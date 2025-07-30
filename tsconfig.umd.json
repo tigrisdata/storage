@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "UMD",
+    "moduleResolution": "node",
+    "resolveJsonModule": false,
+    "outDir": "./dist/umd"
+  }
+}
