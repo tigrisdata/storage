@@ -1,6 +1,6 @@
 {
   "name": "@tigrisdata/storage",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Tigris is a high-performance object storage system designed for multi-cloud",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
