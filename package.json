@@ -2,16 +2,19 @@
   "name": "@tigrisdata/storage",
   "version": "0.0.1",
   "description": "Tigris is a high-performance object storage system designed for multi-cloud",
+  "type": "commonjs",
   "main": "dist/cjs/index.js",
-  "module": "dist/esm/index.js",
-  "browser": "dist/umd/index.js",
+  "module": "dist/esm/index.mjs",
   "types": "dist/types/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/esm/index.js",
+      "types": {
+        "import": "./dist/types/index.d.mts",
+        "require": "./dist/types/index.d.ts"
+      },
+      "import": "./dist/esm/index.mjs",
       "require": "./dist/cjs/index.js",
-      "browser": "./dist/umd/index.js",
-      "types": "./dist/types/index.d.ts"
+      "browser": "./dist/umd/index.js"
     }
   },
   "files": [
@@ -19,10 +22,13 @@
   ],
   "scripts": {
     "build": "npm run clean && npm run build:types && npm run build:cjs && npm run build:esm && npm run build:umd",
-    "build:types": "tsc --emitDeclarationOnly --outDir dist/types",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist/types && npm run copy:types",
     "build:cjs": "tsc --module commonjs --outDir dist/cjs",
-    "build:esm": "tsc --module esnext --outDir dist/esm",
+    "build:esm": "tsc --module esnext --outDir dist/esm && npm run rename:esm && npm run clean:esm-types",
     "build:umd": "tsc --project tsconfig.umd.json",
+    "copy:types": "node -e \"const fs=require('fs');const path=require('path');const typesDir='dist/types';if(fs.existsSync(typesDir)){fs.readdirSync(typesDir,{recursive:true}).forEach(f=>{if(f.endsWith('.d.ts')){const oldPath=path.join(typesDir,f);const newPath=oldPath.replace('.d.ts','.d.mts');fs.copyFileSync(oldPath,newPath);}});}\"",
+    "rename:esm": "node -e \"const fs=require('fs');const path=require('path');const esmDir='dist/esm';if(fs.existsSync(esmDir)){fs.readdirSync(esmDir,{recursive:true}).forEach(f=>{if(f.endsWith('.js')){const oldPath=path.join(esmDir,f);const newPath=oldPath.replace('.js','.mjs');fs.renameSync(oldPath,newPath);}});}\"",
+    "clean:esm-types": "node -e \"const fs=require('fs');const path=require('path');const esmDir='dist/esm';if(fs.existsSync(esmDir)){fs.readdirSync(esmDir,{recursive:true}).forEach(f=>{if(f.endsWith('.d.ts')||f.endsWith('.d.ts.map')){fs.unlinkSync(path.join(esmDir,f));}});}\"",
     "clean": "rimraf dist",
     "dev": "tsc --watch",
     "lint": "eslint src/**/*.ts",
@@ -89,5 +95,10 @@
         }
       ]
     ]
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.859.0",
+    "@aws-sdk/lib-storage": "^3.859.0",
+    "dotenv": "^17.2.1"
   }
 }
