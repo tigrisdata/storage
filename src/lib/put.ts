@@ -1,6 +1,7 @@
 import { Upload } from '@aws-sdk/lib-storage';
-import { createS3Client } from '../utils/s3-client';
+import { createTigrisClient, TigrisAuthOptions } from './tigris-client';
 import { head } from './head';
+import { config } from './config';
 
 type PutOnUploadProgress = ({
   loaded,
@@ -21,6 +22,7 @@ type PutOptions = {
   multipart?: boolean;
   abortController?: AbortController;
   onUploadProgress?: PutOnUploadProgress;
+  auth?: TigrisAuthOptions;
 };
 
 type PutResponse = {
@@ -36,7 +38,7 @@ export async function put(
   data: string | ReadableStream | Blob,
   options?: PutOptions
 ): Promise<PutResponse> {
-  const s3Client = createS3Client();
+  const tigrisClient = createTigrisClient(options?.auth);
 
   if (options?.addRandomSuffix) {
     path = `${path.split('.')[0]}-${Math.random().toString(36).substring(2, 15)}.${path.split('.')[1] ?? ''}`;
@@ -60,9 +62,9 @@ export async function put(
     options && options.access === 'public' ? 'public-read' : 'private';
 
   const upload = new Upload({
-    client: s3Client,
+    client: tigrisClient,
     params: {
-      Bucket: process.env.TIGRIS_STORAGE_BUCKET,
+      Bucket: options?.auth?.tigrisStorageBucket ?? config.tigrisStorageBucket,
       Key: path,
       Body: data,
       ContentType: options?.contentType ?? undefined,

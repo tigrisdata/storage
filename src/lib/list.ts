@@ -1,9 +1,11 @@
 import { ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { createS3Client } from '../utils/s3-client';
+import { createTigrisClient, TigrisAuthOptions } from './tigris-client';
+import { config } from './config';
 
 type ListOptions = {
   limit?: number;
   paginationMarker?: string;
+  auth?: TigrisAuthOptions;
 };
 
 type Item = {
@@ -20,14 +22,14 @@ type ListResponse = {
 };
 
 export async function list(options?: ListOptions): Promise<ListResponse> {
-  const s3Client = createS3Client();
+  const tigrisClient = createTigrisClient(options?.auth);
   const list = new ListObjectsV2Command({
-    Bucket: process.env.TIGRIS_STORAGE_BUCKET,
+    Bucket: options?.auth?.tigrisStorageBucket ?? config.tigrisStorageBucket,
     MaxKeys: options?.limit,
     ContinuationToken: options?.paginationMarker,
   });
 
-  return s3Client.send(list).then((res) => {
+  return tigrisClient.send(list).then((res) => {
     return {
       items:
         res.Contents?.map((item) => ({

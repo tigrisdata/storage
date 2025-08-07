@@ -2,35 +2,31 @@
   "name": "@tigrisdata/storage",
   "version": "0.0.1",
   "description": "Tigris is a high-performance object storage system designed for multi-cloud",
-  "type": "commonjs",
-  "main": "dist/cjs/index.js",
-  "module": "dist/esm/index.mjs",
-  "types": "dist/types/index.d.ts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": {
-        "import": "./dist/types/index.d.mts",
-        "require": "./dist/types/index.d.ts"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
       },
-      "import": "./dist/esm/index.mjs",
-      "require": "./dist/cjs/index.js",
-      "browser": "./dist/umd/index.js"
-    }
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
-    "build": "npm run clean && npm run build:types && npm run build:cjs && npm run build:esm && npm run build:umd",
-    "build:types": "tsc --emitDeclarationOnly --outDir dist/types && npm run copy:types",
-    "build:cjs": "tsc --module commonjs --outDir dist/cjs",
-    "build:esm": "tsc --module esnext --outDir dist/esm && npm run rename:esm && npm run clean:esm-types",
-    "build:umd": "tsc --project tsconfig.umd.json",
-    "copy:types": "node -e \"const fs=require('fs');const path=require('path');const typesDir='dist/types';if(fs.existsSync(typesDir)){fs.readdirSync(typesDir,{recursive:true}).forEach(f=>{if(f.endsWith('.d.ts')){const oldPath=path.join(typesDir,f);const newPath=oldPath.replace('.d.ts','.d.mts');fs.copyFileSync(oldPath,newPath);}});}\"",
-    "rename:esm": "node -e \"const fs=require('fs');const path=require('path');const esmDir='dist/esm';if(fs.existsSync(esmDir)){fs.readdirSync(esmDir,{recursive:true}).forEach(f=>{if(f.endsWith('.js')){const oldPath=path.join(esmDir,f);const newPath=oldPath.replace('.js','.mjs');fs.renameSync(oldPath,newPath);}});}\"",
-    "clean:esm-types": "node -e \"const fs=require('fs');const path=require('path');const esmDir='dist/esm';if(fs.existsSync(esmDir)){fs.readdirSync(esmDir,{recursive:true}).forEach(f=>{if(f.endsWith('.d.ts')||f.endsWith('.d.ts.map')){fs.unlinkSync(path.join(esmDir,f));}});}\"",
-    "clean": "rimraf dist",
-    "dev": "tsc --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "publint": "publint",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write src/**/*.ts",
@@ -44,10 +40,30 @@
     "object",
     "storage",
     "tigris",
-    "blob"
+    "blob",
+    "ai"
   ],
   "author": "Tigris Data",
   "license": "MIT",
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "release": {
+    "branches": [
+      "main",
+      {
+        "name": "next",
+        "prerelease": true
+      }
+    ]
+  },
   "devDependencies": {
     "@commitlint/cli": "^18.0.0",
     "@commitlint/config-conventional": "^18.0.0",
@@ -63,38 +79,9 @@
     "prettier": "^3.0.0",
     "rimraf": "^5.0.0",
     "semantic-release": "^22.0.0",
-    "typescript": "^5.0.0"
-  },
-  "config": {
-    "commitizen": {
-      "path": "cz-conventional-changelog"
-    }
-  },
-  "commitlint": {
-    "extends": [
-      "@commitlint/config-conventional"
-    ]
-  },
-  "release": {
-    "branches": [
-      "main"
-    ],
-    "plugins": [
-      "@semantic-release/commit-analyzer",
-      "@semantic-release/release-notes-generator",
-      "@semantic-release/changelog",
-      "@semantic-release/npm",
-      [
-        "@semantic-release/git",
-        {
-          "assets": [
-            "CHANGELOG.md",
-            "package.json"
-          ],
-          "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
-        }
-      ]
-    ]
+    "typescript": "^5.0.0",
+    "publint": "^0.2.0",
+    "tsup": "^8.0.0"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.859.0",

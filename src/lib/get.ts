@@ -1,12 +1,14 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
-import { createS3Client } from '../utils/s3-client';
+import { createTigrisClient, TigrisAuthOptions } from './tigris-client';
+import { config } from './config';
 
 type GetOptions = {
+  auth?: TigrisAuthOptions;
   contentType?: string;
   contentDisposition?: 'attachment' | 'inline';
 };
 
-type GetResponse = string | ReadableStream | Blob;
+type GetResponse = string | ReadableStream | File;
 
 export async function get(
   path: string,
@@ -20,17 +22,17 @@ export async function get(
 ): Promise<ReadableStream>;
 export async function get(
   path: string,
-  format: 'blob',
+  format: 'file',
   options?: GetOptions
 ): Promise<File>;
 export async function get(
   path: string,
-  format: 'string' | 'stream' | 'blob',
+  format: 'string' | 'stream' | 'file',
   options?: GetOptions
 ): Promise<GetResponse> {
-  const s3Client = createS3Client();
+  const tigrisClient = createTigrisClient(options?.auth);
   const get = new GetObjectCommand({
-    Bucket: process.env.TIGRIS_STORAGE_BUCKET,
+    Bucket: options?.auth?.tigrisStorageBucket ?? config.tigrisStorageBucket,
     Key: path,
     ResponseContentType: options?.contentType ?? undefined,
     ResponseContentDisposition:
@@ -40,7 +42,7 @@ export async function get(
           : 'inline'
         : undefined,
   });
-  return s3Client.send(get).then(async (res) => {
+  return tigrisClient.send(get).then(async (res) => {
     if (!res.Body) {
       throw new Error('No body returned from S3');
     }
@@ -48,7 +50,7 @@ export async function get(
     if (format === 'stream') {
       return res.Body.transformToWebStream();
     }
-    if (format === 'blob') {
+    if (format === 'file') {
       const bytes = await res.Body.transformToByteArray();
       return new File([bytes], path, {
         type: options?.contentType ?? '',
