@@ -52,10 +52,10 @@ const result = await list();
 // Override with custom config
 const result = await list({
   config: {
-    bucket: 'my-custom-bucket',
-    accessKeyId: 'custom-access-key',
-    secretAccessKey: 'custom-secret-key',
-    endpoint: 'https://custom-endpoint.com',
+    bucket: 'my-bucket-name',
+    accessKeyId: 'tigris-access-key',
+    secretAccessKey: 'tigris-secret-key',
+    endpoint: 'https://t3.storage.dev',
   },
 });
 
