@@ -1,11 +1,12 @@
 import { ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { createTigrisClient, TigrisAuthOptions } from './tigris-client';
-import { config } from './config';
+import { createTigrisClient } from './tigris-client';
+import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
+import { config, missingConfigError } from './config';
 
 type ListOptions = {
   limit?: number;
   paginationMarker?: string;
-  auth?: TigrisAuthOptions;
+  config?: TigrisStorageConfig;
 };
 
 type Item = {
@@ -21,25 +22,45 @@ type ListResponse = {
   hasMore: boolean;
 };
 
-export async function list(options?: ListOptions): Promise<ListResponse> {
-  const tigrisClient = createTigrisClient(options?.auth);
+export async function list(
+  options?: ListOptions
+): Promise<TigrisStorageResponse<ListResponse, Error>> {
+  if (!options?.config?.bucket && !config.bucket) {
+    return missingConfigError('bucket');
+  }
+
+  const { data: tigrisClient, error } = createTigrisClient(options?.config);
+
+  if (error || !tigrisClient) {
+    return { error };
+  }
+
   const list = new ListObjectsV2Command({
-    Bucket: options?.auth?.tigrisStorageBucket ?? config.tigrisStorageBucket,
+    Bucket: options?.config?.bucket ?? config.bucket,
     MaxKeys: options?.limit,
     ContinuationToken: options?.paginationMarker,
   });
 
-  return tigrisClient.send(list).then((res) => {
-    return {
-      items:
-        res.Contents?.map((item) => ({
-          id: item.ETag?.replace(/"/g, '') ?? '',
-          name: item.Key ?? '',
-          size: item.Size ?? 0,
-          lastModified: item.LastModified ?? new Date(),
-        })) ?? [],
-      paginationToken: res.NextContinuationToken,
-      hasMore: res.IsTruncated ?? false,
-    };
-  });
+  return tigrisClient
+    .send(list)
+    .then((res) => {
+      return {
+        data: {
+          items:
+            res.Contents?.map((item) => ({
+              id: item.ETag?.replace(/"/g, '') ?? '',
+              name: item.Key ?? '',
+              size: item.Size ?? 0,
+              lastModified: item.LastModified ?? new Date(),
+            })) ?? [],
+          paginationToken: res.NextContinuationToken,
+          hasMore: res.IsTruncated ?? false,
+        },
+      };
+    })
+    .catch((error) => {
+      return {
+        error,
+      };
+    });
 }

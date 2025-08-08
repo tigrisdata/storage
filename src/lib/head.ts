@@ -1,9 +1,10 @@
 import { HeadObjectCommand } from '@aws-sdk/client-s3';
-import { createTigrisClient, TigrisAuthOptions } from './tigris-client';
+import { createTigrisClient } from './tigris-client';
+import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 import { config } from './config';
 
 type HeadOptions = {
-  auth?: TigrisAuthOptions;
+  config?: TigrisStorageConfig;
 };
 
 type HeadResponse = {
@@ -19,26 +20,39 @@ type HeadResponse = {
 export async function head(
   path: string,
   options?: HeadOptions
-): Promise<HeadResponse | undefined> {
-  const tigrisClient = createTigrisClient(options?.auth);
+): Promise<TigrisStorageResponse<HeadResponse, Error> | undefined> {
+  const { data: tigrisClient, error } = createTigrisClient(options?.config);
+  if (error || !tigrisClient) {
+    return { error };
+  }
+
   const head = new HeadObjectCommand({
-    Bucket: options?.auth?.tigrisStorageBucket ?? config.tigrisStorageBucket,
+    Bucket: options?.config?.bucket ?? config.bucket,
     Key: path,
   });
-  return tigrisClient
-    .send(head)
-    .then(async (res) => {
-      return {
-        size: res.ContentLength ?? 0,
-        modified: res.LastModified ?? new Date(),
-        contentType: res.ContentType ?? '',
-        contentDisposition: res.ContentDisposition ?? '',
-        url: res.ContentDisposition ?? '',
-        downloadUrl: res.ContentDisposition ?? '',
-        path: path,
-      };
-    })
-    .catch(() => {
-      return undefined;
-    });
+
+  try {
+    return tigrisClient
+      .send(head)
+      .then(async (res) => {
+        return {
+          data: {
+            size: res.ContentLength ?? 0,
+            modified: res.LastModified ?? new Date(),
+            contentType: res.ContentType ?? '',
+            contentDisposition: res.ContentDisposition ?? '',
+            url: res.ContentDisposition ?? '',
+            downloadUrl: res.ContentDisposition ?? '',
+            path: path,
+          },
+        };
+      })
+      .catch(() => {
+        return undefined;
+      });
+  } catch {
+    return {
+      error: new Error('An error occurred while fetching the file'),
+    };
+  }
 }
