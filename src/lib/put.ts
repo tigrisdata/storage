@@ -1,5 +1,6 @@
 import { Upload } from '@aws-sdk/lib-storage';
-import { createTigrisClient, TigrisAuthOptions } from './tigris-client';
+import { createTigrisClient } from './tigris-client';
+import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 import { head } from './head';
 import { config } from './config';
 
@@ -22,7 +23,7 @@ type PutOptions = {
   multipart?: boolean;
   abortController?: AbortController;
   onUploadProgress?: PutOnUploadProgress;
-  auth?: TigrisAuthOptions;
+  config?: TigrisStorageConfig;
 };
 
 type PutResponse = {
@@ -37,8 +38,12 @@ export async function put(
   path: string,
   data: string | ReadableStream | Blob,
   options?: PutOptions
-): Promise<PutResponse> {
-  const tigrisClient = createTigrisClient(options?.auth);
+): Promise<TigrisStorageResponse<PutResponse, Error>> {
+  const { data: tigrisClient, error } = createTigrisClient(options?.config);
+
+  if (error || !tigrisClient) {
+    return { error };
+  }
 
   if (options?.addRandomSuffix) {
     path = `${path.split('.')[0]}-${Math.random().toString(36).substring(2, 15)}.${path.split('.')[1] ?? ''}`;
@@ -58,13 +63,14 @@ export async function put(
         ? `attachment; filename="${path}"`
         : 'inline'
       : undefined;
+
   const access =
     options && options.access === 'public' ? 'public-read' : 'private';
 
   const upload = new Upload({
     client: tigrisClient,
     params: {
-      Bucket: options?.auth?.tigrisStorageBucket ?? config.tigrisStorageBucket,
+      Bucket: options?.config?.bucket ?? config.bucket,
       Key: path,
       Body: data,
       ContentType: options?.contentType ?? undefined,
@@ -91,13 +97,26 @@ export async function put(
     }
   });
 
-  await upload.done();
+  try {
+    await upload.done();
+  } catch (error) {
+    return {
+      error:
+        (error as { Code?: string }).Code === 'AccessDenied'
+          ? new Error(
+              `Access denied while uploading to Tigris Storage. Please check your credentials.`
+            )
+          : new Error(`Unexpected error while uploading to Tigris Storage`),
+    };
+  }
 
   return {
-    path,
-    contentType: options?.contentType ?? '',
-    contentDisposition: contentDisposition ?? '',
-    url: ``,
-    downloadUrl: ``,
+    data: {
+      path,
+      contentType: options?.contentType ?? '',
+      contentDisposition: contentDisposition ?? '',
+      url: ``,
+      downloadUrl: ``,
+    },
   };
 }

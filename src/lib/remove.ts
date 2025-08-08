@@ -1,19 +1,23 @@
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { createTigrisClient, TigrisAuthOptions } from './tigris-client';
+import { createTigrisClient } from './tigris-client';
+import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 import { config } from './config';
 
 type RemoveOptions = {
-  auth?: TigrisAuthOptions;
+  config?: TigrisStorageConfig;
 };
 
 export async function remove(
   path: string,
   options?: RemoveOptions
-): Promise<void> {
-  const tigrisClient = createTigrisClient(options?.auth);
+): Promise<TigrisStorageResponse<void, Error> | void> {
+  const { data: tigrisClient, error } = createTigrisClient(options?.config);
+  if (error || !tigrisClient) {
+    return { error };
+  }
   const remove = new DeleteObjectCommand({
-    Bucket: options?.auth?.tigrisStorageBucket ?? config.tigrisStorageBucket,
+    Bucket: options?.config?.bucket ?? config.bucket,
     Key: path,
   });
-  await tigrisClient.send(remove);
+  return tigrisClient.send(remove).then(() => undefined);
 }

@@ -1,25 +1,39 @@
 import { S3Client } from '@aws-sdk/client-s3';
-import { config } from './config';
+import { config, missingConfigError } from './config';
+import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
-type TigrisClientOptions = {
-  accessKeyId: string;
-  secretAccessKey: string;
-  endpoint: string;
-};
+export function createTigrisClient(
+  options?: TigrisStorageConfig
+): TigrisStorageResponse<S3Client, Error> {
+  const accessKeyId = options?.accessKeyId ?? config.accessKeyId;
+  const secretAccessKey = options?.secretAccessKey ?? config.secretAccessKey;
+  const endpoint = options?.endpoint ?? config.endpoint;
+  const bucket = options?.bucket ?? config.bucket;
 
-export type TigrisAuthOptions = TigrisClientOptions & {
-  tigrisStorageBucket: string;
-};
+  if (!bucket) {
+    return missingConfigError('bucket');
+  }
 
-export function createTigrisClient(options?: TigrisClientOptions) {
-  const { accessKeyId, secretAccessKey, endpoint } = options ?? config;
+  if (!accessKeyId || accessKeyId === '') {
+    return missingConfigError('accessKeyId');
+  }
 
-  return new S3Client({
-    credentials: {
-      accessKeyId,
-      secretAccessKey,
-    },
-    region: 'auto',
-    endpoint: endpoint ?? 'https://t3.storage.dev',
-  });
+  if (!secretAccessKey || secretAccessKey === '') {
+    return missingConfigError('secretAccessKey');
+  }
+
+  if (!endpoint || endpoint === '') {
+    return missingConfigError('endpoint');
+  }
+
+  return {
+    data: new S3Client({
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+      region: 'auto',
+      endpoint: endpoint ?? 'https://t3.storage.dev',
+    }),
+  };
 }
