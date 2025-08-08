@@ -50,10 +50,11 @@ export async function put(
   }
 
   if (!options?.allowOverwrite) {
-    console.log('head', path);
     const headResult = await head(path);
     if (headResult) {
-      throw new Error('File already exists');
+      return {
+        error: new Error('File already exists'),
+      };
     }
   }
 

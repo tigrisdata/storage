@@ -76,9 +76,12 @@ export async function get(
     });
   } catch (error) {
     return {
-      error: new Error(
-        `Unexpected error while getting ${path} from Tigris Storage:`
-      ),
+      error:
+        (error as { Code?: string }).Code === 'AccessDenied'
+          ? new Error(
+              `Access denied while downloading from Tigris Storage. Please check your credentials.`
+            )
+          : new Error(`Unexpected error while downloading from Tigris Storage`),
     };
   }
 }
