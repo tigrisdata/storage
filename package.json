@@ -47,7 +47,10 @@
     "ai"
   ],
   "author": "Tigris Data",
-  "repository": "https://github.com/tigrisdata/storage",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tigrisdata/storage.git"
+  },
   "license": "MIT",
   "config": {
     "commitizen": {
@@ -81,15 +84,15 @@
     "eslint": "^8.0.0",
     "husky": "^8.0.0",
     "prettier": "^3.0.0",
-    "rimraf": "^5.0.0",
-    "semantic-release": "^22.0.0",
-    "typescript": "^5.0.0",
     "publint": "^0.2.0",
-    "tsup": "^8.0.0"
+    "semantic-release": "^22.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.859.0",
     "@aws-sdk/lib-storage": "^3.859.0",
+    "@aws-sdk/s3-request-presigner": "^3.864.0",
     "dotenv": "^17.2.1"
   }
 }
