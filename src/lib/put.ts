@@ -1,8 +1,10 @@
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { config } from './config';
+import { head } from './head';
 import { createTigrisClient } from './tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
-import { head } from './head';
-import { config } from './config';
 
 type PutOnUploadProgress = ({
   loaded,
@@ -27,16 +29,17 @@ type PutOptions = {
 };
 
 type PutResponse = {
+  contentDisposition: string | undefined;
+  contentType: string | undefined;
+  modified: Date;
   path: string;
-  contentType: string;
-  contentDisposition: string;
+  size: number;
   url: string;
-  downloadUrl: string;
 };
 
 export async function put(
   path: string,
-  data: string | ReadableStream | Blob,
+  data: string | ReadableStream | Blob | Buffer,
   options?: PutOptions
 ): Promise<TigrisStorageResponse<PutResponse, Error>> {
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
@@ -85,8 +88,14 @@ export async function put(
       : new AbortController(),
   });
 
+  let contentSize = 0;
+
   // Track progress
   upload.on('httpUploadProgress', (progress) => {
+    if (contentSize === 0) {
+      contentSize = progress.total ?? 0;
+    }
+
     if (progress && options?.onUploadProgress) {
       options.onUploadProgress({
         loaded: progress.loaded ?? 0,
@@ -111,13 +120,37 @@ export async function put(
     };
   }
 
+  let signedUrl: string;
+
+  if (options?.access === 'public') {
+    signedUrl = await getSignedUrl(
+      tigrisClient,
+      new GetObjectCommand({
+        Bucket: options?.config?.bucket ?? config.bucket,
+        Key: path,
+      })
+    ).then((url) => url.split('?X-Amz-Algorithm=')[0]);
+  } else {
+    signedUrl = await getSignedUrl(
+      tigrisClient,
+      new GetObjectCommand({
+        Bucket: options?.config?.bucket ?? config.bucket,
+        Key: path,
+      }),
+      {
+        expiresIn: 3600,
+      }
+    );
+  }
+
   return {
     data: {
+      contentDisposition: options?.contentDisposition ?? undefined,
+      contentType: options?.contentType ?? undefined,
+      modified: new Date(),
+      size: contentSize,
       path,
-      contentType: options?.contentType ?? '',
-      contentDisposition: contentDisposition ?? '',
-      url: ``,
-      downloadUrl: ``,
+      url: signedUrl,
     },
   };
 }

@@ -1,20 +1,19 @@
 import { HeadObjectCommand } from '@aws-sdk/client-s3';
+import { config } from './config';
 import { createTigrisClient } from './tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
-import { config } from './config';
 
 type HeadOptions = {
   config?: TigrisStorageConfig;
 };
 
 type HeadResponse = {
-  size: number;
-  modified: Date;
-  contentType: string;
   contentDisposition: string;
-  url: string;
-  downloadUrl: string;
+  contentType: string;
+  modified: Date;
   path: string;
+  size: number;
+  url: string;
 };
 
 export async function head(
@@ -42,7 +41,6 @@ export async function head(
             contentType: res.ContentType ?? '',
             contentDisposition: res.ContentDisposition ?? '',
             url: res.ContentDisposition ?? '',
-            downloadUrl: res.ContentDisposition ?? '',
             path: path,
           },
         };

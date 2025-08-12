@@ -114,6 +114,13 @@ if (currentPage.data) {
 }
 ```
 
+The `list` function returns items with the following structure:
+
+- `id`: Unique identifier for the object
+- `name`: Object key/path
+- `size`: Object size in bytes
+- `lastModified`: Last modification date
+
 ### `head` - Get Object Metadata
 
 Retrieves metadata for an object without downloading its content.
@@ -129,6 +136,9 @@ if (result?.error) {
 } else if (result?.data) {
   console.log('File size:', result.data.size);
   console.log('Content type:', result.data.contentType);
+  console.log('Content disposition:', result.data.contentDisposition);
+  console.log('Last modified:', result.data.modified);
+  console.log('Download URL:', result.data.url);
 } else {
   console.log('File not found');
 }
@@ -141,6 +151,15 @@ if (exists?.data) {
   console.log('File does not exist');
 }
 ```
+
+The `head` function returns metadata with the following structure:
+
+- `size`: Object size in bytes
+- `modified`: Last modification date
+- `contentType`: MIME type of the object
+- `contentDisposition`: Content disposition header value
+- `url`: Download URL for the object
+- `path`: Object key/path
 
 ### `get` - Download Object
 
@@ -169,12 +188,25 @@ if (streamResult.error) {
 // Download as File object
 const fileResult = await get('images/photo.jpg', 'file');
 if (fileResult.error) {
-  console.error('Error downloading file:', fileResult.error);
+  console.error('Error downloading file:', result.error);
 } else {
   console.log('File name:', fileResult.data.name);
   console.log('File size:', fileResult.data.size);
 }
+
+// Download with custom options
+const downloadResult = await get('documents/report.pdf', 'string', {
+  contentDisposition: 'attachment',
+  contentType: 'application/pdf',
+  encoding: 'utf-8',
+});
 ```
+
+The `get` function supports the following options:
+
+- `contentDisposition`: Set to 'attachment' or 'inline' to control download behavior
+- `contentType`: Override the content type for the response
+- `encoding`: Specify encoding for string format (defaults to UTF-8)
 
 ### `put` - Upload Object
 
@@ -189,6 +221,8 @@ if (result.error) {
   console.error('Error uploading file:', result.error);
 } else {
   console.log('Uploaded to:', result.data.path);
+  console.log('File size:', result.data.size);
+  console.log('Download URL:', result.data.url);
 }
 
 // Upload with custom options
@@ -222,6 +256,15 @@ const uploadPromise = put('large-file.zip', fileData, {
 setTimeout(() => controller.abort(), 5000);
 ```
 
+The `put` function returns a response object with the following structure:
+
+- `path`: Object key/path
+- `size`: Object size in bytes
+- `modified`: Upload timestamp
+- `contentType`: MIME type of the object
+- `contentDisposition`: Content disposition header value
+- `url`: Download URL for the object
+
 ### `remove` - Delete Object
 
 Deletes an object from the bucket.
@@ -231,7 +274,7 @@ import { remove } from '@tigrisdata/storage';
 
 // Delete a single file
 const result = await remove('documents/old-file.txt');
-if (result.error) {
+if (result?.error) {
   console.error('Error deleting file:', result.error);
 } else {
   console.log('File deleted successfully');
@@ -242,13 +285,15 @@ const filesToDelete = ['temp/file1.txt', 'temp/file2.txt', 'temp/file3.txt'];
 
 for (const file of filesToDelete) {
   const deleteResult = await remove(file);
-  if (deleteResult.error) {
+  if (deleteResult?.error) {
     console.error(`Failed to delete ${file}:`, deleteResult.error);
   } else {
     console.log(`Deleted: ${file}`);
   }
 }
 ```
+
+**Note**: The `remove` function returns `undefined` on success and an error object on failure.
 
 ## Error Handling
 
@@ -296,3 +341,5 @@ try {
 5. **Consider multipart uploads** for large files
 6. **Use progress callbacks** for better user experience
 7. **Use random suffixes** to prevent accidental overwrites
+8. **Leverage content disposition** options for better download behavior
+9. **Use the returned metadata** for file information instead of making additional API calls

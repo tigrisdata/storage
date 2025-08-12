@@ -1,15 +1,16 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { config } from './config';
 import { createTigrisClient } from './tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
-import { config } from './config';
 
 type GetOptions = {
   config?: TigrisStorageConfig;
-  contentType?: string;
   contentDisposition?: 'attachment' | 'inline';
+  contentType?: string;
+  encoding?: string;
 };
 
-type GetResponse = string | ReadableStream | File;
+type GetResponse = string | File | ReadableStream;
 
 export async function get(
   path: string,
@@ -18,17 +19,17 @@ export async function get(
 ): Promise<TigrisStorageResponse<string, Error>>;
 export async function get(
   path: string,
-  format: 'stream',
-  options?: GetOptions
-): Promise<TigrisStorageResponse<ReadableStream, Error>>;
-export async function get(
-  path: string,
   format: 'file',
   options?: GetOptions
 ): Promise<TigrisStorageResponse<File, Error>>;
 export async function get(
   path: string,
-  format: 'string' | 'stream' | 'file',
+  format: 'stream',
+  options?: GetOptions
+): Promise<TigrisStorageResponse<ReadableStream, Error>>;
+export async function get(
+  path: string,
+  format: 'string' | 'file' | 'stream',
   options?: GetOptions
 ): Promise<TigrisStorageResponse<GetResponse, Error>> {
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
@@ -62,6 +63,7 @@ export async function get(
           data: res.Body.transformToWebStream(),
         };
       }
+
       if (format === 'file') {
         const bytes = await res.Body.transformToByteArray();
         return {
@@ -70,8 +72,9 @@ export async function get(
           }),
         };
       }
+
       return {
-        data: await res.Body.transformToString(),
+        data: await res.Body.transformToString(options?.encoding),
       };
     });
   } catch (error) {
