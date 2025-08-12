@@ -33,22 +33,16 @@ function loadEnvConfig(): TigrisStorageConfig {
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const dotenv = require('dotenv');
-      dotenv.config();
-
-      config.bucket = process.env.TIGRIS_STORAGE_BUCKET ?? '';
-      config.accessKeyId = process.env.TIGRIS_STORAGE_ACCESS_KEY_ID ?? '';
-      config.secretAccessKey =
-        process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY ?? '';
-      config.endpoint =
-        process.env.TIGRIS_STORAGE_ENDPOINT ?? 'https://t3.storage.dev';
-    } catch (error) {
-      config.bucket = process.env.TIGRIS_STORAGE_BUCKET ?? '';
-      config.accessKeyId = process.env.TIGRIS_STORAGE_ACCESS_KEY_ID ?? '';
-      config.secretAccessKey =
-        process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY ?? '';
-      config.endpoint =
-        process.env.TIGRIS_STORAGE_ENDPOINT ?? 'https://t3.storage.dev';
+      dotenv.config({ quiet: process.env.NODE_ENV === 'production' });
+    } catch {
+      console.warn('Error loading .env file, switching to parameters');
     }
+
+    config.bucket = process.env.TIGRIS_STORAGE_BUCKET ?? '';
+    config.accessKeyId = process.env.TIGRIS_STORAGE_ACCESS_KEY_ID ?? '';
+    config.secretAccessKey = process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY ?? '';
+    config.endpoint =
+      process.env.TIGRIS_STORAGE_ENDPOINT ?? 'https://t3.storage.dev';
   }
 
   return config;

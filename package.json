@@ -37,7 +37,8 @@
     "commit": "cz",
     "semantic-release": "semantic-release",
     "prepare": "husky install",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "test:integration": "vitest run --config vitest.config.ts"
   },
   "keywords": [
     "object",
@@ -87,7 +88,8 @@
     "publint": "^0.2.0",
     "semantic-release": "^22.0.0",
     "tsup": "^8.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.859.0",
