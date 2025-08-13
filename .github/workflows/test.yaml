@@ -19,6 +19,9 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Install Dependencies
+        run: npm ci
+
       - name: Run integration tests
         env:
           TIGRIS_STORAGE_BUCKET: ${{ secrets.TIGRIS_STORAGE_BUCKET }}
