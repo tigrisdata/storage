@@ -1,22 +1,15 @@
-name: Release
+name: Test
 
 on:
-  push:
+  pull_request:
     branches:
       - main
       - next
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
-
 jobs:
-  release:
+  test:
     runs-on: ubuntu-latest
-
     steps:
-      # Checkout code with full history to get tags
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -26,13 +19,6 @@ jobs:
         with:
           node-version: '22'
 
-      # Install dependencies and build Node.js project
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run build
-      - run: npm audit signatures
-      - run: npm run publint
-
       - name: Run integration tests
         env:
           TIGRIS_STORAGE_BUCKET: ${{ secrets.TIGRIS_STORAGE_BUCKET }}
@@ -40,10 +26,3 @@ jobs:
           TIGRIS_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_STORAGE_SECRET_ACCESS_KEY }}
           TIGRIS_STORAGE_ENDPOINT: ${{ secrets.TIGRIS_STORAGE_ENDPOINT }}
         run: npm run test:integration
-
-      # Release to GitHub and NPM
-      - name: Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm run semantic-release
