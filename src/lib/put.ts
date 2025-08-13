@@ -54,7 +54,7 @@ export async function put(
 
   if (!options?.allowOverwrite) {
     const headResult = await head(path, { config: options?.config });
-    if (headResult !== undefined) {
+    if (headResult !== undefined && headResult.data !== undefined) {
       return {
         error: new Error('File already exists'),
       };
