@@ -55,12 +55,6 @@
     ],
     "plugins": [
       [
-        "@semantic-release/exec",
-        {
-          "prepareCmd": "npm run build"
-        }
-      ],
-      [
         "@semantic-release/npm",
         {
           "pkgRoot": "packages/storage"
@@ -71,8 +65,7 @@
         {
           "pkgRoot": "packages/cli"
         }
-      ],
-      "@semantic-release/github"
+      ]
     ]
   },
   "devDependencies": {
