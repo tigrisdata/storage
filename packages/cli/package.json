@@ -3,7 +3,12 @@
   "version": "0.0.1",
   "description": "Command line interface for Tigris object storage",
   "type": "module",
-  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/cli.js",
+      "require": "./dist/cli.cjs"
+    }
+  },
   "bin": {
     "tigris": "./dist/cli.js"
   },
