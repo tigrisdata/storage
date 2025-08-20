@@ -1,22 +1,53 @@
-# Tigris Storage
+# Tigris Monorepo
+
+This monorepo contains multiple packages for Tigris object storage:
+
+- [`@tigris/storage`](./packages/storage) - Core storage SDK
+- [`@tigris/cli`](./packages/cli) - Command-line interface
 
 Tigris is a globally distributed object storage service that provides low latency anywhere in the world, enabling developers to store and access any amount of data for a wide range of use cases.
 
 ## Getting started
 
-### Installation
+## Development
 
-Tigris Storage API works with any frontend (or nodejs based backends). Begin by installing the package from your package manager
+### Setup
 
 ```bash
-# NPM
-npm i @tigrisdata/storage
-# PNPM
-pnpm i @tigrisdata/storage
-# YARN
-yarn add @tigrisdata/storage
-# BUN
-bun add @tigrisdata/storage
+npm install
+```
+
+### Build all packages
+
+```bash
+npm run build
+```
+
+### Build individual packages
+
+```bash
+npm run build:storage
+npm run build:cli
+```
+
+### Testing
+
+```bash
+npm test
+```
+
+## Installation
+
+### Storage SDK
+
+```bash
+npm install @tigris/storage
+```
+
+### CLI
+
+```bash
+npm install -g @tigris/cli
 ```
 
 ### Create a Storage Bucket
@@ -44,7 +75,7 @@ Tigris Storage API provides the following methods for managing objects in your s
 All methods accept an optional `config` parameter that allows you to override the default environment configuration:
 
 ```typescript
-import { list, get, put, head, remove } from '@tigrisdata/storage';
+import { list, get, put, head, remove } from '@tigris/storage';
 
 // Use environment variables (default)
 const result = await list();
@@ -79,7 +110,7 @@ The `config` parameter accepts:
 Lists all objects in the bucket with pagination support.
 
 ```typescript
-import { list } from '@tigrisdata/storage';
+import { list } from '@tigris/storage';
 
 // List first 100 objects
 const result = await list({ limit: 100 });
@@ -126,7 +157,7 @@ The `list` function returns items with the following structure:
 Retrieves metadata for an object without downloading its content.
 
 ```typescript
-import { head } from '@tigrisdata/storage';
+import { head } from '@tigris/storage';
 
 // Get metadata for a specific file
 const result = await head('images/photo.jpg');
@@ -166,7 +197,7 @@ The `head` function returns metadata with the following structure:
 Downloads an object from the bucket in various formats.
 
 ```typescript
-import { get } from '@tigrisdata/storage';
+import { get } from '@tigris/storage';
 
 // Download as string
 const result = await get('documents/readme.txt', 'string');
@@ -213,7 +244,7 @@ The `get` function supports the following options:
 Uploads an object to the bucket with various options.
 
 ```typescript
-import { put } from '@tigrisdata/storage';
+import { put } from '@tigris/storage';
 
 // Upload a text file
 const result = await put('documents/hello.txt', 'Hello, World!');
@@ -270,7 +301,7 @@ The `put` function returns a response object with the following structure:
 Deletes an object from the bucket.
 
 ```typescript
-import { remove } from '@tigrisdata/storage';
+import { remove } from '@tigris/storage';
 
 // Delete a single file
 const result = await remove('documents/old-file.txt');
@@ -305,7 +336,7 @@ All methods return a response object that may contain an error. Common scenarios
 - **Permission errors**: Insufficient permissions for the operation
 
 ```typescript
-import { get, put } from '@tigrisdata/storage';
+import { get, put } from '@tigris/storage';
 
 // Check for configuration errors
 const result = await get('nonexistent.txt', 'string');
