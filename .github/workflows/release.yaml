@@ -32,6 +32,7 @@ jobs:
       - run: npm run build
       - run: npm audit signatures
       - run: npm run publint --workspace=@tigrisdata/storage
+      - run: npm run publint --workspace=@tigrisdata/cli
 
       - name: Run integration tests
         env:
