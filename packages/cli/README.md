@@ -1,11 +1,11 @@
-# @tigris/cli
+# @tigrisdata/cli
 
 Command line interface for Tigris object storage.
 
 ## Installation
 
 ```bash
-npm install -g @tigris/cli
+npm install -g @tigrisdata/cli
 ```
 
 ## Usage

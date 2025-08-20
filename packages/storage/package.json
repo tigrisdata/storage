@@ -1,5 +1,5 @@
 {
-  "name": "@tigris/storage",
+  "name": "@tigrisdata/storage",
   "version": "0.0.1",
   "description": "Tigris is a high-performance object storage system designed for multi-cloud",
   "type": "module",

@@ -9,8 +9,8 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces",
-    "build:storage": "npm run build --workspace=@tigris/storage",
-    "build:cli": "npm run build --workspace=@tigris/cli",
+    "build:storage": "npm run build --workspace=@tigrisdata/storage",
+    "build:cli": "npm run build --workspace=@tigrisdata/cli",
     "dev": "npm run dev --workspaces",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",

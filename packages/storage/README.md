@@ -1,17 +1,17 @@
-# @tigris/storage
+# @tigrisdata/storage
 
 Tigris is a high-performance object storage system designed for multi-cloud environments.
 
 ## Installation
 
 ```bash
-npm install @tigris/storage
+npm install @tigrisdata/storage
 ```
 
 ## Usage
 
 ```typescript
-import { get, put, list, remove } from '@tigris/storage';
+import { get, put, list, remove } from '@tigrisdata/storage';
 
 // Upload a file
 await put('my-file.txt', './local-file.txt');

@@ -31,4 +31,4 @@ jobs:
           TIGRIS_STORAGE_ACCESS_KEY_ID: ${{ secrets.TIGRIS_STORAGE_ACCESS_KEY_ID }}
           TIGRIS_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_STORAGE_SECRET_ACCESS_KEY }}
           TIGRIS_STORAGE_ENDPOINT: ${{ secrets.TIGRIS_STORAGE_ENDPOINT }}
-        run: npm run test --workspace=@tigris/storage
+        run: npm run test --workspace=@tigrisdata/storage
