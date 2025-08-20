@@ -23,7 +23,9 @@ jobs:
         run: npm ci
 
       - name: Build packages
-        run: npm run build
+        run: |
+          npm run build:storage
+          npm run build:cli
 
       - name: Run integration tests
         env:
