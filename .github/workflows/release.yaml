@@ -29,7 +29,8 @@ jobs:
       # Install dependencies and build Node.js project
       - run: npm ci
       - run: npm run lint
-      - run: npm run build
+      - run: npm run build:storage
+      - run: npm run build:cli
       - run: npm audit signatures
       - run: npm run publint --workspace=@tigrisdata/storage
       - run: npm run publint --workspace=@tigrisdata/cli
