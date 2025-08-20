@@ -1,22 +1,53 @@
-# Tigris Storage
+# Tigris Monorepo
+
+This monorepo contains multiple packages for Tigris object storage:
+
+- [`@tigrisdata/storage`](./packages/storage) - Core storage SDK
+- [`@tigrisdata/cli`](./packages/cli) - Command-line interface
 
 Tigris is a globally distributed object storage service that provides low latency anywhere in the world, enabling developers to store and access any amount of data for a wide range of use cases.
 
 ## Getting started
 
-### Installation
+## Development
 
-Tigris Storage API works with any frontend (or nodejs based backends). Begin by installing the package from your package manager
+### Setup
 
 ```bash
-# NPM
-npm i @tigrisdata/storage
-# PNPM
-pnpm i @tigrisdata/storage
-# YARN
-yarn add @tigrisdata/storage
-# BUN
-bun add @tigrisdata/storage
+npm install
+```
+
+### Build all packages
+
+```bash
+npm run build
+```
+
+### Build individual packages
+
+```bash
+npm run build:storage
+npm run build:cli
+```
+
+### Testing
+
+```bash
+npm test
+```
+
+## Installation
+
+### Storage SDK
+
+```bash
+npm install @tigrisdata/storage
+```
+
+### CLI
+
+```bash
+npm install -g @tigrisdata/cli
 ```
 
 ### Create a Storage Bucket

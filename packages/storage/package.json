@@ -1,0 +1,61 @@
+{
+  "name": "@tigrisdata/storage",
+  "version": "0.0.1",
+  "description": "Tigris is a high-performance object storage system designed for multi-cloud",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "publint": "publint",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "format:check": "prettier --check src/**/*.ts",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run --config vitest.config.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "object",
+    "storage",
+    "tigris",
+    "blob",
+    "ai"
+  ],
+  "author": "Tigris Data",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tigrisdata/storage.git",
+    "directory": "packages/storage"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.859.0",
+    "@aws-sdk/lib-storage": "^3.859.0",
+    "@aws-sdk/s3-request-presigner": "^3.864.0",
+    "dotenv": "^17.2.1"
+  }
+}

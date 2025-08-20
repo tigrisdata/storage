@@ -1,44 +1,26 @@
 {
-  "name": "@tigrisdata/storage",
+  "name": "@tigris/monorepo",
   "version": "0.0.1",
-  "description": "Tigris is a high-performance object storage system designed for multi-cloud",
+  "description": "Tigris monorepo for storage SDK and CLI",
+  "private": true,
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
-    },
-    "./package.json": "./package.json"
-  },
-  "files": [
-    "dist",
-    "README.md"
+  "workspaces": [
+    "packages/*"
   ],
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "publint": "publint",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
-    "format": "prettier --write src/**/*.ts",
-    "format:check": "prettier --check src/**/*.ts",
+    "build": "npm run build --workspaces",
+    "build:storage": "npm run build --workspace=@tigrisdata/storage",
+    "build:cli": "npm run build --workspace=@tigrisdata/cli",
+    "dev": "npm run dev --workspaces",
+    "lint": "npm run lint --workspaces --if-present",
+    "lint:fix": "npm run lint:fix --workspaces --if-present",
+    "format": "npm run format --workspaces --if-present",
+    "format:check": "npm run format:check --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
     "commit": "cz",
     "semantic-release": "semantic-release",
     "prepare": "husky install",
-    "prepublishOnly": "npm run build",
-    "test:integration": "vitest run --config vitest.config.ts"
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules/.cache"
   },
   "keywords": [
     "object",
@@ -70,6 +52,27 @@
         "name": "next",
         "prerelease": true
       }
+    ],
+    "plugins": [
+      [
+        "@semantic-release/exec",
+        {
+          "prepareCmd": "npm run build"
+        }
+      ],
+      [
+        "@semantic-release/npm",
+        {
+          "pkgRoot": "packages/storage"
+        }
+      ],
+      [
+        "@semantic-release/npm",
+        {
+          "pkgRoot": "packages/cli"
+        }
+      ],
+      "@semantic-release/github"
     ]
   },
   "devDependencies": {
@@ -92,9 +95,6 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.859.0",
-    "@aws-sdk/lib-storage": "^3.859.0",
-    "@aws-sdk/s3-request-presigner": "^3.864.0",
-    "dotenv": "^17.2.1"
+    "commander": "^11.0.0"
   }
 }

@@ -1,0 +1,47 @@
+{
+  "name": "@tigrisdata/cli",
+  "version": "0.0.1",
+  "description": "Command line interface for Tigris object storage",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/cli.js",
+      "require": "./dist/cli.cjs"
+    }
+  },
+  "bin": {
+    "tigris": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "publint": "publint",
+    "prepublishOnly": "npm run build",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "cli",
+    "object",
+    "storage",
+    "tigris",
+    "blob"
+  ],
+  "author": "Tigris Data",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tigrisdata/storage.git",
+    "directory": "packages/cli"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@tigrisdata/storage": "*",
+    "commander": "^11.0.0"
+  }
+}
