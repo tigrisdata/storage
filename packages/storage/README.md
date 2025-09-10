@@ -92,7 +92,7 @@ if (currentPage.data) {
   while (currentPage.data.hasMore && currentPage.data.paginationToken) {
     currentPage = await list({
       limit: 50,
-      paginationMarker: currentPage.data.paginationToken,
+      paginationToken: currentPage.data.paginationToken,
     });
 
     if (currentPage.data) {

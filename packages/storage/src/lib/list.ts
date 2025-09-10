@@ -5,6 +5,8 @@ import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
 type ListOptions = {
   limit?: number;
+  paginationToken?: string;
+  // @deprecated
   paginationMarker?: string;
   config?: TigrisStorageConfig;
 };
@@ -38,7 +40,7 @@ export async function list(
   const list = new ListObjectsV2Command({
     Bucket: options?.config?.bucket ?? config.bucket,
     MaxKeys: options?.limit,
-    ContinuationToken: options?.paginationMarker,
+    ContinuationToken: options?.paginationToken ?? options?.paginationMarker,
   });
 
   return tigrisClient
