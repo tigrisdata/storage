@@ -3,7 +3,7 @@ import { config } from './config';
 import { createTigrisClient } from './tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
-type RemoveOptions = {
+export type RemoveOptions = {
   config?: TigrisStorageConfig;
 };
 

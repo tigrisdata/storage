@@ -3,11 +3,11 @@ import { config } from './config';
 import { createTigrisClient } from './tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
-type HeadOptions = {
+export type HeadOptions = {
   config?: TigrisStorageConfig;
 };
 
-type HeadResponse = {
+export type HeadResponse = {
   contentDisposition: string;
   contentType: string;
   modified: Date;

@@ -3,7 +3,7 @@ import { config, missingConfigError } from './config';
 import { createTigrisClient } from './tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
-type ListOptions = {
+export type ListOptions = {
   limit?: number;
   paginationToken?: string;
   // @deprecated
@@ -11,14 +11,14 @@ type ListOptions = {
   config?: TigrisStorageConfig;
 };
 
-type Item = {
+export type Item = {
   id: string;
   name: string;
   size: number;
   lastModified: Date;
 };
 
-type ListResponse = {
+export type ListResponse = {
   items: Item[];
   paginationToken: string | undefined;
   hasMore: boolean;

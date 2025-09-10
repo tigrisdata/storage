@@ -6,7 +6,7 @@ import { head } from './head';
 import { createTigrisClient } from './tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
-type PutOnUploadProgress = ({
+export type PutOnUploadProgress = ({
   loaded,
   total,
   percentage,
@@ -16,7 +16,7 @@ type PutOnUploadProgress = ({
   percentage: number;
 }) => void;
 
-type PutOptions = {
+export type PutOptions = {
   access?: 'public' | 'private';
   addRandomSuffix?: boolean;
   allowOverwrite?: boolean;
@@ -28,7 +28,7 @@ type PutOptions = {
   config?: TigrisStorageConfig;
 };
 
-type PutResponse = {
+export type PutResponse = {
   contentDisposition: string | undefined;
   contentType: string | undefined;
   modified: Date;

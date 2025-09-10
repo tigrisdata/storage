@@ -3,14 +3,14 @@ import { config } from './config';
 import { createTigrisClient } from './tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
-type GetOptions = {
+export type GetOptions = {
   config?: TigrisStorageConfig;
   contentDisposition?: 'attachment' | 'inline';
   contentType?: string;
   encoding?: string;
 };
 
-type GetResponse = string | File | ReadableStream;
+export type GetResponse = string | File | ReadableStream;
 
 export async function get(
   path: string,
