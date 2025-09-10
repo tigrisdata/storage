@@ -19,5 +19,19 @@ export async function remove(
     Bucket: options?.config?.bucket ?? config.bucket,
     Key: path,
   });
-  return tigrisClient.send(remove).then(() => undefined);
+  return tigrisClient
+    .send(remove)
+    .then(() => undefined)
+    .catch(handleError);
 }
+
+const handleError = (error: unknown) => {
+  if ((error as { Code?: string }).Code === 'AccessDenied') {
+    return {
+      error: new Error('Access denied while deleting file'),
+    };
+  }
+  return {
+    error: new Error('Error deleting file'),
+  };
+};
