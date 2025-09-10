@@ -70,29 +70,26 @@ The `config` parameter accepts:
 Lists all objects in the bucket with pagination support.
 
 ```typescript
-import { list } from '@tigrisdata/storage';
+import { list, type Item } from '@tigrisdata/storage';
 
 // List first 100 objects
 const result = await list({ limit: 100 });
 
 if (result.error) {
   console.error('Error listing files:', result.error);
-} else {
-  console.log('Files:', result.data?.items);
-  console.log('Has more:', result.data?.hasMore);
 }
 
 // Pagination example
-let allFiles = [];
-let currentPage = await list({ limit: 50 });
+const allFiles: Item[] = [];
+let currentPage = await list({ limit: 100 });
 
 if (currentPage.data) {
   allFiles.push(...currentPage.data.items);
 
-  while (currentPage.data.hasMore && currentPage.data.paginationToken) {
+  while (currentPage.data?.hasMore && currentPage.data?.paginationToken) {
     currentPage = await list({
-      limit: 50,
-      paginationToken: currentPage.data.paginationToken,
+      limit: 2,
+      paginationToken: currentPage.data?.paginationToken,
     });
 
     if (currentPage.data) {
@@ -103,6 +100,8 @@ if (currentPage.data) {
     }
   }
 }
+
+console.log(allFiles);
 ```
 
 The `list` function returns items with the following structure:
@@ -160,7 +159,7 @@ Downloads an object from the bucket in various formats.
 import { get } from '@tigrisdata/storage';
 
 // Download as string
-const result = await get('documents/readme.txt', 'string');
+const result = await get('readme.json', 'string');
 if (result.error) {
   console.error('Error downloading file:', result.error);
 } else {
@@ -172,25 +171,30 @@ const streamResult = await get('videos/large-video.mp4', 'stream');
 if (streamResult.error) {
   console.error('Error downloading stream:', streamResult.error);
 } else {
-  const reader = streamResult.data.getReader();
+  const reader = streamResult.data?.getReader();
   // Process stream...
+  reader?.read().then((result) => {
+    console.log(result);
+  });
 }
 
 // Download as File object
-const fileResult = await get('images/photo.jpg', 'file');
+const fileResult = await get('photo.jpg', 'file');
 if (fileResult.error) {
-  console.error('Error downloading file:', result.error);
+  console.error('Error downloading file:', fileResult.error);
 } else {
-  console.log('File name:', fileResult.data.name);
-  console.log('File size:', fileResult.data.size);
+  console.log('File name:', fileResult.data?.name);
+  console.log('File size:', fileResult.data?.size);
+  console.log('File type:', fileResult.data?.type);
 }
 
-// Download with custom options
 const downloadResult = await get('documents/report.pdf', 'string', {
   contentDisposition: 'attachment',
   contentType: 'application/pdf',
   encoding: 'utf-8',
 });
+
+console.log(downloadResult);
 ```
 
 The `get` function supports the following options:
@@ -211,19 +215,28 @@ const result = await put('documents/hello.txt', 'Hello, World!');
 if (result.error) {
   console.error('Error uploading file:', result.error);
 } else {
-  console.log('Uploaded to:', result.data.path);
-  console.log('File size:', result.data.size);
-  console.log('Download URL:', result.data.url);
+  console.log('Uploaded to:', result.data?.path);
+  console.log('File size:', result.data?.size);
+  console.log('Download URL:', result.data?.url);
 }
 
 // Upload with custom options
+const imageBlob = new Blob(['Hello, World!'], { type: 'text/plain' });
 const imageResult = await put('images/photo.jpg', imageBlob, {
   contentType: 'image/jpeg',
   access: 'public',
   allowOverwrite: true,
 });
 
+console.log(imageResult);
+
 // Upload with progress tracking
+const videoStream = new ReadableStream({
+  start(controller) {
+    controller.enqueue(new TextEncoder().encode('Hello, World!'));
+    controller.close();
+  },
+});
 const uploadResult = await put('videos/large-video.mp4', videoStream, {
   multipart: true,
   onUploadProgress: ({ percentage }) => {
@@ -231,18 +244,24 @@ const uploadResult = await put('videos/large-video.mp4', videoStream, {
   },
 });
 
+console.log(uploadResult);
+
 // Upload with random suffix
-const uniqueResult = await put('images/avatar.jpg', imageFile, {
+const uniqueResult = await put('images/avatar.jpg', imageBlob, {
   addRandomSuffix: true,
   contentType: 'image/jpeg',
 });
 
+console.log(uniqueResult);
+
 // Upload with abort controller
 const controller = new AbortController();
-const uploadPromise = put('large-file.zip', fileData, {
+const uploadPromise = await put('large-file.zip', imageBlob, {
   abortController: controller,
   multipart: true,
 });
+
+console.log(uploadPromise);
 
 setTimeout(() => controller.abort(), 5000);
 ```
@@ -322,6 +341,10 @@ try {
   }
 }
 ```
+
+## Examples
+
+There are some examples available in `examples` folder available. Something missing there that you you'd like to see? Open an issue and we'll be more than happy to add in examples
 
 ## Best Practices
 
