@@ -51,40 +51,52 @@ export async function get(
   });
 
   try {
-    return tigrisClient.send(get).then(async (res) => {
-      if (!res.Body) {
-        return {
-          error: new Error('No body returned from S3'),
-        };
-      }
+    return tigrisClient
+      .send(get)
+      .then(async (res) => {
+        if (!res.Body) {
+          return {
+            error: new Error('No body returned from Tigris Storage'),
+          };
+        }
 
-      if (format === 'stream') {
-        return {
-          data: res.Body.transformToWebStream(),
-        };
-      }
+        if (format === 'stream') {
+          return {
+            data: res.Body.transformToWebStream(),
+          };
+        }
 
-      if (format === 'file') {
-        const bytes = await res.Body.transformToByteArray();
-        return {
-          data: new File([bytes], path, {
-            type: options?.contentType ?? '',
-          }),
-        };
-      }
+        if (format === 'file') {
+          const bytes = await res.Body.transformToByteArray();
+          return {
+            data: new File([bytes], path, {
+              type: res.ContentType ?? options?.contentType ?? '',
+            }),
+          };
+        }
 
-      return {
-        data: await res.Body.transformToString(options?.encoding),
-      };
-    });
+        return {
+          data: await res.Body.transformToString(options?.encoding),
+        };
+      })
+      .catch(handleError);
   } catch (error) {
-    return {
-      error:
-        (error as { Code?: string }).Code === 'AccessDenied'
-          ? new Error(
-              `Access denied while downloading from Tigris Storage. Please check your credentials.`
-            )
-          : new Error(`Unexpected error while downloading from Tigris Storage`),
-    };
+    return handleError(error);
   }
 }
+
+const handleError = (error: unknown) => {
+  let errorMessage = 'Unexpected error while downloading from Tigris Storage';
+
+  if ((error as { Code?: string }).Code === 'AccessDenied') {
+    errorMessage =
+      'Access denied while downloading from Tigris Storage. Please check your credentials.';
+  }
+  if ((error as { Code?: string }).Code === 'NoSuchKey') {
+    errorMessage = 'File not found in Tigris Storage';
+  }
+
+  return {
+    error: new Error(errorMessage),
+  };
+};
