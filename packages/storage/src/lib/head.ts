@@ -43,7 +43,7 @@ export async function head(
             contentDisposition: res.ContentDisposition ?? '',
             url: await getSignedUrl(tigrisClient, head, {
               expiresIn: 3600,
-            }).then((url) => url.split('?X-Amz-Algorithm=')[0]),
+            }),
             path: path,
           },
         };

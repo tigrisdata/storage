@@ -21,16 +21,16 @@ const imageResult = await put('images/photo.jpg', imageBlob, {
 console.log(imageResult);
 
 // Upload with progress tracking
-const videoStream = new ReadableStream({
-  start(controller) {
-    controller.enqueue(new TextEncoder().encode('Hello, World!'));
-    controller.close();
-  },
-});
-const uploadResult = await put('videos/large-video.mp4', videoStream, {
+const bigFiles = await fetch(
+  'http://ipv4.download.thinkbroadband.com/200MB.zip'
+).then(async (res) => await res.blob());
+const uploadResult = await put('videos/large-file.zip', bigFiles, {
   multipart: true,
-  onUploadProgress: ({ percentage }) => {
-    console.log(`Upload progress: ${percentage}%`);
+  addRandomSuffix: true,
+  onUploadProgress: (data) => {
+    console.log(
+      `Upload progress: ${data.loaded}, ${data.total}, ${data.percentage}`
+    );
   },
 });
 
