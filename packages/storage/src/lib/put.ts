@@ -52,7 +52,9 @@ export async function put(
     path = `${path.split('.')[0]}-${Math.random().toString(36).substring(2, 15)}.${path.split('.')[1] ?? ''}`;
   }
 
-  if (!options?.allowOverwrite) {
+  const allowOverwrite = options?.allowOverwrite ?? true;
+
+  if (!allowOverwrite) {
     const headResult = await head(path, { config: options?.config });
     if (headResult !== undefined && headResult.data !== undefined) {
       return {

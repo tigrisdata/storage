@@ -225,7 +225,6 @@ const imageBlob = new Blob(['Hello, World!'], { type: 'text/plain' });
 const imageResult = await put('images/photo.jpg', imageBlob, {
   contentType: 'image/jpeg',
   access: 'public',
-  allowOverwrite: true,
 });
 
 console.log(imageResult);
@@ -337,7 +336,9 @@ try {
   }
 } catch (error) {
   if (error.message.includes('File already exists')) {
-    console.log('File already exists, use allowOverwrite: true to overwrite');
+    console.log(
+      'File already exists, use allowOverwrite: true or omit this option to overwrite'
+    );
   }
 }
 ```
