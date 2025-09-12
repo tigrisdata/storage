@@ -1,13 +1,14 @@
 import { HeadObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { config } from './config';
 import { createTigrisClient } from './tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
-type HeadOptions = {
+export type HeadOptions = {
   config?: TigrisStorageConfig;
 };
 
-type HeadResponse = {
+export type HeadResponse = {
   contentDisposition: string;
   contentType: string;
   modified: Date;
@@ -40,7 +41,9 @@ export async function head(
             modified: res.LastModified ?? new Date(),
             contentType: res.ContentType ?? '',
             contentDisposition: res.ContentDisposition ?? '',
-            url: res.ContentDisposition ?? '',
+            url: await getSignedUrl(tigrisClient, head, {
+              expiresIn: 3600,
+            }),
             path: path,
           },
         };

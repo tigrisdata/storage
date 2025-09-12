@@ -1,3 +1,4 @@
+import dotenv from 'dotenv';
 import { TigrisStorageConfig } from './types';
 
 const configMap = {
@@ -12,7 +13,7 @@ export const missingConfigError = (key: string) => ({
     `Tigris Storage Config incomplete: ${key} is missing.\n
     Please provide it in .env file or pass it as env variable as ${configMap[key as keyof typeof configMap]}, 
     or pass it as an option from method call.\n
-    Checkout https://github.com/tigrisdata/storage#configuration for more details.`
+    Checkout https://github.com/tigrisdata/storage/tree/main/packages/storage#configure-your-project for more details.`
   ),
 });
 
@@ -31,9 +32,7 @@ function loadEnvConfig(): TigrisStorageConfig {
 
   if (isNode()) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const dotenv = require('dotenv');
-      dotenv.config({ quiet: process.env.NODE_ENV === 'production' });
+      dotenv.config({ quiet: true });
     } catch {
       console.warn('Error loading .env file, switching to parameters');
     }

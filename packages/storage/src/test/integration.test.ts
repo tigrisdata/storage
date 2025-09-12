@@ -22,7 +22,6 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
     it('should upload a file successfully', async () => {
       const result = await put(testFileName, testFileContent, {
         config,
-        allowOverwrite: true,
       });
 
       expect(result.error).toBeUndefined();
@@ -33,15 +32,15 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       expect(result.data?.modified).toBeInstanceOf(Date);
     });
 
-    it('should prevent overwriting by default', async () => {
+    it('should not prevent overwriting by default', async () => {
       // First upload
       await put(testFileName, testFileContent, {
         config,
-        allowOverwrite: true,
       });
 
       // Second upload without allowOverwrite
       const result = await put(testFileName, 'new content', {
+        allowOverwrite: false,
         config,
       });
 
@@ -56,7 +55,6 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       const result = await put(htmlFileName, htmlContent, {
         config,
         contentType: 'text/html',
-        allowOverwrite: true,
       });
 
       expect(result.error).toBeUndefined();
@@ -87,7 +85,6 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       // Ensure test file exists
       await put(testFileName, testFileContent, {
         config,
-        allowOverwrite: true,
       });
     });
 
@@ -134,7 +131,6 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       // Ensure test file exists
       await put(testFileName, testFileContent, {
         config,
-        allowOverwrite: true,
       });
     });
 
@@ -169,7 +165,6 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
         testFiles.map((fileName) =>
           put(fileName, `Content for ${fileName}`, {
             config,
-            allowOverwrite: true,
           })
         )
       );
@@ -215,7 +210,6 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       // Ensure test file exists
       await put(testFileName, testFileContent, {
         config,
-        allowOverwrite: true,
       });
     });
 
@@ -249,7 +243,6 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       const putResult = await put(fileName, content, {
         config,
         contentType: 'text/plain',
-        allowOverwrite: true,
       });
       expect(putResult.error).toBeUndefined();
 

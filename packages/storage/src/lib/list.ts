@@ -3,20 +3,22 @@ import { config, missingConfigError } from './config';
 import { createTigrisClient } from './tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
-type ListOptions = {
+export type ListOptions = {
   limit?: number;
+  paginationToken?: string;
+  // @deprecated
   paginationMarker?: string;
   config?: TigrisStorageConfig;
 };
 
-type Item = {
+export type Item = {
   id: string;
   name: string;
   size: number;
   lastModified: Date;
 };
 
-type ListResponse = {
+export type ListResponse = {
   items: Item[];
   paginationToken: string | undefined;
   hasMore: boolean;
@@ -38,7 +40,7 @@ export async function list(
   const list = new ListObjectsV2Command({
     Bucket: options?.config?.bucket ?? config.bucket,
     MaxKeys: options?.limit,
-    ContinuationToken: options?.paginationMarker,
+    ContinuationToken: options?.paginationToken ?? options?.paginationMarker,
   });
 
   return tigrisClient
