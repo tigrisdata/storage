@@ -345,7 +345,7 @@ try {
 
 ## Examples
 
-There are some examples available in `examples` folder available. Something missing there that you you'd like to see? Open an issue and we'll be more than happy to add in examples
+If you want to see it the Storage SDK used with your tool of choice, we have some ready examples available at [our community repo](https://github.com/tigrisdata-community/storage-sdk-examples). Something missing there that you you'd like to see? Open an issue and we'll be more than happy to add in examples.
 
 ## Best Practices
 
