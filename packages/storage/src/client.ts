@@ -1,5 +1,5 @@
 
-export type ClientUploadOptions = {
+export type UploadOptions = {
   access?: 'public' | 'private';
   addRandomSuffix?: boolean;
   allowOverwrite?: boolean;
@@ -17,7 +17,7 @@ export type ClientUploadOptions = {
   }) => void;
 };
 
-export type ClientUploadResponse = {
+export type UploadResponse = {
   contentDisposition?: string;
   contentType?: string;
   modified: Date;
@@ -26,11 +26,11 @@ export type ClientUploadResponse = {
   url: string;
 };
 
-export async function clientUpload(
+export async function upload(
   path: string,
   data: File | Blob,
-  options?: ClientUploadOptions
-): Promise<ClientUploadResponse> {
+  options?: UploadOptions
+): Promise<UploadResponse> {
   if (!options?.url) {
     throw new Error('URL option is required for clientUpload');
   }
