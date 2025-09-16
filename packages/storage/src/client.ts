@@ -1,4 +1,3 @@
-
 export type UploadOptions = {
   access?: 'public' | 'private';
   addRandomSuffix?: boolean;
@@ -32,7 +31,7 @@ export async function upload(
   options?: UploadOptions
 ): Promise<UploadResponse> {
   if (!options?.url) {
-    throw new Error('URL option is required for clientUpload');
+    throw new Error('URL option is required for client uploads');
   }
 
   if (options?.addRandomSuffix) {
@@ -43,7 +42,6 @@ export async function upload(
   }
 
   try {
-    // Step 1: Request presigned URL from server
     const presignedResponse = await fetch(options.url, {
       method: 'POST',
       headers: {
@@ -52,22 +50,22 @@ export async function upload(
       body: JSON.stringify({
         path,
         method: 'put',
-        contentType: options.contentType || data.type,
+        contentType: options.contentType ?? data.type,
       }),
     });
 
     if (!presignedResponse.ok) {
-      throw new Error(`Failed to get presigned URL: ${presignedResponse.statusText}`);
+      throw new Error(
+        `Failed to get presigned URL: ${presignedResponse.statusText}`
+      );
     }
 
     const { data: presignedData } = await presignedResponse.json();
     const presignedUrl = presignedData.url;
 
-    // Step 2: Upload directly to presigned URL using XMLHttpRequest
     await new Promise<void>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
 
-      // Track upload progress
       xhr.upload.addEventListener('progress', (event) => {
         if (event.lengthComputable && options?.onUploadProgress) {
           const percentage = Math.round((event.loaded / event.total) * 100);
@@ -95,7 +93,7 @@ export async function upload(
 
       // Set content type if provided
       if (options?.contentType || data.type) {
-        xhr.setRequestHeader('Content-Type', options?.contentType || data.type);
+        xhr.setRequestHeader('Content-Type', options?.contentType ?? data.type);
       }
 
       xhr.send(data);
@@ -103,13 +101,15 @@ export async function upload(
 
     return {
       contentDisposition: options?.contentDisposition,
-      contentType: options?.contentType || data.type,
+      contentType: options?.contentType ?? data.type,
       modified: new Date(),
       path,
       size: data.size,
-      url: presignedUrl.split('?')[0], // Clean URL without query params
+      url: presignedUrl.replace('x-id=PutObject', 'x-id=GetObject'), // Clean URL without query params
     };
   } catch (error) {
-    throw new Error(`clientUpload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `client upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
