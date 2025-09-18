@@ -2,7 +2,8 @@
   "name": "tigris",
   "alias": "t3",
   "description": "Command line interface for Tigris",
-  "domains": [
+  "version": "0.0.1",
+  "commands": [
     {
       "name": "login",
       "description": "Login to Tigris",
@@ -32,8 +33,7 @@
     {
       "name": "orgs",
       "description": "Manage organizations",
-      "alias": "o",
-      "commands": [
+      "operations": [
         {
           "name": "list",
           "description": "List organizations",
@@ -86,7 +86,7 @@
       "name": "buckets",
       "description": "Manage buckets",
       "alias": "b",
-      "commands": [
+      "operations": [
         {
           "name": "list",
           "description": "List buckets",
@@ -337,7 +337,7 @@
       "name": "objects",
       "description": "Manage objects",
       "alias": "o",
-      "commands": [
+      "operations": [
         {
           "name": "list",
           "description": "List objects",
