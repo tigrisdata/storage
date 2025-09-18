@@ -31,37 +31,43 @@ interface CommandSpec {
 }
 
 function formatArgumentHelp(arg: Argument): string {
-  let help = `  --${arg.name}`;
+  let optionPart = `  --${arg.name}`;
   if (arg.alias) {
-    help += `, -${arg.alias}`;
+    optionPart += `, -${arg.alias}`;
   }
-  help += `\t${arg.description}`;
+
+  // Pad option part to ensure consistent alignment, adjust for longer aliases
+  const minPadding = 26;
+  const paddedOptionPart = optionPart.length >= minPadding ?
+    optionPart + '  ' :
+    optionPart.padEnd(minPadding);
+  let description = arg.description;
 
   if (arg.options) {
     if (Array.isArray(arg.options) && typeof arg.options[0] === 'string') {
-      help += ` (options: ${(arg.options as string[]).join(', ')})`;
+      description += ` (options: ${(arg.options as string[]).join(', ')})`;
     } else {
-      help += ` (options: ${(arg.options as Array<{ name: string; value: string }>).map(o => o.value).join(', ')})`;
+      description += ` (options: ${(arg.options as Array<{ name: string; value: string }>).map(o => o.value).join(', ')})`;
     }
   }
 
   if (arg.default) {
-    help += ` [default: ${arg.default}]`;
+    description += ` [default: ${arg.default}]`;
   }
 
   if (arg.required) {
-    help += ' [required]';
+    description += ' [required]';
   }
 
   if (arg['required-when']) {
-    help += ` [required when: ${arg['required-when']}]`;
+    description += ` [required when: ${arg['required-when']}]`;
   }
 
   if (arg.type === 'multiple') {
-    help += ' [multiple values: comma-separated]';
+    description += ' [multiple values: comma-separated]';
   }
 
-  return help;
+  return `${paddedOptionPart}${description}`;
 }
 
 function showCommandHelp(command: CommandSpec) {
@@ -70,13 +76,13 @@ function showCommandHelp(command: CommandSpec) {
   if (command.operations && command.operations.length > 0) {
     console.log('Operations:');
     command.operations.forEach(op => {
-      let opLine = `  ${op.name}`;
+      let operationPart = `  ${op.name}`;
       if (op.alias) {
         const aliases = Array.isArray(op.alias) ? op.alias : [op.alias];
-        opLine += ` (${aliases.join(', ')})`;
+        operationPart += ` (${aliases.join(', ')})`;
       }
-      opLine += `\t${op.description}`;
-      console.log(opLine);
+      const paddedOperationPart = operationPart.padEnd(24);
+      console.log(`${paddedOperationPart}${op.description}`);
     });
     console.log();
   }
@@ -110,12 +116,12 @@ function showMainHelp() {
   console.log('Commands:');
 
   specs.commands.forEach(command => {
-    let commandLine = `  ${command.name}`;
+    let commandPart = `  ${command.name}`;
     if (command.alias) {
-      commandLine += ` (${command.alias})`;
+      commandPart += ` (${command.alias})`;
     }
-    commandLine += `\t${command.description}`;
-    console.log(commandLine);
+    const paddedCommandPart = commandPart.padEnd(24);
+    console.log(`${paddedCommandPart}${command.description}`);
   });
 
   console.log(`\nVersion: ${specs.version}`);
