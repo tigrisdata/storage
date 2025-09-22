@@ -11,6 +11,7 @@
     "build": "npm run build --workspaces",
     "build:storage": "npm run build --workspace=@tigrisdata/storage",
     "build:cli": "npm run build --workspace=@tigrisdata/cli",
+    "build:react": "npm run build --workspace=@tigrisdata/react",
     "dev": "npm run dev --workspaces",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
@@ -67,6 +68,12 @@
         "@semantic-release/npm",
         {
           "pkgRoot": "packages/cli"
+        }
+      ],
+      [
+        "@semantic-release/npm",
+        {
+          "pkgRoot": "packages/react"
         }
       ]
     ]
