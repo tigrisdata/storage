@@ -7,7 +7,9 @@ interface Argument {
   name: string;
   description: string;
   alias?: string;
-  options?: string[] | Array<{ name: string; value: string; description: string }>;
+  options?:
+    | string[]
+    | Array<{ name: string; value: string; description: string }>;
   default?: string;
   required?: boolean;
   'required-when'?: string;
@@ -38,16 +40,17 @@ function formatArgumentHelp(arg: Argument): string {
 
   // Pad option part to ensure consistent alignment, adjust for longer aliases
   const minPadding = 26;
-  const paddedOptionPart = optionPart.length >= minPadding ?
-    optionPart + '  ' :
-    optionPart.padEnd(minPadding);
+  const paddedOptionPart =
+    optionPart.length >= minPadding
+      ? optionPart + '  '
+      : optionPart.padEnd(minPadding);
   let description = arg.description;
 
   if (arg.options) {
     if (Array.isArray(arg.options) && typeof arg.options[0] === 'string') {
       description += ` (options: ${(arg.options as string[]).join(', ')})`;
     } else {
-      description += ` (options: ${(arg.options as Array<{ name: string; value: string }>).map(o => o.value).join(', ')})`;
+      description += ` (options: ${(arg.options as Array<{ name: string; value: string }>).map((o) => o.value).join(', ')})`;
     }
   }
 
@@ -75,7 +78,7 @@ function showCommandHelp(command: CommandSpec) {
 
   if (command.operations && command.operations.length > 0) {
     console.log('Operations:');
-    command.operations.forEach(op => {
+    command.operations.forEach((op) => {
       let operationPart = `  ${op.name}`;
       if (op.alias) {
         const aliases = Array.isArray(op.alias) ? op.alias : [op.alias];
@@ -89,21 +92,25 @@ function showCommandHelp(command: CommandSpec) {
 
   if (command.arguments && command.arguments.length > 0) {
     console.log('Arguments:');
-    command.arguments.forEach(arg => {
+    command.arguments.forEach((arg) => {
       console.log(formatArgumentHelp(arg));
     });
     console.log();
   }
 
-  console.log(`Use "${specs.name} ${command.name} <operation> help" for more information about an operation.`);
+  console.log(
+    `Use "${specs.name} ${command.name} <operation> help" for more information about an operation.`
+  );
 }
 
 function showOperationHelp(command: CommandSpec, operation: OperationSpec) {
-  console.log(`\n${specs.name} ${command.name} ${operation.name} - ${operation.description}\n`);
+  console.log(
+    `\n${specs.name} ${command.name} ${operation.name} - ${operation.description}\n`
+  );
 
   if (operation.arguments && operation.arguments.length > 0) {
     console.log('Arguments:');
-    operation.arguments.forEach(arg => {
+    operation.arguments.forEach((arg) => {
       console.log(formatArgumentHelp(arg));
     });
     console.log();
@@ -115,7 +122,7 @@ function showMainHelp() {
   console.log('Usage: tigris [command] [options]\n');
   console.log('Commands:');
 
-  specs.commands.forEach(command => {
+  specs.commands.forEach((command) => {
     let commandPart = `  ${command.name}`;
     if (command.alias) {
       commandPart += ` (${command.alias})`;
@@ -125,11 +132,13 @@ function showMainHelp() {
   });
 
   console.log(`\nVersion: ${specs.version}`);
-  console.log(`\nUse "${specs.name} <command> help" for more information about a command.`);
+  console.log(
+    `\nUse "${specs.name} <command> help" for more information about a command.`
+  );
 }
 
 function addArgumentsToCommand(cmd: CommanderCommand, args: Argument[] = []) {
-  args.forEach(arg => {
+  args.forEach((arg) => {
     let optionString = `--${arg.name}`;
     if (arg.alias) {
       optionString += `, -${arg.alias}`;
@@ -138,14 +147,18 @@ function addArgumentsToCommand(cmd: CommanderCommand, args: Argument[] = []) {
     if (arg.options) {
       optionString += ' <value>';
     } else {
-      optionString += arg.required || arg['required-when'] ? ' <value>' : ' [value]';
+      optionString +=
+        arg.required || arg['required-when'] ? ' <value>' : ' [value]';
     }
 
     cmd.option(optionString, arg.description, arg.default);
   });
 }
 
-function validateRequiredWhen(args: Argument[], options: Record<string, unknown>): boolean {
+function validateRequiredWhen(
+  args: Argument[],
+  options: Record<string, unknown>
+): boolean {
   for (const arg of args) {
     if (arg['required-when']) {
       const [dependentArg, expectedValue] = arg['required-when'].split('=');
@@ -154,7 +167,9 @@ function validateRequiredWhen(args: Argument[], options: Record<string, unknown>
       const currentValue = getOptionValue(options, arg.name, args);
 
       if (dependentValue === expectedValue && !currentValue) {
-        console.error(`Error: --${arg.name} is required when --${dependentArg} is ${expectedValue}`);
+        console.error(
+          `Error: --${arg.name} is required when --${dependentArg} is ${expectedValue}`
+        );
         return false;
       }
     }
@@ -167,11 +182,16 @@ function validateRequiredWhen(args: Argument[], options: Record<string, unknown>
   return true;
 }
 
-function getOptionValue(options: Record<string, unknown>, argName: string, args?: Argument[]): unknown {
+function getOptionValue(
+  options: Record<string, unknown>,
+  argName: string,
+  args?: Argument[]
+): unknown {
   if (args) {
-    const argDef = args.find(a => a.name === argName);
+    const argDef = args.find((a) => a.name === argName);
     if (argDef && argDef.alias) {
-      const aliasKey = argDef.alias.charAt(0).toUpperCase() + argDef.alias.slice(1);
+      const aliasKey =
+        argDef.alias.charAt(0).toUpperCase() + argDef.alias.slice(1);
       if (options[aliasKey] !== undefined) {
         return options[aliasKey];
       }
@@ -183,7 +203,7 @@ function getOptionValue(options: Record<string, unknown>, argName: string, args?
     argName.replace(/-/g, ''),
     argName.replace(/-/g, '').toLowerCase(),
     argName.charAt(0).toUpperCase(),
-    camelCase(argName)
+    camelCase(argName),
   ];
 
   for (const key of possibleKeys) {
@@ -198,14 +218,72 @@ function camelCase(str: string): string {
   return str.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
 }
 
+async function loadAndExecuteCommand(
+  commandName: string,
+  operationName?: string,
+  options: Record<string, unknown> = {}
+) {
+  try {
+    let modulePath: string;
+    let functionName: string;
+
+    if (operationName) {
+      // For commands with operations: try command/operation.ts first, then command/operation/index.ts
+      modulePath = `./${commandName}/${operationName}.js`;
+      functionName = operationName;
+    } else {
+      // For direct commands: try command.ts first, then command/index.ts
+      modulePath = `./${commandName}.js`;
+      functionName = commandName;
+    }
+
+    try {
+      const module = await import(modulePath);
+      const commandFunction = module.default || module[functionName];
+
+      if (typeof commandFunction === 'function') {
+        await commandFunction(options);
+      } else {
+        console.error(
+          `No default export or ${functionName} function found in ${modulePath}`
+        );
+      }
+    } catch (importError) {
+      // Try alternative path with /index
+      try {
+        const indexModulePath = operationName
+          ? `./${commandName}/${operationName}/index.js`
+          : `./${commandName}/index.js`;
+
+        const module = await import(indexModulePath);
+        const commandFunction = module.default || module[functionName];
+
+        if (typeof commandFunction === 'function') {
+          await commandFunction(options);
+        } else {
+          console.error(
+            `No default export or ${functionName} function found in ${indexModulePath}`
+          );
+        }
+      } catch (indexImportError) {
+        console.error(
+          `Command implementation not found: ${modulePath} or ${operationName ? `${commandName}/${operationName}/index` : `${commandName}/index`}`
+        );
+        console.error(
+          'Create the implementation file with a default export function.'
+        );
+      }
+    }
+  } catch (error) {
+    console.error(`Error executing command: ${error}`);
+  }
+}
+
 const program = new CommanderCommand();
 
-program
-  .name(specs.name)
-  .description(specs.description)
-  .version(specs.version);
+program.name(specs.name).description(specs.description).version(specs.version);
 
-specs.commands.forEach(command => {
+specs.commands.forEach((command) => {
   const commandCmd = program
     .command(command.name)
     .description(command.description);
@@ -215,20 +293,29 @@ specs.commands.forEach(command => {
   }
 
   if (command.operations && command.operations.length > 0) {
-    command.operations.forEach(operationSpec => {
+    command.operations.forEach((operationSpec) => {
       const subCmd = commandCmd
         .command(operationSpec.name)
         .description(operationSpec.description)
-        .action((options) => {
-          if (operationSpec.arguments && !validateRequiredWhen(operationSpec.arguments, options)) {
+        .action(async (options) => {
+          if (
+            operationSpec.arguments &&
+            !validateRequiredWhen(operationSpec.arguments, options)
+          ) {
             return;
           }
-          console.log(`Executing: ${command.name} ${operationSpec.name}`, options);
+          await loadAndExecuteCommand(
+            command.name,
+            operationSpec.name,
+            options
+          );
         });
 
       if (operationSpec.alias) {
-        const aliases = Array.isArray(operationSpec.alias) ? operationSpec.alias : [operationSpec.alias];
-        aliases.forEach(alias => subCmd.alias(alias));
+        const aliases = Array.isArray(operationSpec.alias)
+          ? operationSpec.alias
+          : [operationSpec.alias];
+        aliases.forEach((alias) => subCmd.alias(alias));
       }
 
       addArgumentsToCommand(subCmd, operationSpec.arguments);
@@ -242,18 +329,32 @@ specs.commands.forEach(command => {
     });
 
     if (command.default) {
-      commandCmd.action((options) => {
-        const defaultOperation = command.operations?.find(c => c.name === command.default);
+      commandCmd.action(async (options) => {
+        const defaultOperation = command.operations?.find(
+          (c) => c.name === command.default
+        );
         if (defaultOperation) {
-          if (defaultOperation.arguments && !validateRequiredWhen(defaultOperation.arguments, options)) {
+          if (
+            defaultOperation.arguments &&
+            !validateRequiredWhen(defaultOperation.arguments, options)
+          ) {
             return;
           }
-          console.log(`Executing: ${command.name} ${defaultOperation.name}`, options);
+          await loadAndExecuteCommand(
+            command.name,
+            defaultOperation.name,
+            options
+          );
         }
       });
 
-      if (command.operations.find(c => c.name === command.default)?.arguments) {
-        addArgumentsToCommand(commandCmd, command.operations.find(c => c.name === command.default)?.arguments);
+      if (
+        command.operations.find((c) => c.name === command.default)?.arguments
+      ) {
+        addArgumentsToCommand(
+          commandCmd,
+          command.operations.find((c) => c.name === command.default)?.arguments
+        );
       }
     } else {
       commandCmd.action(() => {
@@ -262,11 +363,14 @@ specs.commands.forEach(command => {
     }
   } else {
     addArgumentsToCommand(commandCmd, command.arguments);
-    commandCmd.action((options) => {
-      if (command.arguments && !validateRequiredWhen(command.arguments, options)) {
+    commandCmd.action(async (options) => {
+      if (
+        command.arguments &&
+        !validateRequiredWhen(command.arguments, options)
+      ) {
         return;
       }
-      console.log(`Executing: ${command.name}`, options);
+      await loadAndExecuteCommand(command.name, undefined, options);
     });
   }
 
