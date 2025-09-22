@@ -39,7 +39,7 @@ export type PutResponse = {
 
 export async function put(
   path: string,
-  data: string | ReadableStream | Blob | Buffer,
+  body: string | ReadableStream | Blob | Buffer,
   options?: PutOptions
 ): Promise<TigrisStorageResponse<PutResponse, Error>> {
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
@@ -78,7 +78,7 @@ export async function put(
     params: {
       Bucket: options?.config?.bucket ?? config.bucket,
       Key: path,
-      Body: data,
+      Body: body,
       ContentType: options?.contentType ?? undefined,
       ContentDisposition: contentDisposition,
       ACL: access,
