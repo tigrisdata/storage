@@ -6,7 +6,9 @@ import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 export type ListOptions = {
   limit?: number;
   paginationToken?: string;
-  // @deprecated
+  /**
+   * @deprecated Use paginationToken instead
+   */
   paginationMarker?: string;
   config?: TigrisStorageConfig;
 };
@@ -50,7 +52,7 @@ export async function list(
         data: {
           items:
             res.Contents?.map((item) => ({
-              id: item.ETag?.replace(/"/g, '') ?? '',
+              id: item.Key ?? '',
               name: item.Key ?? '',
               size: item.Size ?? 0,
               lastModified: item.LastModified ?? new Date(),
