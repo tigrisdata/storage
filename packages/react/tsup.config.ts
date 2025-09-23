@@ -11,4 +11,11 @@ export default defineConfig({
   globalName: 'TigrisReact',
   platform: 'browser',
   external: ['react', 'react-dom'],
+  esbuildOptions: (options) => {
+    options.loader = {
+      ...options.loader,
+      '.css': 'css',
+      '.scss': 'css',
+    };
+  },
 });
