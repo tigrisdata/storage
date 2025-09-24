@@ -33,7 +33,9 @@ export async function upload(
   options?: UploadOptions
 ): Promise<TigrisStorageResponse<UploadResponse, Error>> {
   if (!options?.url) {
-    throw new Error('URL option is required for client uploads');
+    return {
+      error: new Error('URL option is required for client uploads'),
+    };
   }
 
   if (options?.addRandomSuffix) {
@@ -57,9 +59,11 @@ export async function upload(
     });
 
     if (!presignedResponse.ok) {
-      throw new Error(
-        `Failed to get presigned URL: ${presignedResponse.statusText}`
-      );
+      return {
+        error: new Error(
+          `Failed to get presigned URL: ${presignedResponse.statusText}`
+        ),
+      };
     }
 
     const { data: presignedData } = await presignedResponse.json();
