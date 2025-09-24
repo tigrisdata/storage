@@ -1,3 +1,5 @@
+import { TigrisStorageResponse } from './lib/types';
+
 export type UploadOptions = {
   access?: 'public' | 'private';
   addRandomSuffix?: boolean;
@@ -29,7 +31,7 @@ export async function upload(
   path: string,
   data: File | Blob,
   options?: UploadOptions
-): Promise<UploadResponse> {
+): Promise<TigrisStorageResponse<UploadResponse, Error>> {
   if (!options?.url) {
     throw new Error('URL option is required for client uploads');
   }
@@ -100,16 +102,20 @@ export async function upload(
     });
 
     return {
-      contentDisposition: options?.contentDisposition,
-      contentType: options?.contentType ?? data.type,
-      modified: new Date(),
-      path,
-      size: data.size,
-      url: presignedUrl.replace('x-id=PutObject', 'x-id=GetObject'), // Clean URL without query params
+      data: {
+        contentDisposition: options?.contentDisposition,
+        contentType: options?.contentType ?? data.type,
+        modified: new Date(),
+        path,
+        size: data.size,
+        url: presignedUrl.replace('x-id=PutObject', 'x-id=GetObject'), // Clean URL without query params
+      },
     };
   } catch (error) {
-    throw new Error(
-      `client upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+    return {
+      error: new Error(
+        `client upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      ),
+    };
   }
 }
