@@ -316,7 +316,7 @@ commands:
             type: noun
             required: true
       # delete
-     - name: delete
+      - name: delete
         description: Delete bucket
         alias: d
         arguments:

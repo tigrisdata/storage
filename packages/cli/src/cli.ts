@@ -1,7 +1,17 @@
 #!/usr/bin/env node
 
 import { Command as CommanderCommand } from 'commander';
-import specs from '../specs.json';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import * as YAML from 'yaml';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const specsPath = join(__dirname, '..', 'specs.yaml');
+const specsContent = readFileSync(specsPath, 'utf8');
+const specs = YAML.parse(specsContent);
 
 interface Argument {
   name: string;
@@ -13,7 +23,9 @@ interface Argument {
   default?: string;
   required?: boolean;
   'required-when'?: string;
-  type?: string;
+  type?: 'noun' | 'flag' | string;
+  multiple?: boolean;
+  examples?: string[];
 }
 
 interface OperationSpec {
@@ -33,9 +45,15 @@ interface CommandSpec {
 }
 
 function formatArgumentHelp(arg: Argument): string {
-  let optionPart = `  --${arg.name}`;
-  if (arg.alias) {
-    optionPart += `, -${arg.alias}`;
+  let optionPart: string;
+
+  if (arg.type === 'noun') {
+    optionPart = `  ${arg.name}`;
+  } else {
+    optionPart = `  --${arg.name}`;
+    if (arg.alias) {
+      optionPart += `, -${arg.alias}`;
+    }
   }
 
   // Pad option part to ensure consistent alignment, adjust for longer aliases
@@ -66,8 +84,16 @@ function formatArgumentHelp(arg: Argument): string {
     description += ` [required when: ${arg['required-when']}]`;
   }
 
-  if (arg.type === 'multiple') {
+  if (arg.multiple) {
     description += ' [multiple values: comma-separated]';
+  }
+
+  if (arg.type === 'noun') {
+    description += ' [positional argument]';
+  }
+
+  if (arg.examples && arg.examples.length > 0) {
+    description += ` (examples: ${arg.examples.join(', ')})`;
   }
 
   return `${paddedOptionPart}${description}`;
@@ -122,7 +148,7 @@ function showMainHelp() {
   console.log('Usage: tigris [command] [options]\n');
   console.log('Commands:');
 
-  specs.commands.forEach((command) => {
+  specs.commands.forEach((command: CommandSpec) => {
     let commandPart = `  ${command.name}`;
     if (command.alias) {
       commandPart += ` (${command.alias})`;
@@ -139,19 +165,26 @@ function showMainHelp() {
 
 function addArgumentsToCommand(cmd: CommanderCommand, args: Argument[] = []) {
   args.forEach((arg) => {
-    let optionString = `--${arg.name}`;
-    if (arg.alias) {
-      optionString += `, -${arg.alias}`;
-    }
-
-    if (arg.options) {
-      optionString += ' <value>';
+    if (arg.type === 'noun') {
+      // Handle noun arguments as positional arguments
+      const argumentName = arg.required ? `<${arg.name}>` : `[${arg.name}]`;
+      cmd.argument(argumentName, arg.description);
     } else {
-      optionString +=
-        arg.required || arg['required-when'] ? ' <value>' : ' [value]';
-    }
+      // Handle regular flag/option arguments
+      let optionString = `--${arg.name}`;
+      if (arg.alias) {
+        optionString += `, -${arg.alias}`;
+      }
 
-    cmd.option(optionString, arg.description, arg.default);
+      if (arg.options) {
+        optionString += ' <value>';
+      } else {
+        optionString +=
+          arg.required || arg['required-when'] ? ' <value>' : ' [value]';
+      }
+
+      cmd.option(optionString, arg.description, arg.default);
+    }
   });
 }
 
@@ -221,6 +254,7 @@ function camelCase(str: string): string {
 async function loadAndExecuteCommand(
   commandName: string,
   operationName?: string,
+  positionalArgs: string[] = [],
   options: Record<string, unknown> = {}
 ) {
   try {
@@ -242,7 +276,7 @@ async function loadAndExecuteCommand(
       const commandFunction = module.default || module[functionName];
 
       if (typeof commandFunction === 'function') {
-        await commandFunction(options);
+        await commandFunction({ ...options, _positional: positionalArgs });
       } else {
         console.error(
           `No default export or ${functionName} function found in ${modulePath}`
@@ -259,7 +293,7 @@ async function loadAndExecuteCommand(
         const commandFunction = module.default || module[functionName];
 
         if (typeof commandFunction === 'function') {
-          await commandFunction(options);
+          await commandFunction({ ...options, _positional: positionalArgs });
         } else {
           console.error(
             `No default export or ${functionName} function found in ${indexModulePath}`
@@ -283,7 +317,35 @@ const program = new CommanderCommand();
 
 program.name(specs.name).description(specs.description).version(specs.version);
 
-specs.commands.forEach((command) => {
+function extractArgumentValues(args: Argument[], positionalArgs: string[], options: Record<string, unknown>): Record<string, unknown> {
+  const result = { ...options };
+
+  // Map positional arguments to their names
+  const positionalArgDefs = args.filter(arg => arg.type === 'noun');
+  positionalArgDefs.forEach((arg, index) => {
+    if (positionalArgs[index] !== undefined) {
+      if (arg.multiple) {
+        // For multiple arguments, split by comma
+        result[arg.name] = positionalArgs[index].split(',').map(s => s.trim());
+      } else {
+        result[arg.name] = positionalArgs[index];
+      }
+    }
+  });
+
+  // Handle multiple flag arguments
+  args.forEach(arg => {
+    if (arg.multiple && arg.type !== 'noun' && result[arg.name]) {
+      if (typeof result[arg.name] === 'string') {
+        result[arg.name] = (result[arg.name] as string).split(',').map(s => s.trim());
+      }
+    }
+  });
+
+  return result;
+}
+
+specs.commands.forEach((command: CommandSpec) => {
   const commandCmd = program
     .command(command.name)
     .description(command.description);
@@ -293,32 +355,39 @@ specs.commands.forEach((command) => {
   }
 
   if (command.operations && command.operations.length > 0) {
-    command.operations.forEach((operationSpec) => {
+    command.operations.forEach((operationSpec: OperationSpec) => {
       const subCmd = commandCmd
         .command(operationSpec.name)
-        .description(operationSpec.description)
-        .action(async (options) => {
-          if (
-            operationSpec.arguments &&
-            !validateRequiredWhen(operationSpec.arguments, options)
-          ) {
-            return;
-          }
-          await loadAndExecuteCommand(
-            command.name,
-            operationSpec.name,
-            options
-          );
-        });
+        .description(operationSpec.description);
 
       if (operationSpec.alias) {
         const aliases = Array.isArray(operationSpec.alias)
           ? operationSpec.alias
           : [operationSpec.alias];
-        aliases.forEach((alias) => subCmd.alias(alias));
+        aliases.forEach((alias: string) => subCmd.alias(alias));
       }
 
       addArgumentsToCommand(subCmd, operationSpec.arguments);
+
+      subCmd.action(async (...args) => {
+        // Handle both positional and option arguments
+        const options = args.pop(); // Last argument is always options
+        const positionalArgs = args; // Remaining are positional arguments
+
+        if (
+          operationSpec.arguments &&
+          !validateRequiredWhen(operationSpec.arguments, extractArgumentValues(operationSpec.arguments, positionalArgs, options))
+        ) {
+          return;
+        }
+
+        await loadAndExecuteCommand(
+          command.name,
+          operationSpec.name,
+          positionalArgs,
+          extractArgumentValues(operationSpec.arguments || [], positionalArgs, options)
+        );
+      });
 
       subCmd
         .command('help')
@@ -329,32 +398,31 @@ specs.commands.forEach((command) => {
     });
 
     if (command.default) {
-      commandCmd.action(async (options) => {
-        const defaultOperation = command.operations?.find(
-          (c) => c.name === command.default
-        );
-        if (defaultOperation) {
+      const defaultOperation = command.operations?.find(
+        (c: OperationSpec) => c.name === command.default
+      );
+
+      if (defaultOperation) {
+        addArgumentsToCommand(commandCmd, defaultOperation.arguments);
+
+        commandCmd.action(async (...args) => {
+          const options = args.pop();
+          const positionalArgs = args;
+
           if (
             defaultOperation.arguments &&
-            !validateRequiredWhen(defaultOperation.arguments, options)
+            !validateRequiredWhen(defaultOperation.arguments, extractArgumentValues(defaultOperation.arguments, positionalArgs, options))
           ) {
             return;
           }
+
           await loadAndExecuteCommand(
             command.name,
             defaultOperation.name,
-            options
+            positionalArgs,
+            extractArgumentValues(defaultOperation.arguments || [], positionalArgs, options)
           );
-        }
-      });
-
-      if (
-        command.operations.find((c) => c.name === command.default)?.arguments
-      ) {
-        addArgumentsToCommand(
-          commandCmd,
-          command.operations.find((c) => c.name === command.default)?.arguments
-        );
+        });
       }
     } else {
       commandCmd.action(() => {
@@ -363,14 +431,24 @@ specs.commands.forEach((command) => {
     }
   } else {
     addArgumentsToCommand(commandCmd, command.arguments);
-    commandCmd.action(async (options) => {
+
+    commandCmd.action(async (...args) => {
+      const options = args.pop();
+      const positionalArgs = args;
+
       if (
         command.arguments &&
-        !validateRequiredWhen(command.arguments, options)
+        !validateRequiredWhen(command.arguments, extractArgumentValues(command.arguments, positionalArgs, options))
       ) {
         return;
       }
-      await loadAndExecuteCommand(command.name, undefined, options);
+
+      await loadAndExecuteCommand(
+        command.name,
+        undefined,
+        positionalArgs,
+        extractArgumentValues(command.arguments || [], positionalArgs, options)
+      );
     });
   }
 

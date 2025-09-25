@@ -5,8 +5,7 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/cli.js",
-      "require": "./dist/cli.cjs"
+      "import": "./dist/cli.js"
     }
   },
   "bin": {
@@ -43,6 +42,10 @@
   "license": "MIT",
   "dependencies": {
     "@tigrisdata/storage": "*",
-    "commander": "^11.0.0"
+    "commander": "^11.0.0",
+    "yaml": "^2.3.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
   }
 }
