@@ -10,7 +10,8 @@
     }
   },
   "bin": {
-    "tigris": "./dist/cli.js"
+    "tigris": "./dist/cli.js",
+    "t3": "./dist/cli.js"
   },
   "files": [
     "dist",
