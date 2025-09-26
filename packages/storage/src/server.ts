@@ -2,6 +2,7 @@ export { get, type GetOptions, type GetResponse } from './lib/get';
 export { head, type HeadOptions, type HeadResponse } from './lib/head';
 export {
   list,
+  type Item,
   type ListItem,
   type ListOptions,
   type ListResponse,

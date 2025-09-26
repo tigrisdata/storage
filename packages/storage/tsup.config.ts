@@ -4,7 +4,11 @@ export default defineConfig([
   {
     entry: ['src/server.ts'],
     format: ['esm', 'cjs'],
-    dts: true,
+    dts: {
+      compilerOptions: {
+        removeComments: false,
+      },
+    },
     clean: true,
     splitting: false,
     sourcemap: true,
@@ -15,7 +19,11 @@ export default defineConfig([
   {
     entry: ['src/client.ts'],
     format: ['esm', 'cjs'],
-    dts: true,
+    dts: {
+      compilerOptions: {
+        removeComments: false,
+      },
+    },
     clean: true,
     splitting: false,
     sourcemap: true,
