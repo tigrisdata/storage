@@ -7,6 +7,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 import { config } from './config';
 import { createTigrisClient } from './tigris-client';
+import { getPresignedUrl } from './presigned-url';
 
 export type InitMultipartUploadOptions = {
   config?: TigrisStorageConfig;
@@ -95,12 +96,14 @@ export type CompleteMultipartUploadOptions = {
 };
 
 export type CompleteMultipartUploadResponse = {
-  etag: string;
+  path: string;
+  url: string;
 };
 
 export async function completeMultipartUpload(
   path: string,
   uploadId: string,
+  partIds: Array<{ [key: number]: string }>,
   options?: CompleteMultipartUploadOptions
 ): Promise<TigrisStorageResponse<CompleteMultipartUploadResponse, Error>> {
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
@@ -113,15 +116,40 @@ export async function completeMultipartUpload(
     Bucket: options?.config?.bucket ?? config.bucket,
     Key: path,
     UploadId: uploadId,
+    MultipartUpload: {
+      Parts: partIds.flatMap((parts) =>
+        Object.keys(parts).map((partNumber) => ({
+          ETag: parts[parseInt(partNumber)],
+          PartNumber: parseInt(partNumber),
+        }))
+      ),
+    },
   });
 
-  const response = await tigrisClient.send(completeCommand);
+  try {
+    const result = await tigrisClient.send(completeCommand);
 
-  if (!response.ETag) {
-    return { error: new Error('Unable to complete multipart upload') };
+    if (result) {
+      const signedUrl = await getPresignedUrl(path, {
+        config: options?.config,
+        operation: 'get',
+        expiresIn: 3600,
+      });
+
+      return {
+        data: {
+          path,
+          url: signedUrl.data?.url ?? '',
+        },
+      };
+    } else {
+      return {
+        error: new Error(`Unable to complete multipart upload`),
+      };
+    }
+  } catch {
+    return {
+      error: new Error(`Unable to complete multipart upload`),
+    };
   }
-
-  return {
-    data: undefined,
-  };
 }

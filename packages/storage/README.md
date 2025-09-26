@@ -381,7 +381,6 @@ if (result.error) {
 ## Presigning an object
 
 `getPresignedUrl` function can be used to presign an object from a bucket and
-`getPresignedUrl` function can be used to presign an object from a bucket and
 retrieve the presigned URL.
 
 ### `getPresignedUrl`
@@ -399,7 +398,7 @@ getPresignedUrl(path: string, options: GetPresignedUrlOptions): Promise<TigrisSt
 
 | **Parameter** | **Required** | **Values**                                                                               |
 | ------------- | ------------ | ---------------------------------------------------------------------------------------- |
-| method        | No           | Specify the operation to use for the presigned URL. Possible values are `get` and `put`. |
+| operation     | No           | Specify the operation to use for the presigned URL. Possible values are `get` and `put`. |
 | expiresIn     | No           | The expiration time of the presigned URL in seconds. Default is 3600 seconds (1 hour).   |
 | contentType   | No           | The content type of the object.                                                          |
 | config        | No           | A configuration object to override the [default configuration](#authentication).         |
@@ -416,7 +415,7 @@ presigned URL and contains the following properties:
 #### Get a presigned URL for a GET operation
 
 ```ts
-const result = await getPresignedUrl('object.txt', { method: 'get' });
+const result = await getPresignedUrl('object.txt', { operation: 'get' });
 
 if (result.error) {
   console.error('Error getting presigned URL:', result.error);
@@ -428,7 +427,7 @@ if (result.error) {
 #### Get a presigned URL for a PUT operation
 
 ```ts
-const result = await getPresignedUrl('object.txt', { method: 'put' });
+const result = await getPresignedUrl('object.txt', { operation: 'put' });
 ```
 
 ## Listing objects
@@ -447,11 +446,11 @@ list(options?: ListOptions): Promise<TigrisStorageResponse<ListResponse, Error>>
 
 #### `options`
 
-| **Parameter**                             | **Required** | **Values**                                                                      |
-| ----------------------------------------- | ------------ | ------------------------------------------------------------------------------- |
-| limit                                     | No           | The maximum number of objects to return. By default, returns up to 100 objects. |
-| paginationToken                           | No           | The pagination token to continue listing objects from the previous request.     |
-| config                                    | No           | A configuration object to override the [default configuration](#authentication). |
+| **Parameter**   | **Required** | **Values**                                                                       |
+| --------------- | ------------ | -------------------------------------------------------------------------------- |
+| limit           | No           | The maximum number of objects to return. By default, returns up to 100 objects.  |
+| paginationToken | No           | The pagination token to continue listing objects from the previous request.      |
+| config          | No           | A configuration object to override the [default configuration](#authentication). |
 
 In case of successful `list`, the `data` property will be set to the list of
 objects and contains the following properties:
@@ -501,6 +500,78 @@ if (currentPage.data) {
 
 console.log(allFiles);
 ```
+
+## Client Uploads
+
+Amongst all the other great features of Tigris, free egress fees is another
+example of what makes us stand out from other providers. We care about the
+bandwidth costs and we want to make it as cheap as possible for you to use
+Tigris. That's why we've made it so that you can upload files directly to Tigris
+from the client side.
+
+We leverage the
+[presigned URLs](https://tigrisdata.com/docs/sdks/tigris/using-sdk#presigning-an-object) features to
+allow you to upload files directly to Tigris from the client side.
+
+Client side uploads are a great way to upload objects to a bucket directly from
+the browser as it allows you to upload objects to a bucket without having to
+proxy the objects through your server saving costs on bandwidth.
+
+### Uploading an object
+
+You can use the `upload` method from `client` package to upload objects directly
+to Tigris from the client side.
+
+```ts
+import { upload } from '@tigrisdata/storage/client';
+```
+
+`upload` accepts the following parameters:
+
+- `path`: (Required) A string specifying the path to the object
+- `body`: (Required) A blob object as File or Blob
+- `options`: (Optional) A JSON object with the following optional parameters:
+
+#### `options`
+
+| **Parameter**    | **Required** | **Values**                                                                                                  |
+| ---------------- | ------------ | ----------------------------------------------------------------------------------------------------------- |
+| url              | No           | The URL to upload the file to.                                                                              |
+| access           | No           | The access level for the object. Possible values are `public` and `private`.                                |
+| onUploadProgress | No           | Callback to track upload progress: `onUploadProgress({loaded: number, total: number, percentage: number})`. |
+| config           | No           | A configuration object to override the [default configuration](/docs/sdks/tigris/using-sdk#authentication). |
+
+In case of successful upload, the `data` property will be set to the upload and
+contains the following properties:
+
+- `contentDisposition`: content disposition of the object
+- `contentType`: content type of the object
+- `modified`: Last modified date of the object
+- `path`: Path to the object
+- `size`: Size of the object
+- `url`: A presigned URL to the object
+
+### Example
+
+```html
+<input type="file" onchange="handleFileChange(event)" />
+
+<script>
+  function handleFileChange(event) {
+    const file = event.target.files[0];
+    upload('file.txt', file, {
+      url: '/api/upload',
+      access: 'private',
+      multipart: true,
+      onUploadProgress: ({ loaded, total, percentage }) => {
+        console.log(`Uploaded ${loaded} of ${total} bytes (${percentage}%)`);
+      },
+    });
+  }
+</script>
+```
+
+You can see a full example [here](https://tigrisdata.com/docs/sdks/tigris/examples#client-uploads).
 
 ## Examples
 

@@ -5,6 +5,7 @@ import { config } from './config';
 import { head } from './head';
 import { createTigrisClient } from './tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
+import { addRandomSuffix } from './utils';
 
 export type PutOnUploadProgress = ({
   loaded,
@@ -49,7 +50,7 @@ export async function put(
   }
 
   if (options?.addRandomSuffix) {
-    path = `${path.split('.')[0]}-${Math.random().toString(36).substring(2, 15)}.${path.split('.')[1] ?? ''}`;
+    path = addRandomSuffix(path);
   }
 
   const allowOverwrite = options?.allowOverwrite ?? true;

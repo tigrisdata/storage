@@ -25,3 +25,4 @@ export {
 } from './lib/presigned-url';
 export { put, type PutOptions, type PutResponse } from './lib/put';
 export { remove, type RemoveOptions } from './lib/remove';
+export { UploadAction } from './lib/upload';

@@ -4,18 +4,28 @@ import { config } from './config';
 import { createTigrisClient } from './tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
+export type GetPresignedUrlOperation = 'get' | 'put';
+
+type MethodOrOperation =
+  | {
+      method: GetPresignedUrlOperation;
+      operation?: never;
+    }
+  | {
+      operation: GetPresignedUrlOperation;
+      method?: never;
+    };
+
 export type GetPresignedUrlOptions = {
-  method: 'get' | 'put';
   expiresIn?: number;
   contentType?: string;
   config?: TigrisStorageConfig;
-};
+} & MethodOrOperation;
 
 export type GetPresignedUrlResponse = {
   url: string;
-  method: 'get' | 'put';
   expiresIn: number;
-};
+} & MethodOrOperation;
 
 export async function getPresignedUrl(
   path: string,
@@ -29,11 +39,20 @@ export async function getPresignedUrl(
 
   const bucket = options?.config?.bucket ?? config.bucket;
   const expiresIn = options.expiresIn ?? 3600; // 1 hour default
+  const operation = options.operation ?? options.method;
+
+  if (!operation) {
+    return {
+      error: new Error(
+        'Operation is required, possible values are `get` and `put`'
+      ),
+    };
+  }
 
   try {
     let signedUrl: string;
 
-    if (options.method === 'put') {
+    if (operation === 'put') {
       const command = new PutObjectCommand({
         Bucket: bucket,
         Key: path,
@@ -51,7 +70,7 @@ export async function getPresignedUrl(
     return {
       data: {
         url: signedUrl,
-        method: options.method,
+        ...(operation ? { operation } : { method: operation }),
         expiresIn,
       },
     };

@@ -11,7 +11,7 @@ export default defineConfig([
     },
     clean: true,
     splitting: false,
-    sourcemap: true,
+    sourcemap: false,
     minify: true,
     globalName: 'TigrisStorage',
     platform: 'neutral',
