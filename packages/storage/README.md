@@ -381,7 +381,8 @@ if (result.error) {
 ## Presigning an object
 
 `getPresignedUrl` function can be used to presign an object from a bucket and
-retreive the presigned URL.
+`getPresignedUrl` function can be used to presign an object from a bucket and
+retrieve the presigned URL.
 
 ### `getPresignedUrl`
 
