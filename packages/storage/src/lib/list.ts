@@ -13,6 +13,9 @@ export type ListOptions = {
   config?: TigrisStorageConfig;
 };
 
+/**
+ * @deprecated Use ListItem instead
+ */
 export type Item = {
   id: string;
   name: string;
@@ -20,8 +23,10 @@ export type Item = {
   lastModified: Date;
 };
 
+export type ListItem = Item;
+
 export type ListResponse = {
-  items: Item[];
+  items: ListItem[];
   paginationToken: string | undefined;
   hasMore: boolean;
 };

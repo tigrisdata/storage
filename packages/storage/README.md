@@ -1,6 +1,6 @@
 # @tigrisdata/storage
 
-Tigris is a high-performance object storage system designed for multi-cloud environments.
+Tigris is a high-performance object storage system designed for multi-cloud environments. Tigris Storage SDK provides a simple interface and minimal configuration that lets you get started quickly and integrate Tigris into your application. It is built on top of Tigris Object Storage API and offers all the functionality of Tigris.
 
 ## Installation
 
@@ -11,37 +11,65 @@ npm install @tigrisdata/storage
 yarn add @tigrisdata/storage
 ```
 
-### Create a Storage Bucket
+## Getting Started
 
-1. Create an account at [storage.new](https://storage.new/). You'll be up and running in a minute.
-2. Create a bucket with a unique name.
-3. Create [Access Keys](https://console.tigris.dev/createaccesskey), make sure to save them somewhere as you will need them to configure in your project
+Getting started with Tigris Storage SDK is easy. First, you need to create a
+Tigris account and create a bucket.
+
+### Setting up your account and bucket
+
+1. Create a Tigris account at [storage.new](https://storage.new)
+2. Create a bucket at
+   [console.tigris.dev/createbucket](https://console.tigris.dev/createbucket)
+3. Create an access key at
+   [console.tigris.dev/createaccesskey](https://console.tigris.dev/createaccesskey)
 
 ### Configure your Project
 
-In your project root, create a `.env` file if it doesn't exist already and put the following content in it. Replace the values with actual values your obtained from above steps
+In your project root, create a `.env` file if it doesn't exist already and put
+the following content in it. Replace the values with actual values you obtained
+from above steps.
 
-```
-TIGRIS_STORAGE_ACCESS_KEY_ID=tid_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-TIGRIS_STORAGE_SECRET_ACCESS_KEY=tsec_yyyyyyyyyyyyyyyyyyyyyyy
+```bash
+TIGRIS_STORAGE_ACCESS_KEY_ID=tid_access_key_id
+TIGRIS_STORAGE_SECRET_ACCESS_KEY=tsec_secret_access_key
 TIGRIS_STORAGE_BUCKET=bucket_name
 ```
 
-## API Reference
+## Authentication
 
-Tigris Storage API provides the following methods for managing objects in your storage bucket:
+After you have created an access key, you can set the environment variables in
+your `.env` file:
 
-### Authentication & Configuration
+```bash
+TIGRIS_STORAGE_ACCESS_KEY_ID=tid_access_key_id
+TIGRIS_STORAGE_SECRET_ACCESS_KEY=tsec_secret_access_key
+TIGRIS_STORAGE_BUCKET=bucket_name
+```
 
-All methods accept an optional `config` parameter that allows you to override the default environment configuration:
+Alternatively, all methods accept an optional config parameter that allows you
+to override the default environment configuration:
 
-```typescript
-import { list, get, put, head, remove } from '@tigrisdata/storage';
+```ts
+type TigrisStorageConfig = {
+  bucket?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  endpoint?: string;
+};
+```
 
-// Use environment variables (default)
+### Examples
+
+#### Use environment variables (default)
+
+```ts
 const result = await list();
+```
 
-// Override with custom config
+#### Override with custom config
+
+```ts
 const result = await list({
   config: {
     bucket: 'my-bucket-name',
@@ -49,46 +77,416 @@ const result = await list({
     secretAccessKey: 'tigris-secret-key',
   },
 });
+```
 
-// Override only specific values
-const result = await get('file.txt', 'string', {
+#### Override only specific values
+
+```ts
+const result = await get('object.txt', 'string', {
   config: {
     bucket: 'different-bucket',
   },
 });
 ```
 
-The `config` parameter accepts:
+## Responses
 
-- `bucket`: Storage bucket name
-- `accessKeyId`: Your access key ID
-- `secretAccessKey`: Your secret access key
-- `endpoint`: Tigris Storage endpoint (defaults to `https://t3.storage.dev`)
+All methods return a generic response of type `TigrisStorageResponse`. If there
+is an error, the `error` property will be set. If there is a successful
+response, the `data` property will be set. This allows for a better type safety
+and error handling.
 
-### `list` - List Objects
+```ts
+type TigrisStorageResponse<T, E> = {
+  data?: T;
+  error?: E;
+};
+```
 
-Lists all objects in the bucket with pagination support.
+### Example
 
-```typescript
-import { list, type Item } from '@tigrisdata/storage';
+```ts
+const objectResult = await get('photo.jpg', 'file');
+if (objectResult.error) {
+  console.error('Error downloading object:', objectResult.error);
+} else {
+  console.log('Object name:', objectResult.data?.name);
+  console.log('Object size:', objectResult.data?.size);
+  console.log('Object type:', objectResult.data?.type);
+}
+```
 
-// List first 100 objects
-const result = await list({ limit: 100 });
+## Uploading an object
 
+`put` function can be used to upload a object to a bucket.
+
+### `put`
+
+```ts
+put(path: string, body: string | ReadableStream | Blob | Buffer, options?: PutOptions): Promise<TigrisStorageResponse<PutResponse, Error>>;
+```
+
+`put` accepts the following parameters:
+
+- `path`: (Required) A string specifying the base value of the return URL
+- `body`: (Required) A blob object as ReadableStream, String, ArrayBuffer or
+  Blob based on these supported body types
+- `options`: (Optional) A JSON object with the following optional parameters:
+
+#### `options`
+
+| **Parameter**      | **Required** | **Values**                                                                                                                                              |
+| ------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| access             | No           | The access level for the object. Possible values are `public` and `private`.                                                                            |
+| addRandomSuffix    | No           | Whether to add a random suffix to the object name. Default is `false`.                                                                                  |
+| allowOverwrite     | No           | Whether to allow overwriting the object. Default is `true`.                                                                                             |
+| contentType        | No           | Set the content type of the object. If not provided, the content type will be inferred from the extension of the path.                                  |
+| contentDisposition | No           | Set the content disposition of the object. Possible values are `inline` and `attachment`. Default is `inline`. Use `attachment` for downloadable files. |
+| multipart          | No           | Pass `multipart: true` when uploading large objects. It will split the object into multiple parts and upload them in parallel.                          |
+| abortController    | No           | An AbortController instance to abort the upload.                                                                                                        |
+| onUploadProgress   | No           | Callback to track upload progress: `onUploadProgress({loaded: number, total: number, percentage: number})`.                                             |
+| config             | No           | A configuration object to override the [default configuration](#authentication).                                                                        |
+
+In case of successful upload, the `data` property will be set to the upload and
+contains the following properties:
+
+- `contentDisposition`: content disposition of the object
+- `contentType`: content type of the object
+- `modified`: Last modified date of the object
+- `path`: Path to the object
+- `size`: Size of the object
+- `url`: A presigned URL to the object if the object is uploaded with `access`
+  set to `private`, otherwise unsigned public URL for the object
+
+### Examples
+
+#### Simple upload
+
+```ts
+const result = await put('simple.txt', 'Hello, World!');
 if (result.error) {
-  console.error('Error listing files:', result.error);
+  console.error('Error uploading object:', result.error);
+} else {
+  console.log('Object uploaded successfully:', result.data);
+}
+```
+
+#### Uploading a large object
+
+```ts
+const result = await put('large.mp4', fileStream, {
+  multipart: true,
+  onUploadProgress: ({ loaded, total, percentage }) => {
+    console.log(`Uploaded ${loaded} of ${total} bytes (${percentage}%)`);
+  },
+});
+```
+
+#### Prevent overwriting
+
+```ts
+const result = await put('config.json', configuration, {
+  allowOverwrite: false,
+});
+```
+
+#### Cancel an upload
+
+```ts
+const abortController = new AbortController();
+
+const result = await put('large.mp4', fileStream, {
+  abortController: abortController,
+});
+
+function cancelUpload() {
+  abortController.abort();
 }
 
-// Pagination example
+// <button onClick={cancelUpload}>Cancel Upload</button>
+```
+
+## Downloading an object
+
+`get` function can be used to get/download a object from a bucket.
+
+### `get`
+
+```ts
+get(path: string, format: "string" | "file" | "stream", options?: GetOptions): Promise<TigrisStorageResponse<GetResponse, Error>>;
+```
+
+`get` accepts the following parameters:
+
+- `path`: (Required) A string specifying the path to the object
+- `format`: (Required) A string specifying the format of the object. Possible
+  values are `string`, `file`, and `stream`.
+- `options`: (Optional) A JSON object with the following optional parameters:
+
+#### `options`
+
+| **Parameter**      | **Required** | **Values**                                                                                                                                              |
+| ------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| contentDisposition | No           | Set the content disposition of the object. Possible values are `inline` and `attachment`. Default is `inline`. Use `attachment` for downloadable files. |
+| contentType        | No           | Set the content type of the object. If not provided, content type set when the object is uploaded will be used.                                         |
+| encoding           | No           | Set the encoding of the object. Default is `utf-8`.                                                                                                     |
+| config             | No           | A configuration object to override the [default configuration](#authentication).                                                                        |
+
+In case of successful `get`, the `data` contains the object in the format
+specified by the `format` parameter.
+
+### Examples
+
+#### Get an object as a string
+
+```ts
+const result = await get('object.txt', 'string');
+
+if (result.error) {
+  console.error('Error getting object:', result.error);
+} else {
+  console.log('Object:', result.data);
+  // output: "Hello, World!"
+}
+```
+
+#### Get an object as a file
+
+```ts
+const result = await get('object.pdf', 'file', {
+  contentDisposition: 'attachment',
+  contentType: 'application/pdf',
+  encoding: 'utf-8',
+});
+
+if (result.error) {
+  console.error('Error getting object:', result.error);
+} else {
+  console.log('Object:', result.data);
+}
+```
+
+#### Get an object as a stream
+
+```ts
+const result = await get('video.mp4', 'stream', {
+  contentDisposition: 'attachment',
+  contentType: 'video/mp4',
+  encoding: 'utf-8',
+});
+
+if (result.error) {
+  console.error('Error getting object:', result.error);
+} else {
+  const reader = result.data?.getReader();
+  // Process stream...
+  reader?.read().then((result) => {
+    console.log(result);
+  });
+}
+```
+
+## Object metadata
+
+`head` function can be used to get the metadata of an object from a bucket.
+
+### `head`
+
+```ts
+head(path: string, options?: HeadOptions): Promise<TigrisStorageResponse<HeadResponse, Error>>
+```
+
+`head` accepts the following parameters:
+
+- `path`: (Required) A string specifying the path to the object
+- `options`: (Optional) A JSON object with the following optional parameters:
+
+#### `options`
+
+| **Parameter** | **Required** | **Values**                                                                       |
+| ------------- | ------------ | -------------------------------------------------------------------------------- |
+| config        | No           | A configuration object to override the [default configuration](#authentication). |
+
+In case of successful `head`, the `data` property will be set to the metadata of
+the object and contains the following properties:
+
+- `contentDisposition`: content disposition of the object
+- `contentType`: content type of the object
+- `modified`: Last modified date of the object
+- `path`: Path to the object
+- `size`: Size of the object
+- `url`: A presigned URL to the object if the object is downloaded with `access`
+  set to `private`, otherwise unsigned public URL for the object
+
+### Examples
+
+#### Get object metadata
+
+```ts
+const result = await head('object.txt');
+
+if (result.error) {
+  console.error('Error getting object metadata:', result.error);
+} else {
+  console.log('Object metadata:', result.data);
+  // output: {
+  //   contentDisposition: "inline",
+  //   contentType: "text/plain",
+  //   modified: "2023-01-15T08:30:00Z",
+  //   path: "object.txt",
+  //   size: 12,
+  //   url: "https://tigris-example.t3.storage.dev/object.txt",
+  // }
+}
+```
+
+## Deleting an object
+
+`remove` function can be used to delete an object from a bucket.
+
+### `remove`
+
+```ts
+remove(path: string, options?: RemoveOptions): Promise<TigrisStorageResponse<void, Error>>;
+```
+
+`remove` accepts the following parameters:
+
+- `path`: (Required) A string specifying the path to the object
+- `options`: (Optional) A JSON object with the following optional parameters:
+
+#### `options`
+
+| **Parameter** | **Required** | **Values**                                                                       |
+| ------------- | ------------ | -------------------------------------------------------------------------------- |
+| config        | No           | A configuration object to override the [default configuration](#authentication). |
+
+In case of successful `remove`, the `data` property will be set to `undefined`
+and the object will be deleted.
+
+### Examples
+
+#### Delete an object
+
+```ts
+const result = await remove('object.txt');
+
+if (result.error) {
+  console.error('Error deleting object:', result.error);
+} else {
+  console.log('Object deleted successfully');
+}
+```
+
+## Presigning an object
+
+`getPresignedUrl` function can be used to presign an object from a bucket and
+`getPresignedUrl` function can be used to presign an object from a bucket and
+retrieve the presigned URL.
+
+### `getPresignedUrl`
+
+```ts
+getPresignedUrl(path: string, options: GetPresignedUrlOptions): Promise<TigrisStorageResponse<GetPresignedUrlResponse, Error>>
+```
+
+`getPresignedUrl` accepts the following parameters:
+
+- `path`: (Required) A string specifying the path to the object
+- `options`: (Optional) A JSON object with the following optional parameters:
+
+#### `options`
+
+| **Parameter** | **Required** | **Values**                                                                               |
+| ------------- | ------------ | ---------------------------------------------------------------------------------------- |
+| method        | No           | Specify the operation to use for the presigned URL. Possible values are `get` and `put`. |
+| expiresIn     | No           | The expiration time of the presigned URL in seconds. Default is 3600 seconds (1 hour).   |
+| contentType   | No           | The content type of the object.                                                          |
+| config        | No           | A configuration object to override the [default configuration](#authentication).         |
+
+In case of successful `getPresignedUrl`, the `data` property will be set to the
+presigned URL and contains the following properties:
+
+- `url`: The presigned URL
+- `method`: The method used to get the presigned URL
+- `expiresIn`: The expiration time of the presigned URL
+
+### Examples
+
+#### Get a presigned URL for a GET operation
+
+```ts
+const result = await getPresignedUrl('object.txt', { method: 'get' });
+
+if (result.error) {
+  console.error('Error getting presigned URL:', result.error);
+} else {
+  console.log('Presigned URL:', result.data.url);
+}
+```
+
+#### Get a presigned URL for a PUT operation
+
+```ts
+const result = await getPresignedUrl('object.txt', { method: 'put' });
+```
+
+## Listing objects
+
+`list` function can be used to list objects from a bucket.
+
+### `list`
+
+```ts
+list(options?: ListOptions): Promise<TigrisStorageResponse<ListResponse, Error>>;
+```
+
+`list` accepts the following parameters:
+
+- `options`: (Optional) A JSON object with the following optional parameters:
+
+#### `options`
+
+| **Parameter**                             | **Required** | **Values**                                                                      |
+| ----------------------------------------- | ------------ | ------------------------------------------------------------------------------- |
+| limit                                     | No           | The maximum number of objects to return. By default, returns up to 100 objects. |
+| paginationToken                           | No           | The pagination token to continue listing objects from the previous request.     |
+| config                                    | No           | A configuration object to override the [default configuration](#authentication). |
+
+In case of successful `list`, the `data` property will be set to the list of
+objects and contains the following properties:
+
+- `items`: The list of objects
+- `paginationToken`: The pagination token to continue listing objects for next
+  page.
+- `hasMore`: Whether there are more objects to list.
+
+### Examples
+
+#### List objects
+
+```ts
+const result = await list();
+
+if (result.error) {
+  console.error('Error listing objects:', result.error);
+} else {
+  console.log('Objects:', result.data);
+}
+```
+
+#### List objects with pagination
+
+```ts
 const allFiles: Item[] = [];
-let currentPage = await list({ limit: 100 });
+let currentPage = await list({ limit: 10 });
 
 if (currentPage.data) {
   allFiles.push(...currentPage.data.items);
 
   while (currentPage.data?.hasMore && currentPage.data?.paginationToken) {
     currentPage = await list({
-      limit: 2,
+      limit: 10,
       paginationToken: currentPage.data?.paginationToken,
     });
 
@@ -104,257 +502,6 @@ if (currentPage.data) {
 console.log(allFiles);
 ```
 
-The `list` function returns items with the following structure:
-
-- `id`: Unique identifier for the object
-- `name`: Object key/path
-- `size`: Object size in bytes
-- `lastModified`: Last modification date
-
-### `head` - Get Object Metadata
-
-Retrieves metadata for an object without downloading its content.
-
-```typescript
-import { head } from '@tigrisdata/storage';
-
-// Get metadata for a specific file
-const result = await head('images/photo.jpg');
-
-if (result?.error) {
-  console.error('Error getting metadata:', result.error);
-} else if (result?.data) {
-  console.log('File size:', result.data.size);
-  console.log('Content type:', result.data.contentType);
-  console.log('Content disposition:', result.data.contentDisposition);
-  console.log('Last modified:', result.data.modified);
-  console.log('Download URL:', result.data.url);
-} else {
-  console.log('File not found');
-}
-
-// Check if file exists
-const exists = await head('documents/report.pdf');
-if (exists?.data) {
-  console.log('File exists, size:', exists.data.size);
-} else {
-  console.log('File does not exist');
-}
-```
-
-The `head` function returns metadata with the following structure:
-
-- `size`: Object size in bytes
-- `modified`: Last modification date
-- `contentType`: MIME type of the object
-- `contentDisposition`: Content disposition header value
-- `url`: Download URL for the object
-- `path`: Object key/path
-
-### `get` - Download Object
-
-Downloads an object from the bucket in various formats.
-
-```typescript
-import { get } from '@tigrisdata/storage';
-
-// Download as string
-const result = await get('readme.json', 'string');
-if (result.error) {
-  console.error('Error downloading file:', result.error);
-} else {
-  console.log('Content:', result.data);
-}
-
-// Download as stream
-const streamResult = await get('videos/large-video.mp4', 'stream');
-if (streamResult.error) {
-  console.error('Error downloading stream:', streamResult.error);
-} else {
-  const reader = streamResult.data?.getReader();
-  // Process stream...
-  reader?.read().then((result) => {
-    console.log(result);
-  });
-}
-
-// Download as File object
-const fileResult = await get('photo.jpg', 'file');
-if (fileResult.error) {
-  console.error('Error downloading file:', fileResult.error);
-} else {
-  console.log('File name:', fileResult.data?.name);
-  console.log('File size:', fileResult.data?.size);
-  console.log('File type:', fileResult.data?.type);
-}
-
-const downloadResult = await get('documents/report.pdf', 'string', {
-  contentDisposition: 'attachment',
-  contentType: 'application/pdf',
-  encoding: 'utf-8',
-});
-
-console.log(downloadResult);
-```
-
-The `get` function supports the following options:
-
-- `contentDisposition`: Set to 'attachment' or 'inline' to control download behavior
-- `contentType`: Override the content type for the response
-- `encoding`: Specify encoding for string format (defaults to UTF-8)
-
-### `put` - Upload Object
-
-Uploads an object to the bucket with various options.
-
-```typescript
-import { put } from '@tigrisdata/storage';
-
-// Upload a text file
-const result = await put('documents/hello.txt', 'Hello, World!');
-if (result.error) {
-  console.error('Error uploading file:', result.error);
-} else {
-  console.log('Uploaded to:', result.data?.path);
-  console.log('File size:', result.data?.size);
-  console.log('Download URL:', result.data?.url);
-}
-
-// Upload with custom options
-const imageBlob = new Blob(['Hello, World!'], { type: 'text/plain' });
-const imageResult = await put('images/photo.jpg', imageBlob, {
-  contentType: 'image/jpeg',
-  access: 'public',
-});
-
-console.log(imageResult);
-
-// Upload with progress tracking
-const videoStream = new ReadableStream({
-  start(controller) {
-    controller.enqueue(new TextEncoder().encode('Hello, World!'));
-    controller.close();
-  },
-});
-const uploadResult = await put('videos/large-video.mp4', videoStream, {
-  multipart: true,
-  onUploadProgress: ({ percentage }) => {
-    console.log(`Upload progress: ${percentage}%`);
-  },
-});
-
-console.log(uploadResult);
-
-// Upload with random suffix
-const uniqueResult = await put('images/avatar.jpg', imageBlob, {
-  addRandomSuffix: true,
-  contentType: 'image/jpeg',
-});
-
-console.log(uniqueResult);
-
-// Upload with abort controller
-const controller = new AbortController();
-const uploadPromise = await put('large-file.zip', imageBlob, {
-  abortController: controller,
-  multipart: true,
-});
-
-console.log(uploadPromise);
-
-setTimeout(() => controller.abort(), 5000);
-```
-
-The `put` function returns a response object with the following structure:
-
-- `path`: Object key/path
-- `size`: Object size in bytes
-- `modified`: Upload timestamp
-- `contentType`: MIME type of the object
-- `contentDisposition`: Content disposition header value
-- `url`: Download URL for the object
-
-### `remove` - Delete Object
-
-Deletes an object from the bucket.
-
-```typescript
-import { remove } from '@tigrisdata/storage';
-
-// Delete a single file
-const result = await remove('documents/old-file.txt');
-if (result?.error) {
-  console.error('Error deleting file:', result.error);
-} else {
-  console.log('File deleted successfully');
-}
-
-// Batch delete
-const filesToDelete = ['temp/file1.txt', 'temp/file2.txt', 'temp/file3.txt'];
-
-for (const file of filesToDelete) {
-  const deleteResult = await remove(file);
-  if (deleteResult?.error) {
-    console.error(`Failed to delete ${file}:`, deleteResult.error);
-  } else {
-    console.log(`Deleted: ${file}`);
-  }
-}
-```
-
-**Note**: The `remove` function returns `undefined` on success and an error object on failure.
-
-## Error Handling
-
-All methods return a response object that may contain an error. Common scenarios include:
-
-- **Configuration errors**: Missing bucket, access key, or secret key
-- **Authentication errors**: Invalid credentials
-- **Network errors**: Connection issues or timeouts
-- **Permission errors**: Insufficient permissions for the operation
-
-```typescript
-import { get, put } from '@tigrisdata/storage';
-
-// Check for configuration errors
-const result = await get('nonexistent.txt', 'string');
-if (result.error) {
-  if (result.error.message.includes('bucket is missing')) {
-    console.log('Please configure your bucket in .env file');
-  } else {
-    console.error('Unexpected error:', result.error);
-  }
-}
-
-// Handle upload conflicts
-try {
-  const uploadResult = await put('existing-file.txt', 'content', {
-    allowOverwrite: false,
-  });
-  if (uploadResult.error) {
-    console.error('Upload error:', uploadResult.error);
-  }
-} catch (error) {
-  if (error.message.includes('File already exists')) {
-    console.log(
-      'File already exists, use allowOverwrite: true or omit this option to overwrite'
-    );
-  }
-}
-```
-
 ## Examples
 
 If you want to see it the Storage SDK used with your tool of choice, we have some ready examples available at [our community repo](https://github.com/tigrisdata-community/storage-sdk-examples). Something missing there that you you'd like to see? Open an issue and we'll be more than happy to add in examples.
-
-## Best Practices
-
-1. **Always check for errors** in the response object before accessing data
-2. **Use pagination** for listing large numbers of objects
-3. **Handle configuration errors** gracefully with proper error messages
-4. **Use appropriate content types** when uploading files
-5. **Consider multipart uploads** for large files
-6. **Use progress callbacks** for better user experience
-7. **Use random suffixes** to prevent accidental overwrites
-8. **Leverage content disposition** options for better download behavior
-9. **Use the returned metadata** for file information instead of making additional API calls

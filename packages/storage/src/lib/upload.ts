@@ -7,15 +7,13 @@ export type UploadOptions = {
   contentType?: string;
   contentDisposition?: 'attachment' | 'inline';
   url?: string;
-  onUploadProgress?: ({
-    loaded,
-    total,
-    percentage,
-  }: {
-    loaded: number;
-    total: number;
-    percentage: number;
-  }) => void;
+  onUploadProgress?: (progress: UploadProgress) => void;
+};
+
+export type UploadProgress = {
+  loaded: number;
+  total: number;
+  percentage: number;
 };
 
 export type UploadResponse = {
