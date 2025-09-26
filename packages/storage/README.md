@@ -451,8 +451,7 @@ list(options?: ListOptions): Promise<TigrisStorageResponse<ListResponse, Error>>
 | ----------------------------------------- | ------------ | ------------------------------------------------------------------------------- |
 | limit                                     | No           | The maximum number of objects to return. By default, returns up to 100 objects. |
 | paginationToken                           | No           | The pagination token to continue listing objects from the previous request.     |
-| config                                    | No           | A configuration object to override the                                          |
-| [default configuration](#authentication). |
+| config                                    | No           | A configuration object to override the [default configuration](#authentication). |
 
 In case of successful `list`, the `data` property will be set to the list of
 objects and contains the following properties:
