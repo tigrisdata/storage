@@ -1,10 +1,15 @@
-export { type GetOptions, type GetResponse, get } from './lib/get';
-export { type ListOptions, type ListResponse, list } from './lib/list';
-export { type HeadOptions, type HeadResponse, head } from './lib/head';
-export { type RemoveOptions, remove } from './lib/remove';
-export { type PutOptions, type PutResponse, put } from './lib/put';
+export { get, type GetOptions, type GetResponse } from './lib/get';
+export { head, type HeadOptions, type HeadResponse } from './lib/head';
 export {
+  list,
+  type ListItem,
+  type ListOptions,
+  type ListResponse,
+} from './lib/list';
+export {
+  getPresignedUrl,
   type GetPresignedUrlOptions,
   type GetPresignedUrlResponse,
-  getPresignedUrl,
 } from './lib/presigned-url';
+export { put, type PutOptions, type PutResponse } from './lib/put';
+export { remove, type RemoveOptions } from './lib/remove';
