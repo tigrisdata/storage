@@ -66,7 +66,7 @@ export async function getPartsPresignedUrls(
     return { error };
   }
 
-  const presignedUrls = await Promise.all(
+  return await Promise.all(
     parts.map((part) => {
       return getSignedUrl(
         tigrisClient,
@@ -79,16 +79,22 @@ export async function getPartsPresignedUrls(
         { expiresIn: 3600 }
       );
     })
-  );
-
-  return {
-    data: presignedUrls.map((presignedUrl, index) => {
+  )
+    .then((presignedUrls) => {
       return {
-        part: parts[index],
-        url: presignedUrl,
+        data: presignedUrls.map((presignedUrl, index) => {
+          return {
+            part: parts[index],
+            url: presignedUrl,
+          };
+        }),
       };
-    }),
-  };
+    })
+    .catch(() => {
+      return {
+        error: new Error(`Failed to get part URLs`),
+      };
+    });
 }
 
 export type CompleteMultipartUploadOptions = {
