@@ -1,4 +1,12 @@
 import { TigrisStorageResponse } from './types';
+import { addRandomSuffix } from './utils';
+
+export enum UploadAction {
+  SinglepartInit = 'singlepart-init',
+  MultipartInit = 'multipart-init',
+  MultipartGetParts = 'multipart-get-parts',
+  MultipartComplete = 'multipart-complete',
+}
 
 export type UploadOptions = {
   access?: 'public' | 'private';
@@ -7,6 +15,8 @@ export type UploadOptions = {
   contentType?: string;
   contentDisposition?: 'attachment' | 'inline';
   url?: string;
+  multipart?: boolean;
+  partSize?: number;
   onUploadProgress?: (progress: UploadProgress) => void;
 };
 
@@ -37,13 +47,31 @@ export async function upload(
   }
 
   if (options?.addRandomSuffix) {
-    const pathParts = path.split('.');
-    const extension = pathParts.length > 1 ? pathParts.pop() : '';
-    const baseName = pathParts.join('.');
-    path = `${baseName}-${Math.random().toString(36).substring(2, 15)}${extension ? `.${extension}` : ''}`;
+    path = addRandomSuffix(path);
+  }
+
+  const partSize = options?.partSize ?? 5 * 1024 * 1024; // 5MB default
+
+  if (options?.multipart) {
+    return uploadMultipart(path, data, options, partSize);
+  } else {
+    return uploadSingle(path, data, options);
+  }
+}
+
+async function uploadSingle(
+  path: string,
+  data: File | Blob,
+  options?: UploadOptions
+): Promise<TigrisStorageResponse<UploadResponse, Error>> {
+  if (!options?.url) {
+    return {
+      error: new Error('URL option is required for client uploads'),
+    };
   }
 
   try {
+    // Get presigned URL
     const presignedResponse = await fetch(options.url, {
       method: 'POST',
       headers: {
@@ -51,11 +79,13 @@ export async function upload(
       },
       body: JSON.stringify({
         path,
-        method: 'put',
-        contentType: options.contentType ?? data.type,
+        action: UploadAction.SinglepartInit,
+        operation: 'put',
+        contentType: options?.contentType ?? data.type,
       }),
     });
 
+    // Check if presigned URL is valid
     if (!presignedResponse.ok) {
       return {
         error: new Error(
@@ -64,12 +94,22 @@ export async function upload(
       };
     }
 
-    const { data: presignedData } = await presignedResponse.json();
-    const presignedUrl = presignedData.url;
+    // Get presigned URL
+    const response = await presignedResponse.json();
 
-    await new Promise<void>((resolve, reject) => {
+    if (!response.data?.url) {
+      return {
+        error: new Error('Failed to get presigned URL'),
+      };
+    }
+
+    const presignedUrl = response.data.url;
+
+    // Upload file
+    return new Promise<void>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
 
+      // Track progress
       xhr.upload.addEventListener('progress', (event) => {
         if (event.lengthComputable && options?.onUploadProgress) {
           const percentage = Math.round((event.loaded / event.total) * 100);
@@ -81,6 +121,7 @@ export async function upload(
         }
       });
 
+      // Handle success
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve();
@@ -89,19 +130,191 @@ export async function upload(
         }
       });
 
+      // Handle error
       xhr.addEventListener('error', () => {
         reject(new Error('Upload failed due to network error'));
       });
 
+      // Open request
       xhr.open('PUT', presignedUrl);
 
-      // Set content type if provided
       if (options?.contentType || data.type) {
         xhr.setRequestHeader('Content-Type', options?.contentType ?? data.type);
       }
 
+      // Send data
       xhr.send(data);
+    })
+      .then(() => {
+        // Return response
+        return {
+          data: {
+            contentDisposition: options?.contentDisposition,
+            contentType: options?.contentType ?? data.type,
+            modified: new Date(),
+            path,
+            size: data.size,
+            url: presignedUrl.replace('x-id=PutObject', 'x-id=GetObject'),
+          },
+        };
+      })
+      .catch((error) => {
+        // Return error
+        return {
+          error: new Error(error),
+        };
+      });
+  } catch {
+    // Return error
+    return {
+      error: new Error('Single upload failed'),
+    };
+  }
+}
+
+async function uploadMultipart(
+  path: string,
+  data: File | Blob,
+  options?: UploadOptions,
+  partSize: number = 5 * 1024 * 1024
+): Promise<TigrisStorageResponse<UploadResponse, Error>> {
+  if (!options?.url) {
+    return {
+      error: new Error('URL option is required for client uploads'),
+    };
+  }
+
+  try {
+    // Step 1: Initialize multipart upload via API endpoint
+    const initResponse = await fetch(options.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        path,
+        action: UploadAction.MultipartInit,
+        contentType: options?.contentType ?? data.type,
+      }),
     });
+
+    if (!initResponse.ok) {
+      return {
+        error: new Error(
+          `Failed to initialize multipart upload: ${initResponse.statusText}`
+        ),
+      };
+    }
+
+    const { data: initData } = await initResponse.json();
+    const { uploadId } = initData;
+
+    // Step 2: Split file into parts and get presigned URLs
+    const totalParts = Math.ceil(data.size / partSize);
+    const parts = Array.from({ length: totalParts }, (_, i) => i + 1);
+
+    const urlResponse = await fetch(options.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        path,
+        action: UploadAction.MultipartGetParts,
+        uploadId,
+        parts,
+      }),
+    });
+
+    if (!urlResponse.ok) {
+      return {
+        error: new Error(`Failed to get part URLs: ${urlResponse.statusText}`),
+      };
+    }
+
+    const { data: urlData } = await urlResponse.json();
+    const partUrls = urlData;
+
+    // Step 3: Upload parts with progress tracking
+    let totalUploaded = 0;
+    const uploadPromises = partUrls.map(
+      ({ part, url }: { part: number; url: string }, index: number) => {
+        const start = index * partSize;
+        const end = Math.min(start + partSize, data.size);
+        const chunk = data.slice(start, end);
+
+        return new Promise<Record<number, string>>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+
+          xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable && options?.onUploadProgress) {
+              const partLoaded = event.loaded;
+              const currentTotal = totalUploaded + partLoaded;
+              const percentage = Math.round((currentTotal / data.size) * 100);
+
+              options.onUploadProgress({
+                loaded: currentTotal,
+                total: data.size,
+                percentage,
+              });
+            }
+          });
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              totalUploaded += chunk.size;
+              options?.onUploadProgress?.({
+                loaded: totalUploaded,
+                total: data.size,
+                percentage: Math.round((totalUploaded / data.size) * 100),
+              });
+              resolve({ [part]: xhr.getResponseHeader('ETag') ?? '' });
+            } else {
+              reject(
+                new Error(
+                  `Part ${part} upload failed with status: ${xhr.status}`
+                )
+              );
+            }
+          });
+
+          xhr.addEventListener('error', () => {
+            reject(
+              new Error(`Part ${part} upload failed due to network error`)
+            );
+          });
+
+          xhr.open('PUT', url);
+          xhr.send(chunk);
+        });
+      }
+    );
+
+    const partIds = await Promise.all(uploadPromises);
+
+    // Step 4: Complete multipart upload
+    const completeResponse = await fetch(options.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        path,
+        action: UploadAction.MultipartComplete,
+        uploadId,
+        partIds,
+      }),
+    });
+
+    if (!completeResponse.ok) {
+      return {
+        error: new Error(
+          `Failed to complete multipart upload: ${completeResponse.statusText}`
+        ),
+      };
+    }
+
+    const { data: completeData } = await completeResponse.json();
 
     return {
       data: {
@@ -110,13 +323,13 @@ export async function upload(
         modified: new Date(),
         path,
         size: data.size,
-        url: presignedUrl.replace('x-id=PutObject', 'x-id=GetObject'), // Clean URL without query params
+        url: completeData?.url ?? '',
       },
     };
   } catch (error) {
     return {
       error: new Error(
-        `client upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Multipart upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       ),
     };
   }

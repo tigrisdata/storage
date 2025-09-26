@@ -5,7 +5,7 @@ export type TigrisStorageConfig = {
   endpoint?: string;
 };
 
-export type TigrisStorageResponse<T, E = unknown> = {
+export type TigrisStorageResponse<T, E = Error> = {
   data?: T;
   error?: E;
 };
