@@ -30,10 +30,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build:storage
-      - run: npm run build:cli
-      - run: npm audit signatures
       - run: npm run publint --workspace=@tigrisdata/storage
-      - run: npm run publint --workspace=@tigrisdata/cli
 
       - name: Run integration tests
         env:
@@ -42,6 +39,11 @@ jobs:
           TIGRIS_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_STORAGE_SECRET_ACCESS_KEY }}
           TIGRIS_STORAGE_ENDPOINT: ${{ secrets.TIGRIS_STORAGE_ENDPOINT }}
         run: npm run test --workspace=@tigrisdata/storage
+
+      - run: npm run build:cli
+      - run: npm run publint --workspace=@tigrisdata/cli
+
+      - run: npm audit signatures
 
       # Release to GitHub and NPM
       - name: Release
