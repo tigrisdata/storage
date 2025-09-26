@@ -534,12 +534,12 @@ import { upload } from '@tigrisdata/storage/client';
 
 #### `options`
 
-| **Parameter**    | **Required** | **Values**                                                                                                  |
-| ---------------- | ------------ | ----------------------------------------------------------------------------------------------------------- |
-| url              | No           | The URL to upload the file to.                                                                              |
-| access           | No           | The access level for the object. Possible values are `public` and `private`.                                |
-| onUploadProgress | No           | Callback to track upload progress: `onUploadProgress({loaded: number, total: number, percentage: number})`. |
-| config           | No           | A configuration object to override the [default configuration](/docs/sdks/tigris/using-sdk#authentication). |
+| **Parameter**    | **Required** | **Values**                                                                                                                        |
+| ---------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| url              | No           | The URL to upload the file to.                                                                                                    |
+| access           | No           | The access level for the object. Possible values are `public` and `private`.                                                      |
+| onUploadProgress | No           | Callback to track upload progress: `onUploadProgress({loaded: number, total: number, percentage: number})`.                       |
+| config           | No           | A configuration object to override the [default configuration](https://tigrisdata.com/docs/sdks/tigris/using-sdk#authentication). |
 
 In case of successful upload, the `data` property will be set to the upload and
 contains the following properties:
