@@ -14,7 +14,7 @@
     "ghcr.io/joshuanianji/devcontainer-features/aws-cli-persistence:1": {}
   },
   "initializeCommand": "mkdir -p ${localEnv:HOME}${localEnv:USERPROFILE}/.local/share/atuin",
-  "postCreateCommand": "npm ci",
+  "postCreateCommand": "sudo chown -R vscode:vscode /workspaces/storage/node_modules && npm ci",
   "mounts": [
     {
       "type": "bind",
