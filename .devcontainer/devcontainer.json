@@ -1,0 +1,41 @@
+{
+  "name": "Dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  // 👇 Features to add to the Dev Container. More info: https://containers.dev/implementors/features.
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/xe/devcontainer-features/fish:0.2.0": {
+      "fisher": true
+    },
+    "ghcr.io/devcontainer-community/devcontainer-features/atuin.sh:1": {},
+    "ghcr.io/devcontainers-extra/features/neovim-apt-get:1": {},
+    "ghcr.io/joshuanianji/devcontainer-features/aws-cli-persistence:1": {}
+  },
+  "initializeCommand": "mkdir -p ${localEnv:HOME}${localEnv:USERPROFILE}/.local/share/atuin",
+  "postCreateCommand": "sudo chown -R vscode:vscode /workspaces/storage/node_modules && npm ci",
+  "mounts": [
+    {
+      "type": "bind",
+      "source": "${localEnv:HOME}${localEnv:USERPROFILE}/.local/share/atuin",
+      "target": "/home/vscode/.local/share/atuin"
+    }
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "streetsidesoftware.code-spell-checker",
+        "ms-vscode.wordcount",
+        "SirTori.indenticator",
+        "ms-vsliveshare.vsliveshare"
+      ]
+    }
+  }
+  // 👇 Use 'postCreateCommand' to run commands after the container is created.
+  // 👇 Configure tool-specific properties.
+  // "customizations": {},
+  // 👇 Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+  // "remoteUser": "root"
+}
