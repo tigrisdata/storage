@@ -25,12 +25,10 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "unifiedjs.vscode-mdx",
         "esbenp.prettier-vscode",
         "streetsidesoftware.code-spell-checker",
         "ms-vscode.wordcount",
         "SirTori.indenticator",
-        "bpruitt-goddard.mermaid-markdown-syntax-highlighting",
         "ms-vsliveshare.vsliveshare"
       ]
     }
