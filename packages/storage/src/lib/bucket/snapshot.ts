@@ -14,20 +14,29 @@ export type ListBucketSnapshotsResponse = Array<{
 }>;
 
 export async function listBucketSnapshots(
+  sourceBucketName?: string,
   options?: ListBucketSnapshotsOptions
 ): Promise<TigrisStorageResponse<ListBucketSnapshotsResponse, Error>> {
-  const { data: tigrisClient, error } = createTigrisClient(options?.config);
+  const { data: tigrisClient, error } = createTigrisClient(
+    options?.config,
+    true
+  );
 
-  if (error || !tigrisClient) {
+  if (error) {
     return { error };
   }
 
-  const bucketName = options?.config?.bucket ?? config.bucket;
+  const bucketName =
+    sourceBucketName ?? options?.config?.bucket ?? config.bucket;
+
+  if (!bucketName) {
+    return { error: new Error('Source bucket name is required') };
+  }
 
   const command = new ListBucketsCommand({});
   command.middlewareStack.add(
     (next) => async (args) => {
-      (args.request as HttpRequest).headers['X-Tigris-Snapshot'] = bucketName!;
+      (args.request as HttpRequest).headers['X-Tigris-Snapshot'] = bucketName;
       return next(args);
     },
     { step: 'build' }
@@ -50,20 +59,30 @@ export async function listBucketSnapshots(
 }
 
 export type CreateBucketSnapshotOptions = {
+  version?: string;
   description?: string;
   config?: TigrisStorageConfig;
 };
 
 export async function createBucketSnapshot(
+  sourceBucketName?: string,
   options?: CreateBucketSnapshotOptions
 ): Promise<TigrisStorageResponse<void, Error>> {
-  const { data: tigrisClient, error } = createTigrisClient(options?.config);
+  const { data: tigrisClient, error } = createTigrisClient(
+    options?.config,
+    true
+  );
 
-  if (error || !tigrisClient) {
+  if (error) {
     return { error };
   }
 
-  const sourceBucket = options?.config?.bucket ?? config.bucket;
+  const sourceBucket =
+    sourceBucketName ?? options?.config?.bucket ?? config.bucket;
+
+  if (!sourceBucket) {
+    return { error: new Error('Source bucket name is required') };
+  }
 
   const command = new CreateBucketCommand({ Bucket: sourceBucket });
   command.middlewareStack.add(

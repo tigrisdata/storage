@@ -9,17 +9,20 @@ export type CreateBucketOptions = {
 };
 
 export async function createBucket(
-  bucket: string,
+  bucketName: string,
   options?: CreateBucketOptions
 ): Promise<TigrisStorageResponse<void, Error>> {
-  const { data: tigrisClient, error } = createTigrisClient(options?.config);
+  const { data: tigrisClient, error } = createTigrisClient(
+    options?.config,
+    true
+  );
 
-  if (error || !tigrisClient) {
+  if (error) {
     return { error };
   }
 
   const command = new CreateBucketCommand({
-    Bucket: bucket,
+    Bucket: bucketName,
   });
 
   if (options?.enableSnapshot) {

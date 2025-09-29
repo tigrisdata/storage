@@ -5,26 +5,50 @@ import { createTigrisClient } from '../tigris-client';
 import { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type CreateBucketForkOptions = {
+  sourceBucketSnapshot?: string;
   config?: TigrisStorageConfig;
 };
 
 export async function createBucketFork(
   forkName: string,
+  sourceBucketName?: string,
   options?: CreateBucketForkOptions
 ): Promise<TigrisStorageResponse<void, Error>> {
-  const { data: tigrisClient, error } = createTigrisClient(options?.config);
+  if (!forkName) {
+    return { error: new Error('Fork name is required') };
+  }
 
-  if (error || !tigrisClient) {
+  const { data: tigrisClient, error } = createTigrisClient(
+    options?.config,
+    true
+  );
+
+  if (error) {
     return { error };
   }
 
-  const bucketName = options?.config?.bucket ?? config.bucket;
+  const bucketName =
+    sourceBucketName ?? options?.config?.bucket ?? config.bucket;
+
+  if (!bucketName) {
+    return { error: new Error('Source bucket name is required') };
+  }
 
   const command = new CreateBucketCommand({ Bucket: forkName });
   command.middlewareStack.add(
     (next) => async (args) => {
       (args.request as HttpRequest).headers['X-Tigris-Fork-Source-Bucket'] =
-        bucketName!;
+        bucketName;
+
+      if (
+        options?.sourceBucketSnapshot &&
+        options.sourceBucketSnapshot !== ''
+      ) {
+        (args.request as HttpRequest).headers[
+          'X-Tigris-Fork-Source-Bucket-Snapshot'
+        ] = options.sourceBucketSnapshot;
+      }
+
       return next(args);
     },
     { step: 'build' }
