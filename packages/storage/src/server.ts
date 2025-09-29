@@ -37,4 +37,4 @@ export {
 } from './lib/object/presigned-url';
 export { put, type PutOptions, type PutResponse } from './lib/object/put';
 export { remove, type RemoveOptions } from './lib/object/remove';
-export { UploadAction } from './lib/upload/upload';
+export { UploadAction } from './lib/upload';
