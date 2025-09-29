@@ -14,9 +14,21 @@ export type ListBucketSnapshotsResponse = Array<{
 }>;
 
 export async function listBucketSnapshots(
+  options?: ListBucketSnapshotsOptions
+): Promise<TigrisStorageResponse<ListBucketSnapshotsResponse, Error>>;
+export async function listBucketSnapshots(
   sourceBucketName?: string,
   options?: ListBucketSnapshotsOptions
+): Promise<TigrisStorageResponse<ListBucketSnapshotsResponse, Error>>;
+export async function listBucketSnapshots(
+  sourceBucketName?: string | ListBucketSnapshotsOptions,
+  options?: ListBucketSnapshotsOptions
 ): Promise<TigrisStorageResponse<ListBucketSnapshotsResponse, Error>> {
+  if (typeof sourceBucketName === 'object') {
+    options = sourceBucketName;
+    sourceBucketName = undefined;
+  }
+
   const { data: tigrisClient, error } = createTigrisClient(
     options?.config,
     true
@@ -26,17 +38,17 @@ export async function listBucketSnapshots(
     return { error };
   }
 
-  const bucketName =
+  const sourceBucket =
     sourceBucketName ?? options?.config?.bucket ?? config.bucket;
 
-  if (!bucketName) {
+  if (!sourceBucket) {
     return { error: new Error('Source bucket name is required') };
   }
 
   const command = new ListBucketsCommand({});
   command.middlewareStack.add(
     (next) => async (args) => {
-      (args.request as HttpRequest).headers['X-Tigris-Snapshot'] = bucketName;
+      (args.request as HttpRequest).headers['X-Tigris-Snapshot'] = sourceBucket;
       return next(args);
     },
     { step: 'build' }
@@ -59,15 +71,26 @@ export async function listBucketSnapshots(
 }
 
 export type CreateBucketSnapshotOptions = {
-  version?: string;
   description?: string;
   config?: TigrisStorageConfig;
 };
 
 export async function createBucketSnapshot(
+  options?: CreateBucketSnapshotOptions
+): Promise<TigrisStorageResponse<void, Error>>;
+export async function createBucketSnapshot(
   sourceBucketName?: string,
   options?: CreateBucketSnapshotOptions
+): Promise<TigrisStorageResponse<void, Error>>;
+export async function createBucketSnapshot(
+  sourceBucketName?: string | CreateBucketSnapshotOptions,
+  options?: CreateBucketSnapshotOptions
 ): Promise<TigrisStorageResponse<void, Error>> {
+  if (typeof sourceBucketName === 'object') {
+    options = sourceBucketName;
+    sourceBucketName = undefined;
+  }
+
   const { data: tigrisClient, error } = createTigrisClient(
     options?.config,
     true

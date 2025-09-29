@@ -11,11 +11,25 @@ export type CreateBucketForkOptions = {
 
 export async function createBucketFork(
   forkName: string,
+  options?: CreateBucketForkOptions
+): Promise<TigrisStorageResponse<void, Error>>;
+export async function createBucketFork(
+  forkName: string,
   sourceBucketName?: string,
+  options?: CreateBucketForkOptions
+): Promise<TigrisStorageResponse<void, Error>>;
+export async function createBucketFork(
+  forkName: string,
+  sourceBucketName?: string | CreateBucketForkOptions,
   options?: CreateBucketForkOptions
 ): Promise<TigrisStorageResponse<void, Error>> {
   if (!forkName) {
     return { error: new Error('Fork name is required') };
+  }
+
+  if (typeof sourceBucketName === 'object') {
+    options = sourceBucketName;
+    sourceBucketName = undefined;
   }
 
   const { data: tigrisClient, error } = createTigrisClient(
@@ -27,10 +41,10 @@ export async function createBucketFork(
     return { error };
   }
 
-  const bucketName =
+  const sourceBucket =
     sourceBucketName ?? options?.config?.bucket ?? config.bucket;
 
-  if (!bucketName) {
+  if (!sourceBucket) {
     return { error: new Error('Source bucket name is required') };
   }
 
@@ -38,7 +52,7 @@ export async function createBucketFork(
   command.middlewareStack.add(
     (next) => async (args) => {
       (args.request as HttpRequest).headers['X-Tigris-Fork-Source-Bucket'] =
-        bucketName;
+        sourceBucket;
 
       if (
         options?.sourceBucketSnapshot &&
@@ -61,7 +75,7 @@ export async function createBucketFork(
     })
     .catch((error) => {
       return {
-        error: new Error(`Unable to fork bucket ${bucketName} - ${error}`),
+        error: new Error(`Unable to fork bucket ${sourceBucket} - ${error}`),
       };
     });
 }
