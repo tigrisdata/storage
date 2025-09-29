@@ -3,4 +3,4 @@ export {
   type UploadOptions,
   type UploadProgress,
   type UploadResponse,
-} from './lib/upload';
+} from './lib/upload/upload';

@@ -1,12 +1,24 @@
-export { get, type GetOptions, type GetResponse } from './lib/get';
-export { head, type HeadOptions, type HeadResponse } from './lib/head';
+export { createBucket, type CreateBucketOptions } from './lib/bucket/create';
+export {
+  createBucketFork,
+  type CreateBucketForkOptions,
+} from './lib/bucket/fork';
+export {
+  createBucketSnapshot,
+  listBucketSnapshots,
+  type CreateBucketSnapshotOptions,
+  type ListBucketSnapshotsOptions,
+  type ListBucketSnapshotsResponse,
+} from './lib/bucket/snapshot';
+export { get, type GetOptions, type GetResponse } from './lib/object/get';
+export { head, type HeadOptions, type HeadResponse } from './lib/object/head';
 export {
   list,
   type Item,
   type ListItem,
   type ListOptions,
   type ListResponse,
-} from './lib/list';
+} from './lib/object/list';
 export {
   completeMultipartUpload,
   getPartsPresignedUrls,
@@ -17,12 +29,12 @@ export {
   type GetPartsPresignedUrlsResponse,
   type InitMultipartUploadOptions,
   type InitMultipartUploadResponse,
-} from './lib/multipart';
+} from './lib/object/multipart';
 export {
   getPresignedUrl,
   type GetPresignedUrlOptions,
   type GetPresignedUrlResponse,
-} from './lib/presigned-url';
-export { put, type PutOptions, type PutResponse } from './lib/put';
-export { remove, type RemoveOptions } from './lib/remove';
-export { UploadAction } from './lib/upload';
+} from './lib/object/presigned-url';
+export { put, type PutOptions, type PutResponse } from './lib/object/put';
+export { remove, type RemoveOptions } from './lib/object/remove';
+export { UploadAction } from './lib/upload/upload';

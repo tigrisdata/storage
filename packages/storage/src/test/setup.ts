@@ -1,6 +1,6 @@
 import { beforeAll, afterAll } from 'vitest';
-import { remove } from '../lib/remove';
-import { list } from '../lib/list';
+import { remove } from '../lib/object/remove';
+import { list } from '../lib/object/list';
 import { config } from '../lib/config';
 
 beforeAll(async () => {

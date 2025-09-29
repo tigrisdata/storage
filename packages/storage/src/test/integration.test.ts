@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { put } from '../lib/put';
-import { get } from '../lib/get';
-import { head } from '../lib/head';
-import { list } from '../lib/list';
-import { remove } from '../lib/remove';
+import { put } from '../lib/object/put';
+import { get } from '../lib/object/get';
+import { head } from '../lib/object/head';
+import { list } from '../lib/object/list';
+import { remove } from '../lib/object/remove';
 import { shouldSkipIntegrationTests } from './setup';
 import { config } from '../lib/config';
 
