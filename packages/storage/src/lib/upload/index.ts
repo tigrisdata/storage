@@ -1,5 +1,5 @@
-import { TigrisStorageResponse } from './types';
-import { addRandomSuffix } from './utils';
+import { TigrisStorageResponse } from '../types';
+import { addRandomSuffix } from '../utils';
 
 export enum UploadAction {
   SinglepartInit = 'singlepart-init',

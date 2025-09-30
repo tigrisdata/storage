@@ -1,7 +1,7 @@
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { config } from './config';
-import { createTigrisClient } from './tigris-client';
-import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
+import { config } from '../config';
+import { createTigrisClient } from '../tigris-client';
+import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type RemoveOptions = {
   config?: TigrisStorageConfig;
