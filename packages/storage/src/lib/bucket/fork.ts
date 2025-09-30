@@ -9,6 +9,11 @@ export type CreateBucketForkOptions = {
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
+/**
+ * @deprecated
+ * Use createBucket with config.sourceBucketName and config.sourceBucketSnapshot instead
+ * Will be removed in the next major version
+ */
 export async function createBucketFork(
   forkName: string,
   options?: CreateBucketForkOptions
