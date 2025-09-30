@@ -8,6 +8,7 @@ export type ListOptions = {
   paginationToken?: string;
   /**
    * @deprecated Use paginationToken instead
+   * Will be removed in the next major version
    */
   paginationMarker?: string;
   config?: TigrisStorageConfig;
@@ -15,6 +16,7 @@ export type ListOptions = {
 
 /**
  * @deprecated Use ListItem instead
+ * Will be removed in the next major version
  */
 export type Item = {
   id: string;

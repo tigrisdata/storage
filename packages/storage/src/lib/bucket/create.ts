@@ -5,6 +5,8 @@ import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type CreateBucketOptions = {
   enableSnapshot?: boolean;
+  sourceBucketName?: string;
+  sourceBucketSnapshot?: string;
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
@@ -30,6 +32,28 @@ export async function createBucket(
       (next) => async (args) => {
         (args.request as HttpRequest).headers['X-Tigris-Enable-Snapshot'] =
           'true';
+        return next(args);
+      },
+      { step: 'build' }
+    );
+  }
+
+  if (options?.sourceBucketName && options.sourceBucketName !== '') {
+    const sourceBucketName = options.sourceBucketName;
+    command.middlewareStack.add(
+      (next) => async (args) => {
+        (args.request as HttpRequest).headers['X-Tigris-Fork-Source-Bucket'] =
+          sourceBucketName;
+
+        if (
+          options?.sourceBucketSnapshot &&
+          options.sourceBucketSnapshot !== ''
+        ) {
+          (args.request as HttpRequest).headers[
+            'X-Tigris-Fork-Source-Bucket-Snapshot'
+          ] = options.sourceBucketSnapshot;
+        }
+
         return next(args);
       },
       { step: 'build' }
