@@ -2,10 +2,10 @@ import { CreateBucketCommand, ListBucketsCommand } from '@aws-sdk/client-s3';
 import type { HttpRequest } from '@aws-sdk/types';
 import { config } from '../config';
 import { createTigrisClient } from '../tigris-client';
-import { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type ListBucketSnapshotsOptions = {
-  config?: TigrisStorageConfig;
+  config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
 export type ListBucketSnapshotsResponse = Array<{
@@ -38,8 +38,7 @@ export async function listBucketSnapshots(
     return { error };
   }
 
-  const sourceBucket =
-    sourceBucketName ?? options?.config?.bucket ?? config.bucket;
+  const sourceBucket = sourceBucketName ?? config.bucket;
 
   if (!sourceBucket) {
     return { error: new Error('Source bucket name is required') };
@@ -72,7 +71,7 @@ export async function listBucketSnapshots(
 
 export type CreateBucketSnapshotOptions = {
   description?: string;
-  config?: TigrisStorageConfig;
+  config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
 export async function createBucketSnapshot(
@@ -100,8 +99,7 @@ export async function createBucketSnapshot(
     return { error };
   }
 
-  const sourceBucket =
-    sourceBucketName ?? options?.config?.bucket ?? config.bucket;
+  const sourceBucket = sourceBucketName ?? config.bucket;
 
   if (!sourceBucket) {
     return { error: new Error('Source bucket name is required') };

@@ -2,11 +2,11 @@ import { CreateBucketCommand } from '@aws-sdk/client-s3';
 import { HttpRequest } from '@aws-sdk/types';
 import { config } from '../config';
 import { createTigrisClient } from '../tigris-client';
-import { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type CreateBucketForkOptions = {
   sourceBucketSnapshot?: string;
-  config?: TigrisStorageConfig;
+  config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
 export async function createBucketFork(
@@ -41,8 +41,7 @@ export async function createBucketFork(
     return { error };
   }
 
-  const sourceBucket =
-    sourceBucketName ?? options?.config?.bucket ?? config.bucket;
+  const sourceBucket = sourceBucketName ?? config.bucket;
 
   if (!sourceBucket) {
     return { error: new Error('Source bucket name is required') };
