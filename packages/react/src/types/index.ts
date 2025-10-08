@@ -15,7 +15,7 @@ export interface UploaderProps {
   maxFileSize?: number;
   multiple?: boolean;
   multipart?: boolean;
-  dragAndDrop?: boolean;
+  allowDrop?: boolean;
   onUploadProgress?: (progress: UploadProgress) => void;
 }
 
