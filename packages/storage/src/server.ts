@@ -1,9 +1,5 @@
 export { createBucket, type CreateBucketOptions } from './lib/bucket/create';
 export {
-  createBucketFork,
-  type CreateBucketForkOptions,
-} from './lib/bucket/fork';
-export {
   createBucketSnapshot,
   listBucketSnapshots,
   type CreateBucketSnapshotOptions,
@@ -14,7 +10,6 @@ export { get, type GetOptions, type GetResponse } from './lib/object/get';
 export { head, type HeadOptions, type HeadResponse } from './lib/object/head';
 export {
   list,
-  type Item,
   type ListItem,
   type ListOptions,
   type ListResponse,

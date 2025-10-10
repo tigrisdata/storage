@@ -6,26 +6,15 @@ import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 export type ListOptions = {
   limit?: number;
   paginationToken?: string;
-  /**
-   * @deprecated Use paginationToken instead
-   * Will be removed in the next major version
-   */
-  paginationMarker?: string;
   config?: TigrisStorageConfig;
 };
 
-/**
- * @deprecated Use ListItem instead
- * Will be removed in the next major version
- */
-export type Item = {
+export type ListItem = {
   id: string;
   name: string;
   size: number;
   lastModified: Date;
 };
-
-export type ListItem = Item;
 
 export type ListResponse = {
   items: ListItem[];
@@ -49,7 +38,7 @@ export async function list(
   const list = new ListObjectsV2Command({
     Bucket: options?.config?.bucket ?? config.bucket,
     MaxKeys: options?.limit,
-    ContinuationToken: options?.paginationToken ?? options?.paginationMarker,
+    ContinuationToken: options?.paginationToken,
   });
 
   return tigrisClient
