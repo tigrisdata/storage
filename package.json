@@ -62,12 +62,6 @@
         {
           "pkgRoot": "packages/storage"
         }
-      ],
-      [
-        "@semantic-release/npm",
-        {
-          "pkgRoot": "packages/cli"
-        }
       ]
     ]
   },
