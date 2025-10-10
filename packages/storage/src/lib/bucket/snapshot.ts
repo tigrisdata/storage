@@ -70,6 +70,10 @@ export async function listBucketSnapshots(
 }
 
 export type CreateBucketSnapshotOptions = {
+  name?: string;
+  /**
+   * @deprecated Use name instead, will be removed in the next major version
+   */
   description?: string;
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
@@ -109,7 +113,7 @@ export async function createBucketSnapshot(
   command.middlewareStack.add(
     (next) => async (args) => {
       (args.request as HttpRequest).headers['X-Tigris-Snapshot'] =
-        `true; desc=${options?.description}`;
+        `true; name=${options?.name ?? options?.description}`;
       return next(args);
     },
     { step: 'build' }
