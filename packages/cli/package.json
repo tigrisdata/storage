@@ -30,6 +30,7 @@
     "prepublishOnly": "npm run build",
     "clean": "rm -rf dist",
     "commit": "cz",
+    "semantic-release": "semantic-release",
     "prepare": "husky install"
   },
   "keywords": [
@@ -55,6 +56,21 @@
       "@commitlint/config-conventional"
     ]
   },
+  "release": {
+    "branches": [
+      "main",
+      {
+        "name": "next",
+        "prerelease": true
+      }
+    ],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/github",
+      "@semantic-release/npm"
+    ]
+  },
   "dependencies": {
     "@tigrisdata/storage": "*",
     "axios": "^1.12.2",
@@ -66,6 +82,8 @@
   "devDependencies": {
     "@commitlint/cli": "^18.0.0",
     "@commitlint/config-conventional": "^18.0.0",
+    "@semantic-release/changelog": "^6.0.0",
+    "@semantic-release/git": "^10.0.0",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
@@ -75,6 +93,7 @@
     "husky": "^8.0.0",
     "prettier": "^3.0.0",
     "publint": "^0.2.0",
+    "semantic-release": "^22.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0"
   }

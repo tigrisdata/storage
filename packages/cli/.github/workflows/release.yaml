@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+      - next
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout code with full history to get tags
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Set up Node.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Install dependencies and build Node.js project
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm run publint
+
+      - run: npm audit signatures
+
+      # Release to GitHub and NPM
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm run semantic-release
