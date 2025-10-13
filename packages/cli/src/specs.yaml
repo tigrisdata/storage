@@ -1,0 +1,535 @@
+name: tigris
+alias: t3
+description: Command line interface for Tigris
+version: 0.0.1
+commands:
+  #########################
+  # Unix style commands
+  #########################
+  
+  # ls
+  - name: ls
+    description: List buckets or objects in a bucket or path
+    alias: list
+    arguments:
+      - name: path
+        required: true
+        type: noun
+        description: a bucket or path in a bucket
+        examples:
+          - my-bucket
+          - my-bucket/my-path
+  
+  # mk
+  - name: mk
+    description: Create a bucket or a folder in a bucket
+    alias: create
+    arguments:
+      - name: path
+        required: true
+        type: noun
+        description: a bucket or a folder in a bucket
+        examples:
+          - my-bucket
+          - my-bucket/my-path
+  
+  # stat
+  - name: stat
+    description: Get the details of a bucket or a folder in a bucket or an object in a bucket or path
+    arguments:
+      - name: path
+        required: true
+        type: noun
+        description: a bucket or a folder in a bucket or an object in a bucket or path
+        examples:
+          - my-bucket
+          - my-bucket/my-path
+          - my-bucket/my-path/my-object.json
+  
+  # cp
+  - name: cp
+    description: Copy a folder or an object
+    alias: copy
+    arguments:
+      - name: src
+        required: true
+        type: noun
+        description: a bucket, a folder in a bucket, an object in a bucket / path. Wildcard is supported.
+        examples:
+          - my-bucket
+          - my-bucket/my-path
+          - my-bucket/my-path/my-object.json
+      - name: dest
+        required: true
+        type: noun
+        description: path to copy to
+        examples:
+          - my-bucket
+          - my-bucket/my-path
+          - my-bucket/my-path/*
+          - my-bucket/my-path/my-object.json
+  
+  # mv
+  - name: mv
+    description: Move a folder or an object
+    alias: move
+    arguments:
+      - name: src
+        type: noun
+        required: true
+        description: path to move from
+        examples:
+          - my-bucket
+          - my-bucket/my-path
+          - my-bucket/my-path/*
+          - my-bucket/my-path/my-object.json
+      - name: dest
+        type: noun
+        required: true
+        description: path to move to
+        examples:
+          - my-bucket
+          - my-bucket/new-path
+  
+  # rm
+  - name: rm
+    description: Remove a bucket or a folder in a bucket or an object in a bucket or path
+    alias: remvoe
+    arguments:
+      - name: path
+        type: noun
+        required: true
+        description: a bucket, a folder in a bucket, an object in a bucket / path. Wildcard is supported.
+        examples:
+          - my-bucket
+          - my-bucket/my-path
+          - my-bucket/my-path/*
+          - my-bucket/my-path/my-object.json
+
+  #########################
+  # Authentication
+  #########################
+  # logout
+  - name: logout
+    description: Logout from Tigris
+
+  # whoami
+  - name: whoami
+    description: Show information about the current user
+    alias: w
+
+  # login
+  - name: login
+    description: Login to Tigris
+    alias: l
+    operations:
+      # configure
+      - name: configure
+        description: Configure Tigris
+        alias: c
+        arguments:
+          - name: access-key
+            description: Tigris Access key ID
+            alias: key
+            required: true
+          - name: access-secret
+            description: Tigris Access secret
+            alias: secret
+            required: true
+          - name: endpoint
+            description: Tigris Endpoint
+            alias: e
+            required: true
+      # credentials
+      - name: credentials
+        description: Login with credentials
+        alias: c
+        arguments:
+          - name: access-key
+            description: Access key
+            alias: key
+            required-when: mode=credentials
+          - name: access-secret
+            description: Access secret
+            alias: secret
+            required-when: mode=credentials
+      # ui
+      - name: ui
+        description: Login with UI
+        alias: u
+    default: ui
+
+  #########################
+  # Manage organizations
+  #########################
+  - name: orgs
+    description: Manage organizations
+    operations:
+      # list
+      - name: list
+        description: List organizations
+        alias: l
+        arguments:
+          - name: format
+            description: Format
+            alias: f
+            options: [json, table, xml, select]
+            default: select
+          - name: select
+            description: Interactive selection mode
+            alias: i
+            type: flag
+      - name: create
+        description: Create organization
+        alias: c
+        arguments:
+          - name: name
+            description: Name of the organization
+            alias: n
+            required: true
+          - name: description
+            description: Description of the organization
+            alias: d
+      - name: select
+        description: Select the organization to use
+        alias: s
+        arguments:
+          - name: name
+            type: noun
+            required: true
+            description: Name of the organization
+
+  #########################
+  # Manage buckets
+  #########################
+  - name: buckets
+    description: Manage buckets
+    alias: b
+    operations:
+      # list
+      - name: list
+        description: List buckets
+        alias: l
+        arguments:
+          - name: format
+            description: Format
+            alias: f
+            options: [json, table, xml]
+            default: table
+      # create
+      - name: create
+        description: Create bucket
+        alias: [c]
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: noun
+            required: true
+          - name: access
+            description: Access level
+            alias: a
+            options: [public, private]
+            default: private
+          - name: default-tier
+            description: Choose the default tier for the bucket
+            alias: t
+            options:
+              - name: Standard
+                value: STANDARD
+                description: The default storage class. It provides high durability, availability, and performance for frequently accessed data.
+              - name: Infrequent Access
+                value: STANDARD_IA
+                description: Lower-cost storage for data that is accessed less frequently but requires rapid access when needed.
+              - name: Archive
+                value: GLACIER
+                description: Low-cost storage for data archiving. Long-term data archiving with infrequent access.
+              - name: Instant Retrieval Archive
+                value: GLACIER_IR
+                description: Lowest-cost storage for long-lived data that is rarely accessed and requires retrieval in milliseconds.
+            default: STANDARD
+          - name: consistency
+            description: Choose the consistency level for the bucket
+            alias: c
+            options:
+              - name: Default
+                value: default
+                description: Strict read-after-write consistency in same region. Eventual consistency globally.
+              - name: Strict
+                value: strict
+                description: Strict read-after-write consistency globally. Latency will be higher than the default.
+            default: default
+          - name: region
+            description: Region
+            alias: r
+            options:
+              - name: Global
+                value: ''
+                description: Global
+              - name: USA
+                value: usa
+                description: Restrict to USA
+              - name: Europe
+                value: eur
+                description: Restrict to Europe
+              - name: Amsterdam, Netherlands
+                value: ams
+                description: Amsterdam, Netherlands
+              - name: Frankfurt, Germany
+                value: fra
+                description: Frankfurt, Germany
+              - name: Sao Paulo, Brazil
+                value: gru
+                description: Sao Paulo, Brazil
+              - name: Ashburn, Virginia (US)
+                value: iad
+                description: Ashburn, Virginia (US)
+              - name: Johannesburg, South Africa
+                value: jnb
+                description: Johannesburg, South Africa
+              - name: London, United Kingdom
+                value: lhr
+                description: London, United Kingdom
+              - name: Tokyo, Japan
+                value: nrt
+                description: Tokyo, Japan
+              - name: Chicago, Illinois (US)
+                value: ord
+                description: Chicago, Illinois (US)
+              - name: Singapore, Singapore
+                value: sin
+                description: Singapore, Singapore
+              - name: San Jose, California (US)
+                value: sjc
+                description: San Jose, California (US)
+              - name: Sydney, Australia
+                value: syd
+                description: Sydney, Australia
+            default: ''
+          - name: Cache Control
+            description: This lets you set the default Cache-Control header for objects in the bucket. Tigris will set some cache control headers by default for public objects, but you can set an implicit default here.
+            alias: cc
+          - name: Delete Protection
+            description: This lets you enable or disable delete protection for the bucket. When enabled, objects in the bucket cannot be deleted.
+            alias: dp
+            options:
+              - name: Enabled
+                value: enabled
+                description: Enabled
+              - name: Disabled
+                value: disabled
+                description: Disabled
+            default: disabled
+      # get
+      - name: get
+        description: Get bucket details
+        alias: g
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: noun
+            required: true
+      # delete
+      - name: delete
+        description: Delete bucket
+        alias: d
+        arguments:
+          - name: name
+            description: Name of the bucket or comma separated list of buckets
+            type: noun
+            required: true
+            multiple: true
+  
+  #########################
+  # Manage forks
+  #########################
+  - name: forks
+    description: Manage forks
+    alias: f
+    operations:
+      # list
+      - name: list
+        description: List forks
+        alias: l
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: noun
+            required: true
+      # create
+      - name: create
+        description: Create fork
+        alias: c
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: noun
+            required: true
+          - name: fork-name
+            description: Name of the fork
+            type: noun
+            required: true
+  
+  #########################
+  # Manage snapshots
+  #########################
+  - name: snapshots
+    description: Manage snapshots
+    alias: s
+    operations:
+      # list  
+      - name: list
+        description: List snapshots
+        alias: l
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: noun
+            required: true
+      # create
+      - name: create
+        description: Create snapshot
+        alias: c
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: noun
+            required: true
+          - name: snapshot-name
+            description: Name of the snapshot
+            type: noun
+            required: true
+
+  #########################
+  # Manage objects
+  #########################
+  - name: objects
+    description: Manage objects
+    alias: o
+    operations:
+      # list
+      - name: list
+        description: List objects
+        alias: l
+        arguments:
+          - name: bucket
+            description: Name of the bucket
+            alias: b
+            required: true
+          - name: format
+            description: Format
+            alias: f
+            options: [json, table, xml]
+            default: table
+      # get
+      - name: get
+        description: Get object
+        alias: g
+        arguments:
+          - name: bucket
+            description: Name of the bucket
+            type: noun
+            required: true
+          - name: key
+            description: Name of the object
+            type: noun
+            required: true
+          - name: format
+            description: Format
+            alias: f
+            options: [string, file, stream]
+            default: string
+      # create
+      - name: create
+        description: Create object
+        alias: c
+        arguments:
+          - name: bucket
+            description: Name of the bucket
+            type: noun
+            required: true
+          - name: name
+            description: Name of the object
+            type: noun
+            required: true
+          - name: body
+            description: Body of the object
+            alias: d
+            required: true
+          - name: access
+            description: Access level
+            alias: a
+            options: [public, private]
+            default: private
+          - name: content-type
+            description: Content type
+            alias: c
+          - name: content-disposition
+            description: Content disposition
+            alias: d
+          - name: tier
+            description: Tier
+            alias: t
+            options:
+              - name: Standard
+                value: STANDARD
+                description: The default storage class. It provides high durability, availability, and performance for frequently accessed data.
+              - name: Infrequent Access
+                value: STANDARD_IA
+                description: Lower-cost storage for data that is accessed less frequently but requires rapid access when needed.
+              - name: Archive
+                value: GLACIER
+                description: Low-cost storage for data archiving. Long-term data archiving with infrequent access.
+              - name: Instant Retrieval Archive
+                value: GLACIER_IR
+                description: Lowest-cost storage for long-lived data that is rarely accessed and requires retrieval in milliseconds.
+            default: STANDARD
+      # delete
+      - name: delete
+        description: Delete object
+        alias: d
+        arguments:
+          - name: bucket
+            description: Name of the bucket
+            type: noun
+            required: true
+          - name: key
+            description: Name of the object (comma separated names for multiple objects)
+            type: noun
+            required: true
+            multiple: true
+      # copy
+      - name: copy
+        description: Copy object
+        alias: c
+        arguments:
+          - name: bucket
+            description: Name of the bucket
+            type: noun
+            required: true
+          - name: name
+            description: Name of the object (comma separated names for multiple objects)
+            type: noun
+            required: true
+            multiple: true
+          - name: destination
+            description: Destination
+            type: noun
+            required: true
+      # move
+      - name: move
+        description: Move object
+        alias: m
+        arguments:
+          - name: bucket
+            description: Name of the bucket
+            type: noun
+            required: true
+          - name: source
+            description: Name of the object (comma separated names for multiple objects)
+            type: noun
+            required: true
+            multiple: true
+          - name: destination
+            description: Destination
+            type: noun
+            required: true

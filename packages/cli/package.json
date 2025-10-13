@@ -1,0 +1,81 @@
+{
+  "name": "@tigrisdata/cli",
+  "version": "0.0.1",
+  "description": "Command line interface for Tigris object storage",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/cli.js"
+    }
+  },
+  "bin": {
+    "tigris": "./dist/cli.js",
+    "t3": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "publint": "publint",
+    "prepublishOnly": "npm run build",
+    "clean": "rm -rf dist",
+    "commit": "cz",
+    "prepare": "husky install"
+  },
+  "keywords": [
+    "cli",
+    "object",
+    "storage",
+    "tigris",
+    "blob"
+  ],
+  "author": "Tigris Data",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tigrisdata/cli.git"
+  },
+  "license": "MIT",
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "dependencies": {
+    "@tigrisdata/storage": "*",
+    "axios": "^1.12.2",
+    "commander": "^11.0.0",
+    "enquirer": "^2.4.1",
+    "open": "^10.2.0",
+    "yaml": "^2.3.4"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^18.0.0",
+    "@commitlint/config-conventional": "^18.0.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "commitizen": "^4.3.0",
+    "cz-conventional-changelog": "^3.3.0",
+    "eslint": "^8.0.0",
+    "husky": "^8.0.0",
+    "prettier": "^3.0.0",
+    "publint": "^0.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}
