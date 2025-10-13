@@ -69,7 +69,7 @@ export async function get(
         if (format === 'file') {
           const bytes = await res.Body.transformToByteArray();
           return {
-            data: new File([bytes], path, {
+            data: new File([bytes as BlobPart], path, {
               type: res.ContentType ?? options?.contentType ?? '',
             }),
           };

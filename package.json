@@ -1,7 +1,7 @@
 {
   "name": "@tigris/monorepo",
   "version": "0.0.1",
-  "description": "Tigris monorepo for storage SDK and CLI",
+  "description": "Tigris monorepo for storage SDK",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -10,7 +10,6 @@
   "scripts": {
     "build": "npm run build --workspaces",
     "build:storage": "npm run build --workspace=@tigrisdata/storage",
-    "build:cli": "npm run build --workspace=@tigrisdata/cli",
     "dev": "npm run dev --workspaces",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
