@@ -68,8 +68,9 @@ export async function get(
 
         if (format === 'file') {
           const bytes = await res.Body.transformToByteArray();
+          const buffer = new Uint8Array(bytes);
           return {
-            data: new File([bytes], path, {
+            data: new File([buffer], path, {
               type: res.ContentType ?? options?.contentType ?? '',
             }),
           };
