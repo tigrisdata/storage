@@ -13,22 +13,17 @@ yarn add @tigrisdata/storage
 
 ## Getting Started
 
-Getting started with Tigris Storage SDK is easy. First, you need to create a
-Tigris account and create a bucket.
+Getting started with Tigris Storage SDK is easy. First, you need to create a Tigris account and create a bucket.
 
 ### Setting up your account and bucket
 
 1. Create a Tigris account at [storage.new](https://storage.new)
-2. Create a bucket at
-   [console.tigris.dev/createbucket](https://console.tigris.dev/createbucket)
-3. Create an access key at
-   [console.tigris.dev/createaccesskey](https://console.tigris.dev/createaccesskey)
+2. Create a bucket at [console.tigris.dev/createbucket](https://console.tigris.dev/createbucket)
+3. Create an access key at [console.tigris.dev/createaccesskey](https://console.tigris.dev/createaccesskey)
 
 ### Configure your Project
 
-In your project root, create a `.env` file if it doesn't exist already and put
-the following content in it. Replace the values with actual values you obtained
-from above steps.
+In your project root, create a `.env` file if it doesn't exist already and put the following content in it. Replace the values with actual values you obtained from above steps.
 
 ```bash
 TIGRIS_STORAGE_ACCESS_KEY_ID=tid_access_key_id
@@ -38,8 +33,7 @@ TIGRIS_STORAGE_BUCKET=bucket_name
 
 ## Authentication
 
-After you have created an access key, you can set the environment variables in
-your `.env` file:
+After you have created an access key, you can set the environment variables in your `.env` file:
 
 ```bash
 TIGRIS_STORAGE_ACCESS_KEY_ID=tid_access_key_id
@@ -47,8 +41,7 @@ TIGRIS_STORAGE_SECRET_ACCESS_KEY=tsec_secret_access_key
 TIGRIS_STORAGE_BUCKET=bucket_name
 ```
 
-Alternatively, all methods accept an optional config parameter that allows you
-to override the default environment configuration:
+Alternatively, all methods accept an optional config parameter that allows you to override the default environment configuration:
 
 ```ts
 type TigrisStorageConfig = {
@@ -91,10 +84,7 @@ const result = await get('object.txt', 'string', {
 
 ## Responses
 
-All methods return a generic response of type `TigrisStorageResponse`. If there
-is an error, the `error` property will be set. If there is a successful
-response, the `data` property will be set. This allows for a better type safety
-and error handling.
+All methods return a generic response of type `TigrisStorageResponse`. If there is an error, the `error` property will be set. If there is a successful response, the `data` property will be set. This allows for a better type safety and error handling.
 
 ```ts
 type TigrisStorageResponse<T, E> = {
@@ -129,8 +119,7 @@ put(path: string, body: string | ReadableStream | Blob | Buffer, options?: PutOp
 `put` accepts the following parameters:
 
 - `path`: (Required) A string specifying the base value of the return URL
-- `body`: (Required) A blob object as ReadableStream, String, ArrayBuffer or
-  Blob based on these supported body types
+- `body`: (Required) A blob object as ReadableStream, String, ArrayBuffer or Blob based on these supported body types
 - `options`: (Optional) A JSON object with the following optional parameters:
 
 #### `options`
@@ -147,16 +136,14 @@ put(path: string, body: string | ReadableStream | Blob | Buffer, options?: PutOp
 | onUploadProgress   | No           | Callback to track upload progress: `onUploadProgress({loaded: number, total: number, percentage: number})`.                                             |
 | config             | No           | A configuration object to override the [default configuration](#authentication).                                                                        |
 
-In case of successful upload, the `data` property will be set to the upload and
-contains the following properties:
+In case of successful upload, the `data` property will be set to the upload and contains the following properties:
 
 - `contentDisposition`: content disposition of the object
 - `contentType`: content type of the object
 - `modified`: Last modified date of the object
 - `path`: Path to the object
 - `size`: Size of the object
-- `url`: A presigned URL to the object if the object is uploaded with `access`
-  set to `private`, otherwise unsigned public URL for the object
+- `url`: A presigned URL to the object if the object is uploaded with `access` set to `private`, otherwise unsigned public URL for the object
 
 ### Examples
 
@@ -219,8 +206,7 @@ get(path: string, format: "string" | "file" | "stream", options?: GetOptions): P
 `get` accepts the following parameters:
 
 - `path`: (Required) A string specifying the path to the object
-- `format`: (Required) A string specifying the format of the object. Possible
-  values are `string`, `file`, and `stream`.
+- `format`: (Required) A string specifying the format of the object. Possible values are `string`, `file`, and `stream`.
 - `options`: (Optional) A JSON object with the following optional parameters:
 
 #### `options`
@@ -232,8 +218,7 @@ get(path: string, format: "string" | "file" | "stream", options?: GetOptions): P
 | encoding           | No           | Set the encoding of the object. Default is `utf-8`.                                                                                                     |
 | config             | No           | A configuration object to override the [default configuration](#authentication).                                                                        |
 
-In case of successful `get`, the `data` contains the object in the format
-specified by the `format` parameter.
+In case of successful `get`, the `data` contains the object in the format specified by the `format` parameter.
 
 ### Examples
 
@@ -307,16 +292,14 @@ head(path: string, options?: HeadOptions): Promise<TigrisStorageResponse<HeadRes
 | ------------- | ------------ | -------------------------------------------------------------------------------- |
 | config        | No           | A configuration object to override the [default configuration](#authentication). |
 
-In case of successful `head`, the `data` property will be set to the metadata of
-the object and contains the following properties:
+In case of successful `head`, the `data` property will be set to the metadata of the object and contains the following properties:
 
 - `contentDisposition`: content disposition of the object
 - `contentType`: content type of the object
 - `modified`: Last modified date of the object
 - `path`: Path to the object
 - `size`: Size of the object
-- `url`: A presigned URL to the object if the object is downloaded with `access`
-  set to `private`, otherwise unsigned public URL for the object
+- `url`: A presigned URL to the object if the object is downloaded with `access` set to `private`, otherwise unsigned public URL for the object
 
 ### Examples
 
@@ -361,8 +344,7 @@ remove(path: string, options?: RemoveOptions): Promise<TigrisStorageResponse<voi
 | ------------- | ------------ | -------------------------------------------------------------------------------- |
 | config        | No           | A configuration object to override the [default configuration](#authentication). |
 
-In case of successful `remove`, the `data` property will be set to `undefined`
-and the object will be deleted.
+In case of successful `remove`, the `data` property will be set to `undefined` and the object will be deleted.
 
 ### Examples
 
@@ -380,8 +362,7 @@ if (result.error) {
 
 ## Presigning an object
 
-`getPresignedUrl` function can be used to presign an object from a bucket and
-retrieve the presigned URL.
+`getPresignedUrl` function can be used to presign an object from a bucket and retreive the presigned URL.
 
 ### `getPresignedUrl`
 
@@ -403,8 +384,7 @@ getPresignedUrl(path: string, options: GetPresignedUrlOptions): Promise<TigrisSt
 | contentType   | No           | The content type of the object.                                                          |
 | config        | No           | A configuration object to override the [default configuration](#authentication).         |
 
-In case of successful `getPresignedUrl`, the `data` property will be set to the
-presigned URL and contains the following properties:
+In case of successful `getPresignedUrl`, the `data` property will be set to the presigned URL and contains the following properties:
 
 - `url`: The presigned URL
 - `method`: The method used to get the presigned URL
@@ -452,12 +432,10 @@ list(options?: ListOptions): Promise<TigrisStorageResponse<ListResponse, Error>>
 | paginationToken | No           | The pagination token to continue listing objects from the previous request.      |
 | config          | No           | A configuration object to override the [default configuration](#authentication). |
 
-In case of successful `list`, the `data` property will be set to the list of
-objects and contains the following properties:
+In case of successful `list`, the `data` property will be set to the list of objects and contains the following properties:
 
 - `items`: The list of objects
-- `paginationToken`: The pagination token to continue listing objects for next
-  page.
+- `paginationToken`: The pagination token to continue listing objects for next page.
 - `hasMore`: Whether there are more objects to list.
 
 ### Examples
@@ -501,26 +479,96 @@ if (currentPage.data) {
 console.log(allFiles);
 ```
 
+## Listing buckets
+
+`listBuckets` function can be used to list all buckets in the account.
+
+### `listBuckets`
+
+```ts
+listBuckets(options?: ListBucketsOptions): Promise<TigrisStorageResponse<ListBucketsResponse, Error>>;
+```
+
+`listBuckets` accepts the following parameters
+
+- `options`: (Optional) A JSON object with the following optional parameters:
+
+#### `options`
+
+| **Parameter**   | **Required** | **Values**                                                                       |
+| --------------- | ------------ | -------------------------------------------------------------------------------- |
+| limit           | No           | The maximum number of buckets to return.                                         |
+| paginationToken | No           | The pagination token to continue listing buckets from the previous request.      |
+| config          | No           | A configuration object to override the [default configuration](#authentication). |
+
+In case of successful `list`, the `data` property will be set to the list of buckets and contains the following properties:
+
+- `buckets`: The list of buckets
+- `owner`: The owner of the buckets
+- `paginationToken`: The pagination token to continue listing objects for next page.
+
+### Examples
+
+#### List buckets
+
+```ts
+const result = await listBuckets();
+
+if (result.error) {
+  console.error('Error listing buckets:', result.error);
+} else {
+  console.log('Buckets:', result.data);
+}
+```
+
+## Deleting a bucket
+
+`removeBucket` function can be used to delete a bucket.
+
+### `removeBucket`
+
+```ts
+removeBucket(bucketName: string, options?: RemoveBucketOptions): Promise<TigrisStorageResponse<void, Error>>;
+```
+
+`removeBucket` accepts the following parameters:
+
+- `bucketName`: (Required) A string specifying the name of the bucket
+- `options`: (Optional) A JSON object with the following optional parameters:
+
+#### `options`
+
+| **Parameter** | **Required** | **Values**                                                                       |
+| ------------- | ------------ | -------------------------------------------------------------------------------- |
+| config        | No           | A configuration object to override the [default configuration](#authentication). |
+
+In case of successful `removeBucket`, the `data` property will be set to `undefined` and the bucket will be deleted.
+
+### Examples
+
+#### Delete a bucket
+
+```ts
+const result = await removeBucket('my-bucket');
+
+if (result.error) {
+  console.error('Error deleting bucket:', result.error);
+} else {
+  console.log('Bucket deleted successfully');
+}
+```
+
 ## Client Uploads
 
-Amongst all the other great features of Tigris, free egress fees is another
-example of what makes us stand out from other providers. We care about the
-bandwidth costs and we want to make it as cheap as possible for you to use
-Tigris. That's why we've made it so that you can upload files directly to Tigris
-from the client side.
+Amongst all the other great features of Tigris, free egress fees is another example of what makes us stand out from other providers. We care about the bandwidth costs and we want to make it as cheap as possible for you to use Tigris. That's why we've made it so that you can upload files directly to Tigris from the client side.
 
-We leverage the
-[presigned URLs](https://tigrisdata.com/docs/sdks/tigris/using-sdk#presigning-an-object) features to
-allow you to upload files directly to Tigris from the client side.
+We leverage the [presigned URLs](https://tigrisdata.com/docs/sdks/tigris/using-sdk#presigning-an-object) features to allow you to upload files directly to Tigris from the client side.
 
-Client side uploads are a great way to upload objects to a bucket directly from
-the browser as it allows you to upload objects to a bucket without having to
-proxy the objects through your server saving costs on bandwidth.
+Client side uploads are a great way to upload objects to a bucket directly from the browser as it allows you to upload objects to a bucket without having to proxy the objects through your server saving costs on bandwidth.
 
 ### Uploading an object
 
-You can use the `upload` method from `client` package to upload objects directly
-to Tigris from the client side.
+You can use the `upload` method from `client` package to upload objects directly to Tigris from the client side.
 
 ```ts
 import { upload } from '@tigrisdata/storage/client';
@@ -541,8 +589,7 @@ import { upload } from '@tigrisdata/storage/client';
 | onUploadProgress | No           | Callback to track upload progress: `onUploadProgress({loaded: number, total: number, percentage: number})`.                       |
 | config           | No           | A configuration object to override the [default configuration](https://tigrisdata.com/docs/sdks/tigris/using-sdk#authentication). |
 
-In case of successful upload, the `data` property will be set to the upload and
-contains the following properties:
+In case of successful upload, the `data` property will be set to the upload and contains the following properties:
 
 - `contentDisposition`: content disposition of the object
 - `contentType`: content type of the object
@@ -573,6 +620,6 @@ contains the following properties:
 
 You can see a full example [here](https://tigrisdata.com/docs/sdks/tigris/examples#client-uploads).
 
-## Examples
+## More Examples
 
 If you want to see it the Storage SDK used with your tool of choice, we have some ready examples available at [our community repo](https://github.com/tigrisdata-community/storage-sdk-examples). Something missing there that you you'd like to see? Open an issue and we'll be more than happy to add in examples.
