@@ -24,7 +24,10 @@ export type BucketOwner = {
 export async function listBuckets(
   options?: ListBucketsOptions
 ): Promise<TigrisStorageResponse<ListBucketsResponse, Error>> {
-  const { data: tigrisClient, error } = createTigrisClient(options?.config);
+  const { data: tigrisClient, error } = createTigrisClient(
+    options?.config,
+    true
+  );
 
   if (error || !tigrisClient) {
     return { error };
