@@ -543,6 +543,7 @@ removeBucket(bucketName: string, options?: RemoveBucketOptions): Promise<TigrisS
 
 | **Parameter** | **Required** | **Values**                                                                       |
 | ------------- | ------------ | -------------------------------------------------------------------------------- |
+| force         | No           | When provided, forcefully delete the bucket                                      |
 | config        | No           | A configuration object to override the [default configuration](#authentication). |
 
 In case of successful `removeBucket`, the `data` property will be set to `undefined` and the bucket will be deleted.

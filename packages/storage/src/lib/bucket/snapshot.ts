@@ -61,7 +61,6 @@ export async function listBucketSnapshots(
   return tigrisClient
     .send(command)
     .then((res) => {
-      console.log(res.Buckets);
       return {
         data:
           res.Buckets?.map((bucket) => ({
