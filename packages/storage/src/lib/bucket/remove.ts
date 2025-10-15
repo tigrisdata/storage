@@ -44,6 +44,6 @@ export async function removeBucket(
       return { data: undefined };
     })
     .catch((error) => {
-      return { error: new Error(`Unable to remove bucket ${error}`) };
+      return { error: new Error(`Unable to remove bucket ${error.message}`) };
     });
 }

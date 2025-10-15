@@ -62,6 +62,6 @@ export async function listBuckets(
       };
     })
     .catch((error) => {
-      return { error: new Error(`Unable to list buckets ${error}`) };
+      return { error: new Error(`Unable to list buckets ${error.message}`) };
     });
 }
