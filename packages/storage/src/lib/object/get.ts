@@ -1,4 +1,5 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
+import type { HttpRequest } from '@aws-sdk/types';
 import { config } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
@@ -8,6 +9,7 @@ export type GetOptions = {
   contentDisposition?: 'attachment' | 'inline';
   contentType?: string;
   encoding?: string;
+  snapshotVersion?: string;
 };
 
 export type GetResponse = string | File | ReadableStream;
@@ -49,6 +51,22 @@ export async function get(
           : 'inline'
         : undefined,
   });
+
+  if (options?.snapshotVersion) {
+    get.middlewareStack.add(
+      (next) => async (args) => {
+        const req = args.request as HttpRequest;
+        req.headers['X-Tigris-Snapshot-Version'] = `${options.snapshotVersion}`;
+        const result = await next(args);
+        return result;
+      },
+      {
+        name: 'X-Tigris-Snapshot-Middleware',
+        step: 'build',
+        override: true,
+      }
+    );
+  }
 
   try {
     return tigrisClient

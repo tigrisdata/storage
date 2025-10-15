@@ -41,27 +41,31 @@ export async function listBuckets(
     MaxBuckets: options?.limit,
   });
 
-  return await tigrisClient
-    .send(command)
-    .then((res) => {
-      if (!res.Buckets) {
-        return { data: { buckets: [] } };
-      }
+  try {
+    return await tigrisClient
+      .send(command)
+      .then((res) => {
+        if (!res.Buckets) {
+          return { data: { buckets: [] } };
+        }
 
-      return {
-        data: {
-          buckets: res.Buckets.map((bucket) => ({
-            name: bucket.Name!,
-            creationDate: bucket.CreationDate!,
-          })),
-          owner: {
-            name: res.Owner?.DisplayName ?? '',
-            id: res.Owner?.ID ?? '',
+        return {
+          data: {
+            buckets: res.Buckets.map((bucket) => ({
+              name: bucket.Name!,
+              creationDate: bucket.CreationDate!,
+            })),
+            owner: {
+              name: res.Owner?.DisplayName ?? '',
+              id: res.Owner?.ID ?? '',
+            },
           },
-        },
-      };
-    })
-    .catch((error) => {
-      return { error: new Error(`Unable to list buckets ${error.message}`) };
-    });
+        };
+      })
+      .catch((error) => {
+        return { error: new Error(`Unable to list buckets ${error.message}`) };
+      });
+  } catch {
+    return { error: new Error('Unable to list buckets') };
+  }
 }

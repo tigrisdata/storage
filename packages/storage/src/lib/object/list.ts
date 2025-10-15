@@ -1,4 +1,5 @@
 import { ListObjectsV2Command } from '@aws-sdk/client-s3';
+import type { HttpRequest } from '@aws-sdk/types';
 import { config, missingConfigError } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
@@ -6,6 +7,7 @@ import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 export type ListOptions = {
   limit?: number;
   paginationToken?: string;
+  snapshotVersion?: string;
   config?: TigrisStorageConfig;
 };
 
@@ -40,6 +42,22 @@ export async function list(
     MaxKeys: options?.limit,
     ContinuationToken: options?.paginationToken,
   });
+
+  if (options?.snapshotVersion) {
+    list.middlewareStack.add(
+      (next) => async (args) => {
+        const req = args.request as HttpRequest;
+        req.headers['X-Tigris-Snapshot-Version'] = `${options.snapshotVersion}`;
+        const result = await next(args);
+        return result;
+      },
+      {
+        name: 'X-Tigris-Snapshot-Middleware',
+        step: 'build',
+        override: true,
+      }
+    );
+  }
 
   return tigrisClient
     .send(list)
