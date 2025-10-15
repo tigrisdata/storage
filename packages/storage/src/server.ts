@@ -6,6 +6,7 @@ export {
   type ListBucketsOptions,
   type ListBucketsResponse,
 } from './lib/bucket/list';
+export { removeBucket, type RemoveBucketOptions } from './lib/bucket/remove';
 export {
   createBucketSnapshot,
   listBucketSnapshots,

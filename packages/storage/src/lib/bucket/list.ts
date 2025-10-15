@@ -4,11 +4,14 @@ import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type ListBucketsOptions = {
   config?: TigrisStorageConfig;
+  paginationToken?: string;
+  limit?: number;
 };
 
 export type ListBucketsResponse = {
   buckets: Bucket[];
   owner: BucketOwner;
+  paginationToken?: string;
 };
 
 export type Bucket = {
@@ -33,7 +36,10 @@ export async function listBuckets(
     return { error };
   }
 
-  const command = new ListBucketsCommand();
+  const command = new ListBucketsCommand({
+    ContinuationToken: options?.paginationToken,
+    MaxBuckets: options?.limit,
+  });
 
   return await tigrisClient
     .send(command)
