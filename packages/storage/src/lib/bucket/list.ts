@@ -10,7 +10,7 @@ export type ListBucketsOptions = {
 
 export type ListBucketsResponse = {
   buckets: Bucket[];
-  owner: BucketOwner;
+  owner?: BucketOwner;
   paginationToken?: string;
 };
 
@@ -45,14 +45,14 @@ export async function listBuckets(
     .send(command)
     .then((res) => {
       if (!res.Buckets) {
-        return { error: new Error('No buckets found') };
+        return { data: { buckets: [] } };
       }
 
       return {
         data: {
           buckets: res.Buckets.map((bucket) => ({
-            name: bucket.Name ?? '',
-            creationDate: bucket.CreationDate ?? new Date(),
+            name: bucket.Name!,
+            creationDate: bucket.CreationDate!,
           })),
           owner: {
             name: res.Owner?.DisplayName ?? '',
