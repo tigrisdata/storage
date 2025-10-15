@@ -9,11 +9,11 @@ export type ListBucketSnapshotsOptions = {
 };
 
 export type ListBucketSnapshotsResponse = Array<{
-  /*
-    @deprecated Use name and version instead, will be removed in the next major version
-  */
   name?: string | undefined;
   version: string | undefined;
+  /**
+   * @deprecated Use name and version instead, will be removed in the next major version
+   */
   snapshotName: string | undefined;
   creationDate: Date | undefined;
 }>;
