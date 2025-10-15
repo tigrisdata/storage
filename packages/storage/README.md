@@ -486,7 +486,7 @@ console.log(allFiles);
 ### `listBuckets`
 
 ```ts
-listBuckets(): Promise<TigrisStorageResponse<ListBucketsResponse, Error>>;
+listBuckets(options?: ListBucketsOptions): Promise<TigrisStorageResponse<ListBucketsResponse, Error>>;
 ```
 
 `listBuckets` accepts the following parameters
