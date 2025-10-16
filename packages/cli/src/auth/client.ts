@@ -19,6 +19,7 @@ import {
   clearTokens,
   storeOrganizations,
   getOrganizations,
+  storeLoginMethod,
 } from './storage.js';
 
 interface DeviceCodeResponse {
@@ -73,15 +74,14 @@ export class TigrisAuthClient {
       const deviceCode = response.data;
 
       console.log('📱 Please authenticate in your browser:');
-      console.log(`\n   ${deviceCode.verification_uri_complete}\n`);
-      console.log(`   Or visit: ${deviceCode.verification_uri}`);
-      console.log(`   And enter code: ${deviceCode.user_code}\n`);
 
       // Open browser automatically
       try {
         await open(deviceCode.verification_uri_complete);
       } catch {
-        // Ignore if browser opening fails
+        console.log(
+          `Visit: ${deviceCode.verification_uri} and Enter code: ${deviceCode.user_code}\n`
+        );
       }
 
       console.log('⏳ Waiting for authentication...\n');
@@ -94,6 +94,9 @@ export class TigrisAuthClient {
 
       // Store tokens securely
       await storeTokens(tokens);
+
+      // Store login method
+      storeLoginMethod('oauth');
 
       // Extract and store organizations
       await this.extractAndStoreOrganizations(tokens.idToken);

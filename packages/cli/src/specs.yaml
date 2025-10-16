@@ -117,47 +117,89 @@ commands:
   - name: whoami
     description: Show information about the current user
     alias: w
+  
+  # configure
+  - name: configure
+    description: Configure Tigris credentials interactively
+    alias: c
+    arguments:
+      - name: access-key
+        description: Tigris Access key ID
+        alias: key
+        required: false
+      - name: access-secret
+        description: Tigris Access secret
+        alias: secret
+        required: false
+      - name: endpoint
+        description: Tigris Endpoint
+        alias: e
+        required: false
 
   # login
   - name: login
-    description: Login to Tigris
+    description: Login to Tigris (interactive selection between user and machine)
     alias: l
+    arguments:
+      - name: access-key
+        description: Access key (optional, will use credentials flow if provided)
+        alias: key
+        required: false
+      - name: access-secret
+        description: Access secret (optional, will use credentials flow if provided)
+        alias: secret
+        required: false
+      - name: profile
+        description: Use saved credentials profile (loads from ~/.tigris/credentials.json)
+        alias: p
+        required: false
+        type: flag
+      - name: oauth
+        description: Login as a user (OAuth2 flow)
+        alias: o
+        required: false
+        type: flag
     operations:
-      # configure
-      - name: configure
-        description: Configure Tigris
-        alias: c
+      # login (main interactive operation)
+      - name: select
+        description: Interactive selection between user and machine login
         arguments:
           - name: access-key
-            description: Tigris Access key ID
+            description: Access key (optional, will use credentials flow if provided)
             alias: key
-            required: true
+            required: false
           - name: access-secret
-            description: Tigris Access secret
+            description: Access secret (optional, will use credentials flow if provided)
             alias: secret
-            required: true
-          - name: endpoint
-            description: Tigris Endpoint
-            alias: e
-            required: true
-      # credentials
-      - name: credentials
-        description: Login with credentials
-        alias: c
-        arguments:
-          - name: access-key
-            description: Access key
-            alias: key
-            required-when: mode=credentials
-          - name: access-secret
-            description: Access secret
-            alias: secret
-            required-when: mode=credentials
+            required: false
+          - name: profile
+            description: Use saved credentials profile (loads from ~/.tigris/credentials.json)
+            alias: p
+            required: false
+            type: flag
+          - name: oauth
+            description: Login as a user (OAuth2 flow)
+            alias: o
+            required: false
+            type: flag
       # ui
       - name: ui
-        description: Login with UI
+        description: Login as a user (OAuth2 flow)
         alias: u
-    default: ui
+      # credentials
+      - name: credentials
+        description: Login as a machine (with access key and secret)
+        alias: c
+        arguments:
+          - name: access-key
+            description: Access key (optional, will prompt or use saved credentials if not provided)
+            alias: key
+            required: false
+          - name: access-secret
+            description: Access secret (optional, will prompt or use saved credentials if not provided)
+            alias: secret
+            required: false
+    default: select
 
   #########################
   # Manage organizations

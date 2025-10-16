@@ -1,52 +1,56 @@
 import { getOption } from '../../utils/options.js';
 import { formatOutput } from '../../utils/format.js';
+import { getS3Client } from '../../auth/s3-client.js';
+import { ListBucketsCommand } from '@aws-sdk/client-s3';
 
 export default async function list(options: Record<string, unknown>) {
   console.log('🪣 Listing Buckets');
 
-  const format = getOption<string>(options, ['format', 'F'], 'table');
+  try {
+    const format = getOption<string>(options, ['format', 'F'], 'table');
 
-  // Mock data for demonstration
-  const buckets = [
-    {
-      name: 'user-uploads',
-      access: 'private',
-      tier: 'STANDARD',
-      region: 'usa',
-      objects: 1250,
-      size: '2.3 GB',
-      created: '2024-01-15',
-    },
-    {
-      name: 'static-assets',
-      access: 'public',
-      tier: 'STANDARD',
-      region: 'global',
-      objects: 45,
-      size: '156 MB',
-      created: '2024-02-01',
-    },
-    {
-      name: 'backups',
-      access: 'private',
-      tier: 'GLACIER',
-      region: 'eur',
-      objects: 89,
-      size: '8.7 GB',
-      created: '2024-01-20',
-    },
-  ];
+    // Get S3 client
+    const client = await getS3Client();
 
-  const output = formatOutput(buckets, format!, 'buckets', 'bucket', [
-    { key: 'name', header: 'Name', width: 15 },
-    { key: 'access', header: 'Access', width: 7 },
-    { key: 'tier', header: 'Tier', width: 9 },
-    { key: 'region', header: 'Region', width: 6 },
-    { key: 'objects', header: 'Objects', width: 7, align: 'right' },
-    { key: 'size', header: 'Size', width: 8, align: 'right' },
-    { key: 'created', header: 'Created', width: 10 },
-  ]);
+    // List buckets using AWS SDK
+    const command = new ListBucketsCommand({});
 
-  console.log(output);
-  console.log(`Found ${buckets.length} bucket(s)`);
+    const response = await client.send(command);
+
+    if (!response.Buckets || response.Buckets.length === 0) {
+      console.log('No buckets found');
+      return;
+    }
+
+    // Transform AWS response to match expected format
+    const buckets = response.Buckets.map((bucket) => ({
+      name: bucket.Name || '',
+      created: bucket.CreationDate
+        ? bucket.CreationDate.toISOString().split('T')[0]
+        : 'N/A',
+    }));
+
+    const output = formatOutput(buckets, format!, 'buckets', 'bucket', [
+      { key: 'name', header: 'Name', width: 50 },
+      { key: 'created', header: 'Created', width: 50 },
+    ]);
+
+    console.log(output);
+    console.log(`Found ${buckets.length} bucket(s)`);
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error(`\n❌ Failed to list buckets: ${error.message}`);
+
+      if (error.message.includes('Not authenticated')) {
+        console.log(
+          '💡 Run "tigris login" or "tigris configure" to authenticate\n'
+        );
+      } else if (error.message.includes('No organization selected')) {
+        console.log('💡 Run "tigris orgs select" to choose an organization\n');
+      }
+    } else {
+      console.error('\n❌ An unknown error occurred');
+    }
+    process.exit(1);
+  }
 }
