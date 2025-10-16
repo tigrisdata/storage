@@ -19,10 +19,15 @@ export async function remove(
     Bucket: options?.config?.bucket ?? config.bucket,
     Key: path,
   });
-  return tigrisClient
-    .send(remove)
-    .then(() => undefined)
-    .catch(handleError);
+
+  try {
+    return tigrisClient
+      .send(remove)
+      .then(() => undefined)
+      .catch(handleError);
+  } catch (error) {
+    return handleError(error);
+  }
 }
 
 const handleError = (error: unknown) => {

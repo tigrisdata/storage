@@ -216,6 +216,7 @@ get(path: string, format: "string" | "file" | "stream", options?: GetOptions): P
 | contentDisposition | No           | Set the content disposition of the object. Possible values are `inline` and `attachment`. Default is `inline`. Use `attachment` for downloadable files. |
 | contentType        | No           | Set the content type of the object. If not provided, content type set when the object is uploaded will be used.                                         |
 | encoding           | No           | Set the encoding of the object. Default is `utf-8`.                                                                                                     |
+| snapshotVersion    | No           | Snapshot version of the bucket.                                                                                                                         |
 | config             | No           | A configuration object to override the [default configuration](#authentication).                                                                        |
 
 In case of successful `get`, the `data` contains the object in the format specified by the `format` parameter.
@@ -288,9 +289,10 @@ head(path: string, options?: HeadOptions): Promise<TigrisStorageResponse<HeadRes
 
 #### `options`
 
-| **Parameter** | **Required** | **Values**                                                                       |
-| ------------- | ------------ | -------------------------------------------------------------------------------- |
-| config        | No           | A configuration object to override the [default configuration](#authentication). |
+| **Parameter**   | **Required** | **Values**                                                                       |
+| --------------- | ------------ | -------------------------------------------------------------------------------- |
+| snapshotVersion | No           | Snapshot version of the bucket.                                                  |
+| config          | No           | A configuration object to override the [default configuration](#authentication). |
 
 In case of successful `head`, the `data` property will be set to the metadata of the object and contains the following properties:
 
@@ -430,6 +432,7 @@ list(options?: ListOptions): Promise<TigrisStorageResponse<ListResponse, Error>>
 | --------------- | ------------ | -------------------------------------------------------------------------------- |
 | limit           | No           | The maximum number of objects to return. By default, returns up to 100 objects.  |
 | paginationToken | No           | The pagination token to continue listing objects from the previous request.      |
+| snapshotVersion | No           | Snapshot version of the bucket.                                                  |
 | config          | No           | A configuration object to override the [default configuration](#authentication). |
 
 In case of successful `list`, the `data` property will be set to the list of objects and contains the following properties:
@@ -481,7 +484,7 @@ console.log(allFiles);
 
 ## Listing buckets
 
-`listBuckets` function can be used to list all buckets in the account.
+`listBuckets` function can be used to list all buckets that the user has access to.
 
 ### `listBuckets`
 
@@ -540,6 +543,7 @@ removeBucket(bucketName: string, options?: RemoveBucketOptions): Promise<TigrisS
 
 | **Parameter** | **Required** | **Values**                                                                       |
 | ------------- | ------------ | -------------------------------------------------------------------------------- |
+| force         | No           | When provided, forcefully delete the bucket.                                     |
 | config        | No           | A configuration object to override the [default configuration](#authentication). |
 
 In case of successful `removeBucket`, the `data` property will be set to `undefined` and the bucket will be deleted.

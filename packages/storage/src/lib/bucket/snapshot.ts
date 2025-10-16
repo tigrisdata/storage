@@ -9,6 +9,11 @@ export type ListBucketSnapshotsOptions = {
 };
 
 export type ListBucketSnapshotsResponse = Array<{
+  name?: string | undefined;
+  version: string | undefined;
+  /**
+   * @deprecated Use name and version instead, will be removed in the next major version
+   */
   snapshotName: string | undefined;
   creationDate: Date | undefined;
 }>;
@@ -59,6 +64,8 @@ export async function listBucketSnapshots(
       return {
         data:
           res.Buckets?.map((bucket) => ({
+            name: bucket.Name?.split('; name=')[1],
+            version: bucket.Name?.split(';')[0],
             snapshotName: bucket.Name,
             creationDate: bucket.CreationDate,
           })) ?? [],
@@ -112,8 +119,11 @@ export async function createBucketSnapshot(
   const command = new CreateBucketCommand({ Bucket: sourceBucket });
   command.middlewareStack.add(
     (next) => async (args) => {
-      (args.request as HttpRequest).headers['X-Tigris-Snapshot'] =
-        `true; name=${options?.name ?? options?.description}`;
+      let header = 'true';
+      if (options?.name ?? options?.description) {
+        header = `${header}; name=${options?.name ?? options?.description}`;
+      }
+      (args.request as HttpRequest).headers['X-Tigris-Snapshot'] = header;
       return next(args);
     },
     { step: 'build' }
