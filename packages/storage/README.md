@@ -484,7 +484,7 @@ console.log(allFiles);
 
 ## Listing buckets
 
-`listBuckets` function can be used to list all buckets user has access to.
+`listBuckets` function can be used to list all buckets that the user has access to.
 
 ### `listBuckets`
 
