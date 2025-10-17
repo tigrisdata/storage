@@ -38,7 +38,7 @@ export function createTigrisClient(
     return missingConfigError('endpoint');
   }
 
-  const key = `${accessKeyId}-${secretAccessKey}-${endpoint}-${bucket}`;
+  const key = `${accessKeyId}-${secretAccessKey}-${endpoint}`;
 
   const cachedClient = cachedClients.get(key);
 
