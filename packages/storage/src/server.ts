@@ -1,4 +1,13 @@
-export { createBucket, type CreateBucketOptions } from './lib/bucket/create';
+export {
+  createBucket,
+  type CreateBucketOptions,
+  type CreateBucketResponse,
+} from './lib/bucket/create';
+export {
+  getBucketInfo,
+  type BucketInfoResponse,
+  type GetBucketInfoOptions,
+} from './lib/bucket/info';
 export {
   listBuckets,
   type Bucket,
@@ -11,6 +20,7 @@ export {
   createBucketSnapshot,
   listBucketSnapshots,
   type CreateBucketSnapshotOptions,
+  type CreateBucketSnapshotResponse,
   type ListBucketSnapshotsOptions,
   type ListBucketSnapshotsResponse,
 } from './lib/bucket/snapshot';

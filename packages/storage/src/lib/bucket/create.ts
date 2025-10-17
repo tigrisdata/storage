@@ -1,6 +1,6 @@
 import { CreateBucketCommand } from '@aws-sdk/client-s3';
 import type { HttpRequest } from '@aws-sdk/types';
-import { createTigrisClient } from '../tigris-client';
+import { createTigrisClient, TigrisHeaders } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type CreateBucketOptions = {
@@ -10,10 +10,17 @@ export type CreateBucketOptions = {
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
+export type CreateBucketResponse = {
+  isSnapshotEnabled: boolean;
+  hasForks: boolean;
+  sourceBucketName?: string;
+  sourceBucketSnapshot?: string;
+};
+
 export async function createBucket(
   bucketName: string,
   options?: CreateBucketOptions
-): Promise<TigrisStorageResponse<void, Error>> {
+): Promise<TigrisStorageResponse<CreateBucketResponse, Error>> {
   const { data: tigrisClient, error } = createTigrisClient(
     options?.config,
     true
@@ -30,7 +37,7 @@ export async function createBucket(
   if (options?.enableSnapshot) {
     command.middlewareStack.add(
       (next) => async (args) => {
-        (args.request as HttpRequest).headers['X-Tigris-Enable-Snapshot'] =
+        (args.request as HttpRequest).headers[TigrisHeaders.SNAPSHOT_ENABLED] =
           'true';
         return next(args);
       },
@@ -42,15 +49,16 @@ export async function createBucket(
     const sourceBucketName = options.sourceBucketName;
     command.middlewareStack.add(
       (next) => async (args) => {
-        (args.request as HttpRequest).headers['X-Tigris-Fork-Source-Bucket'] =
-          sourceBucketName;
+        (args.request as HttpRequest).headers[
+          TigrisHeaders.FORK_SOURCE_BUCKET
+        ] = sourceBucketName;
 
         if (
           options?.sourceBucketSnapshot &&
           options.sourceBucketSnapshot !== ''
         ) {
           (args.request as HttpRequest).headers[
-            'X-Tigris-Fork-Source-Bucket-Snapshot'
+            TigrisHeaders.FORK_SOURCE_BUCKET_SNAPSHOT
           ] = options.sourceBucketSnapshot;
         }
 
@@ -60,12 +68,27 @@ export async function createBucket(
     );
   }
 
-  return tigrisClient
-    .send(command)
-    .then(() => {
-      return { data: undefined };
-    })
-    .catch((error) => {
-      return { error: new Error(`Unable to create bucket ${error}`) };
-    });
+  try {
+    return tigrisClient
+      .send(command)
+      .then(() => {
+        return {
+          data: {
+            isSnapshotEnabled: !!options?.enableSnapshot,
+            hasForks: false,
+            ...(options?.sourceBucketName
+              ? { sourceBucketName: options?.sourceBucketName }
+              : {}),
+            ...(options?.sourceBucketSnapshot
+              ? { sourceBucketSnapshot: options?.sourceBucketSnapshot }
+              : {}),
+          },
+        };
+      })
+      .catch((error) => {
+        return { error: new Error(`Unable to create bucket ${error.message}`) };
+      });
+  } catch {
+    return { error: new Error('Unable to create bucket') };
+  }
 }

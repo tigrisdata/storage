@@ -1,7 +1,7 @@
 import { CreateBucketCommand, ListBucketsCommand } from '@aws-sdk/client-s3';
-import type { HttpRequest } from '@aws-sdk/types';
+import type { HttpRequest, HttpResponse } from '@aws-sdk/types';
 import { config } from '../config';
-import { createTigrisClient } from '../tigris-client';
+import { createTigrisClient, TigrisHeaders } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type ListBucketSnapshotsOptions = {
@@ -52,28 +52,38 @@ export async function listBucketSnapshots(
   const command = new ListBucketsCommand({});
   command.middlewareStack.add(
     (next) => async (args) => {
-      (args.request as HttpRequest).headers['X-Tigris-Snapshot'] = sourceBucket;
+      (args.request as HttpRequest).headers[TigrisHeaders.SNAPSHOT] =
+        sourceBucket;
       return next(args);
     },
     { step: 'build' }
   );
 
-  return tigrisClient
-    .send(command)
-    .then((res) => {
-      return {
-        data:
-          res.Buckets?.map((bucket) => ({
-            name: bucket.Name?.split('; name=')[1],
-            version: bucket.Name?.split(';')[0],
-            snapshotName: bucket.Name,
-            creationDate: bucket.CreationDate,
-          })) ?? [],
-      };
-    })
-    .catch((error) => {
-      return { error: new Error(`Unable to list bucket snapshots ${error}`) };
-    });
+  try {
+    return tigrisClient
+      .send(command)
+      .then((res) => {
+        return {
+          data:
+            res.Buckets?.map((bucket) => ({
+              name: bucket.Name?.split('; name=')[1],
+              version: bucket.Name?.split(';')[0],
+              /**
+               * @deprecated Use name and version instead, will be removed in the next major version
+               */
+              snapshotName: bucket.Name,
+              creationDate: bucket.CreationDate,
+            })) ?? [],
+        };
+      })
+      .catch((error) => {
+        return {
+          error: new Error(`Unable to list bucket snapshots ${error.message}`),
+        };
+      });
+  } catch {
+    return { error: new Error('Unable to list bucket snapshots') };
+  }
 }
 
 export type CreateBucketSnapshotOptions = {
@@ -85,17 +95,21 @@ export type CreateBucketSnapshotOptions = {
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
+export type CreateBucketSnapshotResponse = {
+  snapshotVersion: string;
+};
+
 export async function createBucketSnapshot(
   options?: CreateBucketSnapshotOptions
-): Promise<TigrisStorageResponse<void, Error>>;
+): Promise<TigrisStorageResponse<CreateBucketSnapshotResponse, Error>>;
 export async function createBucketSnapshot(
   sourceBucketName?: string,
   options?: CreateBucketSnapshotOptions
-): Promise<TigrisStorageResponse<void, Error>>;
+): Promise<TigrisStorageResponse<CreateBucketSnapshotResponse, Error>>;
 export async function createBucketSnapshot(
   sourceBucketName?: string | CreateBucketSnapshotOptions,
   options?: CreateBucketSnapshotOptions
-): Promise<TigrisStorageResponse<void, Error>> {
+): Promise<TigrisStorageResponse<CreateBucketSnapshotResponse, Error>> {
   if (typeof sourceBucketName === 'object') {
     options = sourceBucketName;
     sourceBucketName = undefined;
@@ -117,24 +131,48 @@ export async function createBucketSnapshot(
   }
 
   const command = new CreateBucketCommand({ Bucket: sourceBucket });
+
   command.middlewareStack.add(
     (next) => async (args) => {
       let header = 'true';
       if (options?.name ?? options?.description) {
         header = `${header}; name=${options?.name ?? options?.description}`;
       }
-      (args.request as HttpRequest).headers['X-Tigris-Snapshot'] = header;
+      (args.request as HttpRequest).headers[TigrisHeaders.SNAPSHOT] = header;
       return next(args);
     },
     { step: 'build' }
   );
 
-  return tigrisClient
-    .send(command)
-    .then(() => {
-      return { data: undefined };
-    })
-    .catch((error) => {
-      return { error: new Error(`Unable to create bucket snapshot ${error}`) };
-    });
+  let responseHeaders: Record<string, string> = {};
+
+  command.middlewareStack.add(
+    (next) => async (args) => {
+      const result = await next(args);
+      responseHeaders = (result.response as HttpResponse).headers;
+
+      return result;
+    },
+    { step: 'build' }
+  );
+
+  try {
+    return tigrisClient
+      .send(command)
+      .then(() => {
+        return {
+          data: {
+            snapshotVersion:
+              responseHeaders[TigrisHeaders.SNAPSHOT_VERSION.toLowerCase()],
+          },
+        };
+      })
+      .catch((error) => {
+        return {
+          error: new Error(`Unable to create bucket snapshot ${error.message}`),
+        };
+      });
+  } catch {
+    return { error: new Error('Unable to create bucket snapshot') };
+  }
 }
