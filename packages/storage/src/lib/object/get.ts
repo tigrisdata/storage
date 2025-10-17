@@ -1,7 +1,7 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import type { HttpRequest } from '@aws-sdk/types';
 import { config } from '../config';
-import { createTigrisClient } from '../tigris-client';
+import { createTigrisClient, TigrisHeaders } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type GetOptions = {
@@ -56,7 +56,8 @@ export async function get(
     get.middlewareStack.add(
       (next) => async (args) => {
         const req = args.request as HttpRequest;
-        req.headers['X-Tigris-Snapshot-Version'] = `${options.snapshotVersion}`;
+        req.headers[TigrisHeaders.SNAPSHOT_VERSION] =
+          `${options.snapshotVersion}`;
         const result = await next(args);
         return result;
       },
