@@ -508,7 +508,7 @@ createBucket(bucketName: string, options?: CreateBucketOptions): Promise<TigrisS
 
 In case of successful `createBucket`, the `data` property will be set and contains the following properties:
 
-- `isSnapshotEnabled`: Whether snapshot versioning is enabled for the bucket
+- `isSnapshotEnabled`: Whether snapshot functionality is enabled for the bucket
 - `hasForks`: Whether the bucket has forks
 - `sourceBucketName`: The name of the source bucket (if this is a fork bucket)
 - `sourceBucketSnapshot`: The snapshot version of the source bucket (if this is a fork bucket)
