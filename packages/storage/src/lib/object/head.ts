@@ -2,7 +2,7 @@ import { HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { HttpRequest } from '@aws-sdk/types';
 import { config } from '../config';
-import { createTigrisClient } from '../tigris-client';
+import { createTigrisClient, TigrisHeaders } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type HeadOptions = {
@@ -37,7 +37,8 @@ export async function head(
     head.middlewareStack.add(
       (next) => async (args) => {
         const req = args.request as HttpRequest;
-        req.headers['X-Tigris-Snapshot-Version'] = `${options.snapshotVersion}`;
+        req.headers[TigrisHeaders.SNAPSHOT_VERSION] =
+          `${options.snapshotVersion}`;
         const result = await next(args);
         return result;
       },
@@ -71,7 +72,9 @@ export async function head(
       });
   } catch {
     return {
-      error: new Error('An error occurred while fetching the file'),
+      error: new Error(
+        'An error occurred while getting metadata of the object'
+      ),
     };
   }
 }

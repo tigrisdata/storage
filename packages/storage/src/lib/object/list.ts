@@ -1,7 +1,7 @@
 import { ListObjectsV2Command } from '@aws-sdk/client-s3';
 import type { HttpRequest } from '@aws-sdk/types';
 import { config, missingConfigError } from '../config';
-import { createTigrisClient } from '../tigris-client';
+import { createTigrisClient, TigrisHeaders } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type ListOptions = {
@@ -47,7 +47,8 @@ export async function list(
     list.middlewareStack.add(
       (next) => async (args) => {
         const req = args.request as HttpRequest;
-        req.headers['X-Tigris-Snapshot-Version'] = `${options.snapshotVersion}`;
+        req.headers[TigrisHeaders.SNAPSHOT_VERSION] =
+          `${options.snapshotVersion}`;
         const result = await next(args);
         return result;
       },
@@ -59,26 +60,30 @@ export async function list(
     );
   }
 
-  return tigrisClient
-    .send(list)
-    .then((res) => {
-      return {
-        data: {
-          items:
-            res.Contents?.map((item) => ({
-              id: item.Key ?? '',
-              name: item.Key ?? '',
-              size: item.Size ?? 0,
-              lastModified: item.LastModified ?? new Date(),
-            })) ?? [],
-          paginationToken: res.NextContinuationToken,
-          hasMore: res.IsTruncated ?? false,
-        },
-      };
-    })
-    .catch((error) => {
-      return {
-        error,
-      };
-    });
+  try {
+    return tigrisClient
+      .send(list)
+      .then((res) => {
+        return {
+          data: {
+            items:
+              res.Contents?.map((item) => ({
+                id: item.Key ?? '',
+                name: item.Key ?? '',
+                size: item.Size ?? 0,
+                lastModified: item.LastModified ?? new Date(),
+              })) ?? [],
+            paginationToken: res.NextContinuationToken,
+            hasMore: res.IsTruncated ?? false,
+          },
+        };
+      })
+      .catch((error) => {
+        return {
+          error: new Error(`Unable to list objects ${error.message}`),
+        };
+      });
+  } catch {
+    return { error: new Error('Unable to list objects') };
+  }
 }
