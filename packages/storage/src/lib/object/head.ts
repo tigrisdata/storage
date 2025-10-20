@@ -72,7 +72,9 @@ export async function head(
       });
   } catch {
     return {
-      error: new Error('An error occurred while fetching the object'),
+      error: new Error(
+        'An error occurred while getting metadata of the object'
+      ),
     };
   }
 }
