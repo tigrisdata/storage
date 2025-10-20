@@ -501,7 +501,7 @@ createBucket(bucketName: string, options?: CreateBucketOptions): Promise<TigrisS
 
 | **Parameter**        | **Required** | **Values**                                                                       |
 | -------------------- | ------------ | -------------------------------------------------------------------------------- |
-| enableSnapshot       | No           | Enable snapshot versioning for the bucket. Default is `false`.                   |
+| enableSnapshot       | No           | Enable snapshot functionality for the bucket. Default is `false`.                |
 | sourceBucketName     | No           | The name of the source bucket to fork from.                                      |
 | sourceBucketSnapshot | No           | The snapshot version of the source bucket to fork from.                          |
 | config               | No           | A configuration object to override the [default configuration](#authentication). |
@@ -510,12 +510,12 @@ In case of successful `createBucket`, the `data` property will be set and contai
 
 - `isSnapshotEnabled`: Whether snapshot versioning is enabled for the bucket
 - `hasForks`: Whether the bucket has forks
-- `sourceBucketName`: The name of the source bucket (if created from a fork)
-- `sourceBucketSnapshot`: The snapshot version of the source bucket (if created from a fork)
+- `sourceBucketName`: The name of the source bucket (if this is a fork bucket)
+- `sourceBucketSnapshot`: The snapshot version of the source bucket (if this is a fork bucket)
 
 ### Examples
 
-#### Create a simple bucket
+#### Create a regular bucket
 
 ```ts
 const result = await createBucket('my-new-bucket');
@@ -527,17 +527,17 @@ if (result.error) {
 }
 ```
 
-#### Create a bucket with snapshot versioning enabled
+#### Create a bucket with snapshot enabled
 
 ```ts
-const result = await createBucket('my-versioned-bucket', {
+const result = await createBucket('my-snapshot-bucket', {
   enableSnapshot: true,
 });
 
 if (result.error) {
   console.error('Error creating bucket:', result.error);
 } else {
-  console.log('Bucket created with snapshots enabled:', result.data);
+  console.log('Bucket created with snapshot enabled:', result.data);
 }
 ```
 
@@ -545,8 +545,8 @@ if (result.error) {
 
 ```ts
 const result = await createBucket('my-forked-bucket', {
-  sourceBucketName: 'original-bucket',
-  sourceBucketSnapshot: 'snapshot-version-123',
+  sourceBucketName: 'parent-bucket',
+  sourceBucketSnapshot: '1751631910169675092',
 });
 
 if (result.error) {
@@ -579,7 +579,7 @@ getBucketInfo(bucketName: string, options?: GetBucketInfoOptions): Promise<Tigri
 
 In case of successful `getBucketInfo`, the `data` property will be set and contains the following properties:
 
-- `isSnapshotEnabled`: Whether snapshot versioning is enabled for the bucket
+- `isSnapshotEnabled`: Whether snapshot is enabled for the bucket
 - `hasForks`: Whether the bucket has forks
 - `sourceBucketName`: The name of the source bucket (if the bucket is a fork)
 - `sourceBucketSnapshot`: The snapshot version of the source bucket (if the bucket is a fork)
@@ -722,7 +722,7 @@ if (result.error) {
   console.error('Error creating snapshot:', result.error);
 } else {
   console.log('Snapshot created:', result.data);
-  // output: { snapshotVersion: "v1234567890" }
+  // output: { snapshotVersion: "1751631910169675092" }
 }
 ```
 
@@ -782,7 +782,7 @@ if (result.error) {
   // output: [
   //   {
   //     name: "backup-before-migration",
-  //     version: "v1234567890",
+  //     version: "1751631910169675092",
   //     creationDate: Date("2023-01-15T08:30:00Z")
   //   }
   // ]

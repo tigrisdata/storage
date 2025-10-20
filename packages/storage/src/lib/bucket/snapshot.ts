@@ -163,7 +163,8 @@ export async function createBucketSnapshot(
         return {
           data: {
             snapshotVersion:
-              responseHeaders[TigrisHeaders.SNAPSHOT_VERSION.toLowerCase()],
+              responseHeaders[TigrisHeaders.SNAPSHOT_VERSION.toLowerCase()] ??
+              '',
           },
         };
       })
