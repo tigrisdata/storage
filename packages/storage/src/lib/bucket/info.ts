@@ -34,7 +34,7 @@ export async function getBucketInfo(
 
       return result;
     },
-    { step: 'build' }
+    { step: 'deserialize' }
   );
 
   try {
