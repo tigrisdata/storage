@@ -501,9 +501,9 @@ createBucket(bucketName: string, options?: CreateBucketOptions): Promise<TigrisS
 
 | **Parameter**        | **Required** | **Values**                                                                                                                                                               |
 | -------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| access               | No           | `public` or `private`. If set to public, objects in this bucket will be publicly readable                                                                                |
+| access               | No           | `public` or `private`. If set to public, objects in this bucket will be publicly readable. Default value is `private`                                                    |
 | consistency          | No           | `default` or `strict`. Default value is `default`. You can read more about consistency [here](https://www.tigrisdata.com/docs/buckets/create-bucket/#bucket-consistency) |
-| defaultTier          | No           | `STANDARD`, `STANDARD_IA`, `GLACIER` or `GLACIER_IR`, This is default object tier for all objects uploaded to it. Default is `STANDARD`                                  |
+| defaultTier          | No           | `STANDARD`, `STANDARD_IA`, `GLACIER` or `GLACIER_IR`. This is default object tier for all objects uploaded to it. Default is `STANDARD`                                  |
 | enableSnapshot       | No           | Enable snapshot functionality for the bucket. Default is `false`. Please note only the Standard storage tier is supported for snapshot-enabled buckets                   |
 | region               | No           | By default, **Global**. Read more about [Bucket Regions here](https://www.tigrisdata.com/docs/buckets/multi-region/)                                                     |
 | sourceBucketName     | No           | The name of the source bucket to fork from.                                                                                                                              |

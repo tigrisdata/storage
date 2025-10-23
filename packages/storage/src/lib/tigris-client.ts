@@ -49,7 +49,7 @@ export function createTigrisClient(
     return missingConfigError('endpoint');
   }
 
-  let key = `${accessKeyId}-${secretAccessKey}-${endpoint}`;
+  let key = `${accessKeyId}-${endpoint}`;
 
   if (options?.sessionToken && options?.organizationId) {
     key = `${options.sessionToken}-${options.organizationId}-${endpoint}`;
@@ -65,7 +65,7 @@ export function createTigrisClient(
     credentials: {
       accessKeyId: accessKeyId ?? '',
       secretAccessKey: secretAccessKey ?? '',
-      sessionToken: options?.sessionToken ?? '',
+      sessionToken: options?.sessionToken ?? undefined,
     },
     region: 'auto',
     endpoint: endpoint ?? 'https://t3.storage.dev',
