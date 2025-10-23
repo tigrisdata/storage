@@ -2,6 +2,7 @@ export {
   createBucket,
   type CreateBucketOptions,
   type CreateBucketResponse,
+  type StorageClass,
 } from './lib/bucket/create';
 export {
   getBucketInfo,

@@ -3,6 +3,8 @@ export type TigrisStorageConfig = {
   accessKeyId?: string;
   secretAccessKey?: string;
   endpoint?: string;
+  sessionToken?: string;
+  organizationId?: string;
 };
 
 export type TigrisStorageResponse<T, E = Error> =

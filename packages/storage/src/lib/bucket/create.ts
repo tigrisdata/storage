@@ -3,10 +3,36 @@ import type { HttpRequest } from '@aws-sdk/types';
 import { createTigrisClient, TigrisHeaders } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
+const availableRegions = [
+  'usa',
+  'eur',
+  'ams',
+  'fra',
+  'gru',
+  'iad',
+  'jnb',
+  'lhr',
+  'nrt',
+  'ord',
+  'sin',
+  'sjc',
+  'syd',
+];
+
+export type StorageClass =
+  | 'STANDARD'
+  | 'STANDARD_IA'
+  | 'GLACIER'
+  | 'GLACIER_IR';
+
 export type CreateBucketOptions = {
   enableSnapshot?: boolean;
   sourceBucketName?: string;
   sourceBucketSnapshot?: string;
+  access?: 'public' | 'private';
+  defaultTier?: StorageClass;
+  consistency?: 'strict' | 'default';
+  region?: string | string[];
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
@@ -30,9 +56,63 @@ export async function createBucket(
     return { error };
   }
 
+  if (options?.region && options?.region !== undefined) {
+    if (Array.isArray(options.region)) {
+      if (
+        !options.region.every((region) => availableRegions.includes(region))
+      ) {
+        return {
+          error: new Error(
+            'Invalid regions specified, possible values are: ' +
+              availableRegions.join(', ')
+          ),
+        };
+      }
+    } else {
+      if (!availableRegions.includes(options.region)) {
+        return {
+          error: new Error(
+            'Invalid region specified, possible values are: ' +
+              availableRegions.join(', ')
+          ),
+        };
+      }
+    }
+  }
+
   const command = new CreateBucketCommand({
     Bucket: bucketName,
   });
+
+  if (options?.access === 'public') {
+    command.input.ACL = 'public-read';
+  }
+
+  command.middlewareStack.add(
+    (next) => async (args) => {
+      const req = args.request as HttpRequest;
+
+      if (options?.defaultTier) {
+        req.headers[TigrisHeaders.STORAGE_CLASS] = options.defaultTier;
+      }
+
+      if (options?.consistency === 'strict') {
+        req.headers[TigrisHeaders.CONSISTENT] = 'true';
+      }
+
+      if (options?.region && options?.region !== undefined) {
+        req.headers[TigrisHeaders.REGIONS] = Array.isArray(options.region)
+          ? options.region.join(',')
+          : options.region;
+      }
+
+      const result = await next(args);
+      return result;
+    },
+    {
+      step: 'build',
+    }
+  );
 
   if (options?.enableSnapshot) {
     command.middlewareStack.add(
