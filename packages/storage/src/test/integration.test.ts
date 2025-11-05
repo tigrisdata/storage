@@ -137,18 +137,23 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
     it('should retrieve file metadata', async () => {
       const result = await head(testFileName, { config });
 
-      expect(result).toBeDefined();
-      expect(result?.data?.size).toBeGreaterThan(0);
-      expect(result?.data?.modified).toBeInstanceOf(Date);
-      expect(result?.data?.path).toBe(testFileName);
+      expect(result.error).toBeUndefined();
+      expect(result.data).toBeDefined();
+      expect(result.data?.size).toBeGreaterThan(0);
+      expect(result.data?.modified).toBeInstanceOf(Date);
+      expect(result.data?.path).toBe(testFileName);
+      expect(result.data?.url).toBeDefined();
+      expect(result.data?.contentType).toBeDefined();
+      expect(result.data?.contentDisposition).toBeDefined();
     });
 
-    it('should return undefined for non-existent files', async () => {
+    it('should return undefined data for non-existent files', async () => {
       const result = await head('non-existent-file.txt', {
         config,
       });
 
-      expect(result).toBeUndefined();
+      expect(result.error).toBeUndefined();
+      expect(result.data).toBeUndefined();
     });
   });
 
@@ -216,12 +221,13 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
     it('should delete a file successfully', async () => {
       const result = await remove(testFileName, { config });
 
-      // remove returns void on success, undefined means success
-      expect(result).toBeUndefined();
+      expect(result.error).toBeUndefined();
+      expect(result.data).toBeUndefined();
 
       // Verify file is gone
       const headResult = await head(testFileName, { config });
-      expect(headResult).toBeUndefined();
+      expect(headResult.error).toBeUndefined();
+      expect(headResult.data).toBeUndefined();
     });
 
     it('should handle non-existent files gracefully', async () => {
@@ -230,7 +236,8 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       });
 
       // Should succeed silently for non-existent files
-      expect(result).toBeUndefined();
+      expect(result.error).toBeUndefined();
+      expect(result.data).toBeUndefined();
     });
   });
 
@@ -245,10 +252,13 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
         contentType: 'text/plain',
       });
       expect(putResult.error).toBeUndefined();
+      expect(putResult.data).toBeDefined();
 
       // Verify metadata
       const headResult = await head(fileName, { config });
-      expect(headResult?.data?.size).toBeGreaterThan(0);
+      expect(headResult.error).toBeUndefined();
+      expect(headResult.data).toBeDefined();
+      expect(headResult.data?.size).toBeGreaterThan(0);
 
       // Download and verify content
       const getResult = await get(fileName, 'string', { config });
@@ -257,11 +267,13 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
 
       // Delete
       const removeResult = await remove(fileName, { config });
-      expect(removeResult).toBeUndefined();
+      expect(removeResult.error).toBeUndefined();
+      expect(removeResult.data).toBeUndefined();
 
       // Verify deletion
       const finalHeadResult = await head(fileName, { config });
-      expect(finalHeadResult).toBeUndefined();
+      expect(finalHeadResult.error).toBeUndefined();
+      expect(finalHeadResult.data).toBeUndefined();
     });
   });
 });

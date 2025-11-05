@@ -22,7 +22,7 @@ export type HeadResponse = {
 export async function head(
   path: string,
   options?: HeadOptions
-): Promise<TigrisStorageResponse<HeadResponse, Error> | undefined> {
+): Promise<TigrisStorageResponse<HeadResponse | void, Error>> {
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
   if (error || !tigrisClient) {
     return { error };
@@ -67,8 +67,18 @@ export async function head(
           },
         };
       })
-      .catch(() => {
-        return undefined;
+      .catch((error) => {
+        if (error.name === 'NotFound') {
+          return {
+            data: undefined,
+          };
+        }
+
+        return {
+          error: new Error(
+            'An error occurred while getting metadata of the object'
+          ),
+        };
       });
   } catch {
     return {
