@@ -10,7 +10,7 @@ export type RemoveOptions = {
 export async function remove(
   path: string,
   options?: RemoveOptions
-): Promise<TigrisStorageResponse<void, Error> | void> {
+): Promise<TigrisStorageResponse<void, Error>> {
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
   if (error || !tigrisClient) {
     return { error };
@@ -23,7 +23,9 @@ export async function remove(
   try {
     return tigrisClient
       .send(remove)
-      .then(() => undefined)
+      .then(() => {
+        return { data: undefined };
+      })
       .catch(handleError);
   } catch (error) {
     return handleError(error);
