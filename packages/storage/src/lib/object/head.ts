@@ -67,9 +67,17 @@ export async function head(
           },
         };
       })
-      .catch(() => {
+      .catch((error) => {
+        if (error.name === 'NotFound') {
+          return {
+            data: undefined,
+          };
+        }
+
         return {
-          data: undefined,
+          error: new Error(
+            'An error occurred while getting metadata of the object'
+          ),
         };
       });
   } catch {
