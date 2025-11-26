@@ -48,9 +48,11 @@ export async function listOrganizations(
     'auth0'
   );
 
+  if (response.error) {
+    return { error: response.error };
+  }
+
   return {
-    data: {
-      organizations: response.data[TIGRIS_CLAIMS_NAMESPACE]?.ns ?? [],
-    },
+    data: { organizations: response.data[TIGRIS_CLAIMS_NAMESPACE]?.ns ?? [] },
   };
 }

@@ -109,12 +109,21 @@ export interface HttpClientRequest<T = unknown> {
   query?: Record<string, string | number | boolean>;
 }
 
-export interface HttpClientResponse<T = unknown> {
-  status: number;
-  statusText: string;
-  headers: Headers;
-  data: T;
-}
+export type HttpClientResponse<T = unknown> =
+  | {
+      status: number;
+      statusText: string;
+      headers: Headers;
+      data: T;
+      error?: never;
+    }
+  | {
+      status: number;
+      statusText: string;
+      headers: Headers;
+      error: Error;
+      data?: never;
+    };
 
 export interface TigrisHttpClient {
   request<TRequest = unknown, TResponse = unknown>(
@@ -198,6 +207,15 @@ export function createTigrisHttpClient(
       }
 
       const response = await fetch(url.toString(), fetchOptions);
+
+      if (!response.ok) {
+        return {
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers,
+          error: new Error(response.statusText),
+        };
+      }
 
       let data: TResponse;
       const contentType = response.headers.get('content-type');

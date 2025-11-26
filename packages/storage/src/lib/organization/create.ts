@@ -61,13 +61,13 @@ export async function createOrganization(
     'iam'
   );
 
-  if (response?.data?.status === 'error') {
-    return { error: new Error(response?.data?.message) };
+  if (response.error) {
+    return { error: response.error };
   }
 
   return {
     data: {
-      id: response?.data?.result?.namespace_id,
+      id: response.data.result.namespace_id,
       name: organizationName,
     },
   };
