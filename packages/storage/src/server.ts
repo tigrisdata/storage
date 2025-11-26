@@ -52,3 +52,14 @@ export {
 export { put, type PutOptions, type PutResponse } from './lib/object/put';
 export { remove, type RemoveOptions } from './lib/object/remove';
 export { UploadAction } from './lib/upload';
+export {
+  listOrganizations,
+  type ListOrganizationsOptions,
+  type ListOrganizationsResponse,
+  type Organization,
+} from './lib/organization/list';
+export {
+  createOrganization,
+  type CreateOrganizationOptions,
+  type CreateOrganizationResponse,
+} from './lib/organization/create';

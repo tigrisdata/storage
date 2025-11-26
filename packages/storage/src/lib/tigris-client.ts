@@ -4,6 +4,7 @@ import { config, missingConfigError } from './config';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
 export enum TigrisHeaders {
+  SESSION_TOKEN = 'x-amz-security-token',
   NAMESPACE = 'X-Tigris-Namespace',
   STORAGE_CLASS = 'X-Amz-Storage-Class',
   CONSISTENT = 'X-Tigris-Consistent',
@@ -96,4 +97,127 @@ export function createTigrisClient(
   return {
     data: client,
   };
+}
+
+const cachedHttpClients = new Map<string, TigrisHttpClient>();
+
+export interface HttpClientRequest<T = unknown> {
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD';
+  path: string;
+  headers?: Record<string, string>;
+  body?: T;
+  query?: Record<string, string | number | boolean>;
+}
+
+export interface HttpClientResponse<T = unknown> {
+  status: number;
+  statusText: string;
+  headers: Headers;
+  data: T;
+}
+
+export interface TigrisHttpClient {
+  request<TRequest = unknown, TResponse = unknown>(
+    req: HttpClientRequest<TRequest>,
+    host?: 't3' | 'iam' | 'auth0'
+  ): Promise<HttpClientResponse<TResponse>>;
+}
+
+export function createTigrisHttpClient(
+  options?: TigrisStorageConfig,
+  skipChecks: boolean = false
+): TigrisStorageResponse<TigrisHttpClient, Error> {
+  const endpoint = options?.endpoint ?? config.endpoint;
+  const iamEndpoint = options?.iamEndpoint ?? config.iamEndpoint;
+  const authDomain = options?.authDomain ?? config.authDomain;
+  const sessionToken = options?.sessionToken;
+  const organizationId = options?.organizationId;
+
+  if (!sessionToken && !skipChecks) {
+    return missingConfigError('sessionToken is required');
+  }
+
+  if (!organizationId && !skipChecks) {
+    return missingConfigError('organizationId is required');
+  }
+
+  let key = `${sessionToken}-${organizationId}`;
+
+  if (authDomain) {
+    key = `${key}-${authDomain}`;
+  }
+
+  const cachedClient = cachedHttpClients.get(key);
+
+  if (cachedClient !== undefined) {
+    return { data: cachedClient };
+  }
+
+  const client: TigrisHttpClient = {
+    async request<TRequest = unknown, TResponse = unknown>(
+      req: HttpClientRequest<TRequest>,
+      host: 't3' | 'iam' | 'auth0' = 't3'
+    ): Promise<HttpClientResponse<TResponse>> {
+      let domain = endpoint;
+      if (host === 'iam') {
+        domain = iamEndpoint;
+      } else if (host === 'auth0') {
+        domain = `https://${authDomain}`;
+      }
+      const url = new URL(req.path, domain);
+
+      // Add query parameters if provided
+      if (req.query) {
+        Object.entries(req.query).forEach(([key, value]) => {
+          url.searchParams.append(key, String(value));
+        });
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...req.headers,
+      };
+
+      // Add Tigris namespace header if organizationId is provided
+      if (organizationId) {
+        headers[TigrisHeaders.NAMESPACE] = organizationId;
+      }
+
+      if (sessionToken) {
+        headers[TigrisHeaders.SESSION_TOKEN] = sessionToken;
+      }
+
+      const fetchOptions: RequestInit = {
+        method: req.method,
+        headers,
+      };
+
+      // Add body if provided and method supports it
+      if (req.body && req.method !== 'GET' && req.method !== 'HEAD') {
+        fetchOptions.body = JSON.stringify(req.body);
+      }
+
+      const response = await fetch(url.toString(), fetchOptions);
+
+      let data: TResponse;
+      const contentType = response.headers.get('content-type');
+
+      if (contentType && contentType.includes('application/json')) {
+        data = (await response.json()) as TResponse;
+      } else {
+        data = (await response.text()) as TResponse;
+      }
+
+      return {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+        data,
+      };
+    },
+  };
+
+  cachedHttpClients.set(key, client);
+
+  return { data: client };
 }

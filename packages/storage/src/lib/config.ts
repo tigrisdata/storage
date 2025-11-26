@@ -10,10 +10,8 @@ const configMap = {
 
 export const missingConfigError = (key: string) => ({
   error: new Error(
-    `Tigris Storage Config incomplete: ${key} is missing.\n
-    Please provide it in .env file or pass it as env variable as ${configMap[key as keyof typeof configMap]}, 
-    or pass it as an option from method call.\n
-    Checkout https://github.com/tigrisdata/storage/tree/main/packages/storage#configure-your-project for more details.`
+    `Tigris Storage Config incomplete: ${key} is missing. Please provide it in .env file or pass it as env variable as ${configMap[key as keyof typeof configMap]} 
+    or pass it as an option from method call. Checkout https://github.com/tigrisdata/storage/tree/main/packages/storage#configure-your-project for more details.`
   ),
 });
 
@@ -42,6 +40,8 @@ function loadEnvConfig(): TigrisStorageConfig {
     config.secretAccessKey = process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY ?? '';
     config.endpoint =
       process.env.TIGRIS_STORAGE_ENDPOINT ?? 'https://t3.storage.dev';
+    config.iamEndpoint =
+      process.env.TIGRIS_STORAGE_IAM_ENDPOINT ?? 'https://iam.storageapi.dev';
   }
 
   return config;

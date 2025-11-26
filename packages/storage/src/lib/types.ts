@@ -5,6 +5,8 @@ export type TigrisStorageConfig = {
   endpoint?: string;
   sessionToken?: string;
   organizationId?: string;
+  iamEndpoint?: string;
+  authDomain?: string;
 };
 
 export type TigrisStorageResponse<T, E = Error> =
