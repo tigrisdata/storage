@@ -16,24 +16,29 @@ export async function createOrganization(
   organizationName: string,
   options?: CreateOrganizationOptions
 ): Promise<TigrisStorageResponse<CreateOrganizationResponse, Error>> {
-  const { data: organizations, error: organizationsError } =
+  const { data: listOrganizationsResponse, error: listOrganizationsError } =
     await listOrganizations({
       config: options?.config,
     });
 
-  if (organizationsError) {
-    return { error: organizationsError };
+  if (listOrganizationsError) {
+    return { error: listOrganizationsError };
   }
 
-  if (organizations.organizations.length === 0) {
-    return { error: new Error('No organizations found') };
+  if (listOrganizationsResponse.organizations.length === 0) {
+    return {
+      error: new Error(
+        'No organizations found. Please go to https://console.storage.dev to create your first organization.'
+      ),
+    };
   }
 
   const { data: tigrisHttpClient, error } = createTigrisHttpClient(
     {
       ...options?.config,
       endpoint: process.env.TIGRIS_STORAGE_IAM_ENDPOINT,
-      organizationId: organizations.organizations[0].id,
+      // Use the first organization id from the list of organizations
+      organizationId: listOrganizationsResponse.organizations[0].id,
     },
     true
   );

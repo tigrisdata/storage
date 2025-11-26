@@ -42,6 +42,7 @@ function loadEnvConfig(): TigrisStorageConfig {
       process.env.TIGRIS_STORAGE_ENDPOINT ?? 'https://t3.storage.dev';
     config.iamEndpoint =
       process.env.TIGRIS_STORAGE_IAM_ENDPOINT ?? 'https://iam.storageapi.dev';
+    config.authDomain = process.env.TIGRIS_AUTH_DOMAIN ?? 'auth.tigris.dev';
   }
 
   return config;

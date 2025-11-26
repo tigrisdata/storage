@@ -14,7 +14,6 @@ export type ListOrganizationsResponse = {
 };
 
 export type ListOrganizationsOptions = {
-  limit?: number;
   config?: TigrisStorageConfig;
 };
 
