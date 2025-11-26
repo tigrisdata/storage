@@ -150,10 +150,14 @@ export function createTigrisHttpClient(
     return missingConfigError('organizationId is required');
   }
 
-  let key = `${sessionToken}-${organizationId}`;
+  let key = `${sessionToken}-${organizationId}-${endpoint}`;
 
   if (authDomain) {
     key = `${key}-${authDomain}`;
+  }
+
+  if (iamEndpoint) {
+    key = `${key}-${iamEndpoint}`;
   }
 
   const cachedClient = cachedHttpClients.get(key);

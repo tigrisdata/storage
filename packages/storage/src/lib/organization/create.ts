@@ -36,7 +36,6 @@ export async function createOrganization(
   const { data: tigrisHttpClient, error } = createTigrisHttpClient(
     {
       ...options?.config,
-      endpoint: process.env.TIGRIS_STORAGE_IAM_ENDPOINT,
       // Use the first organization id from the list of organizations
       organizationId: listOrganizationsResponse.organizations[0].id,
     },

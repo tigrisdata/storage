@@ -35,13 +35,17 @@ export async function listOrganizations(
     return { error };
   }
 
+  if (!options?.config?.sessionToken || options.config.sessionToken === '') {
+    return { error: new Error('Session token is required') };
+  }
+
   const response = await tigrisHttpClient.request<unknown, UserInfoResponse>(
     {
       method: 'GET',
       path: `/userinfo`,
       headers: {
         Accept: 'application/json',
-        Authorization: `Bearer ${options?.config?.sessionToken}`,
+        Authorization: `Bearer ${options.config.sessionToken}`,
       },
     },
     'auth0'
