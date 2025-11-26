@@ -6,6 +6,10 @@ const configMap = {
   bucket: 'TIGRIS_STORAGE_BUCKET',
   accessKeyId: 'TIGRIS_STORAGE_ACCESS_KEY_ID',
   secretAccessKey: 'TIGRIS_STORAGE_SECRET_ACCESS_KEY',
+  iamEndpoint: 'TIGRIS_STORAGE_IAM_ENDPOINT',
+  authDomain: 'TIGRIS_AUTH_DOMAIN',
+  sessionToken: 'TIGRIS_SESSION_TOKEN',
+  organizationId: 'TIGRIS_ORGANIZATION_ID',
 };
 
 export const missingConfigError = (key: string) => ({
