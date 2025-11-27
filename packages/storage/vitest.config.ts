@@ -1,4 +1,9 @@
 import { defineConfig } from 'vitest/config'
+import path from 'path'
+import dotenv from 'dotenv'
+
+// Load .env from repo root
+dotenv.config({ path: path.resolve(__dirname, '../../.env') })
 
 export default defineConfig({
   test: {
@@ -17,5 +22,10 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       exclude: ['node_modules/', 'dist/', '**/*.{test,spec}.{js,ts}', 'src/test/']
     }
-  }
+  },
+  resolve: {
+    alias: {
+      '@shared': path.resolve(__dirname, '../../shared'),
+    },
+  },
 })
