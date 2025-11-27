@@ -1,24 +1,26 @@
+import { config as envConfig } from '@shared/index';
+import type { TigrisStorageCoreConfig } from '@shared/types';
+import { get, head, list, put, remove } from '@tigrisdata/storage';
 import { EventEmitter } from 'events';
 import type { KeyvStoreAdapter } from 'keyv';
-import { config as envConfig, type TigrisStorageConfig } from '@shared/index';
-import { get, put, remove, list, head } from '@tigrisdata/storage';
 
 export type KeyvTigrisOptions = {
-  config?: TigrisStorageConfig;
+  config?: TigrisStorageCoreConfig;
   namespace?: string;
-  dialect?: string;
-  url?: string;
+};
+
+type InternalOpts = KeyvTigrisOptions & {
+  url: string;
 };
 
 export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
-  opts: KeyvTigrisOptions;
+  opts: InternalOpts;
   namespace?: string;
 
   constructor(options: KeyvTigrisOptions = {}) {
     super();
     this.opts = {
-      dialect: 'tigris',
-      url: 'tigris://',
+      url: '',
       ...options,
       config: {
         ...envConfig,
@@ -54,6 +56,8 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
     return Promise.all(keys.map((key) => this.get<T>(key)));
   }
 
+  // The ttl parameter is required by the KeyvStoreAdapter interface signature, but Keyv handles TTL internally so we don't need to use it in our implementation.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async set<T>(key: string, value: T, ttl?: number): Promise<void> {
     const path = this.getKey(key);
 
