@@ -6,7 +6,6 @@ import type { KeyvStoreAdapter } from 'keyv';
 
 export type KeyvTigrisOptions = {
   config?: TigrisStorageCoreConfig;
-  namespace?: string;
 };
 
 type InternalOpts = KeyvTigrisOptions & {
@@ -15,7 +14,7 @@ type InternalOpts = KeyvTigrisOptions & {
 
 export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
   opts: InternalOpts;
-  namespace?: string;
+  namespace?: string; // Set by Keyv
 
   constructor(options: KeyvTigrisOptions = {}) {
     super();
@@ -27,18 +26,11 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
         ...options.config,
       },
     };
-    this.namespace = options.namespace;
-  }
-
-  private getKey(key: string): string {
-    return this.namespace ? `${this.namespace}/${key}` : key;
   }
 
   async get<T>(key: string): Promise<T | undefined> {
-    const path = this.getKey(key);
-
     try {
-      const { data, error } = await get(path, 'string', {
+      const { data, error } = await get(key, 'string', {
         config: this.opts.config,
       });
 
@@ -53,15 +45,13 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
   }
 
   async getMany<T>(keys: string[]): Promise<Array<T | undefined>> {
-    return Promise.all(keys.map((key) => this.get<T>(key)));
+    return Promise.all(keys.map((k) => this.get<T>(k)));
   }
 
   // The ttl parameter is required by the KeyvStoreAdapter interface signature, but Keyv handles TTL internally so we don't need to use it in our implementation.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async set<T>(key: string, value: T, ttl?: number): Promise<void> {
-    const path = this.getKey(key);
-
-    const { error } = await put(path, value as string, {
+    const { error } = await put(key, value as string, {
       config: this.opts.config,
       contentType: 'application/json',
     });
@@ -80,15 +70,13 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
   }
 
   async delete(key: string): Promise<boolean> {
-    const path = this.getKey(key);
-
     // Check if key exists first
     const exists = await this.has(key);
     if (!exists) {
       return false;
     }
 
-    const { error } = await remove(path, {
+    const { error } = await remove(key, {
       config: this.opts.config,
     });
 
@@ -96,12 +84,13 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
   }
 
   async deleteMany(keys: string[]): Promise<boolean> {
-    const results = await Promise.all(keys.map((key) => this.delete(key)));
+    const results = await Promise.all(keys.map((k) => this.delete(k)));
     return results.every((result) => result);
   }
 
   async clear(): Promise<void> {
-    const keyPrefix = this.namespace ? `${this.namespace}/` : '';
+    // Keyv sets namespace on store, prefix format is "namespace:key"
+    const keyPrefix = this.namespace ? `${this.namespace}:` : '';
 
     let paginationToken: string | undefined;
 
@@ -131,9 +120,7 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
   }
 
   async has(key: string): Promise<boolean> {
-    const path = this.getKey(key);
-
-    const { data, error } = await head(path, {
+    const { data, error } = await head(key, {
       config: this.opts.config,
     });
 
@@ -145,15 +132,13 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
   }
 
   async hasMany(keys: string[]): Promise<boolean[]> {
-    return Promise.all(keys.map((key) => this.has(key)));
+    return Promise.all(keys.map((k) => this.has(k)));
   }
 
-  async *iterator<Value>(
-    namespace?: string
-  ): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void> {
-    const ns = namespace || this.namespace;
-    const keyPrefix = ns ? `${ns}/` : '';
-
+  async *iterator<Value>(): AsyncGenerator<
+    Array<string | Awaited<Value> | undefined>,
+    void
+  > {
     let paginationToken: string | undefined;
 
     do {
@@ -167,14 +152,10 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
       }
 
       for (const item of data.items) {
-        if (!keyPrefix || item.name.startsWith(keyPrefix)) {
-          const key = keyPrefix ? item.name.slice(keyPrefix.length) : item.name;
-          // Fetch using full path (item.name) to avoid namespace mismatch
-          const { data: valueData } = await get(item.name, 'string', {
-            config: this.opts.config,
-          });
-          yield [key, valueData as Awaited<Value> | undefined];
-        }
+        const { data: valueData } = await get(item.name, 'string', {
+          config: this.opts.config,
+        });
+        yield [item.name, valueData as Awaited<Value> | undefined];
       }
 
       paginationToken = data.paginationToken;
