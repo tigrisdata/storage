@@ -41,7 +41,8 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
     return Promise.all(keys.map((k) => this.get<T>(k)));
   }
 
-  // The ttl parameter is required by the KeyvStoreAdapter interface signature, but Keyv handles TTL internally so we don't need to use it in our implementation.
+  // The ttl parameter is required by the KeyvStoreAdapter interface signature,
+  // but Keyv handles TTL internally so we don't need to use it in our implementation.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async set<T>(key: string, value: T, ttl?: number): Promise<void> {
     const { error } = await put(key, value as string, {
