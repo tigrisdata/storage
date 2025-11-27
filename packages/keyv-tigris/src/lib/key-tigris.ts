@@ -132,6 +132,9 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
     Array<string | Awaited<Value> | undefined>,
     void
   > {
+    // Keyv sets namespace on store, prefix format is "namespace:key"
+    const keyPrefix = this.namespace ? `${this.namespace}:` : '';
+
     let paginationToken: string | undefined;
 
     do {
@@ -145,10 +148,12 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
       }
 
       for (const item of data.items) {
-        const { data: valueData } = await get(item.name, 'string', {
-          config: this.opts,
-        });
-        yield [item.name, valueData as Awaited<Value> | undefined];
+        if (!keyPrefix || item.name.startsWith(keyPrefix)) {
+          const { data: valueData } = await get(item.name, 'string', {
+            config: this.opts,
+          });
+          yield [item.name, valueData as Awaited<Value> | undefined];
+        }
       }
 
       paginationToken = data.paginationToken;
