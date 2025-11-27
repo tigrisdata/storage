@@ -32,12 +32,10 @@ const store = new KeyvTigris();
 // Or pass the configuration directly:
 
 const store = new KeyvTigris({
-  config: {
-    bucket: 'your-bucket-name',
-    accessKeyId: 'your-access-key',
-    secretAccessKey: 'your-secret-key',
-    endpoint: 'https://t3.storage.dev',
-  },
+  bucket: 'your-bucket-name',
+  accessKeyId: 'your-access-key',
+  secretAccessKey: 'your-secret-key',
+  endpoint: 'https://t3.storage.dev',
 });
 
 const keyv = new Keyv({ store });
@@ -58,9 +56,6 @@ await keyv.set('foo', 'bar');
 
 // Get a value
 const value = await keyv.get('foo'); // 'bar'
-
-// Set with TTL (in milliseconds)
-await keyv.set('temporary', 'data', 60000); // expires in 1 minute
 
 // Delete a key
 await keyv.delete('foo');
@@ -129,13 +124,7 @@ const keyv = new Keyv({ store });
 
 ## API
 
-### `KeyvTigrisOptions`
-
-| Option   | Type                      | Description                                                  |
-| -------- | ------------------------- | ------------------------------------------------------------ |
-| `config` | `TigrisStorageCoreConfig` | Tigris storage configuration (bucket, credentials, endpoint) |
-
-### `TigrisStorageCoreConfig`
+### Constructor Options (`TigrisStorageCoreConfig`)
 
 | Option            | Type     | Description                                             |
 | ----------------- | -------- | ------------------------------------------------------- |
