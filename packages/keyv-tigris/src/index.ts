@@ -169,8 +169,11 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
       for (const item of data.items) {
         if (!keyPrefix || item.name.startsWith(keyPrefix)) {
           const key = keyPrefix ? item.name.slice(keyPrefix.length) : item.name;
-          const value = await this.get<Value>(key);
-          yield [key, value as Awaited<Value> | undefined];
+          // Fetch using full path (item.name) to avoid namespace mismatch
+          const { data: valueData } = await get(item.name, 'string', {
+            config: this.opts.config,
+          });
+          yield [key, valueData as Awaited<Value> | undefined];
         }
       }
 
