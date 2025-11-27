@@ -1,5 +1,4 @@
 module.exports = {
-  tagFormat: 'storage-v${version}',
   branches: [
     'main',
     {
