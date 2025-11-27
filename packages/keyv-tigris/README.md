@@ -14,7 +14,7 @@ npm install @tigrisdata/keyv-tigris keyv
 
 Create an account and set up bucket at [storage.new](https://storage.new)
 
-Set up your Tigris credentials using environment variables (You can also use `.env` file).
+Set up your Tigris credentials using environment variables (you can also use `.env` file).
 
 ```bash
 TIGRIS_STORAGE_BUCKET=your-bucket-name
