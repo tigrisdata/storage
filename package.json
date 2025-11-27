@@ -17,7 +17,7 @@
     "format:check": "npm run format:check --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "commit": "cz",
-    "semantic-release": "semantic-release",
+    "release": "multi-semantic-release",
     "prepare": "husky install",
     "clean": "npm run clean --workspaces --if-present && rm -rf node_modules/.cache"
   },
@@ -44,26 +44,6 @@
       "@commitlint/config-conventional"
     ]
   },
-  "release": {
-    "branches": [
-      "main",
-      {
-        "name": "next",
-        "prerelease": true
-      }
-    ],
-    "plugins": [
-      "@semantic-release/commit-analyzer",
-      "@semantic-release/release-notes-generator",
-      "@semantic-release/github",
-      [
-        "@semantic-release/npm",
-        {
-          "pkgRoot": "packages/storage"
-        }
-      ]
-    ]
-  },
   "devDependencies": {
     "@commitlint/cli": "^18.0.0",
     "@commitlint/config-conventional": "^18.0.0",
@@ -76,6 +56,7 @@
     "cz-conventional-changelog": "^3.3.0",
     "eslint": "^8.0.0",
     "husky": "^8.0.0",
+    "multi-semantic-release": "^3.1.0",
     "prettier": "^3.0.0",
     "publint": "^0.2.0",
     "semantic-release": "^22.0.0",
