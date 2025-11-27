@@ -8,8 +8,9 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces",
+    "build": "npm run build --workspaces --if-present",
     "build:storage": "npm run build --workspace=@tigrisdata/storage",
+    "build:keyv-tigris": "npm run build --workspace=@tigrisdata/keyv-tigris",
     "dev": "npm run dev --workspaces",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",

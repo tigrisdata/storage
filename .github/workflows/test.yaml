@@ -25,6 +25,7 @@ jobs:
       - name: Build packages
         run: |
           npm run build:storage
+          npm run build:keyv-tigris
 
       - name: Run integration tests
         env:
@@ -32,4 +33,4 @@ jobs:
           TIGRIS_STORAGE_ACCESS_KEY_ID: ${{ secrets.TIGRIS_STORAGE_ACCESS_KEY_ID }}
           TIGRIS_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_STORAGE_SECRET_ACCESS_KEY }}
           TIGRIS_STORAGE_ENDPOINT: ${{ secrets.TIGRIS_STORAGE_ENDPOINT }}
-        run: npm run test --workspace=@tigrisdata/storage
+        run: npm run test
