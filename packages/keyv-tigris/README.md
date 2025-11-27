@@ -1,8 +1,8 @@
 # Tigris Adapter for Keyv
 
-[Tigris Storage](https://www.tigrisdata.com/) adapter for [Keyv](https://keyv.org/). Tigris Storage provides instant access to all your data, all over the globe.
+A [Tigris Storage](https://www.tigrisdata.com/) adapter for [Keyv](https://keyv.org/).
 
-Why use an object storage as a key value store? Tigris is notoriously good when it comes to small objects. Here is a [detailed read and benchmarking](https://www.tigrisdata.com/blog/benchmark-small-objects/).
+Why use object storage as a key–value store? Tigris excels at handling small objects. Here’s a detailed write-up and benchmark: [Benchmarking Small Objects](https://www.tigrisdata.com/blog/benchmark-small-objects/)
 
 ## Installation
 
