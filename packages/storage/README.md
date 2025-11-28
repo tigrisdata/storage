@@ -430,6 +430,8 @@ list(options?: ListOptions): Promise<TigrisStorageResponse<ListResponse, Error>>
 
 | **Parameter**   | **Required** | **Values**                                                                       |
 | --------------- | ------------ | -------------------------------------------------------------------------------- |
+| delimiter       | No           | A delimiter is a character that you use to group keys.                           |
+| prefix          | No           | Limits the items to keys that begin with the specified prefix.                   |
 | limit           | No           | The maximum number of objects to return. By default, returns up to 100 objects.  |
 | paginationToken | No           | The pagination token to continue listing objects from the previous request.      |
 | snapshotVersion | No           | Snapshot version of the bucket.                                                  |
