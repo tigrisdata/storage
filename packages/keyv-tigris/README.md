@@ -47,7 +47,7 @@ const keyv = new Keyv({ store });
 
 ```typescript
 import Keyv from 'keyv';
-import KeyvTigris from '@tigrisdata/keyv-tigris';
+import { KeyvTigris } from '@tigrisdata/keyv-tigris';
 
 const keyv = new Keyv({ store: new KeyvTigris() });
 
