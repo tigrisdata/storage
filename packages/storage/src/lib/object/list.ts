@@ -5,6 +5,8 @@ import { createTigrisClient, TigrisHeaders } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type ListOptions = {
+  delimiter?: string;
+  prefix?: string;
   limit?: number;
   paginationToken?: string;
   snapshotVersion?: string;
@@ -39,6 +41,8 @@ export async function list(
 
   const list = new ListObjectsV2Command({
     Bucket: options?.config?.bucket ?? config.bucket,
+    Prefix: options?.prefix,
+    Delimiter: options?.delimiter,
     MaxKeys: options?.limit,
     ContinuationToken: options?.paginationToken,
   });
