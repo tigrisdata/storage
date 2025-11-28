@@ -825,7 +825,7 @@ import { upload } from '@tigrisdata/storage/client';
 
 `upload` accepts the following parameters:
 
-- `path`: (Required) A string specifying the path to the object
+- `name`: (Required) A string specifying the name of object
 - `body`: (Required) A blob object as File or Blob
 - `options`: (Optional) A JSON object with the following optional parameters:
 
@@ -843,7 +843,7 @@ In case of successful upload, the `data` property will be set to the upload and 
 - `contentDisposition`: content disposition of the object
 - `contentType`: content type of the object
 - `modified`: Last modified date of the object
-- `path`: Path to the object
+- `name`: Name of the object
 - `size`: Size of the object
 - `url`: A presigned URL to the object
 

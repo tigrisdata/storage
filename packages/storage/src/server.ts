@@ -51,7 +51,11 @@ export {
 } from './lib/object/presigned-url';
 export { put, type PutOptions, type PutResponse } from './lib/object/put';
 export { remove, type RemoveOptions } from './lib/object/remove';
-export { UploadAction } from './lib/upload';
+export {
+  createOrganization,
+  type CreateOrganizationOptions,
+  type CreateOrganizationResponse,
+} from './lib/organization/create';
 export {
   listOrganizations,
   type ListOrganizationsOptions,
@@ -59,7 +63,7 @@ export {
   type Organization,
 } from './lib/organization/list';
 export {
-  createOrganization,
-  type CreateOrganizationOptions,
-  type CreateOrganizationResponse,
-} from './lib/organization/create';
+  handleClientUpload,
+  type ClientUploadRequest,
+} from './lib/upload/server';
+export { UploadAction } from './lib/upload/shared';

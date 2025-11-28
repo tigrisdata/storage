@@ -1,12 +1,6 @@
 import { TigrisStorageResponse } from '../types';
 import { addRandomSuffix } from '../utils';
-
-export enum UploadAction {
-  SinglepartInit = 'singlepart-init',
-  MultipartInit = 'multipart-init',
-  MultipartGetParts = 'multipart-get-parts',
-  MultipartComplete = 'multipart-complete',
-}
+import { UploadAction } from './shared';
 
 export type UploadOptions = {
   access?: 'public' | 'private';
@@ -30,13 +24,17 @@ export type UploadResponse = {
   contentDisposition?: string;
   contentType?: string;
   modified: Date;
-  path: string;
+  name: string;
+  /**
+   * @deprecated Use `name` instead. Will be removed in the next major version.
+   */
+  path?: string;
   size: number;
   url: string;
 };
 
 export async function upload(
-  path: string,
+  name: string,
   data: File | Blob,
   options?: UploadOptions
 ): Promise<TigrisStorageResponse<UploadResponse, Error>> {
@@ -47,20 +45,20 @@ export async function upload(
   }
 
   if (options?.addRandomSuffix) {
-    path = addRandomSuffix(path);
+    name = addRandomSuffix(name);
   }
 
   const partSize = options?.partSize ?? 5 * 1024 * 1024; // 5MB default
 
   if (options?.multipart) {
-    return uploadMultipart(path, data, options, partSize);
+    return uploadMultipart(name, data, options, partSize);
   } else {
-    return uploadSingle(path, data, options);
+    return uploadSingle(name, data, options);
   }
 }
 
 async function uploadSingle(
-  path: string,
+  name: string,
   data: File | Blob,
   options?: UploadOptions
 ): Promise<TigrisStorageResponse<UploadResponse, Error>> {
@@ -78,7 +76,8 @@ async function uploadSingle(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        path,
+        name,
+        path: name,
         action: UploadAction.SinglepartInit,
         operation: 'put',
         contentType: options?.contentType ?? data.type,
@@ -152,7 +151,8 @@ async function uploadSingle(
             contentDisposition: options?.contentDisposition,
             contentType: options?.contentType ?? data.type,
             modified: new Date(),
-            path,
+            name,
+            path: name,
             size: data.size,
             url: presignedUrl.replace('x-id=PutObject', 'x-id=GetObject'),
           },
@@ -173,7 +173,7 @@ async function uploadSingle(
 }
 
 async function uploadMultipart(
-  path: string,
+  name: string,
   data: File | Blob,
   options?: UploadOptions,
   partSize: number = 5 * 1024 * 1024
@@ -192,7 +192,8 @@ async function uploadMultipart(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        path,
+        name,
+        path: name,
         action: UploadAction.MultipartInit,
         contentType: options?.contentType ?? data.type,
       }),
@@ -219,7 +220,8 @@ async function uploadMultipart(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        path,
+        name,
+        path: name,
         action: UploadAction.MultipartGetParts,
         uploadId,
         parts,
@@ -299,7 +301,8 @@ async function uploadMultipart(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        path,
+        name,
+        path: name,
         action: UploadAction.MultipartComplete,
         uploadId,
         partIds,
@@ -321,7 +324,8 @@ async function uploadMultipart(
         contentDisposition: options?.contentDisposition,
         contentType: options?.contentType ?? data.type,
         modified: new Date(),
-        path,
+        name,
+        path: name,
         size: data.size,
         url: completeData?.url ?? '',
       },
