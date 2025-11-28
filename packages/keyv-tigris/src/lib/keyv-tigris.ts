@@ -84,13 +84,14 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
 
   async clear(): Promise<void> {
     // Keyv sets namespace on store, prefix format is "namespace:key"
-    const keyPrefix = this.namespace ? `${this.namespace}:` : '';
+    const prefix = this.namespace ? `${this.namespace}:` : undefined;
 
     let paginationToken: string | undefined;
 
     do {
       const { data, error } = await list({
         config: this.opts,
+        prefix,
         paginationToken,
       });
 
@@ -99,14 +100,8 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
         return;
       }
 
-      const keysToDelete = keyPrefix
-        ? data.items
-            .filter((item) => item.name.startsWith(keyPrefix))
-            .map((item) => item.name)
-        : data.items.map((item) => item.name);
-
       await Promise.all(
-        keysToDelete.map((key) => remove(key, { config: this.opts }))
+        data.items.map((item) => remove(item.name, { config: this.opts }))
       );
 
       paginationToken = data.paginationToken;
@@ -134,13 +129,14 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
     void
   > {
     // Keyv sets namespace on store, prefix format is "namespace:key"
-    const keyPrefix = this.namespace ? `${this.namespace}:` : '';
+    const prefix = this.namespace ? `${this.namespace}:` : undefined;
 
     let paginationToken: string | undefined;
 
     do {
       const { data, error } = await list({
         config: this.opts,
+        prefix,
         paginationToken,
       });
 
@@ -149,12 +145,10 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
       }
 
       for (const item of data.items) {
-        if (!keyPrefix || item.name.startsWith(keyPrefix)) {
-          const { data: valueData } = await get(item.name, 'string', {
-            config: this.opts,
-          });
-          yield [item.name, valueData as Awaited<Value> | undefined];
-        }
+        const { data: valueData } = await get(item.name, 'string', {
+          config: this.opts,
+        });
+        yield [item.name, valueData as Awaited<Value> | undefined];
       }
 
       paginationToken = data.paginationToken;
