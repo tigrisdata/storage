@@ -25,7 +25,7 @@ TIGRIS_STORAGE_ENDPOINT=https://t3.storage.dev  # optional, defaults to this
 
 ```typescript
 import Keyv from 'keyv';
-import KeyvTigris from '@tigrisdata/keyv-tigris';
+import { KeyvTigris } from '@tigrisdata/keyv-tigris';
 
 const store = new KeyvTigris();
 
