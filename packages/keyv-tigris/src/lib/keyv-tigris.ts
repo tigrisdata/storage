@@ -27,6 +27,10 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
         config: this.opts,
       });
 
+      if (error) {
+        this.emit('error', error);
+      }
+
       if (error || !data) {
         return undefined;
       }
@@ -74,7 +78,12 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
       config: this.opts,
     });
 
-    return !error;
+    if (error) {
+      this.emit('error', error);
+      return false;
+    }
+
+    return true;
   }
 
   async deleteMany(keys: string[]): Promise<boolean> {
@@ -113,7 +122,12 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
       config: this.opts,
     });
 
-    if (error || !data) {
+    if (error) {
+      this.emit('error', error);
+      return false;
+    }
+
+    if (!data) {
       return false;
     }
 
@@ -139,6 +153,10 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
         prefix,
         paginationToken,
       });
+
+      if (error) {
+        this.emit('error', error);
+      }
 
       if (error || !data) {
         return;
