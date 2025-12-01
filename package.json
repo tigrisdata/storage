@@ -43,7 +43,13 @@
   "commitlint": {
     "extends": [
       "@commitlint/config-conventional"
-    ]
+    ],
+    "rules": {
+      "scope-empty": [
+        2,
+        "never"
+      ]
+    }
   },
   "devDependencies": {
     "@commitlint/cli": "^18.0.0",
