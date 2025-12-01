@@ -20,7 +20,8 @@
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["../../shared/*"]
-    }
+    },
+    "types": ["vitest/globals", "@testing-library/jest-dom"]
   },
   "include": ["src/**/*", "../../shared/**/*"],
   "exclude": ["node_modules", "dist"]
