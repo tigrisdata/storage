@@ -133,24 +133,25 @@ The component uses `tigris-` prefixed class names with state modifiers:
 
 ### CSS Classes
 
-| Class                               | Description                   |
-| ----------------------------------- | ----------------------------- |
-| `.tigris-uploader`                  | Container element             |
-| `.tigris-uploader.is-dragging`      | When files are dragged over   |
-| `.tigris-uploader.is-uploading`     | When upload is in progress    |
-| `.tigris-uploader.is-disabled`      | When disabled                 |
-| `.tigris-uploader-input`            | Hidden file input             |
-| `.tigris-uploader-text`             | Default text content          |
-| `.tigris-uploader-link`             | "Browse" link text            |
-| `.tigris-uploader-filelist`         | File list container           |
-| `.tigris-uploader-file`             | Individual file item          |
-| `.tigris-uploader-file.is-uploading`| File currently uploading      |
-| `.tigris-uploader-file.is-success`  | Upload succeeded              |
-| `.tigris-uploader-file.is-error`    | Upload failed                 |
-| `.tigris-uploader-filename`         | File name text                |
-| `.tigris-uploader-progress`         | Progress bar container        |
-| `.tigris-uploader-progress-fill`    | Progress bar fill             |
-| `.tigris-uploader-status`           | Status text (Uploaded/Failed) |
+| Class                               | Description                            |
+| ----------------------------------- | -------------------------------------- |
+| `.tigris-uploader`                  | Container element                      |
+| `.tigris-uploader.is-dragging`      | When files are dragged over            |
+| `.tigris-uploader.is-uploading`     | When upload is in progress             |
+| `.tigris-uploader.is-disabled`      | When disabled                          |
+| `.tigris-uploader-input`            | Hidden file input                      |
+| `.tigris-uploader-text`             | Default text content                   |
+| `.tigris-uploader-link`             | "Browse" link text                     |
+| `.tigris-uploader-filelist`         | File list container                    |
+| `.tigris-uploader-file`             | Individual file item                   |
+| `.tigris-uploader-file.is-pending`  | File waiting in queue                  |
+| `.tigris-uploader-file.is-uploading`| File currently uploading               |
+| `.tigris-uploader-file.is-success`  | Upload succeeded                       |
+| `.tigris-uploader-file.is-error`    | Upload failed                          |
+| `.tigris-uploader-filename`         | File name text                         |
+| `.tigris-uploader-progress`         | Progress bar container                 |
+| `.tigris-uploader-progress-fill`    | Progress bar fill                      |
+| `.tigris-uploader-status`           | Status text (Pending/Uploaded/Failed)  |
 
 ## Server Setup
 

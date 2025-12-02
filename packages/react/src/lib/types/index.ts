@@ -2,7 +2,7 @@ import type { UploadOptions, UploadProgress, UploadResponse } from '@tigrisdata/
 
 export type { UploadOptions, UploadProgress, UploadResponse };
 
-export type UploadStatus = 'idle' | 'uploading' | 'success' | 'error';
+export type UploadStatus = 'idle' | 'pending' | 'uploading' | 'success' | 'error';
 
 export interface FileUploadState {
   file: File;

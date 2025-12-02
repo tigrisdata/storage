@@ -287,4 +287,95 @@ describe('useUpload', () => {
     expect(mockUpload).toHaveBeenCalledTimes(8);
     expect(maxConcurrentUploads).toBeLessThanOrEqual(4);
   });
+
+  it('should add all files as pending immediately when uploading multiple', async () => {
+    let resolveUpload: (() => void) | undefined;
+
+    vi.mocked(mockUpload).mockImplementation(() => {
+      return new Promise((resolve) => {
+        resolveUpload = () => resolve({ data: { name: 'test.txt', url: '', size: 0, modified: new Date() } });
+      });
+    });
+
+    const files = Array.from({ length: 4 }, (_, i) =>
+      new File([`content${i}`], `file${i}.txt`, { type: 'text/plain' })
+    );
+
+    const { result } = renderHook(() => useUpload({ url: mockUrl, concurrency: 1 }));
+
+    let uploadPromise: Promise<unknown>;
+    act(() => {
+      uploadPromise = result.current.uploadMultiple(files);
+    });
+
+    // All files should be in the uploads map immediately
+    expect(result.current.uploads.size).toBe(4);
+
+    // Check that files not yet started are pending
+    const states = Array.from(result.current.uploads.values());
+    const pendingFiles = states.filter((s) => s.status === 'pending');
+    const uploadingFiles = states.filter((s) => s.status === 'uploading');
+
+    // With concurrency 1, only 1 should be uploading, rest pending
+    expect(uploadingFiles.length).toBe(1);
+    expect(pendingFiles.length).toBe(3);
+
+    // Cleanup: resolve all uploads
+    await act(async () => {
+      for (let i = 0; i < 4; i++) {
+        resolveUpload?.();
+        await new Promise((r) => setTimeout(r, 0));
+      }
+      await uploadPromise!;
+    });
+  });
+
+  it('should transition files from pending to uploading to success', async () => {
+    const uploadResolvers: (() => void)[] = [];
+
+    vi.mocked(mockUpload).mockImplementation(() => {
+      return new Promise((resolve) => {
+        uploadResolvers.push(() => resolve({ data: { name: 'test.txt', url: '', size: 0, modified: new Date() } }));
+      });
+    });
+
+    const files = [
+      new File(['content1'], 'file1.txt', { type: 'text/plain' }),
+      new File(['content2'], 'file2.txt', { type: 'text/plain' }),
+    ];
+
+    const { result } = renderHook(() => useUpload({ url: mockUrl, concurrency: 1 }));
+
+    let uploadPromise: Promise<unknown>;
+    act(() => {
+      uploadPromise = result.current.uploadMultiple(files);
+    });
+
+    // Initially: 1 uploading, 1 pending
+    let states = Array.from(result.current.uploads.values());
+    expect(states.find((s) => s.file.name === 'file1.txt')?.status).toBe('uploading');
+    expect(states.find((s) => s.file.name === 'file2.txt')?.status).toBe('pending');
+
+    // Complete first upload
+    await act(async () => {
+      uploadResolvers[0]();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    // Now: 1 success, 1 uploading
+    states = Array.from(result.current.uploads.values());
+    expect(states.find((s) => s.file.name === 'file1.txt')?.status).toBe('success');
+    expect(states.find((s) => s.file.name === 'file2.txt')?.status).toBe('uploading');
+
+    // Complete second upload
+    await act(async () => {
+      uploadResolvers[1]();
+      await uploadPromise!;
+    });
+
+    // Now: both success
+    states = Array.from(result.current.uploads.values());
+    expect(states.find((s) => s.file.name === 'file1.txt')?.status).toBe('success');
+    expect(states.find((s) => s.file.name === 'file2.txt')?.status).toBe('success');
+  });
 });

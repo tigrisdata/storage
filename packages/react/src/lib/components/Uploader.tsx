@@ -13,6 +13,7 @@ function FileListItem({ state }: { state: FileUploadState }) {
     <div
       className={cn(
         'tigris-uploader-file',
+        status === 'pending' && 'is-pending',
         status === 'uploading' && 'is-uploading',
         status === 'success' && 'is-success',
         status === 'error' && 'is-error'
@@ -21,6 +22,7 @@ function FileListItem({ state }: { state: FileUploadState }) {
       <span className="tigris-uploader-filename" title={file.name}>
         {file.name}
       </span>
+      {status === 'pending' && <span className="tigris-uploader-status">Pending</span>}
       {status === 'uploading' && (
         <div className="tigris-uploader-progress">
           <div
