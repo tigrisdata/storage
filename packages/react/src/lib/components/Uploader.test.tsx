@@ -197,6 +197,27 @@ describe('Uploader', () => {
     );
   });
 
+  it('should reject all files when maxSize is 0', () => {
+    const onUploadError = vi.fn();
+    render(<Uploader url={mockUrl} maxSize={0} onUploadError={onUploadError} />);
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['test'], 'test.txt', { type: 'text/plain' });
+
+    Object.defineProperty(input, 'files', {
+      value: [file],
+    });
+
+    fireEvent.change(input);
+
+    expect(onUploadError).toHaveBeenCalledWith(
+      file,
+      expect.objectContaining({
+        message: expect.stringContaining('exceeds maximum'),
+      })
+    );
+  });
+
   it('should add is-dragging class on drag over', () => {
     render(<Uploader url={mockUrl} />);
 

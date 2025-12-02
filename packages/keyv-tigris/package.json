@@ -46,6 +46,7 @@
     "directory": "packages/keyv-tigris"
   },
   "license": "MIT",
+  "homepage": "https://github.com/tigrisdata/storage/tree/main/packages/keyv-tigris#readme",
   "dependencies": {
     "@tigrisdata/storage": "*",
     "dotenv": "^17.2.1",

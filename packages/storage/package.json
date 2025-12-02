@@ -62,6 +62,7 @@
     "directory": "packages/storage"
   },
   "license": "MIT",
+  "homepage": "https://github.com/tigrisdata/storage/tree/main/packages/storage#readme",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.859.0",
     "@aws-sdk/lib-storage": "^3.859.0",

@@ -74,7 +74,7 @@ export function Uploader({
 
   const validateFile = useCallback(
     (file: File): boolean => {
-      if (maxSize && file.size > maxSize) {
+      if (maxSize !== undefined && file.size > maxSize) {
         onUploadError?.(file, new Error(`File size exceeds maximum allowed size of ${maxSize} bytes`));
         return false;
       }
@@ -201,7 +201,7 @@ export function Uploader({
       {uploadList.length > 0 && (
         <div className="tigris-uploader-filelist" onClick={(e) => e.stopPropagation()}>
           {uploadList.map((state) => (
-            <FileListItem key={`${state.file.name}-${state.file.size}`} state={state} />
+            <FileListItem key={`${state.file.name}-${state.file.size}-${state.file.lastModified}`} state={state} />
           ))}
         </div>
       )}
