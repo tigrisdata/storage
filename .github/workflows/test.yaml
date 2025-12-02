@@ -24,8 +24,10 @@ jobs:
 
       - name: Build packages
         run: |
-          npm run build:storage
-          npm run build:keyv-tigris
+          npm run build
+
+      - name: Test Release
+        run: npm run release:dry-run
 
       - name: Run integration tests
         env:

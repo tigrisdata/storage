@@ -23,6 +23,7 @@
     "test": "npm run test --workspaces --if-present",
     "commit": "cz",
     "release": "multi-semantic-release --sequential-init",
+    "release:dry-run": "multi-semantic-release --sequential-init --dry-run",
     "prepare": "husky install",
     "clean": "npm run clean --workspaces --if-present && rm -rf node_modules/.cache"
   },
