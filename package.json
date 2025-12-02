@@ -13,6 +13,7 @@
     "build:keyv-tigris": "npm run build --workspace=@tigrisdata/keyv-tigris",
     "build:react": "npm run build --workspace=@tigrisdata/react",
     "dev": "npm run dev --workspaces",
+    "publint": "npm run publint --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
     "format": "npm run format --workspaces --if-present",

@@ -38,9 +38,7 @@ jobs:
 
       - name: Lint packages
         run: |
-          npm run publint --workspace=@tigrisdata/storage
-          npm run publint --workspace=@tigrisdata/keyv-tigris
-          npm run publint --workspace=@tigrisdata/react
+          npm run publint
 
       - name: Test packages
         env:
