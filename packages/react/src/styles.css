@@ -80,6 +80,7 @@
     background-color: #e0e0e0;
     border-radius: 2px;
     overflow: hidden;
+    margin-left: 10px;
   }
 
   .tigris-uploader-progress-fill {

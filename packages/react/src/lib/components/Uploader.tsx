@@ -1,4 +1,10 @@
-import { useCallback, useRef, useState, type DragEvent, type ChangeEvent } from 'react';
+import {
+  useCallback,
+  useRef,
+  useState,
+  type DragEvent,
+  type ChangeEvent,
+} from 'react';
 import { useUpload } from '../hooks/useUpload';
 import type { UploaderProps, FileUploadState } from '../types';
 
@@ -22,16 +28,23 @@ function FileListItem({ state }: { state: FileUploadState }) {
       <span className="tigris-uploader-filename" title={file.name}>
         {file.name}
       </span>
-      {status === 'pending' && <span className="tigris-uploader-status">Pending</span>}
-      {status === 'uploading' && (
-        <div className="tigris-uploader-progress">
-          <div
-            className="tigris-uploader-progress-fill"
-            style={{ width: `${progress.percentage}%` }}
-          />
-        </div>
+      {status === 'pending' && (
+        <span className="tigris-uploader-status">Pending</span>
       )}
-      {status === 'success' && <span className="tigris-uploader-status">Uploaded</span>}
+      {status === 'uploading' && (
+        <>
+          <span className="tigris-uploader-status">{progress.percentage}%</span>
+          <div className="tigris-uploader-progress">
+            <div
+              className="tigris-uploader-progress-fill"
+              style={{ width: `${progress.percentage}%` }}
+            />
+          </div>
+        </>
+      )}
+      {status === 'success' && (
+        <span className="tigris-uploader-status">Uploaded</span>
+      )}
       {status === 'error' && (
         <span className="tigris-uploader-status" title={error?.message}>
           Failed
@@ -83,7 +96,9 @@ export function Uploader({
         const acceptedTypes = accept.split(',').map((type) => type.trim());
         const fileType = file.type;
         const fileName = file.name;
-        const fileExtension = fileName.includes('.') ? `.${fileName.split('.').pop()?.toLowerCase()}` : '';
+        const fileExtension = fileName.includes('.')
+          ? `.${fileName.split('.').pop()?.toLowerCase()}`
+          : '';
 
         const isAccepted = acceptedTypes.some((acceptedType) => {
           // Handle MIME type wildcards (e.g., "image/*")
@@ -103,14 +118,22 @@ export function Uploader({
         });
 
         if (!isAccepted) {
-          onUploadError?.(file, new Error(`File type not accepted. Allowed types: ${accept}`));
+          onUploadError?.(
+            file,
+            new Error(`File type not accepted. Allowed types: ${accept}`)
+          );
           return false;
         }
       }
 
       // Validate file size
       if (maxSize !== undefined && file.size > maxSize) {
-        onUploadError?.(file, new Error(`File size exceeds maximum allowed size of ${maxSize} bytes`));
+        onUploadError?.(
+          file,
+          new Error(
+            `File size exceeds maximum allowed size of ${maxSize} bytes`
+          )
+        );
         return false;
       }
       return true;
@@ -235,9 +258,15 @@ export function Uploader({
       )}
 
       {uploadList.length > 0 && (
-        <div className="tigris-uploader-filelist" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="tigris-uploader-filelist"
+          onClick={(e) => e.stopPropagation()}
+        >
           {uploadList.map((state) => (
-            <FileListItem key={`${state.file.name}-${state.file.size}-${state.file.lastModified}`} state={state} />
+            <FileListItem
+              key={`${state.file.name}-${state.file.size}-${state.file.lastModified}`}
+              state={state}
+            />
           ))}
         </div>
       )}
