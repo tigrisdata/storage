@@ -244,8 +244,16 @@ async function uploadMultipart(
     const partUrls = urlData;
 
     // Step 3: Upload parts with progress tracking and concurrency limit
-    let totalUploaded = 0;
     const concurrency = options?.concurrency ?? 4;
+    const partProgress = new Map<number, number>();
+
+    const calculateTotalProgress = () => {
+      let total = 0;
+      for (const bytes of partProgress.values()) {
+        total += bytes;
+      }
+      return total;
+    };
 
     const uploadTasks = partUrls.map(
       ({ part, url }: { part: number; url: string }, index: number) => {
@@ -254,13 +262,16 @@ async function uploadMultipart(
           const end = Math.min(start + partSize, data.size);
           const chunk = data.slice(start, end);
 
+          // Initialize progress for this part
+          partProgress.set(part, 0);
+
           return new Promise<Record<number, string>>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
 
             xhr.upload.addEventListener('progress', (event) => {
               if (event.lengthComputable && options?.onUploadProgress) {
-                const partLoaded = event.loaded;
-                const currentTotal = totalUploaded + partLoaded;
+                partProgress.set(part, event.loaded);
+                const currentTotal = calculateTotalProgress();
                 const percentage = Math.round((currentTotal / data.size) * 100);
 
                 options.onUploadProgress({
@@ -273,11 +284,12 @@ async function uploadMultipart(
 
             xhr.addEventListener('load', () => {
               if (xhr.status >= 200 && xhr.status < 300) {
-                totalUploaded += chunk.size;
+                partProgress.set(part, chunk.size);
+                const currentTotal = calculateTotalProgress();
                 options?.onUploadProgress?.({
-                  loaded: totalUploaded,
+                  loaded: currentTotal,
                   total: data.size,
-                  percentage: Math.round((totalUploaded / data.size) * 100),
+                  percentage: Math.round((currentTotal / data.size) * 100),
                 });
                 resolve({ [part]: xhr.getResponseHeader('ETag') ?? '' });
               } else {
