@@ -170,6 +170,7 @@ export function Uploader({
       tabIndex={disabled ? -1 : 0}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
           handleClick();
         }
       }}
