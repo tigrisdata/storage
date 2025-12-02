@@ -1,5 +1,6 @@
 import { TigrisStorageResponse } from '../types';
 import { addRandomSuffix } from '../utils';
+import { executeWithConcurrency } from '@shared/utils';
 import { UploadAction } from './shared';
 
 export type UploadOptions = {
@@ -11,6 +12,11 @@ export type UploadOptions = {
   url?: string;
   multipart?: boolean;
   partSize?: number;
+  /**
+   * Maximum number of concurrent part uploads for multipart uploads
+   * @default 4
+   */
+  concurrency?: number;
   onUploadProgress?: (progress: UploadProgress) => void;
 };
 
@@ -237,62 +243,66 @@ async function uploadMultipart(
     const { data: urlData } = await urlResponse.json();
     const partUrls = urlData;
 
-    // Step 3: Upload parts with progress tracking
+    // Step 3: Upload parts with progress tracking and concurrency limit
     let totalUploaded = 0;
-    const uploadPromises = partUrls.map(
+    const concurrency = options?.concurrency ?? 4;
+
+    const uploadTasks = partUrls.map(
       ({ part, url }: { part: number; url: string }, index: number) => {
-        const start = index * partSize;
-        const end = Math.min(start + partSize, data.size);
-        const chunk = data.slice(start, end);
+        return () => {
+          const start = index * partSize;
+          const end = Math.min(start + partSize, data.size);
+          const chunk = data.slice(start, end);
 
-        return new Promise<Record<number, string>>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
+          return new Promise<Record<number, string>>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
 
-          xhr.upload.addEventListener('progress', (event) => {
-            if (event.lengthComputable && options?.onUploadProgress) {
-              const partLoaded = event.loaded;
-              const currentTotal = totalUploaded + partLoaded;
-              const percentage = Math.round((currentTotal / data.size) * 100);
+            xhr.upload.addEventListener('progress', (event) => {
+              if (event.lengthComputable && options?.onUploadProgress) {
+                const partLoaded = event.loaded;
+                const currentTotal = totalUploaded + partLoaded;
+                const percentage = Math.round((currentTotal / data.size) * 100);
 
-              options.onUploadProgress({
-                loaded: currentTotal,
-                total: data.size,
-                percentage,
-              });
-            }
-          });
+                options.onUploadProgress({
+                  loaded: currentTotal,
+                  total: data.size,
+                  percentage,
+                });
+              }
+            });
 
-          xhr.addEventListener('load', () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              totalUploaded += chunk.size;
-              options?.onUploadProgress?.({
-                loaded: totalUploaded,
-                total: data.size,
-                percentage: Math.round((totalUploaded / data.size) * 100),
-              });
-              resolve({ [part]: xhr.getResponseHeader('ETag') ?? '' });
-            } else {
+            xhr.addEventListener('load', () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                totalUploaded += chunk.size;
+                options?.onUploadProgress?.({
+                  loaded: totalUploaded,
+                  total: data.size,
+                  percentage: Math.round((totalUploaded / data.size) * 100),
+                });
+                resolve({ [part]: xhr.getResponseHeader('ETag') ?? '' });
+              } else {
+                reject(
+                  new Error(
+                    `Part ${part} upload failed with status: ${xhr.status}`
+                  )
+                );
+              }
+            });
+
+            xhr.addEventListener('error', () => {
               reject(
-                new Error(
-                  `Part ${part} upload failed with status: ${xhr.status}`
-                )
+                new Error(`Part ${part} upload failed due to network error`)
               );
-            }
-          });
+            });
 
-          xhr.addEventListener('error', () => {
-            reject(
-              new Error(`Part ${part} upload failed due to network error`)
-            );
+            xhr.open('PUT', url);
+            xhr.send(chunk);
           });
-
-          xhr.open('PUT', url);
-          xhr.send(chunk);
-        });
+        };
       }
     );
 
-    const partIds = await Promise.all(uploadPromises);
+    const partIds = await executeWithConcurrency(uploadTasks, concurrency);
 
     // Step 4: Complete multipart upload
     const completeResponse = await fetch(options.url, {
