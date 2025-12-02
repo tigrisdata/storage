@@ -29,12 +29,20 @@ jobs:
       # Install dependencies and build Node.js project
       - run: npm ci
       - run: npm run lint
-      - run: npm run build:storage
-      - run: npm run build:keyv-tigris
-      - run: npm run publint --workspace=@tigrisdata/storage
-      - run: npm run publint --workspace=@tigrisdata/keyv-tigris
 
-      - name: Run integration tests
+      - name: Build packages
+        run: |
+          npm run build:storage
+          npm run build:keyv-tigris
+          npm run build:react
+
+      - name: Lint packages
+        run: |
+          npm run publint --workspace=@tigrisdata/storage
+          npm run publint --workspace=@tigrisdata/keyv-tigris
+          npm run publint --workspace=@tigrisdata/react
+
+      - name: Test packages
         env:
           TIGRIS_STORAGE_BUCKET: ${{ secrets.TIGRIS_STORAGE_BUCKET }}
           TIGRIS_STORAGE_ACCESS_KEY_ID: ${{ secrets.TIGRIS_STORAGE_ACCESS_KEY_ID }}
@@ -43,6 +51,7 @@ jobs:
         run: |
           npm run test --workspace=@tigrisdata/storage
           npm run test --workspace=@tigrisdata/keyv-tigris
+          npm run test --workspace=@tigrisdata/react
 
       - run: npm audit signatures
 
