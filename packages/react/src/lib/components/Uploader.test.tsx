@@ -42,21 +42,21 @@ describe('Uploader', () => {
   it('should apply custom className', () => {
     render(<Uploader url={mockUrl} className="custom-class" />);
 
-    const container = document.querySelector('.uploader');
+    const container = document.querySelector('.tigris-uploader');
     expect(container).toHaveClass('custom-class');
   });
 
   it('should apply custom style', () => {
     render(<Uploader url={mockUrl} style={{ backgroundColor: 'red' }} />);
 
-    const container = document.querySelector('.uploader') as HTMLElement;
+    const container = document.querySelector('.tigris-uploader') as HTMLElement;
     expect(container.style.backgroundColor).toBe('red');
   });
 
   it('should have is-disabled class when disabled', () => {
     render(<Uploader url={mockUrl} disabled />);
 
-    const container = document.querySelector('.uploader');
+    const container = document.querySelector('.tigris-uploader');
     expect(container).toHaveClass('is-disabled');
   });
 
@@ -71,7 +71,7 @@ describe('Uploader', () => {
 
     render(<Uploader url={mockUrl} />);
 
-    const container = document.querySelector('.uploader');
+    const container = document.querySelector('.tigris-uploader');
     expect(container).toHaveClass('is-uploading');
   });
 
@@ -95,7 +95,7 @@ describe('Uploader', () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     const clickSpy = vi.spyOn(input, 'click');
 
-    const container = document.querySelector('.uploader') as HTMLElement;
+    const container = document.querySelector('.tigris-uploader') as HTMLElement;
     fireEvent.click(container);
 
     expect(clickSpy).toHaveBeenCalled();
@@ -107,7 +107,7 @@ describe('Uploader', () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     const clickSpy = vi.spyOn(input, 'click');
 
-    const container = document.querySelector('.uploader') as HTMLElement;
+    const container = document.querySelector('.tigris-uploader') as HTMLElement;
     fireEvent.click(container);
 
     expect(clickSpy).not.toHaveBeenCalled();
@@ -200,7 +200,7 @@ describe('Uploader', () => {
   it('should add is-dragging class on drag over', () => {
     render(<Uploader url={mockUrl} />);
 
-    const container = document.querySelector('.uploader') as HTMLElement;
+    const container = document.querySelector('.tigris-uploader') as HTMLElement;
 
     fireEvent.dragOver(container);
 
@@ -210,7 +210,7 @@ describe('Uploader', () => {
   it('should remove is-dragging class on drag leave', () => {
     render(<Uploader url={mockUrl} />);
 
-    const container = document.querySelector('.uploader') as HTMLElement;
+    const container = document.querySelector('.tigris-uploader') as HTMLElement;
 
     fireEvent.dragOver(container);
     expect(container).toHaveClass('is-dragging');
@@ -231,7 +231,7 @@ describe('Uploader', () => {
 
     render(<Uploader url={mockUrl} />);
 
-    const container = document.querySelector('.uploader') as HTMLElement;
+    const container = document.querySelector('.tigris-uploader') as HTMLElement;
     const file = new File(['test'], 'test.txt', { type: 'text/plain' });
 
     const dataTransfer = {
@@ -287,7 +287,7 @@ describe('Uploader', () => {
     render(<Uploader url={mockUrl} />);
 
     expect(screen.getByText('test.txt')).toBeInTheDocument();
-    expect(document.querySelector('.uploader-progress')).toBeInTheDocument();
+    expect(document.querySelector('.tigris-uploader-progress')).toBeInTheDocument();
   });
 
   it('should show success status for completed uploads', () => {
@@ -315,7 +315,7 @@ describe('Uploader', () => {
     render(<Uploader url={mockUrl} />);
 
     expect(screen.getByText('Uploaded')).toBeInTheDocument();
-    expect(document.querySelector('.uploader-file')).toHaveClass('is-success');
+    expect(document.querySelector('.tigris-uploader-file')).toHaveClass('is-success');
   });
 
   it('should show error status for failed uploads', () => {
@@ -343,13 +343,13 @@ describe('Uploader', () => {
     render(<Uploader url={mockUrl} />);
 
     expect(screen.getByText('Failed')).toBeInTheDocument();
-    expect(document.querySelector('.uploader-file')).toHaveClass('is-error');
+    expect(document.querySelector('.tigris-uploader-file')).toHaveClass('is-error');
   });
 
   it('should be accessible via keyboard', () => {
     render(<Uploader url={mockUrl} />);
 
-    const container = document.querySelector('.uploader') as HTMLElement;
+    const container = document.querySelector('.tigris-uploader') as HTMLElement;
     expect(container).toHaveAttribute('role', 'button');
     expect(container).toHaveAttribute('tabIndex', '0');
   });
@@ -360,7 +360,7 @@ describe('Uploader', () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     const clickSpy = vi.spyOn(input, 'click');
 
-    const container = document.querySelector('.uploader') as HTMLElement;
+    const container = document.querySelector('.tigris-uploader') as HTMLElement;
     fireEvent.keyDown(container, { key: 'Enter' });
 
     expect(clickSpy).toHaveBeenCalled();
@@ -372,7 +372,7 @@ describe('Uploader', () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     const clickSpy = vi.spyOn(input, 'click');
 
-    const container = document.querySelector('.uploader') as HTMLElement;
+    const container = document.querySelector('.tigris-uploader') as HTMLElement;
     fireEvent.keyDown(container, { key: ' ' });
 
     expect(clickSpy).toHaveBeenCalled();

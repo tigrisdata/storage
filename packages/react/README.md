@@ -11,7 +11,7 @@ npm install @tigrisdata/react
 ## Requirements
 
 - React 18+
-- A Tigris Storage backend with upload endpoint
+- A backend with upload endpoint using Tigris Storage SDK. [You can see example here](https://www.tigrisdata.com/docs/sdks/tigris/examples/#client-uploads)
 
 ## Usage
 
@@ -117,90 +117,39 @@ Import the default stylesheet for a ready-to-use look:
 import '@tigrisdata/react/styles.css';
 ```
 
+Default styles use CSS `@layer tigris`, so your custom styles will always take precedence without needing `!important`.
+
 ### Custom Styles
 
-The component uses class-based styling with state modifiers, giving you full control.
+The component uses `tigris-` prefixed class names with state modifiers:
+
+```css
+/* Override default styles easily */
+.tigris-uploader {
+  border-color: purple;
+}
+```
 
 ### CSS Classes
 
-| Class                         | Description                   |
-| ----------------------------- | ----------------------------- |
-| `.uploader`                   | Container element             |
-| `.uploader.is-dragging`       | When files are dragged over   |
-| `.uploader.is-uploading`      | When upload is in progress    |
-| `.uploader.is-disabled`       | When disabled                 |
-| `.uploader-input`             | Hidden file input             |
-| `.uploader-text`              | Default text content          |
-| `.uploader-link`              | "Browse" link text            |
-| `.uploader-filelist`          | File list container           |
-| `.uploader-file`              | Individual file item          |
-| `.uploader-file.is-uploading` | File currently uploading      |
-| `.uploader-file.is-success`   | Upload succeeded              |
-| `.uploader-file.is-error`     | Upload failed                 |
-| `.uploader-filename`          | File name text                |
-| `.uploader-progress`          | Progress bar container        |
-| `.uploader-progress-fill`     | Progress bar fill             |
-| `.uploader-status`            | Status text (Uploaded/Failed) |
-
-### Example Styles
-
-```css
-.uploader {
-  border: 2px dashed #ccc;
-  border-radius: 8px;
-  padding: 32px;
-  text-align: center;
-  cursor: pointer;
-  transition:
-    border-color 0.2s,
-    background-color 0.2s;
-}
-
-.uploader.is-dragging {
-  border-color: #2196f3;
-  background-color: #e3f2fd;
-}
-
-.uploader.is-disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.uploader-input {
-  display: none;
-}
-
-.uploader-file {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-}
-
-.uploader-file.is-success {
-  border-color: #4caf50;
-}
-.uploader-file.is-error {
-  border-color: #f44336;
-}
-
-.uploader-progress {
-  width: 100px;
-  height: 4px;
-  background: #e0e0e0;
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.uploader-progress-fill {
-  height: 100%;
-  background: #4caf50;
-  transition: width 0.2s;
-}
-```
+| Class                               | Description                   |
+| ----------------------------------- | ----------------------------- |
+| `.tigris-uploader`                  | Container element             |
+| `.tigris-uploader.is-dragging`      | When files are dragged over   |
+| `.tigris-uploader.is-uploading`     | When upload is in progress    |
+| `.tigris-uploader.is-disabled`      | When disabled                 |
+| `.tigris-uploader-input`            | Hidden file input             |
+| `.tigris-uploader-text`             | Default text content          |
+| `.tigris-uploader-link`             | "Browse" link text            |
+| `.tigris-uploader-filelist`         | File list container           |
+| `.tigris-uploader-file`             | Individual file item          |
+| `.tigris-uploader-file.is-uploading`| File currently uploading      |
+| `.tigris-uploader-file.is-success`  | Upload succeeded              |
+| `.tigris-uploader-file.is-error`    | Upload failed                 |
+| `.tigris-uploader-filename`         | File name text                |
+| `.tigris-uploader-progress`         | Progress bar container        |
+| `.tigris-uploader-progress-fill`    | Progress bar fill             |
+| `.tigris-uploader-status`           | Status text (Uploaded/Failed) |
 
 ## Server Setup
 

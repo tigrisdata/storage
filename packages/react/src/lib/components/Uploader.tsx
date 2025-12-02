@@ -12,26 +12,26 @@ function FileListItem({ state }: { state: FileUploadState }) {
   return (
     <div
       className={cn(
-        'uploader-file',
+        'tigris-uploader-file',
         status === 'uploading' && 'is-uploading',
         status === 'success' && 'is-success',
         status === 'error' && 'is-error'
       )}
     >
-      <span className="uploader-filename" title={file.name}>
+      <span className="tigris-uploader-filename" title={file.name}>
         {file.name}
       </span>
       {status === 'uploading' && (
-        <div className="uploader-progress">
+        <div className="tigris-uploader-progress">
           <div
-            className="uploader-progress-fill"
+            className="tigris-uploader-progress-fill"
             style={{ width: `${progress.percentage}%` }}
           />
         </div>
       )}
-      {status === 'success' && <span className="uploader-status">Uploaded</span>}
+      {status === 'success' && <span className="tigris-uploader-status">Uploaded</span>}
       {status === 'error' && (
-        <span className="uploader-status" title={error?.message}>
+        <span className="tigris-uploader-status" title={error?.message}>
           Failed
         </span>
       )}
@@ -151,7 +151,7 @@ export function Uploader({
   const uploadList = Array.from(uploads.values());
 
   const containerClassName = cn(
-    'uploader',
+    'tigris-uploader',
     isDragOver && 'is-dragging',
     isUploading && 'is-uploading',
     disabled && 'is-disabled',
@@ -178,7 +178,7 @@ export function Uploader({
       <input
         ref={inputRef}
         type="file"
-        className="uploader-input"
+        className="tigris-uploader-input"
         onChange={handleChange}
         multiple={multiple}
         accept={accept}
@@ -186,20 +186,20 @@ export function Uploader({
       />
 
       {children || (
-        <p className="uploader-text">
+        <p className="tigris-uploader-text">
           {isUploading ? (
             'Uploading...'
           ) : (
             <>
               Drag and drop {multiple ? 'files' : 'a file'} here, or{' '}
-              <span className="uploader-link">browse</span>
+              <span className="tigris-uploader-link">browse</span>
             </>
           )}
         </p>
       )}
 
       {uploadList.length > 0 && (
-        <div className="uploader-filelist" onClick={(e) => e.stopPropagation()}>
+        <div className="tigris-uploader-filelist" onClick={(e) => e.stopPropagation()}>
           {uploadList.map((state) => (
             <FileListItem key={`${state.file.name}-${state.file.size}`} state={state} />
           ))}
