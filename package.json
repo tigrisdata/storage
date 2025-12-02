@@ -5,7 +5,9 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "packages/*"
+    "packages/storage",
+    "packages/keyv-tigris",
+    "packages/react"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
