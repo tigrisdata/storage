@@ -51,6 +51,7 @@ function App() {
 | `multipart`          | `boolean`                                        | `false`   | Enable multipart upload for large files                |
 | `partSize`           | `number`                                         | `5242880` | Part size in bytes for multipart uploads (default 5MB) |
 | `multipartThreshold` | `number`                                         | -         | Auto-enable multipart for files larger than this size  |
+| `concurrency`        | `number`                                         | `4`       | Max concurrent uploads (files or multipart parts)      |
 | `uploadOptions`      | `UploadOptions`                                  | -         | Additional storage client options                      |
 | `onUploadStart`      | `(file: File) => void`                           | -         | Called when upload starts                              |
 | `onUploadProgress`   | `(file: File, progress: UploadProgress) => void` | -         | Called during upload                                   |
