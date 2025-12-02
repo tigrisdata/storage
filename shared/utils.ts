@@ -6,6 +6,13 @@ export async function executeWithConcurrency<T>(
   tasks: (() => Promise<T>)[],
   concurrency: number
 ): Promise<T[]> {
+  if (tasks.length === 0) {
+    return [];
+  }
+
+  // Ensure concurrency is at least 1
+  const limit = Math.max(1, Math.floor(concurrency));
+
   const results: T[] = new Array(tasks.length);
   let currentIndex = 0;
 
@@ -17,7 +24,7 @@ export async function executeWithConcurrency<T>(
   }
 
   const workers = Array.from(
-    { length: Math.min(concurrency, tasks.length) },
+    { length: Math.min(limit, tasks.length) },
     () => runNext()
   );
 
