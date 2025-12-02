@@ -206,4 +206,85 @@ describe('useUpload', () => {
       })
     );
   });
+
+  it('should pass concurrency to storage client', async () => {
+    vi.mocked(mockUpload).mockResolvedValue({
+      data: { name: 'test.txt', url: '', size: 0, modified: new Date() },
+    });
+
+    const { result } = renderHook(() =>
+      useUpload({ url: mockUrl, concurrency: 2 })
+    );
+
+    await act(async () => {
+      await result.current.upload(mockFile);
+    });
+
+    expect(mockUpload).toHaveBeenCalledWith(
+      'test.txt',
+      mockFile,
+      expect.objectContaining({
+        concurrency: 2,
+      })
+    );
+  });
+
+  it('should respect concurrency limit when uploading multiple files', async () => {
+    let activeUploads = 0;
+    let maxConcurrentUploads = 0;
+
+    vi.mocked(mockUpload).mockImplementation(async () => {
+      activeUploads++;
+      maxConcurrentUploads = Math.max(maxConcurrentUploads, activeUploads);
+
+      // Simulate upload delay
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      activeUploads--;
+      return { data: { name: 'test.txt', url: '', size: 0, modified: new Date() } };
+    });
+
+    const files = Array.from({ length: 6 }, (_, i) =>
+      new File([`content${i}`], `file${i}.txt`, { type: 'text/plain' })
+    );
+
+    const { result } = renderHook(() =>
+      useUpload({ url: mockUrl, concurrency: 2 })
+    );
+
+    await act(async () => {
+      await result.current.uploadMultiple(files);
+    });
+
+    expect(mockUpload).toHaveBeenCalledTimes(6);
+    expect(maxConcurrentUploads).toBeLessThanOrEqual(2);
+  });
+
+  it('should use default concurrency of 4 when not specified', async () => {
+    let activeUploads = 0;
+    let maxConcurrentUploads = 0;
+
+    vi.mocked(mockUpload).mockImplementation(async () => {
+      activeUploads++;
+      maxConcurrentUploads = Math.max(maxConcurrentUploads, activeUploads);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      activeUploads--;
+      return { data: { name: 'test.txt', url: '', size: 0, modified: new Date() } };
+    });
+
+    const files = Array.from({ length: 8 }, (_, i) =>
+      new File([`content${i}`], `file${i}.txt`, { type: 'text/plain' })
+    );
+
+    const { result } = renderHook(() => useUpload({ url: mockUrl }));
+
+    await act(async () => {
+      await result.current.uploadMultiple(files);
+    });
+
+    expect(mockUpload).toHaveBeenCalledTimes(8);
+    expect(maxConcurrentUploads).toBeLessThanOrEqual(4);
+  });
 });

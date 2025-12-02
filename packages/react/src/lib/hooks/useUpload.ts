@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { upload as storageUpload } from '@tigrisdata/storage/client';
+import { executeWithConcurrency } from '@shared/utils';
 import type {
   UseUploadOptions,
   UseUploadReturn,
@@ -17,6 +18,7 @@ export function useUpload(options: UseUploadOptions): UseUploadReturn {
     multipart,
     partSize,
     multipartThreshold,
+    concurrency,
     uploadOptions,
     onUploadStart,
     onUploadProgress,
@@ -65,6 +67,7 @@ export function useUpload(options: UseUploadOptions): UseUploadReturn {
         url,
         multipart: useMultipart,
         partSize,
+        concurrency,
         onUploadProgress: (progress: UploadProgress) => {
           updateUpload(key, { progress });
           onUploadProgress?.(file, progress);
@@ -86,15 +89,17 @@ export function useUpload(options: UseUploadOptions): UseUploadReturn {
       onUploadComplete?.(file, result.data);
       return result.data;
     },
-    [url, multipart, partSize, multipartThreshold, uploadOptions, onUploadStart, onUploadProgress, onUploadComplete, onUploadError, updateUpload]
+    [url, multipart, partSize, multipartThreshold, concurrency, uploadOptions, onUploadStart, onUploadProgress, onUploadComplete, onUploadError, updateUpload]
   );
 
   const uploadMultiple = useCallback(
     async (files: File[]) => {
-      const results = await Promise.all(files.map((file) => upload(file)));
+      const limit = concurrency ?? 4;
+      const tasks = files.map((file) => () => upload(file));
+      const results = await executeWithConcurrency(tasks, limit);
       return results;
     },
-    [upload]
+    [upload, concurrency]
   );
 
   const isUploading = Array.from(uploads.values()).some((state) => state.status === 'uploading');

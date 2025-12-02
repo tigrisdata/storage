@@ -79,9 +79,15 @@ export interface UploaderProps {
   multipartThreshold?: number;
 
   /**
+   * Maximum number of concurrent part uploads for multipart uploads
+   * @default 4
+   */
+  concurrency?: number;
+
+  /**
    * Additional upload options passed to the storage client
    */
-  uploadOptions?: Omit<UploadOptions, 'url' | 'onUploadProgress' | 'multipart' | 'partSize'>;
+  uploadOptions?: Omit<UploadOptions, 'url' | 'onUploadProgress' | 'multipart' | 'partSize' | 'concurrency'>;
 
   /**
    * Custom class name for the container
@@ -124,9 +130,15 @@ export interface UseUploadOptions {
   multipartThreshold?: number;
 
   /**
+   * Maximum number of concurrent part uploads for multipart uploads
+   * @default 4
+   */
+  concurrency?: number;
+
+  /**
    * Additional upload options
    */
-  uploadOptions?: Omit<UploadOptions, 'url' | 'onUploadProgress' | 'multipart' | 'partSize'>;
+  uploadOptions?: Omit<UploadOptions, 'url' | 'onUploadProgress' | 'multipart' | 'partSize' | 'concurrency'>;
 
   /**
    * Callback fired when upload starts
