@@ -398,4 +398,108 @@ describe('Uploader', () => {
 
     expect(clickSpy).toHaveBeenCalled();
   });
+
+  it('should reject dropped files that do not match accept pattern (MIME wildcard)', () => {
+    const onUploadError = vi.fn();
+    render(<Uploader url={mockUrl} accept="image/*" onUploadError={onUploadError} />);
+
+    const container = document.querySelector('.tigris-uploader') as HTMLElement;
+    const textFile = new File(['test'], 'test.txt', { type: 'text/plain' });
+
+    fireEvent.drop(container, {
+      dataTransfer: { files: [textFile] },
+    });
+
+    expect(onUploadError).toHaveBeenCalledWith(
+      textFile,
+      expect.objectContaining({
+        message: expect.stringContaining('File type not accepted'),
+      })
+    );
+  });
+
+  it('should accept dropped files that match accept pattern (MIME wildcard)', () => {
+    const mockUpload = vi.fn();
+    vi.mocked(useUpload).mockReturnValue({
+      upload: mockUpload,
+      uploadMultiple: vi.fn(),
+      uploads: new Map(),
+      isUploading: false,
+      reset: vi.fn(),
+    });
+
+    render(<Uploader url={mockUrl} accept="image/*" />);
+
+    const container = document.querySelector('.tigris-uploader') as HTMLElement;
+    const imageFile = new File(['test'], 'test.png', { type: 'image/png' });
+
+    fireEvent.drop(container, {
+      dataTransfer: { files: [imageFile] },
+    });
+
+    expect(mockUpload).toHaveBeenCalledWith(imageFile);
+  });
+
+  it('should reject dropped files that do not match accept pattern (file extension)', () => {
+    const onUploadError = vi.fn();
+    render(<Uploader url={mockUrl} accept=".pdf,.doc" onUploadError={onUploadError} />);
+
+    const container = document.querySelector('.tigris-uploader') as HTMLElement;
+    const textFile = new File(['test'], 'test.txt', { type: 'text/plain' });
+
+    fireEvent.drop(container, {
+      dataTransfer: { files: [textFile] },
+    });
+
+    expect(onUploadError).toHaveBeenCalledWith(
+      textFile,
+      expect.objectContaining({
+        message: expect.stringContaining('File type not accepted'),
+      })
+    );
+  });
+
+  it('should accept dropped files that match accept pattern (file extension)', () => {
+    const mockUpload = vi.fn();
+    vi.mocked(useUpload).mockReturnValue({
+      upload: mockUpload,
+      uploadMultiple: vi.fn(),
+      uploads: new Map(),
+      isUploading: false,
+      reset: vi.fn(),
+    });
+
+    render(<Uploader url={mockUrl} accept=".pdf,.doc" />);
+
+    const container = document.querySelector('.tigris-uploader') as HTMLElement;
+    const pdfFile = new File(['test'], 'document.pdf', { type: 'application/pdf' });
+
+    fireEvent.drop(container, {
+      dataTransfer: { files: [pdfFile] },
+    });
+
+    expect(mockUpload).toHaveBeenCalledWith(pdfFile);
+  });
+
+  it('should accept dropped files that match exact MIME type', () => {
+    const mockUpload = vi.fn();
+    vi.mocked(useUpload).mockReturnValue({
+      upload: mockUpload,
+      uploadMultiple: vi.fn(),
+      uploads: new Map(),
+      isUploading: false,
+      reset: vi.fn(),
+    });
+
+    render(<Uploader url={mockUrl} accept="application/json" />);
+
+    const container = document.querySelector('.tigris-uploader') as HTMLElement;
+    const jsonFile = new File(['{}'], 'data.json', { type: 'application/json' });
+
+    fireEvent.drop(container, {
+      dataTransfer: { files: [jsonFile] },
+    });
+
+    expect(mockUpload).toHaveBeenCalledWith(jsonFile);
+  });
 });
