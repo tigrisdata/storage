@@ -831,12 +831,18 @@ import { upload } from '@tigrisdata/storage/client';
 
 #### `options`
 
-| **Parameter**    | **Required** | **Values**                                                                                                                        |
-| ---------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| url              | No           | The URL to upload the file to.                                                                                                    |
-| access           | No           | The access level for the object. Possible values are `public` and `private`.                                                      |
-| onUploadProgress | No           | Callback to track upload progress: `onUploadProgress({loaded: number, total: number, percentage: number})`.                       |
-| config           | No           | A configuration object to override the [default configuration](https://tigrisdata.com/docs/sdks/tigris/using-sdk#authentication). |
+| **Parameter**      | **Required** | **Values**                                                                                                    |
+| ------------------ | ------------ | ------------------------------------------------------------------------------------------------------------- |
+| url                | Yes          | The URL of your upload endpoint that handles client uploads.                                                  |
+| access             | No           | The access level for the object. Possible values are `public` and `private`.                                  |
+| addRandomSuffix    | No           | Whether to add a random suffix to the object name. Default is `false`.                                        |
+| allowOverwrite     | No           | Whether to allow overwriting the object. Default is `true`.                                                   |
+| contentType        | No           | Set the content type of the object. If not provided, inferred from the file.                                  |
+| contentDisposition | No           | Set the content disposition. Possible values are `inline` and `attachment`.                                   |
+| multipart          | No           | Enable multipart upload for large files. Default is `false`.                                                  |
+| partSize           | No           | Part size in bytes for multipart uploads. Default is 5MB.                                                     |
+| concurrency        | No           | Maximum number of concurrent part uploads for multipart uploads. Default is `4`.                              |
+| onUploadProgress   | No           | Callback to track upload progress: `onUploadProgress({loaded: number, total: number, percentage: number})`.   |
 
 In case of successful upload, the `data` property will be set to the upload and contains the following properties:
 
