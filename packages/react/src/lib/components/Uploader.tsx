@@ -76,13 +76,44 @@ export function Uploader({
 
   const validateFile = useCallback(
     (file: File): boolean => {
+      // Validate accept pattern
+      if (accept) {
+        const acceptedTypes = accept.split(',').map((type) => type.trim());
+        const fileType = file.type;
+        const fileName = file.name;
+        const fileExtension = fileName.includes('.') ? `.${fileName.split('.').pop()?.toLowerCase()}` : '';
+
+        const isAccepted = acceptedTypes.some((acceptedType) => {
+          // Handle MIME type wildcards (e.g., "image/*")
+          if (acceptedType.endsWith('/*')) {
+            const baseType = acceptedType.slice(0, -2);
+            return fileType.startsWith(baseType + '/');
+          }
+          // Handle exact MIME types (e.g., "image/png")
+          if (acceptedType.includes('/')) {
+            return fileType === acceptedType;
+          }
+          // Handle file extensions (e.g., ".pdf")
+          if (acceptedType.startsWith('.')) {
+            return fileExtension === acceptedType.toLowerCase();
+          }
+          return false;
+        });
+
+        if (!isAccepted) {
+          onUploadError?.(file, new Error(`File type not accepted. Allowed types: ${accept}`));
+          return false;
+        }
+      }
+
+      // Validate file size
       if (maxSize !== undefined && file.size > maxSize) {
         onUploadError?.(file, new Error(`File size exceeds maximum allowed size of ${maxSize} bytes`));
         return false;
       }
       return true;
     },
-    [maxSize, onUploadError]
+    [accept, maxSize, onUploadError]
   );
 
   const handleFiles = useCallback(
