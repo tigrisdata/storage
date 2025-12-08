@@ -64,16 +64,14 @@
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
-    "commitizen": "^4.3.0",
-    "cz-conventional-changelog": "^3.3.0",
     "eslint": "^8.0.0",
     "husky": "^8.0.0",
     "multi-semantic-release": "^3.1.0",
     "prettier": "^3.0.0",
     "publint": "^0.2.0",
-    "semantic-release": "^22.0.0",
+    "semantic-release": "^25.0.2",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
-    "vitest": "^3.2.4"
+    "vitest": "^4.0.15"
   }
 }
