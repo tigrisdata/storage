@@ -7,12 +7,14 @@
   "workspaces": [
     "packages/storage",
     "packages/keyv-tigris",
+    "packages/kv",
     "packages/react"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "build:storage": "npm run build --workspace=@tigrisdata/storage",
     "build:keyv-tigris": "npm run build --workspace=@tigrisdata/keyv-tigris",
+    "build:kv": "npm run build --workspace=@tigrisdata/kv",
     "build:react": "npm run build --workspace=@tigrisdata/react",
     "dev": "npm run dev --workspaces",
     "publint": "npm run publint --workspaces --if-present",

@@ -36,6 +36,7 @@ jobs:
           npm run build:storage
           npm run build:keyv-tigris
           npm run build:react
+          npm run build:kv
 
       - name: Lint packages
         run: |
@@ -47,10 +48,7 @@ jobs:
           TIGRIS_STORAGE_ACCESS_KEY_ID: ${{ secrets.TIGRIS_STORAGE_ACCESS_KEY_ID }}
           TIGRIS_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_STORAGE_SECRET_ACCESS_KEY }}
           TIGRIS_STORAGE_ENDPOINT: ${{ secrets.TIGRIS_STORAGE_ENDPOINT }}
-        run: |
-          npm run test --workspace=@tigrisdata/storage
-          npm run test --workspace=@tigrisdata/keyv-tigris
-          npm run test --workspace=@tigrisdata/react
+        run: npm run test
 
       - run: npm audit signatures
 
@@ -58,5 +56,4 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm run release
