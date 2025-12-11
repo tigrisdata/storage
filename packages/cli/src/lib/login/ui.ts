@@ -1,43 +1,52 @@
 import { getAuthClient } from '../../auth/client.js';
 import { storeSelectedOrganization } from '../../auth/storage.js';
+import {
+  printStart,
+  printSuccess,
+  printFailure,
+  printAlreadyDone,
+  printHint,
+  msg,
+} from '../../utils/messages.js';
+
+const context = msg('login', 'ui');
 
 export async function ui(): Promise<void> {
-  console.log('🔐 Tigris User Login');
+  printStart(context);
   try {
     const authClient = getAuthClient();
 
     // Check if already authenticated
     const isAuth = await authClient.isAuthenticated();
     if (isAuth) {
-      console.log('⚠️  You are already logged in.');
-      console.log(
-        '💡 Run "tigris logout" first if you want to login with a different account.\n'
-      );
+      printAlreadyDone(context);
       return;
     }
 
-    // Initiate login flow
-    await authClient.login();
+    // Initiate login flow with callbacks for output
+    await authClient.login({
+      onDeviceCode: (code, uri) => {
+        console.log(`\nYour confirmation code: ${code}\n`);
+        console.log(`If browser doesn't open, visit: ${uri}`);
+      },
+      onWaiting: () => console.log('\nWaiting for authentication...'),
+    });
 
     // After successful login, automatically select the first organization
     const orgs = await authClient.getOrganizations();
     if (orgs.length > 0) {
       const firstOrg = orgs[0];
       storeSelectedOrganization(firstOrg.id);
-      console.log('🎯 Auto-selected organization:');
-      console.log(
-        `   ${firstOrg.displayName || firstOrg.name} (${firstOrg.id})\n`
-      );
+      printSuccess(context, { org: firstOrg.displayName || firstOrg.name });
 
       if (orgs.length > 1) {
-        console.log(`💡 You have ${orgs.length} organizations available.`);
-        console.log(
-          '   Run "tigris orgs list" to see all and switch if needed.\n'
-        );
+        printHint(context, { count: orgs.length });
       }
+    } else {
+      printSuccess(context, { org: 'none' });
     }
   } catch (error) {
-    // Error already logged in the client
+    printFailure(context);
     process.exit(1);
   }
 }

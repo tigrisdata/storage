@@ -1,5 +1,8 @@
 import { getAuthClient } from '../auth/client.js';
 import { getSelectedOrganization } from '../auth/storage.js';
+import { printFailure, printAlreadyDone, msg } from '../utils/messages.js';
+
+const context = msg('whoami');
 
 export default async function whoami(): Promise<void> {
   try {
@@ -8,8 +11,7 @@ export default async function whoami(): Promise<void> {
     // Check if authenticated
     const isAuth = await authClient.isAuthenticated();
     if (!isAuth) {
-      console.log('❌ Not authenticated');
-      console.log('💡 Run "tigris login" to authenticate\n');
+      printAlreadyDone(context);
       return;
     }
 
@@ -18,34 +20,40 @@ export default async function whoami(): Promise<void> {
     const organizations = await authClient.getOrganizations();
     const selectedOrg = getSelectedOrganization();
 
-    console.log('\n👤 User Information:');
-    console.log(`   Email: ${claims.email || 'N/A'}`);
-    console.log(`   User ID: ${claims.sub}`);
+    const lines: string[] = [];
+    lines.push('');
+    lines.push('User Information:');
+    lines.push(`   Email: ${claims.email || 'N/A'}`);
+    lines.push(`   User ID: ${claims.sub}`);
 
     if (organizations.length > 0) {
-      console.log(`\n📂 Organizations (${organizations.length}):`);
+      lines.push('');
+      lines.push(`Organizations (${organizations.length}):`);
       organizations.forEach((org) => {
         const isSelected = org.id === selectedOrg;
-        const marker = isSelected ? '→' : ' ';
-        console.log(`   ${marker} ${org.name} (${org.id})`);
+        const marker = isSelected ? '>' : ' ';
+        lines.push(`   ${marker} ${org.name} (${org.id})`);
       });
 
       if (selectedOrg) {
         const selected = organizations.find((o) => o.id === selectedOrg);
         if (selected) {
-          console.log(`\n✓ Active: ${selected.name}`);
+          lines.push('');
+          lines.push(`Active: ${selected.name}`);
         }
       }
     } else {
-      console.log('\n📂 Organizations: None');
+      lines.push('');
+      lines.push('Organizations: None');
     }
 
-    console.log();
+    lines.push('');
+    console.log(lines.join('\n'));
   } catch (error) {
     if (error instanceof Error) {
-      console.error(`\n❌ ${error.message}\n`);
+      printFailure(context, error.message);
     } else {
-      console.error('\n❌ Failed to retrieve user information\n');
+      printFailure(context);
     }
     process.exit(1);
   }

@@ -5,9 +5,17 @@ import {
   storeLoginMethod,
   storeTemporaryCredentials,
 } from '../../auth/storage.js';
+import {
+  printStart,
+  printSuccess,
+  printFailure,
+  msg,
+} from '../../utils/messages.js';
+
+const context = msg('login', 'credentials');
 
 export default async function credentials(options: Record<string, unknown>) {
-  console.log('🔐 Tigris Machine Login\n');
+  printStart(context);
 
   let accessKey =
     options['access-key'] ||
@@ -33,7 +41,6 @@ export default async function credentials(options: Record<string, unknown>) {
     if (savedCreds) {
       // If --profile flag is used, automatically use saved credentials
       if (useProfile) {
-        console.log('📁 Using saved credentials from profile...\n');
         accessKey = savedCreds.accessKeyId;
         accessSecret = savedCreds.secretAccessKey;
       } else {
@@ -47,12 +54,10 @@ export default async function credentials(options: Record<string, unknown>) {
           });
 
           if (response.useSaved) {
-            console.log('📁 Using saved credentials...\n');
             accessKey = savedCreds.accessKeyId;
             accessSecret = savedCreds.secretAccessKey;
           } else {
             // User chose not to use saved credentials, prompt for new ones
-            console.log('Please provide your access credentials.\n');
 
             const credPrompts = [];
 
@@ -83,24 +88,21 @@ export default async function credentials(options: Record<string, unknown>) {
             accessSecret = accessSecret || credResponses.accessSecret;
           }
         } catch (error) {
-          console.error('\n❌ Login cancelled');
+          printFailure(context, 'Login cancelled');
           process.exit(1);
         }
       }
     } else {
       // No saved credentials
       if (useProfile) {
-        console.error(
-          '❌ No saved credentials found. Please run "tigris configure" first.\n'
+        printFailure(
+          context,
+          'No saved credentials found. Please run "tigris configure" first.'
         );
         process.exit(1);
       }
 
       // Prompt for them
-      console.log(
-        'No saved credentials found. Please provide your access credentials.\n'
-      );
-
       try {
         const questions = [];
 
@@ -130,7 +132,7 @@ export default async function credentials(options: Record<string, unknown>) {
         accessKey = accessKey || responses.accessKey;
         accessSecret = accessSecret || responses.accessSecret;
       } catch (error) {
-        console.error('\n❌ Login cancelled');
+        printFailure(context, 'Login cancelled');
         process.exit(1);
       }
     }
@@ -138,13 +140,9 @@ export default async function credentials(options: Record<string, unknown>) {
 
   // Validate that all required fields are present
   if (!accessKey || !accessSecret) {
-    console.error('❌ Access key and secret are required');
+    printFailure(context, 'Access key and secret are required');
     process.exit(1);
   }
-
-  console.log('🔑 Authenticating with credentials...');
-  console.log(`Access Key: ${accessKey}`);
-  console.log(`Access Secret: ${'*'.repeat(String(accessSecret).length)}`);
 
   // Get endpoint from saved credentials or use default
   const savedCreds = getCredentials();
@@ -160,5 +158,5 @@ export default async function credentials(options: Record<string, unknown>) {
   // Store login method
   await storeLoginMethod('credentials');
 
-  console.log('✅ Successfully authenticated with credentials');
+  printSuccess(context);
 }

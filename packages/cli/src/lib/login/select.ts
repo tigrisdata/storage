@@ -2,6 +2,9 @@ import enquirer from 'enquirer';
 const { prompt } = enquirer;
 import { ui } from './ui.js';
 import credentials from './credentials.js';
+import { printFailure, msg } from '../../utils/messages.js';
+
+const context = msg('login', 'select');
 
 /**
  * Main login command - presents interactive selection between user and machine login
@@ -47,8 +50,6 @@ export default async function select(options: Record<string, unknown>) {
     return;
   }
 
-  console.log('🔐 Tigris Login\n');
-
   try {
     const response = await prompt<{ loginType: string }>({
       type: 'select',
@@ -72,7 +73,7 @@ export default async function select(options: Record<string, unknown>) {
       await credentials(options);
     }
   } catch (error) {
-    console.error('\n❌ Login cancelled');
+    printFailure(context, 'Login cancelled');
     process.exit(1);
   }
 }

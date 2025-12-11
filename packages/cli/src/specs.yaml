@@ -2,6 +2,78 @@ name: tigris
 alias: t3
 description: Command line interface for Tigris
 version: 0.0.1
+
+# Reusable option definitions
+definitions:
+  tier_options: &tier_options
+    - name: Standard
+      value: STANDARD
+      description: The default storage class. It provides high durability, availability, and performance for frequently accessed data.
+    - name: Infrequent Access
+      value: STANDARD_IA
+      description: Lower-cost storage for data that is accessed less frequently but requires rapid access when needed.
+    - name: Archive
+      value: GLACIER
+      description: Low-cost storage for data archiving. Long-term data archiving with infrequent access.
+    - name: Instant Retrieval Archive
+      value: GLACIER_IR
+      description: Lowest-cost storage for long-lived data that is rarely accessed and requires retrieval in milliseconds.
+
+  consistency_options: &consistency_options
+    - name: Default
+      value: default
+      description: Strict read-after-write consistency in same region. Eventual consistency globally.
+    - name: Strict
+      value: strict
+      description: Strict read-after-write consistency globally. Latency will be higher than the default.
+
+  region_options: &region_options
+    - name: Global
+      value: 'global'
+      description: Global
+    - name: USA
+      value: usa
+      description: Restrict to USA
+    - name: Europe
+      value: eur
+      description: Restrict to Europe
+    - name: Amsterdam, Netherlands
+      value: ams
+      description: Amsterdam, Netherlands
+    - name: Frankfurt, Germany
+      value: fra
+      description: Frankfurt, Germany
+    - name: Sao Paulo, Brazil
+      value: gru
+      description: Sao Paulo, Brazil
+    - name: Ashburn, Virginia (US)
+      value: iad
+      description: Ashburn, Virginia (US)
+    - name: Johannesburg, South Africa
+      value: jnb
+      description: Johannesburg, South Africa
+    - name: London, United Kingdom
+      value: lhr
+      description: London, United Kingdom
+    - name: Tokyo, Japan
+      value: nrt
+      description: Tokyo, Japan
+    - name: Chicago, Illinois (US)
+      value: ord
+      description: Chicago, Illinois (US)
+    - name: Singapore, Singapore
+      value: sin
+      description: Singapore, Singapore
+    - name: San Jose, California (US)
+      value: sjc
+      description: San Jose, California (US)
+    - name: Sydney, Australia
+      value: syd
+      description: Sydney, Australia
+
+  access_options: &access_options
+    [public, private]
+
 commands:
   #########################
   # Unix style commands
@@ -112,16 +184,29 @@ commands:
   # logout
   - name: logout
     description: Logout from Tigris
+    messages:
+      onStart: "Logging out..."
+      onSuccess: "Logged out successfully"
+      onFailure: "Failed to logout"
 
   # whoami
   - name: whoami
     description: Show information about the current user
     alias: w
+    messages:
+      onStart: ""
+      onSuccess: ""
+      onFailure: "Failed to get user information"
+      onAlreadyDone: "Not authenticated\nRun \"tigris login\" to authenticate"
   
   # configure
   - name: configure
     description: Configure Tigris credentials interactively
     alias: c
+    messages:
+      onStart: "Configuring credentials..."
+      onSuccess: "Configuration saved"
+      onFailure: "Failed to configure credentials"
     arguments:
       - name: access-key
         description: Tigris Access key ID
@@ -139,6 +224,10 @@ commands:
   # login
   - name: login
     description: Login to Tigris (interactive selection between user and machine)
+    messages:
+      onStart: "Logging in..."
+      onSuccess: "Login successful"
+      onFailure: "Login failed"
     alias: l
     arguments:
       - name: access-key
@@ -163,6 +252,10 @@ commands:
       # login (main interactive operation)
       - name: select
         description: Interactive selection between user and machine login
+        messages:
+          onStart: ""
+          onSuccess: "Login successful"
+          onFailure: "Login failed"
         arguments:
           - name: access-key
             description: Access key (optional, will use credentials flow if provided)
@@ -186,10 +279,20 @@ commands:
       - name: ui
         description: Login as a user (OAuth2 flow)
         alias: u
+        messages:
+          onStart: "Initiating authentication..."
+          onSuccess: "Authentication successful\nOrganization '{{org}}' selected"
+          onFailure: "Authentication failed"
+          onAlreadyDone: "You are already logged in.\nRun \"tigris logout\" first if you want to login with a different account."
+          hint: "You have {{count}} organizations available.\nRun \"tigris orgs list\" to see all and switch if needed."
       # credentials
       - name: credentials
         description: Login as a machine (with access key and secret)
         alias: c
+        messages:
+          onStart: "Authenticating with credentials..."
+          onSuccess: "Login successful"
+          onFailure: "Login failed"
         arguments:
           - name: access-key
             description: Access key (optional, will prompt or use saved credentials if not provided)
@@ -211,6 +314,11 @@ commands:
       - name: list
         description: List organizations
         alias: l
+        messages:
+          onStart: "Listing organizations..."
+          onSuccess: "Organization '{{name}}' selected"
+          onFailure: "Failed to select organization"
+          onEmpty: "No organizations found. You may need to re-authenticate.\nRun: tigris login"
         arguments:
           - name: format
             description: Format
@@ -224,17 +332,23 @@ commands:
       - name: create
         description: Create organization
         alias: c
+        messages:
+          onStart: "Creating organization..."
+          onSuccess: "Organization '{{name}}' created successfully\nOrganization ID: {{id}}"
+          onFailure: "Failed to create organization"
+          hint: "Next steps:\n   - Select this organization: tigris orgs select {{name}}"
         arguments:
           - name: name
-            description: Name of the organization
-            alias: n
+            type: noun
             required: true
-          - name: description
-            description: Description of the organization
-            alias: d
+            description: Name of the organization
       - name: select
         description: Select the organization to use
         alias: s
+        messages:
+          onStart: ""
+          onSuccess: "Organization '{{name}}' selected"
+          onFailure: "Failed to select organization"
         arguments:
           - name: name
             type: noun
@@ -252,6 +366,11 @@ commands:
       - name: list
         description: List buckets
         alias: l
+        messages:
+          onStart: "Listing buckets..."
+          onSuccess: "Found {{count}} bucket(s)"
+          onFailure: "Failed to list buckets"
+          onEmpty: "No buckets found"
         arguments:
           - name: format
             description: Format
@@ -262,109 +381,48 @@ commands:
       - name: create
         description: Create bucket
         alias: [c]
+        messages:
+          onStart: "Creating bucket..."
+          onSuccess: "Bucket '{{name}}' created successfully"
+          onFailure: "Failed to create bucket"
         arguments:
           - name: name
             description: Name of the bucket
             type: noun
-            required: true
+            required: false
           - name: access
             description: Access level
             alias: a
-            options: [public, private]
+            options: *access_options
             default: private
+          - name: enable-snapshots
+            description: Enable snapshots for the bucket
+            alias: s
+            type: flag
+            default: false
           - name: default-tier
             description: Choose the default tier for the bucket
             alias: t
-            options:
-              - name: Standard
-                value: STANDARD
-                description: The default storage class. It provides high durability, availability, and performance for frequently accessed data.
-              - name: Infrequent Access
-                value: STANDARD_IA
-                description: Lower-cost storage for data that is accessed less frequently but requires rapid access when needed.
-              - name: Archive
-                value: GLACIER
-                description: Low-cost storage for data archiving. Long-term data archiving with infrequent access.
-              - name: Instant Retrieval Archive
-                value: GLACIER_IR
-                description: Lowest-cost storage for long-lived data that is rarely accessed and requires retrieval in milliseconds.
+            options: *tier_options
             default: STANDARD
           - name: consistency
             description: Choose the consistency level for the bucket
             alias: c
-            options:
-              - name: Default
-                value: default
-                description: Strict read-after-write consistency in same region. Eventual consistency globally.
-              - name: Strict
-                value: strict
-                description: Strict read-after-write consistency globally. Latency will be higher than the default.
+            options: *consistency_options
             default: default
           - name: region
             description: Region
             alias: r
-            options:
-              - name: Global
-                value: ''
-                description: Global
-              - name: USA
-                value: usa
-                description: Restrict to USA
-              - name: Europe
-                value: eur
-                description: Restrict to Europe
-              - name: Amsterdam, Netherlands
-                value: ams
-                description: Amsterdam, Netherlands
-              - name: Frankfurt, Germany
-                value: fra
-                description: Frankfurt, Germany
-              - name: Sao Paulo, Brazil
-                value: gru
-                description: Sao Paulo, Brazil
-              - name: Ashburn, Virginia (US)
-                value: iad
-                description: Ashburn, Virginia (US)
-              - name: Johannesburg, South Africa
-                value: jnb
-                description: Johannesburg, South Africa
-              - name: London, United Kingdom
-                value: lhr
-                description: London, United Kingdom
-              - name: Tokyo, Japan
-                value: nrt
-                description: Tokyo, Japan
-              - name: Chicago, Illinois (US)
-                value: ord
-                description: Chicago, Illinois (US)
-              - name: Singapore, Singapore
-                value: sin
-                description: Singapore, Singapore
-              - name: San Jose, California (US)
-                value: sjc
-                description: San Jose, California (US)
-              - name: Sydney, Australia
-                value: syd
-                description: Sydney, Australia
-            default: ''
-          - name: Cache Control
-            description: This lets you set the default Cache-Control header for objects in the bucket. Tigris will set some cache control headers by default for public objects, but you can set an implicit default here.
-            alias: cc
-          - name: Delete Protection
-            description: This lets you enable or disable delete protection for the bucket. When enabled, objects in the bucket cannot be deleted.
-            alias: dp
-            options:
-              - name: Enabled
-                value: enabled
-                description: Enabled
-              - name: Disabled
-                value: disabled
-                description: Disabled
-            default: disabled
+            options: *region_options
+            default: 'global'
       # get
       - name: get
         description: Get bucket details
         alias: g
+        messages:
+          onStart: "Getting bucket details..."
+          onSuccess: ""
+          onFailure: "Failed to get bucket details"
         arguments:
           - name: name
             description: Name of the bucket
@@ -374,6 +432,10 @@ commands:
       - name: delete
         description: Delete bucket
         alias: d
+        messages:
+          onStart: "Deleting bucket..."
+          onSuccess: "Bucket '{{name}}' deleted successfully"
+          onFailure: "Failed to delete bucket '{{name}}'"
         arguments:
           - name: name
             description: Name of the bucket or comma separated list of buckets
@@ -500,7 +562,7 @@ commands:
           - name: access
             description: Access level
             alias: a
-            options: [public, private]
+            options: *access_options
             default: private
           - name: content-type
             description: Content type
@@ -511,19 +573,7 @@ commands:
           - name: tier
             description: Tier
             alias: t
-            options:
-              - name: Standard
-                value: STANDARD
-                description: The default storage class. It provides high durability, availability, and performance for frequently accessed data.
-              - name: Infrequent Access
-                value: STANDARD_IA
-                description: Lower-cost storage for data that is accessed less frequently but requires rapid access when needed.
-              - name: Archive
-                value: GLACIER
-                description: Low-cost storage for data archiving. Long-term data archiving with infrequent access.
-              - name: Instant Retrieval Archive
-                value: GLACIER_IR
-                description: Lowest-cost storage for long-lived data that is rarely accessed and requires retrieval in milliseconds.
+            options: *tier_options
             default: STANDARD
       # delete
       - name: delete

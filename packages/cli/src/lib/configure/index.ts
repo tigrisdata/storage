@@ -1,12 +1,17 @@
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
 import { storeCredentials, storeLoginMethod } from '../../auth/storage.js';
+import {
+  printStart,
+  printSuccess,
+  printFailure,
+  msg,
+} from '../../utils/messages.js';
+
+const context = msg('configure');
 
 export default async function configure(options: Record<string, unknown>) {
-  console.log('🔐 Tigris Configuration\n');
-
-  // Debug: log all options to see what's being passed
-  // console.log('DEBUG: Options received:', JSON.stringify(options, null, 2));
+  printStart(context);
 
   let accessKey =
     options['access-key'] ||
@@ -25,10 +30,6 @@ export default async function configure(options: Record<string, unknown>) {
 
   // If credentials are not provided via CLI args, prompt for them
   if (!accessKey || !accessSecret || !endpoint) {
-    console.log(
-      'Please provide your Tigris credentials. You can find these in your Tigris dashboard.\n'
-    );
-
     try {
       const questions = [];
 
@@ -70,14 +71,14 @@ export default async function configure(options: Record<string, unknown>) {
       accessSecret = accessSecret || responses.accessSecret;
       endpoint = endpoint || responses.endpoint;
     } catch (error) {
-      console.error('\n❌ Configuration cancelled');
+      printFailure(context, 'Configuration cancelled');
       process.exit(1);
     }
   }
 
   // Validate that all required fields are present
   if (!accessKey || !accessSecret || !endpoint) {
-    console.error('❌ All credentials are required');
+    printFailure(context, 'All credentials are required');
     process.exit(1);
   }
 
@@ -92,12 +93,9 @@ export default async function configure(options: Record<string, unknown>) {
     // Store login method
     await storeLoginMethod('credentials');
 
-    console.log('\n✅ Credentials saved successfully!');
-    console.log(
-      '\n💡 You can now use Tigris CLI commands with these credentials.'
-    );
+    printSuccess(context);
   } catch (error) {
-    console.error('❌ Failed to save credentials:', error);
+    printFailure(context, 'Failed to save credentials');
     process.exit(1);
   }
 }

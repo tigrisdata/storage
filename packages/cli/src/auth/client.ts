@@ -54,62 +54,57 @@ export class TigrisAuthClient {
   /**
    * Initiate device authorization flow
    */
-  async login(): Promise<void> {
-    console.log('🔐 Initiating authentication...\n');
+  async login(callbacks?: {
+    onDeviceCode?: (code: string, uri: string) => void;
+    onWaiting?: () => void;
+  }): Promise<void> {
+    // Start device authorization
+    const response = await axios.post<DeviceCodeResponse>(
+      `${this.baseUrl}/oauth/device/code`,
+      {
+        client_id: this.config.clientId,
+        audience: this.config.audience,
+        scope: 'openid profile email offline_access',
+      },
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      }
+    );
 
+    const deviceCode = response.data;
+
+    // Show device code for confirmation
+    callbacks?.onDeviceCode?.(
+      deviceCode.user_code,
+      deviceCode.verification_uri
+    );
+
+    // Delay before opening browser so user can see the code
+    await this.sleep(2000);
+
+    // Open browser automatically
     try {
-      // Start device authorization
-      const response = await axios.post<DeviceCodeResponse>(
-        `${this.baseUrl}/oauth/device/code`,
-        {
-          client_id: this.config.clientId,
-          audience: this.config.audience,
-          scope: 'openid profile email offline_access',
-        },
-        {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        }
-      );
-
-      const deviceCode = response.data;
-
-      console.log('📱 Please authenticate in your browser:');
-
-      // Open browser automatically
-      try {
-        await open(deviceCode.verification_uri_complete);
-      } catch {
-        console.log(
-          `Visit: ${deviceCode.verification_uri} and Enter code: ${deviceCode.user_code}\n`
-        );
-      }
-
-      console.log('⏳ Waiting for authentication...\n');
-
-      // Poll for token
-      const tokens = await this.pollForToken(
-        deviceCode.device_code,
-        deviceCode.interval || 5
-      );
-
-      // Store tokens securely
-      await storeTokens(tokens);
-
-      // Store login method
-      storeLoginMethod('oauth');
-
-      // Extract and store organizations
-      await this.extractAndStoreOrganizations(tokens.idToken);
-
-      console.log('✅ Authentication successful!\n');
-    } catch (error) {
-      if (error instanceof Error) {
-        console.error(`❌ Authentication failed: ${error.message}`);
-      } else {
-        console.error('❌ Authentication failed');
-      }
-      throw error;
+      await open(deviceCode.verification_uri_complete);
+    } catch {
+      // Browser failed to open, user will need to manually visit the URL
     }
+
+    callbacks?.onWaiting?.();
+
+    // Poll for token
+    const tokens = await this.pollForToken(
+      deviceCode.device_code,
+      deviceCode.interval || 5
+    );
+
+    // Store tokens securely
+    await storeTokens(tokens);
+
+    // Store login method
+    storeLoginMethod('oauth');
+
+    // Extract and store organizations
+    await this.extractAndStoreOrganizations(tokens.idToken);
   }
 
   /**
@@ -195,7 +190,6 @@ export class TigrisAuthClient {
     // Check if token is expired or will expire in next 5 minutes
     const expiryBuffer = 5 * 60 * 1000; // 5 minutes
     if (Date.now() + expiryBuffer >= tokens.expiresAt) {
-      console.log('🔄 Refreshing access token...');
       tokens = await this.refreshAccessToken(tokens);
     }
 
@@ -205,8 +199,15 @@ export class TigrisAuthClient {
   /**
    * Refresh access token using refresh token
    */
-  private async refreshAccessToken(tokens: TokenSet): Promise<TokenSet> {
-    if (!tokens.refreshToken) {
+  async refreshAccessToken(tokens?: TokenSet): Promise<TokenSet> {
+    let tokenSet: TokenSet | null = null;
+    if (!tokens?.refreshToken) {
+      tokenSet = await getTokens();
+    } else {
+      tokenSet = tokens;
+    }
+
+    if (!tokenSet) {
       throw new Error(
         'No refresh token available. Please run "tigris login" to re-authenticate.'
       );
@@ -218,7 +219,8 @@ export class TigrisAuthClient {
         {
           client_id: this.config.clientId,
           grant_type: 'refresh_token',
-          refresh_token: tokens.refreshToken,
+          refresh_token: tokenSet.refreshToken,
+          scope: 'openid profile email offline_access',
         },
         {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -229,8 +231,8 @@ export class TigrisAuthClient {
 
       const newTokens: TokenSet = {
         accessToken: data.access_token,
-        refreshToken: data.refresh_token || tokens.refreshToken,
-        idToken: data.id_token || tokens.idToken,
+        refreshToken: data.refresh_token || tokenSet.refreshToken,
+        idToken: data.id_token || tokenSet.idToken,
         expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
       };
 
@@ -270,13 +272,10 @@ export class TigrisAuthClient {
   /**
    * Extract organizations from ID token claims and store them
    */
-  private async extractAndStoreOrganizations(
+  async extractAndStoreOrganizations(
     idToken: string | undefined
   ): Promise<void> {
     if (!idToken) {
-      console.warn(
-        '⚠️  No ID token available, skipping organization extraction'
-      );
       return;
     }
 
@@ -291,7 +290,6 @@ export class TigrisAuthClient {
         | undefined;
 
       if (!tigrisNamespace) {
-        console.warn('⚠️  No Tigris claims found in token');
         return;
       }
 
@@ -315,14 +313,12 @@ export class TigrisAuthClient {
         }) || [];
 
       if (availableOrgs.length === 0) {
-        console.warn('⚠️  No organizations found in claims');
         return;
       }
 
       storeOrganizations(availableOrgs);
-      console.log(`📂 Found ${availableOrgs.length} organization(s)`);
     } catch (error) {
-      console.error('Failed to extract organizations from token');
+      // Silently fail - organizations will need to be fetched another way
     }
   }
 
@@ -342,7 +338,6 @@ export class TigrisAuthClient {
    */
   async logout(): Promise<void> {
     await clearTokens();
-    console.log('✅ Logged out successfully');
   }
 
   /**

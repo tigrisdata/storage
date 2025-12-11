@@ -6,6 +6,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as YAML from 'yaml';
 import type { Argument, OperationSpec, CommandSpec } from './types.js';
+import { version } from '../package.json';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -114,7 +115,7 @@ function showOperationHelp(command: CommandSpec, operation: OperationSpec) {
 }
 
 function showMainHelp() {
-  console.log(`\n${specs.name} - ${specs.description}\n`);
+  console.log(`Tigris CLI Version: ${version}\n`);
   console.log('Usage: tigris [command] [options]\n');
   console.log('Commands:');
 
@@ -126,8 +127,6 @@ function showMainHelp() {
     const paddedCommandPart = commandPart.padEnd(24);
     console.log(`${paddedCommandPart}${command.description}`);
   });
-
-  console.log(`\nVersion: ${specs.version}`);
   console.log(
     `\nUse "${specs.name} <command> help" for more information about a command.`
   );
@@ -171,14 +170,14 @@ function validateRequiredWhen(
 
       if (dependentValue === expectedValue && !currentValue) {
         console.error(
-          `Error: --${arg.name} is required when --${dependentArg} is ${expectedValue}`
+          `--${arg.name} is required when --${dependentArg} is ${expectedValue}`
         );
         return false;
       }
     }
 
     if (arg.required && !getOptionValue(options, arg.name, args)) {
-      console.error(`Error: --${arg.name} is required`);
+      console.error(`--${arg.name} is required`);
       return false;
     }
   }
@@ -221,66 +220,65 @@ function camelCase(str: string): string {
   return str.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
 }
 
+async function loadModule(
+  commandName: string,
+  operationName?: string
+): Promise<{ module: Record<string, unknown> | null; error: string | null }> {
+  const paths = operationName
+    ? [
+        `./lib/${commandName}/${operationName}.js`,
+        `./lib/${commandName}/${operationName}/index.js`,
+      ]
+    : [`./lib/${commandName}.js`, `./lib/${commandName}/index.js`];
+
+  for (const path of paths) {
+    const module = await import(path).catch(() => null);
+    if (module) {
+      return { module, error: null };
+    }
+  }
+
+  const cmdDisplay = operationName
+    ? `${commandName} ${operationName}`
+    : commandName;
+  return { module: null, error: `Command not found: ${cmdDisplay}` };
+}
+
 async function loadAndExecuteCommand(
   commandName: string,
   operationName?: string,
   positionalArgs: string[] = [],
-  options: Record<string, unknown> = {}
+  options: Record<string, unknown> = {},
+  message?: string
 ) {
-  try {
-    let modulePath: string;
-    let functionName: string;
-
-    if (operationName) {
-      // For commands with operations: try command/operation.ts first, then command/operation/index.ts
-      modulePath = `./lib/${commandName}/${operationName}.js`;
-      functionName = operationName;
-    } else {
-      // For direct commands: try command.ts first, then command/index.ts
-      modulePath = `./lib/${commandName}.js`;
-      functionName = commandName;
-    }
-
-    try {
-      const module = await import(modulePath);
-      const commandFunction = module.default || module[functionName];
-
-      if (typeof commandFunction === 'function') {
-        await commandFunction({ ...options, _positional: positionalArgs });
-      } else {
-        console.error(
-          `No default export or ${functionName} function found in ${modulePath}`
-        );
-      }
-    } catch (importError) {
-      // Try alternative path with /index
-      try {
-        const indexModulePath = operationName
-          ? `./lib/${commandName}/${operationName}/index.js`
-          : `./lib/${commandName}/index.js`;
-
-        const module = await import(indexModulePath);
-        const commandFunction = module.default || module[functionName];
-
-        if (typeof commandFunction === 'function') {
-          await commandFunction({ ...options, _positional: positionalArgs });
-        } else {
-          console.error(
-            `No default export or ${functionName} function found in ${indexModulePath}`
-          );
-        }
-      } catch (indexImportError) {
-        console.error(
-          `Command implementation not found: ${modulePath} or ${operationName ? `${commandName}/${operationName}/index` : `${commandName}/index`}`
-        );
-        console.error(
-          'Create the implementation file with a default export function.'
-        );
-      }
-    }
-  } catch (error) {
-    console.error(`Error executing command: ${error}`);
+  // Display message if available
+  if (message) {
+    const formattedMessage = message.replace(/\\n/g, '\n');
+    console.log(formattedMessage);
   }
+
+  // Load module
+  const { module, error: loadError } = await loadModule(
+    commandName,
+    operationName
+  );
+
+  if (loadError || !module) {
+    console.error(loadError);
+    process.exit(1);
+  }
+
+  // Get command function
+  const functionName = operationName || commandName;
+  const commandFunction = module.default || module[functionName];
+
+  if (typeof commandFunction !== 'function') {
+    console.error(`Command not implemented: ${functionName}`);
+    process.exit(1);
+  }
+
+  // Execute command - let errors propagate naturally
+  await commandFunction({ ...options, _positional: positionalArgs });
 }
 
 const program = new CommanderCommand();
@@ -386,7 +384,8 @@ specs.commands.forEach((command: CommandSpec) => {
             operationSpec.arguments || [],
             positionalArgs,
             options
-          )
+          ),
+          operationSpec.message
         );
       });
 
@@ -432,7 +431,8 @@ specs.commands.forEach((command: CommandSpec) => {
               defaultOperation.arguments || [],
               positionalArgs,
               options
-            )
+            ),
+            command.message || defaultOperation.message
           );
         });
       }
@@ -462,7 +462,8 @@ specs.commands.forEach((command: CommandSpec) => {
         command.name,
         undefined,
         positionalArgs,
-        extractArgumentValues(command.arguments || [], positionalArgs, options)
+        extractArgumentValues(command.arguments || [], positionalArgs, options),
+        command.message
       );
     });
   }

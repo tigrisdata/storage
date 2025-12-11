@@ -1,20 +1,26 @@
 import { getOption } from '../../utils/options.js';
 import { getAuthClient } from '../../auth/client.js';
 import { storeSelectedOrganization } from '../../auth/storage.js';
+import {
+  printStart,
+  printSuccess,
+  printFailure,
+  msg,
+} from '../../utils/messages.js';
+
+const context = msg('orgs', 'select');
 
 export default async function select(options: Record<string, unknown>) {
-  console.log('🎯 Selecting Organization');
+  printStart(context);
 
   const name = getOption<string>(options, ['name', 'N']);
 
   if (!name) {
-    console.error('❌ Organization name or ID is required');
+    printFailure(context, 'Organization name or ID is required');
     process.exit(1);
   }
 
   try {
-    console.log(`🔍 Looking for organization: ${name}`);
-
     // Get authenticated client
     const authClient = getAuthClient();
     await authClient.getAccessToken();
@@ -26,26 +32,25 @@ export default async function select(options: Record<string, unknown>) {
     const org = orgs.find((o) => o.id === name || o.name === name);
 
     if (!org) {
-      console.error(`\n❌ Organization "${name}" not found`);
-      console.log('\n💡 Available organizations:');
-      orgs.forEach((o) => console.log(`   - ${o.name} (${o.id})`));
-      console.log();
+      const availableOrgs = orgs
+        .map((o) => `   - ${o.name} (${o.id})`)
+        .join('\n');
+      printFailure(
+        context,
+        `Organization "${name}" not found\n\nAvailable organizations:\n${availableOrgs}`
+      );
       process.exit(1);
     }
 
     // Store selected organization
     storeSelectedOrganization(org.id);
 
-    console.log('✅ Organization selected successfully!');
-    console.log(`📛 Active Organization: ${org.name} (${org.id})`);
-    console.log(
-      '\n💡 This organization will be used for all subsequent commands'
-    );
+    printSuccess(context, { name: org.name });
   } catch (error) {
     if (error instanceof Error) {
-      console.error(`\n❌ ${error.message}\n`);
+      printFailure(context, error.message);
     } else {
-      console.error('\n❌ Failed to select organization\n');
+      printFailure(context);
     }
     process.exit(1);
   }

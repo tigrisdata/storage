@@ -21,6 +21,69 @@ export async function getLoginMethod(): Promise<LoginMethod | null> {
   return getStoredLoginMethod();
 }
 
+export type TigrisStorageConfig = {
+  bucket?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  endpoint?: string;
+  sessionToken?: string;
+  organizationId?: string;
+  iamEndpoint?: string;
+  authDomain?: string;
+};
+
+export async function getStorageConfig(): Promise<TigrisStorageConfig> {
+  const loginMethod = await getLoginMethod();
+
+  if (!loginMethod) {
+    throw new Error(
+      'Not authenticated. Please run "tigris login" or "tigris configure" first.'
+    );
+  }
+
+  if (loginMethod === 'oauth') {
+    // OAuth login - use access token and selected org
+    const authClient = getAuthClient();
+    const accessToken = await authClient.getAccessToken();
+    const selectedOrg = getSelectedOrganization();
+
+    if (!selectedOrg) {
+      throw new Error(
+        'No organization selected. Please run "tigris orgs select" first.'
+      );
+    }
+
+    const endpoint = process.env.TIGRIS_ENDPOINT ?? 'https://t3.storage.dev';
+    const iamEndpoint =
+      process.env.TIGRIS_STORAGE_IAM_ENDPOINT ?? 'https://iam.storageapi.dev';
+    const authDomain = process.env.AUTH0_DOMAIN ?? 'https://auth.tigris.dev';
+
+    return {
+      sessionToken: accessToken,
+      accessKeyId: '',
+      secretAccessKey: '',
+      endpoint,
+      organizationId: getSelectedOrganization() ?? undefined,
+      iamEndpoint,
+      authDomain,
+    };
+  }
+
+  const credentials = getCredentials();
+
+  if (!credentials) {
+    throw new Error(
+      'No credentials found. Please run "tigris configure" first.'
+    );
+  }
+
+  return {
+    accessKeyId: credentials.accessKeyId,
+    secretAccessKey: credentials.secretAccessKey,
+    endpoint: credentials.endpoint,
+  };
+}
+
 /**
  * Get configured S3 client based on login method
  */

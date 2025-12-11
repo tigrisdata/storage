@@ -6,9 +6,18 @@ import {
   getSelectedOrganization,
 } from '../../auth/storage.js';
 import Enquirer from 'enquirer';
+import {
+  printStart,
+  printSuccess,
+  printFailure,
+  printEmpty,
+  msg,
+} from '../../utils/messages.js';
+
+const context = msg('orgs', 'list');
 
 export default async function list(options: Record<string, unknown>) {
-  console.log('📋 Listing Organizations');
+  printStart(context);
 
   const format = getOption<string>(options, ['format', 'f', 'F'], 'select');
 
@@ -23,10 +32,7 @@ export default async function list(options: Record<string, unknown>) {
     const orgs = await authClient.getOrganizations();
 
     if (orgs.length === 0) {
-      console.log(
-        '\n⚠️  No organizations found. You may need to re-authenticate.'
-      );
-      console.log('   Run: tigris login\n');
+      printEmpty(context);
       return;
     }
 
@@ -62,13 +68,13 @@ export default async function list(options: Record<string, unknown>) {
         storeSelectedOrganization(selectedOrgId);
 
         const selectedOrg = orgs.find((o) => o.id === selectedOrgId);
-        console.log(
-          `\n✅ Selected organization: ${selectedOrg?.displayName || selectedOrg?.name} (${selectedOrgId})\n`
-        );
+        printSuccess(context, {
+          name: selectedOrg?.displayName || selectedOrg?.name,
+        });
         return;
       } catch (error) {
         // User cancelled the prompt (Ctrl+C)
-        console.log('\n❌ Selection cancelled\n');
+        printFailure(context, 'Selection cancelled');
         process.exit(0);
       }
     }
@@ -78,7 +84,7 @@ export default async function list(options: Record<string, unknown>) {
       id: org.id,
       name: org.name,
       displayName: org.displayName || org.name,
-      selected: org.id === currentSelection ? '✓' : '',
+      selected: org.id === currentSelection ? '*' : '',
     }));
 
     const output = formatOutput(
@@ -87,29 +93,20 @@ export default async function list(options: Record<string, unknown>) {
       'organizations',
       'organization',
       [
-        { key: 'selected', header: '', width: 3 },
-        { key: 'id', header: 'ID', width: 20 },
-        { key: 'name', header: 'Name', width: 20 },
-        { key: 'displayName', header: 'Display Name', width: 30 },
+        { key: 'selected', header: ' ', width: 1 },
+        { key: 'id', header: 'ID' },
+        { key: 'name', header: 'Name' },
+        { key: 'displayName', header: 'Display Name' },
       ]
     );
 
     console.log(output);
-    console.log(`\nFound ${organizations.length} organization(s)`);
-
-    if (currentSelection) {
-      const selected = orgs.find((o) => o.id === currentSelection);
-      console.log(
-        `Currently selected: ${selected?.displayName || selected?.name} (${currentSelection})`
-      );
-    } else {
-      console.log('No organization selected.');
-    }
+    printSuccess(context, { count: organizations.length });
   } catch (error) {
     if (error instanceof Error) {
-      console.error(`\n❌ ${error.message}\n`);
+      printFailure(context, error.message);
     } else {
-      console.error('\n❌ Failed to list organizations\n');
+      printFailure(context);
     }
     process.exit(1);
   }

@@ -13,11 +13,22 @@ export interface Argument {
   examples?: string[];
 }
 
+export interface Messages {
+  onStart?: string;
+  onSuccess?: string;
+  onFailure?: string;
+  onEmpty?: string;
+  onAlreadyDone?: string;
+  hint?: string;
+}
+
 export interface OperationSpec {
   name: string;
   description: string;
   alias?: string | string[];
   arguments?: Argument[];
+  message?: string;
+  messages?: Messages;
 }
 
 export interface CommandSpec {
@@ -27,6 +38,8 @@ export interface CommandSpec {
   arguments?: Argument[];
   operations?: OperationSpec[];
   default?: string;
+  message?: string;
+  messages?: Messages;
 }
 
 export interface ParsedPath {

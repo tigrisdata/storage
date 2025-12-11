@@ -1,18 +1,25 @@
 import { clearAllData } from '../auth/storage.js';
+import {
+  printStart,
+  printSuccess,
+  printFailure,
+  msg,
+} from '../utils/messages.js';
+
+const context = msg('logout');
 
 export default async function logout(): Promise<void> {
+  printStart(context);
   try {
-    console.log('🔓 Logging out...\n');
-
     // Clear all authentication data
     await clearAllData();
 
-    console.log('✅ Successfully logged out');
-    console.log('💡 All stored tokens and data have been cleared\n');
+    printSuccess(context);
   } catch (error) {
-    console.error('❌ Error during logout');
     if (error instanceof Error) {
-      console.error(`   ${error.message}\n`);
+      printFailure(context, error.message);
+    } else {
+      printFailure(context);
     }
     process.exit(1);
   }
