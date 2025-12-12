@@ -83,7 +83,7 @@ commands:
     alias: c
     messages:
       onStart: 'Configuring credentials...'
-      onSuccess: 'Configuration saved'
+      onSuccess: 'Configuration saved in ~/.tigris/credentials.json'
       onFailure: 'Failed to configure credentials'
     arguments:
       - name: access-key
