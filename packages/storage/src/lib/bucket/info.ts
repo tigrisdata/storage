@@ -18,8 +18,12 @@ export async function getBucketInfo(
   bucketName: string,
   options?: GetBucketInfoOptions
 ): Promise<TigrisStorageResponse<BucketInfoResponse, Error>> {
-  const { data: tigrisClient, error } = createTigrisClient(options?.config);
-  if (error || !tigrisClient) {
+  const { data: tigrisClient, error } = createTigrisClient(
+    options?.config,
+    true
+  );
+
+  if (error) {
     return { error };
   }
 
