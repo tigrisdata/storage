@@ -71,142 +71,20 @@ definitions:
       value: syd
       description: Sydney, Australia
 
-  access_options: &access_options
-    [public, private]
+  access_options: &access_options [public, private]
 
 commands:
   #########################
-  # Unix style commands
-  #########################
-  
-  # ls
-  - name: ls
-    description: List buckets or objects in a bucket or path
-    alias: list
-    arguments:
-      - name: path
-        required: true
-        type: positional
-        description: a bucket or path in a bucket
-        examples:
-          - my-bucket
-          - my-bucket/my-path
-  
-  # mk
-  - name: mk
-    description: Create a bucket or a folder in a bucket
-    alias: create
-    arguments:
-      - name: path
-        required: true
-        type: positional
-        description: a bucket or a folder in a bucket
-        examples:
-          - my-bucket
-          - my-bucket/my-path
-  
-  # stat
-  - name: stat
-    description: Get the details of a bucket or a folder in a bucket or an object in a bucket or path
-    arguments:
-      - name: path
-        required: true
-        type: positional
-        description: a bucket or a folder in a bucket or an object in a bucket or path
-        examples:
-          - my-bucket
-          - my-bucket/my-path
-          - my-bucket/my-path/my-object.json
-  
-  # cp
-  - name: cp
-    description: Copy a folder or an object
-    alias: copy
-    arguments:
-      - name: src
-        required: true
-        type: positional
-        description: a bucket, a folder in a bucket, an object in a bucket / path. Wildcard is supported.
-        examples:
-          - my-bucket
-          - my-bucket/my-path
-          - my-bucket/my-path/my-object.json
-      - name: dest
-        required: true
-        type: positional
-        description: path to copy to
-        examples:
-          - my-bucket
-          - my-bucket/my-path
-          - my-bucket/my-path/*
-          - my-bucket/my-path/my-object.json
-  
-  # mv
-  - name: mv
-    description: Move a folder or an object
-    alias: move
-    arguments:
-      - name: src
-        type: positional
-        required: true
-        description: path to move from
-        examples:
-          - my-bucket
-          - my-bucket/my-path
-          - my-bucket/my-path/*
-          - my-bucket/my-path/my-object.json
-      - name: dest
-        type: positional
-        required: true
-        description: path to move to
-        examples:
-          - my-bucket
-          - my-bucket/new-path
-  
-  # rm
-  - name: rm
-    description: Remove a bucket or a folder in a bucket or an object in a bucket or path
-    alias: remvoe
-    arguments:
-      - name: path
-        type: positional
-        required: true
-        description: a bucket, a folder in a bucket, an object in a bucket / path. Wildcard is supported.
-        examples:
-          - my-bucket
-          - my-bucket/my-path
-          - my-bucket/my-path/*
-          - my-bucket/my-path/my-object.json
-
-  #########################
   # Authentication
   #########################
-  # logout
-  - name: logout
-    description: Logout from Tigris
-    messages:
-      onStart: "Logging out..."
-      onSuccess: "Logged out successfully"
-      onFailure: "Failed to logout"
-
-  # whoami
-  - name: whoami
-    description: Show information about the current user
-    alias: w
-    messages:
-      onStart: ""
-      onSuccess: ""
-      onFailure: "Failed to get user information"
-      onAlreadyDone: "Not authenticated\nRun \"tigris login\" to authenticate"
-  
   # configure
   - name: configure
     description: Configure Tigris credentials interactively
     alias: c
     messages:
-      onStart: "Configuring credentials..."
-      onSuccess: "Configuration saved"
-      onFailure: "Failed to configure credentials"
+      onStart: 'Configuring credentials...'
+      onSuccess: 'Configuration saved'
+      onFailure: 'Failed to configure credentials'
     arguments:
       - name: access-key
         description: Tigris Access key ID
@@ -225,9 +103,9 @@ commands:
   - name: login
     description: Login to Tigris (interactive selection between user and machine)
     messages:
-      onStart: "Logging in..."
-      onSuccess: "Login successful"
-      onFailure: "Login failed"
+      onStart: 'Logging in...'
+      onSuccess: 'Login successful'
+      onFailure: 'Login failed'
     alias: l
     arguments:
       - name: access-key
@@ -253,9 +131,9 @@ commands:
       - name: select
         description: Interactive selection between user and machine login
         messages:
-          onStart: ""
-          onSuccess: "Login successful"
-          onFailure: "Login failed"
+          onStart: ''
+          onSuccess: 'Login successful'
+          onFailure: 'Login failed'
         arguments:
           - name: access-key
             description: Access key (optional, will use credentials flow if provided)
@@ -280,9 +158,9 @@ commands:
         description: Login as a user (OAuth2 flow)
         alias: u
         messages:
-          onStart: "Initiating authentication..."
+          onStart: 'Initiating authentication...'
           onSuccess: "Authentication successful\nOrganization '{{org}}' selected"
-          onFailure: "Authentication failed"
+          onFailure: 'Authentication failed'
           onAlreadyDone: "You are already logged in.\nRun \"tigris logout\" first if you want to login with a different account."
           hint: "You have {{count}} organizations available.\nRun \"tigris orgs list\" to see all and switch if needed."
       # credentials
@@ -290,9 +168,9 @@ commands:
         description: Login as a machine (with access key and secret)
         alias: c
         messages:
-          onStart: "Authenticating with credentials..."
-          onSuccess: "Login successful"
-          onFailure: "Login failed"
+          onStart: 'Authenticating with credentials...'
+          onSuccess: 'Login successful'
+          onFailure: 'Login failed'
         arguments:
           - name: access-key
             description: Access key (optional, will prompt or use saved credentials if not provided)
@@ -304,10 +182,131 @@ commands:
             required: false
     default: select
 
+  # whoami
+  - name: whoami
+    description: Show information about the current user
+    alias: w
+    messages:
+      onStart: ''
+      onSuccess: ''
+      onFailure: 'Failed to get user information'
+      onAlreadyDone: "Not authenticated\nRun \"tigris login\" to authenticate"
+
+  # logout
+  - name: logout
+    description: Logout from Tigris
+    messages:
+      onStart: 'Logging out...'
+      onSuccess: 'Logged out successfully'
+      onFailure: 'Failed to logout'
+
+  #########################
+  # Unix style commands
+  #########################
+  # ls
+  - name: ls
+    description: List buckets or objects in a bucket or path
+    alias: list
+    arguments:
+      - name: path
+        required: true
+        type: positional
+        description: a bucket or path in a bucket
+        examples:
+          - my-bucket
+          - my-bucket/my-path
+
+  # mk
+  - name: mk
+    description: Create a bucket or a folder in a bucket
+    alias: create
+    arguments:
+      - name: path
+        required: true
+        type: positional
+        description: a bucket or a folder in a bucket
+        examples:
+          - my-bucket
+          - my-bucket/my-path
+
+  # stat
+  - name: stat
+    description: Get the details of a bucket or a folder in a bucket or an object in a bucket or path
+    arguments:
+      - name: path
+        required: true
+        type: positional
+        description: a bucket or a folder in a bucket or an object in a bucket or path
+        examples:
+          - my-bucket
+          - my-bucket/my-path
+          - my-bucket/my-path/my-object.json
+
+  # cp
+  - name: cp
+    description: Copy a folder or an object
+    alias: copy
+    arguments:
+      - name: src
+        required: true
+        type: positional
+        description: a bucket, a folder in a bucket, an object in a bucket / path. Wildcard is supported.
+        examples:
+          - my-bucket
+          - my-bucket/my-path
+          - my-bucket/my-path/my-object.json
+      - name: dest
+        required: true
+        type: positional
+        description: path to copy to
+        examples:
+          - my-bucket
+          - my-bucket/my-path
+          - my-bucket/my-path/*
+          - my-bucket/my-path/my-object.json
+
+  # mv
+  - name: mv
+    description: Move a folder or an object
+    alias: move
+    arguments:
+      - name: src
+        type: positional
+        required: true
+        description: path to move from
+        examples:
+          - my-bucket
+          - my-bucket/my-path
+          - my-bucket/my-path/*
+          - my-bucket/my-path/my-object.json
+      - name: dest
+        type: positional
+        required: true
+        description: path to move to
+        examples:
+          - my-bucket
+          - my-bucket/new-path
+
+  # rm
+  - name: rm
+    description: Remove a bucket or a folder in a bucket or an object in a bucket or path
+    alias: remvoe
+    arguments:
+      - name: path
+        type: positional
+        required: true
+        description: a bucket, a folder in a bucket, an object in a bucket / path. Wildcard is supported.
+        examples:
+          - my-bucket
+          - my-bucket/my-path
+          - my-bucket/my-path/*
+          - my-bucket/my-path/my-object.json
+
   #########################
   # Manage organizations
   #########################
-  - name: orgs
+  - name: organizations
+    alias: orgs
     description: Manage organizations
     operations:
       # list
@@ -315,9 +314,9 @@ commands:
         description: List organizations
         alias: l
         messages:
-          onStart: "Listing organizations..."
+          onStart: 'Listing organizations...'
           onSuccess: "Organization '{{name}}' selected"
-          onFailure: "Failed to select organization"
+          onFailure: 'Failed to select organization'
           onEmpty: "No organizations found. You may need to re-authenticate.\nRun: tigris login"
         arguments:
           - name: format
@@ -333,9 +332,9 @@ commands:
         description: Create organization
         alias: c
         messages:
-          onStart: "Creating organization..."
+          onStart: 'Creating organization...'
           onSuccess: "Organization '{{name}}' created successfully\nOrganization ID: {{id}}"
-          onFailure: "Failed to create organization"
+          onFailure: 'Failed to create organization'
           hint: "Next steps:\n   - Select this organization: tigris orgs select {{name}}"
         arguments:
           - name: name
@@ -346,9 +345,9 @@ commands:
         description: Select the organization to use
         alias: s
         messages:
-          onStart: ""
+          onStart: ''
           onSuccess: "Organization '{{name}}' selected"
-          onFailure: "Failed to select organization"
+          onFailure: 'Failed to select organization'
         arguments:
           - name: name
             type: positional
@@ -367,10 +366,10 @@ commands:
         description: List buckets
         alias: l
         messages:
-          onStart: "Listing buckets..."
-          onSuccess: "Found {{count}} bucket(s)"
-          onFailure: "Failed to list buckets"
-          onEmpty: "No buckets found"
+          onStart: 'Listing buckets...'
+          onSuccess: 'Found {{count}} bucket(s)'
+          onFailure: 'Failed to list buckets'
+          onEmpty: 'No buckets found'
         arguments:
           - name: format
             description: Format
@@ -382,9 +381,9 @@ commands:
         description: Create bucket
         alias: [c]
         messages:
-          onStart: "Creating bucket..."
+          onStart: 'Creating bucket...'
           onSuccess: "Bucket '{{name}}' created successfully"
-          onFailure: "Failed to create bucket"
+          onFailure: 'Failed to create bucket'
         arguments:
           - name: name
             description: Name of the bucket
@@ -420,9 +419,9 @@ commands:
         description: Get bucket details
         alias: g
         messages:
-          onStart: "Getting bucket details..."
-          onSuccess: ""
-          onFailure: "Failed to get bucket details"
+          onStart: 'Getting bucket details...'
+          onSuccess: ''
+          onFailure: 'Failed to get bucket details'
         arguments:
           - name: name
             description: Name of the bucket
@@ -433,7 +432,7 @@ commands:
         description: Delete bucket
         alias: d
         messages:
-          onStart: "Deleting bucket..."
+          onStart: 'Deleting bucket...'
           onSuccess: "Bucket '{{name}}' deleted successfully"
           onFailure: "Failed to delete bucket '{{name}}'"
         arguments:
@@ -442,7 +441,7 @@ commands:
             type: positional
             required: true
             multiple: true
-  
+
   #########################
   # Manage forks
   #########################
@@ -472,7 +471,7 @@ commands:
             description: Name of the fork
             type: positional
             required: true
-  
+
   #########################
   # Manage snapshots
   #########################
@@ -480,7 +479,7 @@ commands:
     description: Manage snapshots
     alias: s
     operations:
-      # list  
+      # list
       - name: list
         description: List snapshots
         alias: l
