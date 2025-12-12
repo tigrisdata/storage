@@ -38,7 +38,7 @@ function hasImplementation(
 function formatArgumentHelp(arg: Argument): string {
   let optionPart: string;
 
-  if (arg.type === 'noun') {
+  if (arg.type === 'positional') {
     optionPart = `  ${arg.name}`;
   } else {
     optionPart = `  --${arg.name}`;
@@ -79,7 +79,7 @@ function formatArgumentHelp(arg: Argument): string {
     description += ' [multiple values: comma-separated]';
   }
 
-  if (arg.type === 'noun') {
+  if (arg.type === 'positional') {
     description += ' [positional argument]';
   }
 
@@ -178,8 +178,8 @@ function showMainHelp() {
 
 function addArgumentsToCommand(cmd: CommanderCommand, args: Argument[] = []) {
   args.forEach((arg) => {
-    if (arg.type === 'noun') {
-      // Handle noun arguments as positional arguments
+    if (arg.type === 'positional') {
+      // Handle positional arguments
       const argumentName = arg.required ? `<${arg.name}>` : `[${arg.name}]`;
       cmd.argument(argumentName, arg.description);
     } else {
@@ -349,7 +349,7 @@ function extractArgumentValues(
   const result = { ...options };
 
   // Map positional arguments to their names
-  const positionalArgDefs = args.filter((arg) => arg.type === 'noun');
+  const positionalArgDefs = args.filter((arg) => arg.type === 'positional');
   positionalArgDefs.forEach((arg, index) => {
     if (positionalArgs[index] !== undefined) {
       if (arg.multiple) {
@@ -365,7 +365,7 @@ function extractArgumentValues(
 
   // Handle multiple flag arguments
   args.forEach((arg) => {
-    if (arg.multiple && arg.type !== 'noun' && result[arg.name]) {
+    if (arg.multiple && arg.type !== 'positional' && result[arg.name]) {
       if (typeof result[arg.name] === 'string') {
         result[arg.name] = (result[arg.name] as string)
           .split(',')

@@ -86,7 +86,7 @@ commands:
     arguments:
       - name: path
         required: true
-        type: noun
+        type: positional
         description: a bucket or path in a bucket
         examples:
           - my-bucket
@@ -99,7 +99,7 @@ commands:
     arguments:
       - name: path
         required: true
-        type: noun
+        type: positional
         description: a bucket or a folder in a bucket
         examples:
           - my-bucket
@@ -111,7 +111,7 @@ commands:
     arguments:
       - name: path
         required: true
-        type: noun
+        type: positional
         description: a bucket or a folder in a bucket or an object in a bucket or path
         examples:
           - my-bucket
@@ -125,7 +125,7 @@ commands:
     arguments:
       - name: src
         required: true
-        type: noun
+        type: positional
         description: a bucket, a folder in a bucket, an object in a bucket / path. Wildcard is supported.
         examples:
           - my-bucket
@@ -133,7 +133,7 @@ commands:
           - my-bucket/my-path/my-object.json
       - name: dest
         required: true
-        type: noun
+        type: positional
         description: path to copy to
         examples:
           - my-bucket
@@ -147,7 +147,7 @@ commands:
     alias: move
     arguments:
       - name: src
-        type: noun
+        type: positional
         required: true
         description: path to move from
         examples:
@@ -156,7 +156,7 @@ commands:
           - my-bucket/my-path/*
           - my-bucket/my-path/my-object.json
       - name: dest
-        type: noun
+        type: positional
         required: true
         description: path to move to
         examples:
@@ -169,7 +169,7 @@ commands:
     alias: remvoe
     arguments:
       - name: path
-        type: noun
+        type: positional
         required: true
         description: a bucket, a folder in a bucket, an object in a bucket / path. Wildcard is supported.
         examples:
@@ -339,7 +339,7 @@ commands:
           hint: "Next steps:\n   - Select this organization: tigris orgs select {{name}}"
         arguments:
           - name: name
-            type: noun
+            type: positional
             required: true
             description: Name of the organization
       - name: select
@@ -351,7 +351,7 @@ commands:
           onFailure: "Failed to select organization"
         arguments:
           - name: name
-            type: noun
+            type: positional
             required: true
             description: Name of the organization
 
@@ -388,7 +388,7 @@ commands:
         arguments:
           - name: name
             description: Name of the bucket
-            type: noun
+            type: positional
             required: false
           - name: access
             description: Access level
@@ -426,7 +426,7 @@ commands:
         arguments:
           - name: name
             description: Name of the bucket
-            type: noun
+            type: positional
             required: true
       # delete
       - name: delete
@@ -439,7 +439,7 @@ commands:
         arguments:
           - name: name
             description: Name of the bucket or comma separated list of buckets
-            type: noun
+            type: positional
             required: true
             multiple: true
   
@@ -457,7 +457,7 @@ commands:
         arguments:
           - name: name
             description: Name of the bucket
-            type: noun
+            type: positional
             required: true
       # create
       - name: create
@@ -466,11 +466,11 @@ commands:
         arguments:
           - name: name
             description: Name of the bucket
-            type: noun
+            type: positional
             required: true
           - name: fork-name
             description: Name of the fork
-            type: noun
+            type: positional
             required: true
   
   #########################
@@ -487,7 +487,7 @@ commands:
         arguments:
           - name: name
             description: Name of the bucket
-            type: noun
+            type: positional
             required: true
       # create
       - name: create
@@ -496,11 +496,11 @@ commands:
         arguments:
           - name: name
             description: Name of the bucket
-            type: noun
+            type: positional
             required: true
           - name: snapshot-name
             description: Name of the snapshot
-            type: noun
+            type: positional
             required: true
 
   #########################
@@ -531,11 +531,11 @@ commands:
         arguments:
           - name: bucket
             description: Name of the bucket
-            type: noun
+            type: positional
             required: true
           - name: key
             description: Name of the object
-            type: noun
+            type: positional
             required: true
           - name: format
             description: Format
@@ -549,11 +549,11 @@ commands:
         arguments:
           - name: bucket
             description: Name of the bucket
-            type: noun
+            type: positional
             required: true
           - name: name
             description: Name of the object
-            type: noun
+            type: positional
             required: true
           - name: body
             description: Body of the object
@@ -582,11 +582,11 @@ commands:
         arguments:
           - name: bucket
             description: Name of the bucket
-            type: noun
+            type: positional
             required: true
           - name: key
             description: Name of the object (comma separated names for multiple objects)
-            type: noun
+            type: positional
             required: true
             multiple: true
       # copy
@@ -596,16 +596,16 @@ commands:
         arguments:
           - name: bucket
             description: Name of the bucket
-            type: noun
+            type: positional
             required: true
           - name: name
             description: Name of the object (comma separated names for multiple objects)
-            type: noun
+            type: positional
             required: true
             multiple: true
           - name: destination
             description: Destination
-            type: noun
+            type: positional
             required: true
       # move
       - name: move
@@ -614,14 +614,14 @@ commands:
         arguments:
           - name: bucket
             description: Name of the bucket
-            type: noun
+            type: positional
             required: true
           - name: source
             description: Name of the object (comma separated names for multiple objects)
-            type: noun
+            type: positional
             required: true
             multiple: true
           - name: destination
             description: Destination
-            type: noun
+            type: positional
             required: true

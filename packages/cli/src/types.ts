@@ -8,7 +8,7 @@ export interface Argument {
   default?: string;
   required?: boolean;
   'required-when'?: string;
-  type?: 'noun' | 'flag' | string;
+  type?: 'positional' | 'flag' | string;
   multiple?: boolean;
   examples?: string[];
 }
