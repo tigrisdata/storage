@@ -12,7 +12,8 @@ export async function remove(
   options?: RemoveOptions
 ): Promise<TigrisStorageResponse<void, Error>> {
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
-  if (error || !tigrisClient) {
+
+  if (error) {
     return { error };
   }
   const remove = new DeleteObjectCommand({

@@ -17,7 +17,7 @@ export async function removeBucket(
     true
   );
 
-  if (error || !tigrisClient) {
+  if (error) {
     return { error };
   }
 

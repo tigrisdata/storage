@@ -32,7 +32,7 @@ export async function listBuckets(
     true
   );
 
-  if (error || !tigrisClient) {
+  if (error) {
     return { error };
   }
 
