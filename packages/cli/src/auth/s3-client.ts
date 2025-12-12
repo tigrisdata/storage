@@ -11,6 +11,10 @@ import {
   getSelectedOrganization,
 } from './storage.js';
 import { getAuthClient } from './client.js';
+import { getAuth0Config, getTigrisConfig } from './config.js';
+
+const tigrisConfig = getTigrisConfig();
+const auth0Config = getAuth0Config();
 
 export type LoginMethod = 'oauth' | 'credentials';
 
@@ -53,10 +57,9 @@ export async function getStorageConfig(): Promise<TigrisStorageConfig> {
       );
     }
 
-    const endpoint = process.env.TIGRIS_ENDPOINT ?? 'https://t3.storage.dev';
-    const iamEndpoint =
-      process.env.TIGRIS_STORAGE_IAM_ENDPOINT ?? 'https://iam.storageapi.dev';
-    const authDomain = process.env.AUTH0_DOMAIN ?? 'https://auth.tigris.dev';
+    const endpoint = tigrisConfig.endpoint;
+    const iamEndpoint = tigrisConfig.iamEndpoint;
+    const authDomain = auth0Config.domain;
 
     return {
       sessionToken: accessToken,
@@ -108,7 +111,7 @@ export async function getS3Client(): Promise<S3Client> {
       );
     }
 
-    const endpoint = process.env.TIGRIS_ENDPOINT ?? 'https://t3.storage.dev';
+    const endpoint = tigrisConfig.endpoint;
 
     // Get credentials config to get endpoint if available, otherwise use default
     // Create S3 client with custom headers for OAuth
