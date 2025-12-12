@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command as CommanderCommand } from 'commander';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as YAML from 'yaml';
@@ -14,6 +14,26 @@ const __dirname = dirname(__filename);
 const specsPath = join(__dirname, 'specs.yaml');
 const specsContent = readFileSync(specsPath, 'utf8');
 const specs = YAML.parse(specsContent);
+
+/**
+ * Check if a command/operation has an implementation
+ */
+function hasImplementation(
+  commandName: string,
+  operationName?: string
+): boolean {
+  const paths = operationName
+    ? [
+        join(__dirname, 'lib', commandName, `${operationName}.js`),
+        join(__dirname, 'lib', commandName, operationName, 'index.js'),
+      ]
+    : [
+        join(__dirname, 'lib', `${commandName}.js`),
+        join(__dirname, 'lib', commandName, 'index.js'),
+      ];
+
+  return paths.some((p) => existsSync(p));
+}
 
 function formatArgumentHelp(arg: Argument): string {
   let optionPart: string;
@@ -74,17 +94,23 @@ function showCommandHelp(command: CommandSpec) {
   console.log(`\n${specs.name} ${command.name} - ${command.description}\n`);
 
   if (command.operations && command.operations.length > 0) {
-    console.log('Operations:');
-    command.operations.forEach((op) => {
-      let operationPart = `  ${op.name}`;
-      if (op.alias) {
-        const aliases = Array.isArray(op.alias) ? op.alias : [op.alias];
-        operationPart += ` (${aliases.join(', ')})`;
-      }
-      const paddedOperationPart = operationPart.padEnd(24);
-      console.log(`${paddedOperationPart}${op.description}`);
-    });
-    console.log();
+    const availableOps = command.operations.filter((op) =>
+      hasImplementation(command.name, op.name)
+    );
+
+    if (availableOps.length > 0) {
+      console.log('Operations:');
+      availableOps.forEach((op) => {
+        let operationPart = `  ${op.name}`;
+        if (op.alias) {
+          const aliases = Array.isArray(op.alias) ? op.alias : [op.alias];
+          operationPart += ` (${aliases.join(', ')})`;
+        }
+        const paddedOperationPart = operationPart.padEnd(24);
+        console.log(`${paddedOperationPart}${op.description}`);
+      });
+      console.log();
+    }
   }
 
   if (command.arguments && command.arguments.length > 0) {
@@ -114,12 +140,30 @@ function showOperationHelp(command: CommandSpec, operation: OperationSpec) {
   }
 }
 
+function commandHasAnyImplementation(command: CommandSpec): boolean {
+  // Check if command itself has implementation
+  if (hasImplementation(command.name)) {
+    return true;
+  }
+
+  // Check if any operation has implementation
+  if (command.operations) {
+    return command.operations.some((op) =>
+      hasImplementation(command.name, op.name)
+    );
+  }
+
+  return false;
+}
+
 function showMainHelp() {
   console.log(`Tigris CLI Version: ${version}\n`);
   console.log('Usage: tigris [command] [options]\n');
   console.log('Commands:');
 
-  specs.commands.forEach((command: CommandSpec) => {
+  const availableCommands = specs.commands.filter(commandHasAnyImplementation);
+
+  availableCommands.forEach((command: CommandSpec) => {
     let commandPart = `  ${command.name}`;
     if (command.alias) {
       commandPart += ` (${command.alias})`;
