@@ -45,7 +45,7 @@ export async function put(
 ): Promise<TigrisStorageResponse<PutResponse, Error>> {
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
-  if (error || !tigrisClient) {
+  if (error) {
     return { error };
   }
 

@@ -36,7 +36,7 @@ export async function get(
 ): Promise<TigrisStorageResponse<GetResponse, Error>> {
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
-  if (error || !tigrisClient) {
+  if (error) {
     return { error };
   }
 

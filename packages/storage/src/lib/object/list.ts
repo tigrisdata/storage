@@ -35,7 +35,7 @@ export async function list(
 
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
-  if (error || !tigrisClient) {
+  if (error) {
     return { error };
   }
 

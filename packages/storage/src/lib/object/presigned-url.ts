@@ -33,7 +33,7 @@ export async function getPresignedUrl(
 ): Promise<TigrisStorageResponse<GetPresignedUrlResponse, Error>> {
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
-  if (error || !tigrisClient) {
+  if (error) {
     return { error };
   }
 

@@ -23,7 +23,7 @@ export async function initMultipartUpload(
 ): Promise<TigrisStorageResponse<InitMultipartUploadResponse, Error>> {
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
-  if (error || !tigrisClient) {
+  if (error) {
     return { error };
   }
 
@@ -62,7 +62,7 @@ export async function getPartsPresignedUrls(
 ): Promise<TigrisStorageResponse<GetPartsPresignedUrlsResponse, Error>> {
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
-  if (error || !tigrisClient) {
+  if (error) {
     return { error };
   }
 
@@ -114,7 +114,7 @@ export async function completeMultipartUpload(
 ): Promise<TigrisStorageResponse<CompleteMultipartUploadResponse, Error>> {
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
-  if (error || !tigrisClient) {
+  if (error) {
     return { error };
   }
 
