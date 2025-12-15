@@ -300,7 +300,7 @@ commands:
   # rm
   - name: rm
     description: Remove a bucket or a folder in a bucket or an object in a bucket or path
-    alias: remvoe
+    alias: remove
     arguments:
       - name: path
         type: positional
@@ -311,6 +311,10 @@ commands:
           - my-bucket/my-path
           - my-bucket/my-path/*
           - my-bucket/my-path/my-object.json
+      - name: force
+        type: flag
+        alias: f
+        description: Skip confirmation prompt
 
   #########################
   # Manage organizations
