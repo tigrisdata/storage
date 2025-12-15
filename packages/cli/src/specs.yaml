@@ -451,26 +451,43 @@ commands:
     operations:
       # list
       - name: list
-        description: List forks
+        description: List forks of a bucket
         alias: l
+        messages:
+          onStart: 'Listing forks...'
+          onSuccess: 'Found {{count}} fork(s)'
+          onFailure: 'Failed to list forks'
+          onEmpty: 'No forks found for this bucket'
         arguments:
           - name: name
-            description: Name of the bucket
+            description: Name of the source bucket
             type: positional
             required: true
+          - name: format
+            description: Output format
+            alias: f
+            options: [json, table, xml]
+            default: table
       # create
       - name: create
-        description: Create fork
+        description: Create a fork of a bucket
         alias: c
+        messages:
+          onStart: 'Creating fork...'
+          onSuccess: "Fork '{{forkName}}' created from '{{name}}'"
+          onFailure: 'Failed to create fork'
         arguments:
           - name: name
-            description: Name of the bucket
+            description: Name of the source bucket
             type: positional
             required: true
           - name: fork-name
-            description: Name of the fork
+            description: Name for the new fork
             type: positional
             required: true
+          - name: snapshot
+            description: Create fork from a specific snapshot
+            alias: s
 
   #########################
   # Manage snapshots
