@@ -1,5 +1,6 @@
 import { readFileSync, statSync } from 'fs';
 import { getOption } from '../../utils/options.js';
+import { formatOutput } from '../../utils/format.js';
 import { getStorageConfig } from '../../auth/s3-client.js';
 import { put } from '@tigrisdata/storage';
 import {
@@ -24,6 +25,7 @@ export default async function putObject(options: Record<string, unknown>) {
     't',
     'T',
   ]);
+  const format = getOption<string>(options, ['format', 'f', 'F'], 'table');
 
   if (!bucket) {
     printFailure(context, 'Bucket name is required');
@@ -51,7 +53,7 @@ export default async function putObject(options: Record<string, unknown>) {
   const config = await getStorageConfig();
   const body = readFileSync(file);
 
-  const { error } = await put(key, body, {
+  const { data, error } = await put(key, body, {
     access: access === 'public' ? 'public' : 'private',
     contentType,
     config: {
@@ -65,5 +67,29 @@ export default async function putObject(options: Record<string, unknown>) {
     process.exit(1);
   }
 
+  const result = [
+    {
+      path: data.path,
+      size: formatSize(data.size),
+      contentType: data.contentType || '-',
+      modified: data.modified,
+    },
+  ];
+
+  const output = formatOutput(result, format!, 'objects', 'object', [
+    { key: 'path', header: 'Path' },
+    { key: 'size', header: 'Size' },
+    { key: 'contentType', header: 'Content-Type' },
+    { key: 'modified', header: 'Modified' },
+  ]);
+
+  console.log(output);
   printSuccess(context, { key, bucket });
+}
+
+function formatSize(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
 }

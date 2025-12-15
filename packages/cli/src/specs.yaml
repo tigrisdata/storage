@@ -614,6 +614,11 @@ commands:
           - name: content-type
             description: Content type
             alias: t
+          - name: format
+            description: Output format
+            alias: f
+            options: [json, table, xml]
+            default: table
       # delete
       - name: delete
         description: Delete an object
