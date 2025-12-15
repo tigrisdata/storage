@@ -209,9 +209,8 @@ commands:
     alias: list
     arguments:
       - name: path
-        required: true
         type: positional
-        description: a bucket or path in a bucket
+        description: a bucket or path in a bucket (if not provided, lists all buckets)
         examples:
           - my-bucket
           - my-bucket/my-path
