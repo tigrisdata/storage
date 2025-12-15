@@ -582,6 +582,10 @@ commands:
           - name: output
             description: Output file path (if not specified, prints to stdout)
             alias: o
+          - name: mode
+            description: Response mode (auto-detected from extension if not specified)
+            alias: m
+            options: [string, stream]
       # put
       - name: put
         description: Upload an object
