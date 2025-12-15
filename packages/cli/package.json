@@ -22,7 +22,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "cli": "export $(grep -v '^#' .env | xargs) && npm run build && node dist/cli.js",
+    "cli": "export $(grep -v '^#' .env | xargs) && node dist/cli.js",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
