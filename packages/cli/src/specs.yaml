@@ -228,6 +228,17 @@ commands:
           - my-bucket
           - my-bucket/my-path
 
+  # touch
+  - name: touch
+    description: Create an empty object in a bucket
+    arguments:
+      - name: path
+        required: true
+        type: positional
+        description: path to the object (bucket/key)
+        examples:
+          - my-bucket/my-file.txt
+
   # stat
   - name: stat
     description: Get the details of a bucket or a folder in a bucket or an object in a bucket or path

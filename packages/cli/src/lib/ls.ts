@@ -17,11 +17,7 @@ export default async function ls(options: Record<string, unknown>) {
       process.exit(1);
     }
 
-    if (!data.buckets || data.buckets.length === 0) {
-      return;
-    }
-
-    const buckets = data.buckets.map((bucket) => ({
+    const buckets = (data.buckets || []).map((bucket) => ({
       name: bucket.name,
       created: bucket.creationDate,
     }));
@@ -44,8 +40,11 @@ export default async function ls(options: Record<string, unknown>) {
 
   const config = await getStorageConfig();
 
+  // Normalize prefix: ensure trailing slash for directory-like listing
+  const prefix = path ? (path.endsWith('/') ? path : `${path}/`) : undefined;
+
   const { data, error } = await list({
-    prefix: path || undefined,
+    prefix,
     config: {
       ...config,
       bucket,
@@ -57,15 +56,28 @@ export default async function ls(options: Record<string, unknown>) {
     process.exit(1);
   }
 
-  if (!data.items || data.items.length === 0) {
-    return;
-  }
+  const objects = (data.items || [])
+    .map((item) => {
+      // Strip the prefix from the name for cleaner display
+      const name = prefix ? item.name.slice(prefix.length) : item.name;
 
-  const objects = data.items.map((item) => ({
-    key: item.name,
-    size: formatSize(item.size),
-    modified: item.lastModified,
-  }));
+      // For immediate children only: if name contains /, only show up to first /
+      const firstSlash = name.indexOf('/');
+      const displayName =
+        firstSlash === -1 ? name : name.slice(0, firstSlash + 1);
+      const isFolder = displayName.endsWith('/');
+
+      return {
+        key: displayName,
+        size: isFolder ? '-' : formatSize(item.size),
+        modified: item.lastModified,
+      };
+    })
+    // Filter out empty keys and deduplicate folders
+    .filter(
+      (item, index, arr) =>
+        item.key !== '' && arr.findIndex((i) => i.key === item.key) === index
+    );
 
   const output = formatOutput(objects, 'table', 'objects', 'object', [
     { key: 'key', header: 'Key' },
