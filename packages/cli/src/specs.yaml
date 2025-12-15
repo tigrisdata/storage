@@ -285,7 +285,6 @@ commands:
         required: true
         description: path to move from
         examples:
-          - my-bucket
           - my-bucket/my-path
           - my-bucket/my-path/*
           - my-bucket/my-path/my-object.json
@@ -296,6 +295,10 @@ commands:
         examples:
           - my-bucket
           - my-bucket/new-path
+      - name: force
+        type: flag
+        alias: f
+        description: Skip confirmation prompt
 
   # rm
   - name: rm

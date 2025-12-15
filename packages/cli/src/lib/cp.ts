@@ -55,9 +55,6 @@ export default async function cp(options: Record<string, unknown>) {
 
     let copied = 0;
     for (const item of data.items) {
-      // Skip folder markers
-      if (item.name.endsWith('/')) continue;
-
       const relativePath = prefix ? item.name.slice(prefix.length) : item.name;
       const destKey = destPath.path
         ? `${destPath.path.replace(/\/$/, '')}/${relativePath}`
@@ -113,6 +110,23 @@ async function copyObject(
   destBucket: string,
   destKey: string
 ): Promise<{ error?: string }> {
+  // Handle folder markers specially (empty objects ending with /)
+  if (srcKey.endsWith('/')) {
+    // Put empty string to destination (creates folder marker)
+    const { error: putError } = await put(destKey, '', {
+      config: {
+        ...config,
+        bucket: destBucket,
+      },
+    });
+
+    if (putError) {
+      return { error: putError.message };
+    }
+
+    return {};
+  }
+
   // Get source object
   const { data, error: getError } = await get(srcKey, 'stream', {
     config: {
