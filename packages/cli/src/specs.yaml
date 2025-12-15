@@ -498,26 +498,40 @@ commands:
     operations:
       # list
       - name: list
-        description: List snapshots
+        description: List snapshots of a bucket
         alias: l
+        messages:
+          onStart: 'Listing snapshots...'
+          onSuccess: 'Found {{count}} snapshot(s)'
+          onFailure: 'Failed to list snapshots'
+          onEmpty: 'No snapshots found for this bucket'
         arguments:
           - name: name
             description: Name of the bucket
             type: positional
             required: true
-      # create
-      - name: create
-        description: Create snapshot
-        alias: c
+          - name: format
+            description: Output format
+            alias: f
+            options: [json, table, xml]
+            default: table
+      # take
+      - name: take
+        description: Take a snapshot of a bucket
+        alias: t
+        messages:
+          onStart: 'Taking snapshot...'
+          onSuccess: "Snapshot '{{snapshotName}}' taken for bucket '{{name}}'"
+          onFailure: 'Failed to take snapshot'
         arguments:
           - name: name
             description: Name of the bucket
             type: positional
             required: true
           - name: snapshot-name
-            description: Name of the snapshot
+            description: Name of the snapshot (optional)
             type: positional
-            required: true
+            required: false
 
   #########################
   # Manage objects
