@@ -542,52 +542,66 @@ commands:
     operations:
       # list
       - name: list
-        description: List objects
+        description: List objects in a bucket
         alias: l
+        messages:
+          onStart: 'Listing objects...'
+          onSuccess: 'Found {{count}} object(s)'
+          onFailure: 'Failed to list objects'
+          onEmpty: 'No objects found'
         arguments:
           - name: bucket
             description: Name of the bucket
-            alias: b
+            type: positional
             required: true
+          - name: prefix
+            description: Filter objects by prefix
+            alias: p
           - name: format
-            description: Format
+            description: Output format
             alias: f
             options: [json, table, xml]
             default: table
       # get
       - name: get
-        description: Get object
+        description: Get an object
         alias: g
+        messages:
+          onStart: 'Getting object...'
+          onSuccess: ''
+          onFailure: 'Failed to get object'
         arguments:
           - name: bucket
             description: Name of the bucket
             type: positional
             required: true
           - name: key
-            description: Name of the object
+            description: Key of the object
             type: positional
             required: true
-          - name: format
-            description: Format
-            alias: f
-            options: [string, file, stream]
-            default: string
-      # create
-      - name: create
-        description: Create object
-        alias: c
+          - name: output
+            description: Output file path (if not specified, prints to stdout)
+            alias: o
+      # put
+      - name: put
+        description: Upload an object
+        alias: p
+        messages:
+          onStart: 'Uploading object...'
+          onSuccess: "Object '{{key}}' uploaded successfully"
+          onFailure: 'Failed to upload object'
         arguments:
           - name: bucket
             description: Name of the bucket
             type: positional
             required: true
-          - name: name
-            description: Name of the object
+          - name: key
+            description: Key for the object
             type: positional
             required: true
-          - name: body
-            description: Body of the object
-            alias: d
+          - name: file
+            description: Path to the file to upload
+            type: positional
             required: true
           - name: access
             description: Access level
@@ -596,62 +610,22 @@ commands:
             default: private
           - name: content-type
             description: Content type
-            alias: c
-          - name: content-disposition
-            description: Content disposition
-            alias: d
-          - name: tier
-            description: Tier
             alias: t
-            options: *tier_options
-            default: STANDARD
       # delete
       - name: delete
-        description: Delete object
+        description: Delete an object
         alias: d
+        messages:
+          onStart: 'Deleting object...'
+          onSuccess: "Object '{{key}}' deleted successfully"
+          onFailure: 'Failed to delete object'
         arguments:
           - name: bucket
             description: Name of the bucket
             type: positional
             required: true
           - name: key
-            description: Name of the object (comma separated names for multiple objects)
+            description: Key of the object (comma separated for multiple)
             type: positional
             required: true
             multiple: true
-      # copy
-      - name: copy
-        description: Copy object
-        alias: c
-        arguments:
-          - name: bucket
-            description: Name of the bucket
-            type: positional
-            required: true
-          - name: name
-            description: Name of the object (comma separated names for multiple objects)
-            type: positional
-            required: true
-            multiple: true
-          - name: destination
-            description: Destination
-            type: positional
-            required: true
-      # move
-      - name: move
-        description: Move object
-        alias: m
-        arguments:
-          - name: bucket
-            description: Name of the bucket
-            type: positional
-            required: true
-          - name: source
-            description: Name of the object (comma separated names for multiple objects)
-            type: positional
-            required: true
-            multiple: true
-          - name: destination
-            description: Destination
-            type: positional
-            required: true

@@ -184,12 +184,14 @@ function addArgumentsToCommand(cmd: CommanderCommand, args: Argument[] = []) {
       cmd.argument(argumentName, arg.description);
     } else {
       // Handle regular flag/option arguments
-      let optionString = `--${arg.name}`;
-      if (arg.alias) {
-        optionString += `, -${arg.alias}`;
-      }
+      // Commander expects short option first: -p, --prefix <value>
+      let optionString = arg.alias
+        ? `-${arg.alias}, --${arg.name}`
+        : `--${arg.name}`;
 
-      if (arg.options) {
+      if (arg.type === 'flag') {
+        // Flags don't take values
+      } else if (arg.options) {
         optionString += ' <value>';
       } else {
         optionString +=
