@@ -18,6 +18,14 @@ const ICONS = {
   hint: '→',
 } as const;
 
+/**
+ * Check if stdout is a TTY (interactive terminal)
+ * When false, output is being piped/redirected (e.g., using > operator)
+ */
+function isTTY(): boolean {
+  return process.stdout.isTTY === true;
+}
+
 function getMessages(context: MessageContext): Messages | undefined {
   const spec = getCommandSpec(context.command, context.operation);
   if (!spec) return undefined;
@@ -48,11 +56,13 @@ function interpolate(template: string, variables?: MessageVariables): string {
 
 /**
  * Print the onStart message for a command/operation
+ * Suppressed when output is piped/redirected
  */
 export function printStart(
   context: MessageContext,
   variables?: MessageVariables
 ): void {
+  if (!isTTY()) return;
   const messages = getMessages(context);
   if (messages?.onStart) {
     console.log(interpolate(messages.onStart, variables));
@@ -61,11 +71,13 @@ export function printStart(
 
 /**
  * Print the onSuccess message for a command/operation
+ * Suppressed when output is piped/redirected
  */
 export function printSuccess(
   context: MessageContext,
   variables?: MessageVariables
 ): void {
+  if (!isTTY()) return;
   const messages = getMessages(context);
   if (messages?.onSuccess) {
     console.log(
@@ -95,11 +107,13 @@ export function printFailure(
 
 /**
  * Print the onEmpty message for a command/operation (when no results found)
+ * Suppressed when output is piped/redirected
  */
 export function printEmpty(
   context: MessageContext,
   variables?: MessageVariables
 ): void {
+  if (!isTTY()) return;
   const messages = getMessages(context);
   if (messages?.onEmpty) {
     console.log(interpolate(messages.onEmpty, variables));
@@ -108,11 +122,13 @@ export function printEmpty(
 
 /**
  * Print the onAlreadyDone message for a command/operation (when action already completed)
+ * Suppressed when output is piped/redirected
  */
 export function printAlreadyDone(
   context: MessageContext,
   variables?: MessageVariables
 ): void {
+  if (!isTTY()) return;
   const messages = getMessages(context);
   if (messages?.onAlreadyDone) {
     console.log(interpolate(messages.onAlreadyDone, variables));
@@ -121,11 +137,13 @@ export function printAlreadyDone(
 
 /**
  * Print a hint message for a command/operation
+ * Suppressed when output is piped/redirected
  */
 export function printHint(
   context: MessageContext,
   variables?: MessageVariables
 ): void {
+  if (!isTTY()) return;
   const messages = getMessages(context);
   if (messages?.hint) {
     console.log(`${ICONS.hint} ${interpolate(messages.hint, variables)}`);
