@@ -28,6 +28,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "publint": "publint",
+    "updatedocs": "tsx scripts/update-docs.ts",
     "prepublishOnly": "npm run build",
     "clean": "rm -rf dist",
     "semantic-release": "semantic-release",
@@ -94,6 +95,7 @@
     "publint": "^0.2.0",
     "semantic-release": "^25.0.2",
     "tsup": "^8.0.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.0.0"
   }
 }
