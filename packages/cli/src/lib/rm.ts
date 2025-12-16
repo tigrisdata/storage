@@ -1,5 +1,5 @@
 import * as readline from 'readline';
-import { parsePath } from '../utils/path.js';
+import { parsePath, isPathFolder } from '../utils/path.js';
 import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { remove, removeBucket, list } from '@tigrisdata/storage';
@@ -65,18 +65,7 @@ export default async function rm(options: Record<string, unknown>) {
 
   // If not explicitly a folder, check if it's a prefix with objects
   if (!isWildcard && !isFolder) {
-    const { data: checkData } = await list({
-      prefix: `${path}/`,
-      limit: 1,
-      config: {
-        ...config,
-        bucket,
-      },
-    });
-
-    if (checkData?.items && checkData.items.length > 0) {
-      isFolder = true;
-    }
+    isFolder = await isPathFolder(bucket, path, config);
   }
 
   if (isWildcard || isFolder) {

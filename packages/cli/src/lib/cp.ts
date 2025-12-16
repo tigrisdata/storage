@@ -1,4 +1,4 @@
-import { parsePath } from '../utils/path.js';
+import { parsePath, isPathFolder } from '../utils/path.js';
 import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { get, put, list } from '@tigrisdata/storage';
@@ -29,11 +29,20 @@ export default async function cp(options: Record<string, unknown>) {
 
   // Check if source is a single object or a prefix (folder/wildcard)
   const isWildcard = src.includes('*');
-  const isFolder = src.endsWith('/');
+  let isFolder = src.endsWith('/');
+
+  // If not explicitly a folder, check if it's a prefix with objects
+  if (!isWildcard && !isFolder && srcPath.path) {
+    isFolder = await isPathFolder(srcPath.bucket, srcPath.path, config);
+  }
 
   if (isWildcard || isFolder) {
     // List and copy multiple objects
-    const prefix = isWildcard ? srcPath.path.replace('*', '') : srcPath.path;
+    const prefix = isWildcard
+      ? srcPath.path.replace('*', '')
+      : srcPath.path.endsWith('/')
+        ? srcPath.path
+        : `${srcPath.path}/`;
 
     const { data, error } = await list({
       prefix: prefix || undefined,
