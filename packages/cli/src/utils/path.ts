@@ -52,3 +52,49 @@ export function parsePaths(src: string, dest: string): ParsedPaths {
     destination: parsePath(dest),
   };
 }
+
+export type ListItem = {
+  id: string;
+  name: string;
+  size: number;
+  lastModified: Date;
+};
+
+/**
+ * Lists all objects with the given prefix, handling pagination automatically.
+ * @param bucket - The bucket name
+ * @param prefix - The prefix to filter by
+ * @param config - Storage configuration
+ * @returns Array of all items matching the prefix
+ */
+export async function listAllItems(
+  bucket: string,
+  prefix: string | undefined,
+  config: TigrisStorageConfig
+): Promise<{ items: ListItem[]; error?: Error }> {
+  const allItems: ListItem[] = [];
+  let paginationToken: string | undefined;
+
+  do {
+    const { data, error } = await list({
+      prefix,
+      paginationToken,
+      config: {
+        ...config,
+        bucket,
+      },
+    });
+
+    if (error) {
+      return { items: allItems, error };
+    }
+
+    if (data?.items) {
+      allItems.push(...data.items);
+    }
+
+    paginationToken = data?.hasMore ? data.paginationToken : undefined;
+  } while (paginationToken);
+
+  return { items: allItems };
+}

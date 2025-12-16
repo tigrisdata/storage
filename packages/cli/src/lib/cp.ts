@@ -1,4 +1,4 @@
-import { parsePath, isPathFolder } from '../utils/path.js';
+import { parsePath, isPathFolder, listAllItems } from '../utils/path.js';
 import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { get, put, list } from '@tigrisdata/storage';
@@ -25,6 +25,12 @@ export default async function cp(options: Record<string, unknown>) {
     process.exit(1);
   }
 
+  // Cannot copy a bucket itself
+  if (!srcPath.path) {
+    console.error('Cannot copy a bucket. Provide a path within the bucket.');
+    process.exit(1);
+  }
+
   const config = await getStorageConfig();
 
   // Check if source is a single object or a prefix (folder/wildcard)
@@ -44,31 +50,27 @@ export default async function cp(options: Record<string, unknown>) {
         ? srcPath.path
         : `${srcPath.path}/`;
 
-    const { data, error } = await list({
-      prefix: prefix || undefined,
-      config: {
-        ...config,
-        bucket: srcPath.bucket,
-      },
-    });
+    const { items, error } = await listAllItems(
+      srcPath.bucket,
+      prefix || undefined,
+      config
+    );
 
     if (error) {
       console.error(error.message);
       process.exit(1);
     }
 
-    if (!data.items || data.items.length === 0) {
+    // Filter out folder markers - they would result in empty destKey when copying to root
+    const itemsToCopy = items.filter((item) => item.name !== prefix);
+
+    if (itemsToCopy.length === 0) {
       console.log('No objects to copy');
       return;
     }
 
     let copied = 0;
-    for (const item of data.items) {
-      // Skip folder markers when copying to root (would result in empty destKey)
-      if (item.name === prefix) {
-        continue;
-      }
-
+    for (const item of itemsToCopy) {
       const relativePath = prefix ? item.name.slice(prefix.length) : item.name;
       const destKey = destPath.path
         ? `${destPath.path.replace(/\/$/, '')}/${relativePath}`
@@ -87,6 +89,35 @@ export default async function cp(options: Record<string, unknown>) {
       } else {
         console.log(`Copied ${item.name} -> ${destPath.bucket}/${destKey}`);
         copied++;
+      }
+    }
+
+    // Also copy the folder marker if it exists and we have a destination path
+    if (destPath.path) {
+      const folderMarker = srcPath.path.endsWith('/')
+        ? srcPath.path
+        : `${srcPath.path}/`;
+      const { data: markerData } = await list({
+        prefix: folderMarker,
+        limit: 1,
+        config: {
+          ...config,
+          bucket: srcPath.bucket,
+        },
+      });
+
+      if (markerData?.items?.some((item) => item.name === folderMarker)) {
+        const destFolderMarker = `${destPath.path.replace(/\/$/, '')}/`;
+        const markerResult = await copyObject(
+          config,
+          srcPath.bucket,
+          folderMarker,
+          destPath.bucket,
+          destFolderMarker
+        );
+        if (markerResult.error) {
+          console.error(`Failed to copy folder marker: ${markerResult.error}`);
+        }
       }
     }
 

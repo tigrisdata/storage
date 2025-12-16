@@ -1,5 +1,5 @@
 import * as readline from 'readline';
-import { parsePath, isPathFolder } from '../utils/path.js';
+import { parsePath, isPathFolder, listAllItems } from '../utils/path.js';
 import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { remove, removeBucket, list } from '@tigrisdata/storage';
@@ -76,20 +76,18 @@ export default async function rm(options: Record<string, unknown>) {
         ? path
         : `${path}/`;
 
-    const { data, error } = await list({
-      prefix: prefix || undefined,
-      config: {
-        ...config,
-        bucket,
-      },
-    });
+    const { items, error } = await listAllItems(
+      bucket,
+      prefix || undefined,
+      config
+    );
 
     if (error) {
       console.error(error.message);
       process.exit(1);
     }
 
-    const itemsToRemove = data.items || [];
+    const itemsToRemove = items;
 
     // Also check if the folder marker itself exists (e.g., "hello/")
     const folderMarker = prefix;

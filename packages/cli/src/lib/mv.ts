@@ -1,5 +1,5 @@
 import * as readline from 'readline';
-import { parsePath, isPathFolder } from '../utils/path.js';
+import { parsePath, isPathFolder, listAllItems } from '../utils/path.js';
 import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { get, put, remove, list } from '@tigrisdata/storage';
@@ -66,27 +66,28 @@ export default async function mv(options: Record<string, unknown>) {
         ? srcPath.path
         : `${srcPath.path}/`;
 
-    const { data, error } = await list({
-      prefix: prefix || undefined,
-      config: {
-        ...config,
-        bucket: srcPath.bucket,
-      },
-    });
+    const { items, error } = await listAllItems(
+      srcPath.bucket,
+      prefix || undefined,
+      config
+    );
 
     if (error) {
       console.error(error.message);
       process.exit(1);
     }
 
-    if (!data.items || data.items.length === 0) {
+    // Filter out folder markers - they're handled separately below
+    const itemsToMove = items.filter((item) => item.name !== prefix);
+
+    if (itemsToMove.length === 0) {
       console.log('No objects to move');
       return;
     }
 
     if (!force) {
       const confirmed = await confirm(
-        `Are you sure you want to move ${data.items.length} object(s)?`
+        `Are you sure you want to move ${itemsToMove.length} object(s)?`
       );
       if (!confirmed) {
         console.log('Aborted');
@@ -95,12 +96,7 @@ export default async function mv(options: Record<string, unknown>) {
     }
 
     let moved = 0;
-    for (const item of data.items) {
-      // Skip folder markers - they're handled separately below
-      if (item.name === prefix) {
-        continue;
-      }
-
+    for (const item of itemsToMove) {
       const relativePath = prefix ? item.name.slice(prefix.length) : item.name;
       const destKey = destPath.path
         ? `${destPath.path.replace(/\/$/, '')}/${relativePath}`
@@ -139,21 +135,29 @@ export default async function mv(options: Record<string, unknown>) {
       if (destPath.path) {
         // Move folder marker to destination folder
         const destFolderMarker = `${destPath.path.replace(/\/$/, '')}/`;
-        await moveObject(
+        const markerResult = await moveObject(
           config,
           srcPath.bucket,
           folderMarker,
           destPath.bucket,
           destFolderMarker
         );
+        if (markerResult.error) {
+          console.error(`Failed to move folder marker: ${markerResult.error}`);
+        }
       } else {
         // Moving to root - just delete source folder marker, no marker at root
-        await remove(folderMarker, {
+        const { error: removeError } = await remove(folderMarker, {
           config: {
             ...config,
             bucket: srcPath.bucket,
           },
         });
+        if (removeError) {
+          console.error(
+            `Failed to remove source folder marker: ${removeError.message}`
+          );
+        }
       }
     }
 
