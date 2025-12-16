@@ -64,6 +64,11 @@ export default async function cp(options: Record<string, unknown>) {
 
     let copied = 0;
     for (const item of data.items) {
+      // Skip folder markers when copying to root (would result in empty destKey)
+      if (item.name === prefix) {
+        continue;
+      }
+
       const relativePath = prefix ? item.name.slice(prefix.length) : item.name;
       const destKey = destPath.path
         ? `${destPath.path.replace(/\/$/, '')}/${relativePath}`

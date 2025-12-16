@@ -96,6 +96,11 @@ export default async function mv(options: Record<string, unknown>) {
 
     let moved = 0;
     for (const item of data.items) {
+      // Skip folder markers - they're handled separately below
+      if (item.name === prefix) {
+        continue;
+      }
+
       const relativePath = prefix ? item.name.slice(prefix.length) : item.name;
       const destKey = destPath.path
         ? `${destPath.path.replace(/\/$/, '')}/${relativePath}`
@@ -131,17 +136,25 @@ export default async function mv(options: Record<string, unknown>) {
     });
 
     if (markerData?.items?.some((item) => item.name === folderMarker)) {
-      const destFolderMarker = destPath.path
-        ? `${destPath.path.replace(/\/$/, '')}/`
-        : folderMarker;
-
-      await moveObject(
-        config,
-        srcPath.bucket,
-        folderMarker,
-        destPath.bucket,
-        destFolderMarker
-      );
+      if (destPath.path) {
+        // Move folder marker to destination folder
+        const destFolderMarker = `${destPath.path.replace(/\/$/, '')}/`;
+        await moveObject(
+          config,
+          srcPath.bucket,
+          folderMarker,
+          destPath.bucket,
+          destFolderMarker
+        );
+      } else {
+        // Moving to root - just delete source folder marker, no marker at root
+        await remove(folderMarker, {
+          config: {
+            ...config,
+            bucket: srcPath.bucket,
+          },
+        });
+      }
     }
 
     console.log(`Moved ${moved} object(s)`);
