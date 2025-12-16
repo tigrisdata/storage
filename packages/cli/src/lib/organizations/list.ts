@@ -4,6 +4,7 @@ import { getAuthClient } from '../../auth/client.js';
 import {
   storeSelectedOrganization,
   getSelectedOrganization,
+  getLoginMethod,
 } from '../../auth/storage.js';
 import Enquirer from 'enquirer';
 import {
@@ -18,6 +19,16 @@ const context = msg('orgs', 'list');
 
 export default async function list(options: Record<string, unknown>) {
   printStart(context);
+
+  // Check if logged in with access keys
+  if (getLoginMethod() === 'credentials') {
+    console.log(
+      'You are logged in using an access key, which belongs to a single organization.\n' +
+        'Organization listing and selection is only available with OAuth login.\n\n' +
+        'Run "tigris login --oauth" to login with your Tigris account.'
+    );
+    return;
+  }
 
   const format = getOption<string>(options, ['format', 'f', 'F'], 'select');
 
