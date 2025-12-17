@@ -3,6 +3,7 @@ import { getAuthClient } from '../../auth/client.js';
 import {
   storeSelectedOrganization,
   getLoginMethod,
+  getCredentials,
 } from '../../auth/storage.js';
 import {
   printStart,
@@ -16,13 +17,21 @@ const context = msg('orgs', 'select');
 export default async function select(options: Record<string, unknown>) {
   printStart(context);
 
-  // Check if logged in with access keys
-  if (getLoginMethod() === 'credentials') {
-    console.log(
-      'You are logged in using an access key, which belongs to a single organization.\n' +
-        'Organization selection is only available with OAuth login.\n\n' +
-        'Run "tigris login --oauth" to login with your Tigris account.'
-    );
+  // Check if logged in with OAuth (required for org selection)
+  const loginMethod = getLoginMethod();
+  if (loginMethod !== 'oauth') {
+    // Not logged in via OAuth - check if using credentials
+    if (getCredentials()) {
+      console.log(
+        'You are using access key credentials, which belong to a single organization.\n' +
+          'Organization selection is only available with OAuth login.\n\n' +
+          'Run "tigris login" to login with your Tigris account.'
+      );
+    } else {
+      console.log(
+        'Not authenticated. Please run "tigris login" to login with your Tigris account.'
+      );
+    }
     return;
   }
 
