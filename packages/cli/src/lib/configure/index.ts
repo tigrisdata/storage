@@ -56,7 +56,8 @@ export default async function configure(options: Record<string, unknown>) {
         name: 'endpoint',
         message: 'Tigris Endpoint:',
         required: true,
-        initial: process.env.TIGRIS_ENDPOINT ?? 'https://t3.storage.dev',
+        initial:
+          process.env.TIGRIS_STORAGE_ENDPOINT ?? 'https://t3.storage.dev',
       });
     }
 
