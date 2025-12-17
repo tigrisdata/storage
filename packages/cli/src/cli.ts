@@ -8,6 +8,23 @@ import * as YAML from 'yaml';
 import type { Argument, OperationSpec, CommandSpec } from './types.js';
 import { version } from '../package.json';
 
+// Global handler for user cancellation (Ctrl+C) and unhandled errors
+process.on('unhandledRejection', (reason) => {
+  // Enquirer throws empty string or undefined when user cancels with Ctrl+C
+  if (reason === '' || reason === undefined) {
+    console.error('\nOperation cancelled');
+    process.exit(1);
+  }
+  // For other unhandled rejections, show the error
+  console.error('\nError:', reason instanceof Error ? reason.message : reason);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('\nError:', error.message);
+  process.exit(1);
+});
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -42,7 +59,8 @@ function formatArgumentHelp(arg: Argument): string {
     optionPart = `  ${arg.name}`;
   } else {
     optionPart = `  --${arg.name}`;
-    if (arg.alias) {
+    // Only show short option if it's a single character (Commander requirement)
+    if (arg.alias && arg.alias.length === 1) {
       optionPart += `, -${arg.alias}`;
     }
   }
@@ -184,8 +202,10 @@ function addArgumentsToCommand(cmd: CommanderCommand, args: Argument[] = []) {
       cmd.argument(argumentName, arg.description);
     } else {
       // Handle regular flag/option arguments
-      // Commander expects short option first: -p, --prefix <value>
-      let optionString = arg.alias
+      // Commander expects single-character short options: -p, --prefix <value>
+      // Multi-character aliases are not supported by Commander
+      const hasValidShortOption = arg.alias && arg.alias.length === 1;
+      let optionString = hasValidShortOption
         ? `-${arg.alias}, --${arg.name}`
         : `--${arg.name}`;
 
@@ -336,10 +356,19 @@ function extractArgumentValues(
   positionalArgs: string[],
   commandOrOptions: Record<string, unknown>
 ): Record<string, unknown> {
-  // If this is a Commander Command object, extract opts()
+  // If this is a Commander Command object, extract options
+  // Use optsWithGlobals() to include parent command options (for subcommands)
   let options: Record<string, unknown>;
 
   if (
+    'optsWithGlobals' in commandOrOptions &&
+    typeof commandOrOptions.optsWithGlobals === 'function'
+  ) {
+    // optsWithGlobals includes options from parent commands
+    options = (
+      commandOrOptions.optsWithGlobals as () => Record<string, unknown>
+    )();
+  } else if (
     'opts' in commandOrOptions &&
     typeof commandOrOptions.opts === 'function'
   ) {
@@ -449,21 +478,25 @@ specs.commands.forEach((command: CommandSpec) => {
       );
 
       if (defaultOperation) {
+        // Add both command-level and default operation arguments
+        addArgumentsToCommand(commandCmd, command.arguments);
         addArgumentsToCommand(commandCmd, defaultOperation.arguments);
+
+        // Merge command and operation arguments for validation/extraction
+        const allArguments = [
+          ...(command.arguments || []),
+          ...(defaultOperation.arguments || []),
+        ];
 
         commandCmd.action(async (...args) => {
           const options = args.pop();
           const positionalArgs = args;
 
           if (
-            defaultOperation.arguments &&
+            allArguments.length > 0 &&
             !validateRequiredWhen(
-              defaultOperation.arguments,
-              extractArgumentValues(
-                defaultOperation.arguments,
-                positionalArgs,
-                options
-              )
+              allArguments,
+              extractArgumentValues(allArguments, positionalArgs, options)
             )
           ) {
             return;
@@ -473,11 +506,7 @@ specs.commands.forEach((command: CommandSpec) => {
             command.name,
             defaultOperation.name,
             positionalArgs,
-            extractArgumentValues(
-              defaultOperation.arguments || [],
-              positionalArgs,
-              options
-            ),
+            extractArgumentValues(allArguments, positionalArgs, options),
             command.message || defaultOperation.message
           );
         });

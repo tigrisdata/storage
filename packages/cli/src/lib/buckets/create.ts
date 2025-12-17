@@ -134,29 +134,24 @@ export default async function create(options: Record<string, unknown>) {
 
   // Prompt for missing values
   if (questions.length > 0) {
-    try {
-      const responses = await prompt<{
-        name?: string;
-        access?: string;
-        enableSnapshots?: boolean;
-        defaultTier?: string;
-        consistency?: string;
-        region?: string;
-      }>(questions);
+    const responses = await prompt<{
+      name?: string;
+      access?: string;
+      enableSnapshots?: boolean;
+      defaultTier?: string;
+      consistency?: string;
+      region?: string;
+    }>(questions);
 
-      name = name || responses.name;
-      access = access || responses.access;
-      enableSnapshots =
-        enableSnapshots !== undefined
-          ? enableSnapshots
-          : responses.enableSnapshots;
-      defaultTier = defaultTier || responses.defaultTier;
-      consistency = consistency || responses.consistency;
-      region = region !== undefined ? region : responses.region;
-    } catch (error) {
-      printFailure(context, 'Operation cancelled');
-      process.exit(1);
-    }
+    name = name || responses.name;
+    access = access || responses.access;
+    enableSnapshots =
+      enableSnapshots !== undefined
+        ? enableSnapshots
+        : responses.enableSnapshots;
+    defaultTier = defaultTier || responses.defaultTier;
+    consistency = consistency || responses.consistency;
+    region = region !== undefined ? region : responses.region;
   }
 
   // Validate required fields

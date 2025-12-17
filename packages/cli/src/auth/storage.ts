@@ -142,6 +142,14 @@ export function getCredentials(): CredentialsConfig | null {
 }
 
 /**
+ * Get only permanent/saved credentials (from configure command)
+ */
+export function getSavedCredentials(): CredentialsConfig | null {
+  const config = readConfig();
+  return config.credentials || null;
+}
+
+/**
  * Store permanent credentials (from configure command)
  */
 export async function storeCredentials(

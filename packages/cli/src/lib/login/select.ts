@@ -1,21 +1,14 @@
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
-import { ui } from './ui.js';
+import { oauth } from './oauth.js';
 import credentials from './credentials.js';
-import { printFailure, msg } from '../../utils/messages.js';
-
-const context = msg('login', 'select');
 
 /**
- * Main login command - presents interactive selection between user and machine login
- * If access key and secret are provided, uses credentials flow directly
- * If --profile flag is provided, loads from saved credentials
+ * Main login command
+ * - If access-key/secret provided → uses credentials flow (temporary session)
+ * - Otherwise → prompts user to choose between OAuth and credentials
  */
 export default async function select(options: Record<string, unknown>) {
-  // Check if profile flag is provided
-  const profile =
-    options['profile'] || options['Profile'] || options.p || options.P;
-
   // Check if access key and/or secret are provided
   const accessKey =
     options['access-key'] ||
@@ -30,50 +23,26 @@ export default async function select(options: Record<string, unknown>) {
     options.Secret ||
     options.accesssecret;
 
-  // Check if user flag is provided
-  const oauth = options['oauth'] || options['OAuth'] || options.o || options.O;
-
-  // If profile flag is provided, use credentials flow (which loads from saved credentials)
-  if (profile) {
-    await credentials(options);
-    return;
-  }
-
-  // If either access key or secret is provided, use credentials flow directly
+  // If credentials provided, use credentials flow for temporary session
   if (accessKey || accessSecret) {
     await credentials(options);
     return;
   }
 
-  if (oauth) {
-    await ui();
-    return;
-  }
+  // Prompt user to choose login method
+  const { method } = await prompt<{ method: string }>({
+    type: 'select',
+    name: 'method',
+    message: 'Choose login method:',
+    choices: [
+      { name: 'user', message: 'As a user (OAuth2 flow)' },
+      { name: 'machine', message: 'As a machine (Access Key & Secret)' },
+    ],
+  });
 
-  try {
-    const response = await prompt<{ loginType: string }>({
-      type: 'select',
-      name: 'loginType',
-      message: 'How would you like to login?',
-      choices: [
-        { name: 'user', message: 'As a user (OAuth2 flow)', value: 'user' },
-        {
-          name: 'machine',
-          message: 'As a machine (Access Key & Secret)',
-          value: 'machine',
-        },
-      ],
-    });
-
-    if (response.loginType === 'user') {
-      // Start UI flow
-      await ui();
-    } else {
-      // Start machine/credentials flow with prompting
-      await credentials(options);
-    }
-  } catch (error) {
-    printFailure(context, 'Login cancelled');
-    process.exit(1);
+  if (method === 'user') {
+    await oauth();
+  } else {
+    await credentials(options);
   }
 }

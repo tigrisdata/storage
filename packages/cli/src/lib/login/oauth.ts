@@ -9,9 +9,9 @@ import {
   msg,
 } from '../../utils/messages.js';
 
-const context = msg('login', 'ui');
+const context = msg('login', 'oauth');
 
-export async function ui(): Promise<void> {
+export async function oauth(): Promise<void> {
   printStart(context);
   try {
     const authClient = getAuthClient();
@@ -51,4 +51,4 @@ export async function ui(): Promise<void> {
   }
 }
 
-export default ui;
+export default oauth;

@@ -58,36 +58,30 @@ export default async function list(options: Record<string, unknown>) {
         hint: org.id === currentSelection ? 'currently selected' : undefined,
       }));
 
-      try {
-        const response = await Enquirer.prompt<{ organization: string }>({
-          type: 'select',
-          name: 'organization',
-          message: 'Select an organization:',
-          choices: choices.map((c) => c.message),
-          initial: currentSelection
-            ? orgs.findIndex((o) => o.id === currentSelection)
-            : 0,
-        });
+      const response = await Enquirer.prompt<{ organization: string }>({
+        type: 'select',
+        name: 'organization',
+        message: 'Select an organization:',
+        choices: choices.map((c) => c.message),
+        initial: currentSelection
+          ? orgs.findIndex((o) => o.id === currentSelection)
+          : 0,
+      });
 
-        const answer = response.organization;
+      const answer = response.organization;
 
-        // Extract the org ID from the selection (format: "Name (id)")
-        const match = answer.match(/\(([^)]+)\)$/);
-        const selectedOrgId = match ? match[1] : orgs[0].id;
+      // Extract the org ID from the selection (format: "Name (id)")
+      const match = answer.match(/\(([^)]+)\)$/);
+      const selectedOrgId = match ? match[1] : orgs[0].id;
 
-        // Store the selection
-        storeSelectedOrganization(selectedOrgId);
+      // Store the selection
+      storeSelectedOrganization(selectedOrgId);
 
-        const selectedOrg = orgs.find((o) => o.id === selectedOrgId);
-        printSuccess(context, {
-          name: selectedOrg?.displayName || selectedOrg?.name,
-        });
-        return;
-      } catch (error) {
-        // User cancelled the prompt (Ctrl+C)
-        printFailure(context, 'Selection cancelled');
-        process.exit(0);
-      }
+      const selectedOrg = orgs.find((o) => o.id === selectedOrgId);
+      printSuccess(context, {
+        name: selectedOrg?.displayName || selectedOrg?.name,
+      });
+      return;
     }
 
     // Format organizations for output

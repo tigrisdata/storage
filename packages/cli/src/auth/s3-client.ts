@@ -39,12 +39,6 @@ export type TigrisStorageConfig = {
 export async function getStorageConfig(): Promise<TigrisStorageConfig> {
   const loginMethod = await getLoginMethod();
 
-  if (!loginMethod) {
-    throw new Error(
-      'Not authenticated. Please run "tigris login" or "tigris configure" first.'
-    );
-  }
-
   if (loginMethod === 'oauth') {
     // OAuth login - use access token and selected org
     const authClient = getAuthClient();
@@ -72,19 +66,21 @@ export async function getStorageConfig(): Promise<TigrisStorageConfig> {
     };
   }
 
+  // Either loginMethod is 'credentials' OR no loginMethod but credentials exist
   const credentials = getCredentials();
 
-  if (!credentials) {
-    throw new Error(
-      'No credentials found. Please run "tigris configure" first.'
-    );
+  if (credentials) {
+    return {
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+      endpoint: credentials.endpoint,
+    };
   }
 
-  return {
-    accessKeyId: credentials.accessKeyId,
-    secretAccessKey: credentials.secretAccessKey,
-    endpoint: credentials.endpoint,
-  };
+  // No valid auth method found
+  throw new Error(
+    'Not authenticated. Please run "tigris login" or "tigris configure" first.'
+  );
 }
 
 /**
@@ -92,12 +88,6 @@ export async function getStorageConfig(): Promise<TigrisStorageConfig> {
  */
 export async function getS3Client(): Promise<S3Client> {
   const loginMethod = await getLoginMethod();
-
-  if (!loginMethod) {
-    throw new Error(
-      'Not authenticated. Please run "tigris login" or "tigris configure" first.'
-    );
-  }
 
   if (loginMethod === 'oauth') {
     // OAuth login - use access token and selected org
@@ -141,16 +131,12 @@ export async function getS3Client(): Promise<S3Client> {
     );
 
     return client;
-  } else {
-    // Credentials login - use access key and secret
-    const credentials = getCredentials();
+  }
 
-    if (!credentials) {
-      throw new Error(
-        'No credentials found. Please run "tigris configure" first.'
-      );
-    }
+  // Either loginMethod is 'credentials' OR no loginMethod but credentials exist
+  const credentials = getCredentials();
 
+  if (credentials) {
     // Create S3 client with access key and secret
     const client = new S3Client({
       region: 'auto',
@@ -163,6 +149,11 @@ export async function getS3Client(): Promise<S3Client> {
 
     return client;
   }
+
+  // No valid auth method found
+  throw new Error(
+    'Not authenticated. Please run "tigris login" or "tigris configure" first.'
+  );
 }
 
 /**
@@ -170,5 +161,10 @@ export async function getS3Client(): Promise<S3Client> {
  */
 export async function isAuthenticated(): Promise<boolean> {
   const method = await getLoginMethod();
-  return method !== null;
+  if (method !== null) {
+    return true;
+  }
+  // Also check if credentials exist (e.g., after logout with configured credentials)
+  const credentials = getCredentials();
+  return credentials !== null;
 }

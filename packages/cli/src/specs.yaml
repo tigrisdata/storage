@@ -79,105 +79,76 @@ commands:
   #########################
   # configure
   - name: configure
-    description: Configure Tigris credentials interactively
+    description: Save credentials permanently. After running this, all commands work automatically
     alias: c
     messages:
-      onStart: 'Configuring credentials...'
-      onSuccess: 'Configuration saved in ~/.tigris/credentials.json'
-      onFailure: 'Failed to configure credentials'
+      onStart: 'Saving credentials...'
+      onSuccess: 'Credentials saved to ~/.tigris/config.json. You can now use all tigris commands.'
+      onFailure: 'Failed to save credentials'
     arguments:
       - name: access-key
-        description: Tigris Access key ID
+        description: Your Tigris access key ID
         alias: key
         required: false
       - name: access-secret
-        description: Tigris Access secret
+        description: Your Tigris secret access key
         alias: secret
         required: false
       - name: endpoint
-        description: Tigris Endpoint
+        description: 'Tigris API endpoint (default: https://t3.storage.dev)'
         alias: e
         required: false
 
   # login
   - name: login
-    description: Login to Tigris (interactive selection between user and machine)
+    description: Start a session. Use OAuth (default) or temporary credentials that override your saved config
     messages:
-      onStart: 'Logging in...'
+      onStart: ''
       onSuccess: 'Login successful'
       onFailure: 'Login failed'
     alias: l
     arguments:
       - name: access-key
-        description: Access key (optional, will use credentials flow if provided)
+        description: Use temporary credentials instead of OAuth (useful for testing different keys)
         alias: key
         required: false
       - name: access-secret
-        description: Access secret (optional, will use credentials flow if provided)
+        description: Secret for temporary credentials
         alias: secret
         required: false
-      - name: profile
-        description: Use saved credentials profile (loads from ~/.tigris/credentials.json)
-        alias: p
-        required: false
-        type: flag
-      - name: oauth
-        description: Login as a user (OAuth2 flow)
-        alias: o
-        required: false
-        type: flag
     operations:
       # login (main interactive operation)
       - name: select
-        description: Interactive selection between user and machine login
+        description: Choose how to login - OAuth (browser) or credentials (access key)
         messages:
           onStart: ''
           onSuccess: 'Login successful'
           onFailure: 'Login failed'
-        arguments:
-          - name: access-key
-            description: Access key (optional, will use credentials flow if provided)
-            alias: key
-            required: false
-          - name: access-secret
-            description: Access secret (optional, will use credentials flow if provided)
-            alias: secret
-            required: false
-          - name: profile
-            description: Use saved credentials profile (loads from ~/.tigris/credentials.json)
-            alias: p
-            required: false
-            type: flag
-          - name: oauth
-            description: Login as a user (OAuth2 flow)
-            alias: o
-            required: false
-            type: flag
-      # ui
-      - name: ui
-        description: Login as a user (OAuth2 flow)
-        alias: u
+      # oauth
+      - name: oauth
+        description: Login via browser (OAuth2 device flow). Best for interactive use
+        alias: o
         messages:
-          onStart: 'Initiating authentication...'
-          onSuccess: "Authentication successful\nOrganization '{{org}}' selected"
+          onStart: 'Opening browser for authentication...'
+          onSuccess: "Logged in successfully\nOrganization '{{org}}' selected"
           onFailure: 'Authentication failed'
-          onAlreadyDone: "You are already logged in.\nRun \"tigris logout\" first if you want to login with a different account."
-          hint: "You have {{count}} organizations available.\nRun \"tigris orgs list\" to see all and switch if needed."
+          onAlreadyDone: "Already logged in.\nRun \"tigris logout\" first to switch accounts."
+          hint: "You have {{count}} organizations.\nRun \"tigris orgs list\" to switch."
       # credentials
       - name: credentials
-        description: Login as a machine (with access key and secret)
+        description: Login with access key + secret. Creates a temporary session (cleared on logout)
         alias: c
         messages:
-          onStart: 'Authenticating with credentials...'
-          onSuccess: 'Login successful'
-          onFailure: 'Login failed'
+          onStart: 'Authenticating...'
+          onSuccess: 'Logged in with credentials'
+          onFailure: 'Authentication failed'
         arguments:
           - name: access-key
-            description: Access key (optional, will prompt or use saved credentials if not provided)
+            description: Your access key ID (will prompt if not provided)
             alias: key
             required: false
           - name: access-secret
-            description: Access secret (optional, will prompt or use saved credentials if not provided)
+            description: Your secret access key (will prompt if not provided)
             alias: secret
             required: false
     default: select
@@ -194,10 +165,10 @@ commands:
 
   # logout
   - name: logout
-    description: Logout from Tigris
+    description: End your session. Clears login state but keeps credentials from 'configure'
     messages:
       onStart: 'Logging out...'
-      onSuccess: 'Logged out successfully'
+      onSuccess: 'Logged out. Your configured credentials are still saved.'
       onFailure: 'Failed to logout'
 
   #########################
