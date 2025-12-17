@@ -88,13 +88,11 @@ export default async function cp(options: Record<string, unknown>) {
     }
 
     // Also copy the folder marker if it exists and we have a destination path
+    // Use prefix directly - it's already correctly computed for wildcards
     let copiedFolderMarker = false;
-    if (destPath.path) {
-      const folderMarker = srcPath.path.endsWith('/')
-        ? srcPath.path
-        : `${srcPath.path}/`;
+    if (destPath.path && prefix) {
       const { data: markerData } = await list({
-        prefix: folderMarker,
+        prefix,
         limit: 1,
         config: {
           ...config,
@@ -102,12 +100,12 @@ export default async function cp(options: Record<string, unknown>) {
         },
       });
 
-      if (markerData?.items?.some((item) => item.name === folderMarker)) {
+      if (markerData?.items?.some((item) => item.name === prefix)) {
         const destFolderMarker = `${destPath.path.replace(/\/$/, '')}/`;
         const markerResult = await copyObject(
           config,
           srcPath.bucket,
-          folderMarker,
+          prefix,
           destPath.bucket,
           destFolderMarker
         );
@@ -132,7 +130,28 @@ export default async function cp(options: Record<string, unknown>) {
       process.exit(1);
     }
 
-    const destKey = destPath.path || srcPath.path.split('/').pop()!;
+    const srcFileName = srcPath.path.split('/').pop()!;
+    let destKey: string;
+
+    if (!destPath.path) {
+      // No dest path, use source filename
+      destKey = srcFileName;
+    } else if (dest.endsWith('/')) {
+      // Explicit folder destination
+      destKey = `${destPath.path}${srcFileName}`;
+    } else {
+      // Check if destination is an existing folder
+      const destIsFolder = await isPathFolder(
+        destPath.bucket,
+        destPath.path,
+        config
+      );
+      if (destIsFolder) {
+        destKey = `${destPath.path}/${srcFileName}`;
+      } else {
+        destKey = destPath.path;
+      }
+    }
 
     const result = await copyObject(
       config,

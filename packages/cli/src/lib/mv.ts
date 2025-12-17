@@ -81,20 +81,18 @@ export default async function mv(options: Record<string, unknown>) {
     const itemsToMove = items.filter((item) => item.name !== prefix);
 
     // Check if folder marker exists
-    const folderMarker = srcPath.path.endsWith('/')
-      ? srcPath.path
-      : `${srcPath.path}/`;
+    // Use prefix directly - it's already correctly computed for wildcards
     const { data: markerData } = await list({
-      prefix: folderMarker,
+      prefix,
       limit: 1,
       config: {
         ...config,
         bucket: srcPath.bucket,
       },
     });
-    const hasFolderMarker = markerData?.items?.some(
-      (item) => item.name === folderMarker
-    );
+    const hasFolderMarker = prefix
+      ? markerData?.items?.some((item) => item.name === prefix)
+      : false;
 
     if (itemsToMove.length === 0 && !hasFolderMarker) {
       console.log('No objects to move');
@@ -143,7 +141,7 @@ export default async function mv(options: Record<string, unknown>) {
         const markerResult = await moveObject(
           config,
           srcPath.bucket,
-          folderMarker,
+          prefix,
           destPath.bucket,
           destFolderMarker
         );
@@ -154,7 +152,7 @@ export default async function mv(options: Record<string, unknown>) {
         }
       } else {
         // Moving to root - just delete source folder marker, no marker at root
-        const { error: removeError } = await remove(folderMarker, {
+        const { error: removeError } = await remove(prefix, {
           config: {
             ...config,
             bucket: srcPath.bucket,
@@ -178,7 +176,28 @@ export default async function mv(options: Record<string, unknown>) {
       process.exit(1);
     }
 
-    const destKey = destPath.path || srcPath.path.split('/').pop()!;
+    const srcFileName = srcPath.path.split('/').pop()!;
+    let destKey: string;
+
+    if (!destPath.path) {
+      // No dest path, use source filename
+      destKey = srcFileName;
+    } else if (dest.endsWith('/')) {
+      // Explicit folder destination
+      destKey = `${destPath.path}${srcFileName}`;
+    } else {
+      // Check if destination is an existing folder
+      const destIsFolder = await isPathFolder(
+        destPath.bucket,
+        destPath.path,
+        config
+      );
+      if (destIsFolder) {
+        destKey = `${destPath.path}/${srcFileName}`;
+      } else {
+        destKey = destPath.path;
+      }
+    }
 
     if (!force) {
       const confirmed = await confirm(

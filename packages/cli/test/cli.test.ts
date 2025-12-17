@@ -368,6 +368,62 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
   });
 
+  describe('file to folder operations', () => {
+    const targetFolder = 'target-folder';
+    const srcFile = 'src-file-to-folder.txt';
+    const srcFile2 = 'src-file-to-folder2.txt';
+    const srcFile3 = 'src-file-to-folder3.txt';
+
+    beforeAll(() => {
+      // Create target folder and source files
+      runCli(`mk ${testBucket}/${targetFolder}/`);
+      runCli(`touch ${testBucket}/${srcFile}`);
+      runCli(`touch ${testBucket}/${srcFile2}`);
+      runCli(`touch ${testBucket}/${srcFile3}`);
+    });
+
+    it('should copy file to existing folder (auto-detect)', () => {
+      const result = runCli(
+        `cp ${testBucket}/${srcFile} ${testBucket}/${targetFolder}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Copied');
+      expect(result.stdout).toContain(`${targetFolder}/${srcFile}`);
+    });
+
+    it('should copy file to explicit folder path (trailing slash)', () => {
+      const result = runCli(
+        `cp ${testBucket}/${srcFile2} ${testBucket}/${targetFolder}/`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Copied');
+      expect(result.stdout).toContain(`${targetFolder}/${srcFile2}`);
+    });
+
+    it('should move file to existing folder with force flag', () => {
+      const result = runCli(
+        `mv ${testBucket}/${srcFile3} ${testBucket}/${targetFolder} -f`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Moved');
+      expect(result.stdout).toContain(`${targetFolder}/${srcFile3}`);
+    });
+
+    it('should show all files inside target folder', () => {
+      const result = runCli(`ls ${testBucket}/${targetFolder}/`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain(srcFile);
+      expect(result.stdout).toContain(srcFile2);
+      expect(result.stdout).toContain(srcFile3);
+    });
+
+    afterAll(() => {
+      runCli(`rm ${testBucket}/${targetFolder}/ -f`);
+      runCli(`rm ${testBucket}/${srcFile} -f`);
+      runCli(`rm ${testBucket}/${srcFile2} -f`);
+    });
+  });
+
   describe('error cases', () => {
     it('should error on cp without arguments', () => {
       const result = runCli('cp');
@@ -420,6 +476,55 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(`ls ${testBucket}`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).not.toContain(`${wildcardPrefix}-`);
+    });
+  });
+
+  describe('wildcard folder marker operations', () => {
+    const wcFolder = 'wc-folder';
+    const wcCopied = 'wc-copied';
+    const wcMoved = 'wc-moved';
+
+    beforeAll(() => {
+      // Create a folder with files
+      runCli(`mk ${testBucket}/${wcFolder}/`);
+      runCli(`touch ${testBucket}/${wcFolder}/file1.txt`);
+      runCli(`touch ${testBucket}/${wcFolder}/file2.txt`);
+    });
+
+    it('should copy folder contents and marker using wildcard', () => {
+      const result = runCli(
+        `cp ${testBucket}/${wcFolder}/* ${testBucket}/${wcCopied}/`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Copied');
+      expect(result.stdout).toContain('2 object(s)');
+    });
+
+    it('should show copied folder marker in ls', () => {
+      const result = runCli(`ls ${testBucket}`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain(`${wcCopied}/`);
+    });
+
+    it('should move folder contents and marker using wildcard', () => {
+      const result = runCli(
+        `mv ${testBucket}/${wcCopied}/* ${testBucket}/${wcMoved}/ -f`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Moved');
+      expect(result.stdout).toContain('3 object(s)');
+    });
+
+    it('should not show source folder after wildcard move', () => {
+      const result = runCli(`ls ${testBucket}`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).not.toContain(`${wcCopied}/`);
+      expect(result.stdout).toContain(`${wcMoved}/`);
+    });
+
+    afterAll(() => {
+      runCli(`rm ${testBucket}/${wcFolder}/ -f`);
+      runCli(`rm ${testBucket}/${wcMoved}/ -f`);
     });
   });
 });
