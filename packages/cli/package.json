@@ -27,6 +27,10 @@
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run test/utils",
+    "test:integration": "vitest run test/cli.test.ts",
     "publint": "publint",
     "updatedocs": "tsx scripts/update-docs.ts",
     "prepublishOnly": "npm run build",
@@ -89,6 +93,7 @@
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
+    "dotenv": "^17.2.3",
     "eslint": "^8.0.0",
     "husky": "^8.0.0",
     "prettier": "^3.0.0",
@@ -96,6 +101,7 @@
     "semantic-release": "^25.0.2",
     "tsup": "^8.0.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.15"
   }
 }
