@@ -27,10 +27,10 @@ Run `tigris help` to see all available commands, or `tigris <command> help` for 
 
 ### Authentication
 
-- `tigris login` - Login to Tigris (interactive selection between user and machine)
-- `tigris logout` - Logout from Tigris
+- `tigris login` - Start a session. Use OAuth (default) or temporary credentials that override your saved config
+- `tigris logout` - End your session. Clears login state but keeps credentials from 'configure'
 - `tigris whoami` - Show information about the current user
-- `tigris configure` - Configure Tigris credentials interactively
+- `tigris configure` - Save credentials permanently. After running this, all commands work automatically
 
 ### Resources
 
@@ -140,31 +140,24 @@ tigris rm my-bucket/my-path/*
 
 ### `login` | `l`
 
-Login to Tigris (interactive selection between user and machine)
+Start a session. Use OAuth (default) or temporary credentials that override your saved config
 
 | Command | Description |
 |---------|-------------|
-| `login select` | Interactive selection between user and machine login |
-| `login ui` (u) | Login as a user (OAuth2 flow) |
-| `login credentials` (c) | Login as a machine (with access key and secret) |
+| `login select` | Choose how to login - OAuth (browser) or credentials (access key) |
+| `login oauth` (o) | Login via browser (OAuth2 device flow). Best for interactive use |
+| `login credentials` (c) | Login with access key + secret. Creates a temporary session (cleared on logout) |
 
 #### `login select`
 
 ```
-tigris login select [flags]
+tigris login select
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-key, --access-key` | Access key (optional, will use credentials flow if provided) |
-| `-secret, --access-secret` | Access secret (optional, will use credentials flow if provided) |
-| `-p, --profile` | Use saved credentials profile (loads from ~/.tigris/credentials.json) |
-| `-o, --oauth` | Login as a user (OAuth2 flow) |
-
-#### `login ui`
+#### `login oauth`
 
 ```
-tigris login ui
+tigris login oauth
 ```
 
 #### `login credentials`
@@ -175,12 +168,12 @@ tigris login credentials [flags]
 
 | Flag | Description |
 |------|-------------|
-| `-key, --access-key` | Access key (optional, will prompt or use saved credentials if not provided) |
-| `-secret, --access-secret` | Access secret (optional, will prompt or use saved credentials if not provided) |
+| `-key, --access-key` | Your access key ID (will prompt if not provided) |
+| `-secret, --access-secret` | Your secret access key (will prompt if not provided) |
 
 ### `logout`
 
-Logout from Tigris
+End your session. Clears login state but keeps credentials from 'configure'
 
 ```
 tigris logout
@@ -196,7 +189,7 @@ tigris whoami
 
 ### `configure` | `c`
 
-Configure Tigris credentials interactively
+Save credentials permanently. After running this, all commands work automatically
 
 ```
 tigris configure [flags]
@@ -204,9 +197,9 @@ tigris configure [flags]
 
 | Flag | Description |
 |------|-------------|
-| `-key, --access-key` | Tigris Access key ID |
-| `-secret, --access-secret` | Tigris Access secret |
-| `-e, --endpoint` | Tigris Endpoint |
+| `-key, --access-key` | Your Tigris access key ID |
+| `-secret, --access-secret` | Your Tigris secret access key |
+| `-e, --endpoint` | Tigris API endpoint (default: https://t3.storage.dev) |
 
 ## Resources
 
