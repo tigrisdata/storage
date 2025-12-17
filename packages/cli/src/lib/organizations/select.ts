@@ -65,7 +65,7 @@ export default async function select(options: Record<string, unknown>) {
     }
 
     // Store selected organization
-    storeSelectedOrganization(org.id);
+    await storeSelectedOrganization(org.id);
 
     printSuccess(context, { name: org.name });
   } catch (error) {

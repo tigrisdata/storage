@@ -36,7 +36,7 @@ export async function oauth(): Promise<void> {
     const orgs = await authClient.getOrganizations();
     if (orgs.length > 0) {
       const firstOrg = orgs[0];
-      storeSelectedOrganization(firstOrg.id);
+      await storeSelectedOrganization(firstOrg.id);
       printSuccess(context, { org: firstOrg.displayName || firstOrg.name });
 
       if (orgs.length > 1) {

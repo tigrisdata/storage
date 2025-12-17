@@ -84,7 +84,7 @@ export default async function list(options: Record<string, unknown>) {
       const selectedOrgId = match ? match[1] : orgs[0].id;
 
       // Store the selection
-      storeSelectedOrganization(selectedOrgId);
+      await storeSelectedOrganization(selectedOrgId);
 
       const selectedOrg = orgs.find((o) => o.id === selectedOrgId);
       printSuccess(context, {
