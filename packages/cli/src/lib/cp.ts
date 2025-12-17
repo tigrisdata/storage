@@ -89,7 +89,6 @@ export default async function cp(options: Record<string, unknown>) {
 
     // Also copy the folder marker if it exists and we have a destination path
     // Use prefix directly - it's already correctly computed for wildcards
-    let copiedFolderMarker = false;
     if (destPath.path && prefix) {
       const { data: markerData } = await list({
         prefix,
@@ -112,12 +111,12 @@ export default async function cp(options: Record<string, unknown>) {
         if (markerResult.error) {
           console.error(`Failed to copy folder marker: ${markerResult.error}`);
         } else {
-          copiedFolderMarker = true;
+          copied++;
         }
       }
     }
 
-    if (copied === 0 && !copiedFolderMarker) {
+    if (copied === 0) {
       console.log('No objects to copy');
       return;
     }

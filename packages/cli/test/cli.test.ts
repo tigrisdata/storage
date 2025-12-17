@@ -337,7 +337,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Copied');
-      expect(result.stdout).toContain('0 object(s)');
+      expect(result.stdout).toContain('1 object(s)');
     });
 
     it('should show copied empty folder in ls', () => {
