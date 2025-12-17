@@ -321,6 +321,53 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
   });
 
+  describe('empty folder operations', () => {
+    const emptyFolder = 'empty-folder';
+    const copiedEmptyFolder = 'copied-empty';
+    const movedEmptyFolder = 'moved-empty';
+
+    beforeAll(() => {
+      // Create an empty folder (just the folder marker, no contents)
+      runCli(`mk ${testBucket}/${emptyFolder}/`);
+    });
+
+    it('should copy an empty folder', () => {
+      const result = runCli(
+        `cp ${testBucket}/${emptyFolder}/ ${testBucket}/${copiedEmptyFolder}/`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Copied');
+      expect(result.stdout).toContain('0 object(s)');
+    });
+
+    it('should show copied empty folder in ls', () => {
+      const result = runCli(`ls ${testBucket}`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain(`${copiedEmptyFolder}/`);
+    });
+
+    it('should move an empty folder', () => {
+      const result = runCli(
+        `mv ${testBucket}/${copiedEmptyFolder}/ ${testBucket}/${movedEmptyFolder}/ -f`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Moved');
+      expect(result.stdout).toContain('1 object(s)');
+    });
+
+    it('should not show source after moving empty folder', () => {
+      const result = runCli(`ls ${testBucket}`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).not.toContain(`${copiedEmptyFolder}/`);
+      expect(result.stdout).toContain(`${movedEmptyFolder}/`);
+    });
+
+    afterAll(() => {
+      runCli(`rm ${testBucket}/${emptyFolder}/ -f`);
+      runCli(`rm ${testBucket}/${movedEmptyFolder}/ -f`);
+    });
+  });
+
   describe('error cases', () => {
     it('should error on cp without arguments', () => {
       const result = runCli('cp');

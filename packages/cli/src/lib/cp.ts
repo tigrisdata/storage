@@ -61,13 +61,8 @@ export default async function cp(options: Record<string, unknown>) {
       process.exit(1);
     }
 
-    // Filter out folder markers - they would result in empty destKey when copying to root
+    // Filter out folder markers - they're handled separately below
     const itemsToCopy = items.filter((item) => item.name !== prefix);
-
-    if (itemsToCopy.length === 0) {
-      console.log('No objects to copy');
-      return;
-    }
 
     let copied = 0;
     for (const item of itemsToCopy) {
@@ -93,6 +88,7 @@ export default async function cp(options: Record<string, unknown>) {
     }
 
     // Also copy the folder marker if it exists and we have a destination path
+    let copiedFolderMarker = false;
     if (destPath.path) {
       const folderMarker = srcPath.path.endsWith('/')
         ? srcPath.path
@@ -117,8 +113,15 @@ export default async function cp(options: Record<string, unknown>) {
         );
         if (markerResult.error) {
           console.error(`Failed to copy folder marker: ${markerResult.error}`);
+        } else {
+          copiedFolderMarker = true;
         }
       }
+    }
+
+    if (copied === 0 && !copiedFolderMarker) {
+      console.log('No objects to copy');
+      return;
     }
 
     console.log(`Copied ${copied} object(s)`);

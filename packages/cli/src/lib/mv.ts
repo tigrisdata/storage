@@ -80,14 +80,31 @@ export default async function mv(options: Record<string, unknown>) {
     // Filter out folder markers - they're handled separately below
     const itemsToMove = items.filter((item) => item.name !== prefix);
 
-    if (itemsToMove.length === 0) {
+    // Check if folder marker exists
+    const folderMarker = srcPath.path.endsWith('/')
+      ? srcPath.path
+      : `${srcPath.path}/`;
+    const { data: markerData } = await list({
+      prefix: folderMarker,
+      limit: 1,
+      config: {
+        ...config,
+        bucket: srcPath.bucket,
+      },
+    });
+    const hasFolderMarker = markerData?.items?.some(
+      (item) => item.name === folderMarker
+    );
+
+    if (itemsToMove.length === 0 && !hasFolderMarker) {
       console.log('No objects to move');
       return;
     }
 
+    const totalToMove = itemsToMove.length + (hasFolderMarker ? 1 : 0);
     if (!force) {
       const confirmed = await confirm(
-        `Are you sure you want to move ${itemsToMove.length} object(s)?`
+        `Are you sure you want to move ${totalToMove} object(s)?`
       );
       if (!confirmed) {
         console.log('Aborted');
@@ -118,20 +135,8 @@ export default async function mv(options: Record<string, unknown>) {
       }
     }
 
-    // Also move the folder marker if it exists
-    const folderMarker = srcPath.path.endsWith('/')
-      ? srcPath.path
-      : `${srcPath.path}/`;
-    const { data: markerData } = await list({
-      prefix: folderMarker,
-      limit: 1,
-      config: {
-        ...config,
-        bucket: srcPath.bucket,
-      },
-    });
-
-    if (markerData?.items?.some((item) => item.name === folderMarker)) {
+    // Also move the folder marker if it exists (already checked above)
+    if (hasFolderMarker) {
       if (destPath.path) {
         // Move folder marker to destination folder
         const destFolderMarker = `${destPath.path.replace(/\/$/, '')}/`;
@@ -144,6 +149,8 @@ export default async function mv(options: Record<string, unknown>) {
         );
         if (markerResult.error) {
           console.error(`Failed to move folder marker: ${markerResult.error}`);
+        } else {
+          moved++;
         }
       } else {
         // Moving to root - just delete source folder marker, no marker at root
@@ -157,6 +164,8 @@ export default async function mv(options: Record<string, unknown>) {
           console.error(
             `Failed to remove source folder marker: ${removeError.message}`
           );
+        } else {
+          moved++;
         }
       }
     }
