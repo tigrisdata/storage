@@ -14,6 +14,14 @@ export function createIAMClient(
   const sessionToken = options?.sessionToken ?? config.sessionToken;
   const organizationId = options?.organizationId ?? config.organizationId;
 
+  if (!sessionToken || sessionToken === '') {
+    return { error: new Error('Session token is required') };
+  }
+
+  if (!organizationId || organizationId === '') {
+    return { error: new Error('Organization ID is required') };
+  }
+
   return createTigrisHttpClient({
     baseUrl: getIAMEndpoint(options),
     sessionToken,
