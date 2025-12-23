@@ -1,6 +1,7 @@
 import { CreateBucketCommand } from '@aws-sdk/client-s3';
 import type { HttpRequest } from '@aws-sdk/types';
-import { createTigrisClient, TigrisHeaders } from '../tigris-client';
+import { TigrisHeaders } from '@shared/index';
+import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 const availableRegions = [
