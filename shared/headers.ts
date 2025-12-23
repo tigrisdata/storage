@@ -1,0 +1,13 @@
+export enum TigrisHeaders {
+  SESSION_TOKEN = 'x-amz-security-token',
+  NAMESPACE = 'X-Tigris-Namespace',
+  STORAGE_CLASS = 'X-Amz-Storage-Class',
+  CONSISTENT = 'X-Tigris-Consistent',
+  REGIONS = 'X-Tigris-Regions',
+  SNAPSHOT = 'X-Tigris-Snapshot',
+  SNAPSHOT_VERSION = 'X-Tigris-Snapshot-Version',
+  SNAPSHOT_ENABLED = 'X-Tigris-Enable-Snapshot',
+  HAS_FORKS = 'X-Tigris-Is-Fork-Parent',
+  FORK_SOURCE_BUCKET = 'X-Tigris-Fork-Source-Bucket',
+  FORK_SOURCE_BUCKET_SNAPSHOT = 'X-Tigris-Fork-Source-Bucket-Snapshot',
+}
