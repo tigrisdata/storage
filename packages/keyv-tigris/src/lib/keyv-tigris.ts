@@ -1,24 +1,23 @@
-import { config as envConfig } from '@shared/index';
-import type { TigrisStorageCoreConfig } from '@shared/types';
 import { get, head, list, put, remove } from '@tigrisdata/storage';
 import { EventEmitter } from 'events';
 import type { KeyvStoreAdapter } from 'keyv';
 
-type InternalOpts = TigrisStorageCoreConfig & {
-  url: string;
-};
+export interface KeyvTigrisOptions {
+  bucket?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  endpoint?: string;
+}
+
+type InternalOpts = KeyvTigrisOptions & { url: string };
 
 export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
   opts: InternalOpts;
   namespace?: string; // Set by Keyv
 
-  constructor(options: TigrisStorageCoreConfig = {}) {
+  constructor(options: KeyvTigrisOptions = {}) {
     super();
-    this.opts = {
-      url: '',
-      ...envConfig,
-      ...options,
-    };
+    this.opts = { url: '', ...options };
   }
 
   async get<T>(key: string): Promise<T | undefined> {

@@ -1,4 +1,3 @@
 import { KeyvTigris } from './lib/keyv-tigris';
-
-export { KeyvTigris };
+export { KeyvTigris, KeyvTigrisOptions } from './lib/keyv-tigris';
 export default KeyvTigris;

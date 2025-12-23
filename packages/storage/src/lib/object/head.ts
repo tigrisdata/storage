@@ -1,8 +1,9 @@
 import { HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { HttpRequest } from '@aws-sdk/types';
+import { TigrisHeaders } from '@shared/index';
 import { config } from '../config';
-import { createTigrisClient, TigrisHeaders } from '../tigris-client';
+import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type HeadOptions = {

@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { createTigrisHttpClient } from '../tigris-client';
-import { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import { createIAMClient } from '../http-client';
+import type { TigrisIAMConfig, TigrisIAMResponse } from '../types';
 import { listOrganizations } from './list';
 
 export interface CreateOrganizationOptions {
-  config?: TigrisStorageConfig;
+  config?: TigrisIAMConfig;
 }
 
 export interface CreateOrganizationResponse {
@@ -15,7 +15,7 @@ export interface CreateOrganizationResponse {
 export async function createOrganization(
   organizationName: string,
   options?: CreateOrganizationOptions
-): Promise<TigrisStorageResponse<CreateOrganizationResponse, Error>> {
+): Promise<TigrisIAMResponse<CreateOrganizationResponse, Error>> {
   const { data: listOrganizationsResponse, error: listOrganizationsError } =
     await listOrganizations({
       config: options?.config,
@@ -33,37 +33,32 @@ export async function createOrganization(
     };
   }
 
-  const { data: tigrisHttpClient, error } = createTigrisHttpClient(
-    {
-      ...options?.config,
-      // Use the first organization id from the list of organizations
-      organizationId: listOrganizationsResponse.organizations[0].id,
-    },
-    true
-  );
+  const organizationId = listOrganizationsResponse.organizations[0].id;
 
-  if (error || !tigrisHttpClient) {
+  const { data: client, error } = createIAMClient({
+    ...options?.config,
+    organizationId,
+  });
+
+  if (error || !client) {
     return { error };
   }
 
-  const response = await tigrisHttpClient.request<
+  const response = await client.request<
     { id: string; name: string },
     {
       status: 'success' | 'error';
       message: string;
       result: { namespace_id: string };
     }
-  >(
-    {
-      method: 'POST',
-      path: `/tigris-iam/namespaces`,
-      body: {
-        id: randomUUID().toString(),
-        name: organizationName,
-      },
+  >({
+    method: 'POST',
+    path: `/tigris-iam/namespaces`,
+    body: {
+      id: randomUUID().toString(),
+      name: organizationName,
     },
-    'iam'
-  );
+  });
 
   if (response.error) {
     return { error: response.error };

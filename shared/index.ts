@@ -1,3 +1,11 @@
-export { config, missingConfigError } from './config';
-export type { TigrisStorageConfig, TigrisStorageResponse } from './types';
+export { isNode, loadEnv, missingConfigError } from './config';
+export type { TigrisResponse } from './types';
 export { executeWithConcurrency } from './utils';
+export { TigrisHeaders } from './headers';
+export {
+  createTigrisHttpClient,
+  type HttpClientRequest,
+  type HttpClientResponse,
+  type TigrisHttpClient,
+  type CreateHttpClientOptions,
+} from './http-client';
