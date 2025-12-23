@@ -9,13 +9,15 @@ export interface KeyvTigrisOptions {
   endpoint?: string;
 }
 
+type InternalOpts = KeyvTigrisOptions & { url: string };
+
 export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
-  opts: KeyvTigrisOptions;
+  opts: InternalOpts;
   namespace?: string; // Set by Keyv
 
   constructor(options: KeyvTigrisOptions = {}) {
     super();
-    this.opts = options;
+    this.opts = { url: '', ...options };
   }
 
   async get<T>(key: string): Promise<T | undefined> {
