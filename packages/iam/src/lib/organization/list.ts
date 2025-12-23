@@ -23,10 +23,6 @@ type IAMNamespacesResponse = {
 export async function listOrganizations(
   options?: ListOrganizationsOptions
 ): Promise<TigrisIAMResponse<ListOrganizationsResponse, Error>> {
-  if (!options?.config?.sessionToken || options.config.sessionToken === '') {
-    return { error: new Error('Session token is required') };
-  }
-
   const { data: client, error } = createIAMClient(options?.config);
 
   if (error || !client) {
@@ -36,10 +32,6 @@ export async function listOrganizations(
   const response = await client.request<unknown, IAMNamespacesResponse>({
     method: 'GET',
     path: `/tigris-iam/namespaces`,
-    headers: {
-      Accept: 'application/json',
-      Authorization: `Bearer ${options.config.sessionToken}`,
-    },
   });
 
   if (response.error) {
