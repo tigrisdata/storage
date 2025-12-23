@@ -6,12 +6,14 @@
   "type": "module",
   "workspaces": [
     "packages/storage",
+    "packages/iam",
     "packages/keyv-tigris",
     "packages/react"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "build:storage": "npm run build --workspace=@tigrisdata/storage",
+    "build:iam": "npm run build --workspace=@tigrisdata/iam",
     "build:keyv-tigris": "npm run build --workspace=@tigrisdata/keyv-tigris",
     "build:react": "npm run build --workspace=@tigrisdata/react",
     "dev": "npm run dev --workspaces",
