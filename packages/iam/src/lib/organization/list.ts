@@ -16,7 +16,8 @@ export type ListOrganizationsOptions = {
 };
 
 type IAMNamespacesResponse = {
-  status: string;
+  status: 'success' | 'error';
+  message?: string;
   result: Organization[];
 };
 
@@ -36,6 +37,10 @@ export async function listOrganizations(
 
   if (response.error) {
     return { error: response.error };
+  }
+
+  if (response.data.status === 'error') {
+    return { error: new Error(response.data.message ?? 'Failed to list organizations') };
   }
 
   return {

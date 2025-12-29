@@ -64,6 +64,10 @@ export async function createOrganization(
     return { error: response.error };
   }
 
+  if (response.data.status === 'error') {
+    return { error: new Error(response.data.message) };
+  }
+
   return {
     data: {
       id: response.data.result.namespace_id,
