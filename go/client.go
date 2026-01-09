@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -57,7 +58,10 @@ func (c *Client) HeadBucketForkOrSnapshot(ctx context.Context, in *s3.HeadBucket
 		return nil, err
 	}
 
-	rawResp := middleware.GetRawResponse(resp.ResultMetadata).(*http.Response)
+	rawResp, ok := middleware.GetRawResponse(resp.ResultMetadata).(*http.Response)
+	if !ok {
+		return nil, fmt.Errorf("unexpected response type from middleware")
+	}
 	return &HeadBucketForkOrSnapshotOutput{
 		SnapshotsEnabled:     rawResp.Header.Get("X-Tigris-Enable-Snapshot") == "true",
 		SourceBucket:         rawResp.Header.Get("X-Tigris-Fork-Source-Bucket"),
