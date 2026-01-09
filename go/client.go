@@ -17,6 +17,8 @@ type Client struct {
 }
 
 // CreateBucketFork creates a fork of the source bucket named target.
+//
+// If you want to specify an exact snapshot version to fork from, use tigrisheaders.WithSnapshotVersion.
 func (c *Client) CreateBucketFork(ctx context.Context, source, target string, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
 	opts = append(opts, tigrisheaders.WithHeader("X-Tigris-Fork-Source-Bucket", source))
 

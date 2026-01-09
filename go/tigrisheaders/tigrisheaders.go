@@ -5,6 +5,7 @@ package tigrisheaders
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -126,7 +127,7 @@ func WithEnableSnapshot() func(*s3.Options) {
 //
 // [1]: https://www.tigrisdata.com/docs/buckets/snapshots-and-forks/#creating-a-snapshot
 func WithTakeSnapshot(desc string) func(*s3.Options) {
-	return WithHeader("X-Tigris-Snapshot", fmt.Sprintf("true; desc=%s", desc))
+	return WithHeader("X-Tigris-Snapshot", fmt.Sprintf("true; desc=%s", url.QueryEscape(desc)))
 }
 
 // WithSnapshotVersion tells Tigris to use a given snapshot when doing ListObjectsV2, GetObject, or HeadObject calls.
