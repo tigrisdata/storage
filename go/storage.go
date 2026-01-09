@@ -1,4 +1,4 @@
-// Package tigrissdk contains a Tigris client and helpers for interacting with Tigris.
+// Package storage contains a Tigris client and helpers for interacting with Tigris.
 //
 // Tigris is a cloud storage service that provides a simple, scalable, and secure object storage solution. It is based on the S3 API, but has additional features that need these helpers.
 package storage

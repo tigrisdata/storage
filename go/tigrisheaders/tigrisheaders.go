@@ -65,7 +65,7 @@ func WithQuery(query string) func(*s3.Options) {
 	return WithHeader("X-Tigris-Query", query)
 }
 
-// WithCreateIfNotExists will create the object if it doesn't exist.
+// WithCreateObjectIfNotExists will create the object if it doesn't exist.
 //
 // See the Tigris documentation[1] for more information.
 //
