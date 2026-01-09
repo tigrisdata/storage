@@ -97,7 +97,9 @@ func New(ctx context.Context, options ...Option) (*Client, error) {
 		opts.BaseEndpoint = aws.String(o.BaseEndpoint)
 		opts.Region = o.Region
 		opts.UsePathStyle = o.UsePathStyle
-		opts.Credentials = creds
+		if creds != nil {
+			opts.Credentials = creds
+		}
 	})
 
 	return &Client{
