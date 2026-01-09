@@ -1,4 +1,4 @@
-name: Test
+name: JavaScript tests
 
 on:
   pull_request:
@@ -7,8 +7,8 @@ on:
       - next
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  javascript_tests:
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -17,7 +17,7 @@ jobs:
       # Set up Node.js
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "latest"
 
       - name: Install Dependencies
         run: npm ci
