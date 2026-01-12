@@ -73,10 +73,10 @@ client, err := storage.New(ctx,
 
 Tigris supports bucket snapshots and forking, allowing you to create point-in-time copies of buckets and branch from them.
 
-#### Create a Snapshottable Bucket
+#### Create a Snapshot Enabled Bucket
 
 ```go
-output, err := client.CreateSnapshottableBucket(ctx, &s3.CreateBucketInput{
+output, err := client.CreateSnapshotEnabledBucket(ctx, &s3.CreateBucketInput{
     Bucket: aws.String("my-bucket"),
 })
 ```

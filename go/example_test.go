@@ -32,7 +32,7 @@ func ExampleNew() {
 	_ = client
 }
 
-func ExampleClient_CreateSnapshottableBucket() {
+func ExampleClient_CreateSnapshotEnabledBucket() {
 	ctx := context.Background()
 
 	client, err := storage.New(ctx)
@@ -41,7 +41,7 @@ func ExampleClient_CreateSnapshottableBucket() {
 	}
 
 	// Create a bucket with snapshot support enabled
-	output, err := client.CreateSnapshottableBucket(ctx, &s3.CreateBucketInput{
+	output, err := client.CreateSnapshotEnabledBucket(ctx, &s3.CreateBucketInput{
 		Bucket: aws.String("my-bucket"),
 	})
 	if err != nil {

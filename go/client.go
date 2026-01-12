@@ -34,8 +34,8 @@ func (c *Client) CreateBucketSnapshot(ctx context.Context, description string, i
 	return c.Client.CreateBucket(ctx, in, opts...)
 }
 
-// CreateSnapshottableBucket creates a new bucket with the ability to take snapshots and fork the contents of it.
-func (c *Client) CreateSnapshottableBucket(ctx context.Context, in *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
+// CreateSnapshotEnabledBucket creates a new bucket with the ability to take snapshots and fork the contents of it.
+func (c *Client) CreateSnapshotEnabledBucket(ctx context.Context, in *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
 	opts = append(opts, tigrisheaders.WithEnableSnapshot())
 
 	return c.Client.CreateBucket(ctx, in, opts...)
