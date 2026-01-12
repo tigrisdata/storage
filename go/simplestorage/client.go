@@ -122,11 +122,11 @@ func (c *Client) Get(ctx context.Context, key string, opts ...ClientOption) (*Ob
 	return &Object{
 		Bucket:       o.BucketName,
 		Key:          key,
-		ContentType:  Lower(resp.ContentType, "application/octet-stream"),
-		Etag:         Lower(resp.ETag, ""),
-		Size:         Lower(resp.ContentLength, 0),
-		Version:      Lower(resp.VersionId, ""),
-		LastModified: Lower(resp.LastModified, time.Time{}),
+		ContentType:  lower(resp.ContentType, "application/octet-stream"),
+		Etag:         lower(resp.ETag, ""),
+		Size:         lower(resp.ContentLength, 0),
+		Version:      lower(resp.VersionId, ""),
+		LastModified: lower(resp.LastModified, time.Time{}),
 		Body:         resp.Body,
 	}, nil
 }
@@ -144,8 +144,8 @@ func (c *Client) Put(ctx context.Context, obj *Object, opts ...ClientOption) (*O
 			Bucket:        aws.String(o.BucketName),
 			Key:           aws.String(obj.Key),
 			Body:          obj.Body,
-			ContentType:   Raise(obj.ContentType),
-			ContentLength: Raise(obj.Size),
+			ContentType:   raise(obj.ContentType),
+			ContentLength: raise(obj.Size),
 		},
 		o.S3Headers...,
 	)
@@ -211,25 +211,27 @@ func (c *Client) List(ctx context.Context, prefix string, opts ...ClientOption) 
 		result = append(result, Object{
 			Bucket:       o.BucketName,
 			Key:          *obj.Key,
-			Etag:         Lower(obj.ETag, ""),
-			Size:         Lower(obj.Size, 0),
-			LastModified: Lower(obj.LastModified, time.Time{}),
+			Etag:         lower(obj.ETag, ""),
+			Size:         lower(obj.Size, 0),
+			LastModified: lower(obj.LastModified, time.Time{}),
 		})
 	}
 
 	return result, nil
 }
 
-// Lower returns the value pointed to by p, or defaultVal if p is nil.
-func Lower[T any](p *T, defaultVal T) T {
+// lower lowers the "pointer level" of the value by returning the value pointed
+// to by p, or defaultVal if p is nil.
+func lower[T any](p *T, defaultVal T) T {
 	if p != nil {
 		return *p
 	}
 	return defaultVal
 }
 
-// Raise returns a pointer to v, or nil if v is the zero value for type T.
-func Raise[T comparable](v T) *T {
+// raise raises the "pointer level" of the value by returning a pointer to v,
+// or nil if v is the zero value for type T.
+func raise[T comparable](v T) *T {
 	var zero T
 	if v == zero {
 		return nil
