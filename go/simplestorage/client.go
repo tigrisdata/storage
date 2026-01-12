@@ -2,6 +2,7 @@ package simplestorage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -10,6 +11,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	storage "github.com/tigrisdata/storage/go"
 )
+
+// ErrNoBucketName is returned when no bucket name is provided via the
+// TIGRIS_STORAGE_BUCKET environment variable or the WithBucket option.
+var ErrNoBucketName = errors.New("bucket name not set: provide the TIGRIS_STORAGE_BUCKET environment variable or use WithBucket option")
 
 type Client struct {
 	cli     *storage.Client
@@ -62,6 +67,15 @@ func New(ctx context.Context, options ...Option) (*Client, error) {
 
 	for _, doer := range options {
 		doer(&o)
+	}
+
+	var errs []error
+	if o.BucketName == "" {
+		errs = append(errs, ErrNoBucketName)
+	}
+
+	if len(errs) != 0 {
+		return nil, fmt.Errorf("simplestorage: can't create client: %w", errors.Join(errs...))
 	}
 
 	var storageOpts []storage.Option
