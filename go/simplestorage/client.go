@@ -16,52 +16,75 @@ import (
 // TIGRIS_STORAGE_BUCKET environment variable or the WithBucket option.
 var ErrNoBucketName = errors.New("bucket name not set: provide the TIGRIS_STORAGE_BUCKET environment variable or use WithBucket option")
 
+// Client is a high-level client for Tigris that simplifies common interactions
+// to very high level calls.
 type Client struct {
 	cli     *storage.Client
 	options Options
 }
 
+// ClientOption is a function option that allows callers to override settings in
+// calls to Tigris via Client.
 type ClientOption func(*ClientOptions)
 
-func WithBucket(bucket string) ClientOption {
+// OverrideBucket overrides the bucket used for Tigris calls.
+func OverrideBucket(bucket string) ClientOption {
 	return func(co *ClientOptions) {
 		co.BucketName = bucket
 	}
 }
 
-func WithS3Headers(opts ...func(*s3.Options)) ClientOption {
+// WithS3Options sets S3 options for individual Tigris calls.
+func WithS3Options(opts ...func(*s3.Options)) ClientOption {
 	return func(co *ClientOptions) {
-		co.S3Headers = append(co.S3Headers, opts...)
+		co.S3Options = append(co.S3Options, opts...)
 	}
 }
 
+// WithStartAfter sets the StartAfter setting in List calls. Use this if you need
+// pagination in your List calls.
 func WithStartAfter(startAfter string) ClientOption {
 	return func(co *ClientOptions) {
 		co.StartAfter = aws.String(startAfter)
 	}
 }
 
+// WithMaxKeys sets the maximum number of keys in List calls. Use this along with
+// WithStartAfter for pagination in your List calls.
 func WithMaxKeys(maxKeys int32) ClientOption {
 	return func(co *ClientOptions) {
 		co.MaxKeys = &maxKeys
 	}
 }
 
+// ClientOptions is the collection of options that are set for individual Tigris
+// calls.
 type ClientOptions struct {
 	BucketName string
-	S3Headers  []func(*s3.Options)
+	S3Options  []func(*s3.Options)
 
 	// List options
 	StartAfter *string
 	MaxKeys    *int32
 }
 
+// defaults populates client options from the global Options.
 func (ClientOptions) defaults(o Options) ClientOptions {
 	return ClientOptions{
 		BucketName: o.BucketName,
 	}
 }
 
+// New creates a new Client based on the options provided and defaults loaded from the environment.
+//
+// By default New reads the following environment variables for setting its defaults:
+//
+// * `TIGRIS_STORAGE_BUCKET`: the name of the bucket for all Tigris operations. If this is not set in the environment or via the WithBucket, New() will return an error containing ErrNoBucketName.
+// * `TIGRIS_STORAGE_ACCESS_KEY_ID`: The access key ID of the Tigris authentication keypair. If this is not set in the environment or via WithAccessKeypair, New() will load configuration via the AWS configuration resolution method.
+// * `TIGRIS_STORAGE_SECRET_ACCESS_KEY`: The secret access key of the Tigris authentication keypair. If this is not set in the environment or via WithAccessKeypair, New() will load configuration via the AWS configuration resolution method.
+//
+// The returned Client will default to having its operations performed on the specified bucket. If
+// individual calls need to operate against arbitrary buckets, override it with OverrideBucket.
 func New(ctx context.Context, options ...Option) (*Client, error) {
 	o := new(Options).defaults()
 
@@ -102,6 +125,10 @@ func New(ctx context.Context, options ...Option) (*Client, error) {
 	}, nil
 }
 
+// Object contains metadata about an individual object read from or put into Tigris.
+//
+// Some calls may not populate all fields. Ensure that the values are valid before
+// consuming them.
 type Object struct {
 	Bucket       string        // Bucket the object is in
 	Key          string        // Key for the object
@@ -113,6 +140,7 @@ type Object struct {
 	Body         io.ReadCloser // Body of the object so it can be read, don't forget to close it.
 }
 
+// Get fetches the contents of an object and its metadata from Tigris.
 func (c *Client) Get(ctx context.Context, key string, opts ...ClientOption) (*Object, error) {
 	o := new(ClientOptions).defaults(c.options)
 
@@ -126,7 +154,7 @@ func (c *Client) Get(ctx context.Context, key string, opts ...ClientOption) (*Ob
 			Bucket: aws.String(o.BucketName),
 			Key:    aws.String(key),
 		},
-		o.S3Headers...,
+		o.S3Options...,
 	)
 
 	if err != nil {
@@ -145,6 +173,7 @@ func (c *Client) Get(ctx context.Context, key string, opts ...ClientOption) (*Ob
 	}, nil
 }
 
+// Put puts the contents of an object into Tigris.
 func (c *Client) Put(ctx context.Context, obj *Object, opts ...ClientOption) (*Object, error) {
 	o := new(ClientOptions).defaults(c.options)
 
@@ -161,7 +190,7 @@ func (c *Client) Put(ctx context.Context, obj *Object, opts ...ClientOption) (*O
 			ContentType:   raise(obj.ContentType),
 			ContentLength: raise(obj.Size),
 		},
-		o.S3Headers...,
+		o.S3Options...,
 	)
 
 	if err != nil {
@@ -175,6 +204,7 @@ func (c *Client) Put(ctx context.Context, obj *Object, opts ...ClientOption) (*O
 	return obj, nil
 }
 
+// Delete removes an object from Tigris.
 func (c *Client) Delete(ctx context.Context, key string, opts ...ClientOption) error {
 	o := new(ClientOptions).defaults(c.options)
 
@@ -188,7 +218,7 @@ func (c *Client) Delete(ctx context.Context, key string, opts ...ClientOption) e
 			Bucket: aws.String(o.BucketName),
 			Key:    aws.String(key),
 		},
-		o.S3Headers...,
+		o.S3Options...,
 	); err != nil {
 		return fmt.Errorf("simplestorage: can't delete %s/%s: %v", o.BucketName, key, err)
 	}
@@ -196,6 +226,7 @@ func (c *Client) Delete(ctx context.Context, key string, opts ...ClientOption) e
 	return nil
 }
 
+// List returns a list of objects matching a key prefix.
 func (c *Client) List(ctx context.Context, prefix string, opts ...ClientOption) ([]Object, error) {
 	o := new(ClientOptions).defaults(c.options)
 
@@ -212,7 +243,7 @@ func (c *Client) List(ctx context.Context, prefix string, opts ...ClientOption) 
 			MaxKeys:    o.MaxKeys,
 			StartAfter: o.StartAfter,
 		},
-		o.S3Headers...,
+		o.S3Options...,
 	)
 
 	if err != nil {

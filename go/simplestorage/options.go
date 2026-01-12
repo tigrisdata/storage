@@ -6,16 +6,28 @@ import (
 	storage "github.com/tigrisdata/storage/go"
 )
 
+// Option is a functional option for new client creation.
 type Option func(o *Options)
 
+// Options is the set of options for client creation.
+//
+// These fields are made public so you can implement your own configuration resolution methods.
 type Options struct {
-	BucketName      string
-	AccessKeyID     string
+	// The bucket to operate against. Defaults to the contents of the environment variable
+	// `TIGRIS_STORAGE_BUCKET`.
+	BucketName string
+
+	// The access key ID of the Tigris keypair the Client should use. Defaults to the contents
+	// of the environment variable `TIGRIS_STORAGE_ACCESS_KEY_ID`.
+	AccessKeyID string
+
+	// The access key ID of the Tigris keypair the Client should use. Defaults to the contents
+	// of the environment variable `TIGRIS_STORAGE_SECRET_ACCESS_KEY`.
 	SecretAccessKey string
 
-	BaseEndpoint string
-	Region       string
-	UsePathStyle bool
+	BaseEndpoint string // The Tigris base endpoint the Client should use (defaults to GlobalEndpoint)
+	Region       string // The S3 region the Client should use (defaults to "auto").
+	UsePathStyle bool   // Should the Client use S3 path style resolution? (defaults to false).
 }
 
 func (Options) defaults() Options {
@@ -27,6 +39,15 @@ func (Options) defaults() Options {
 		BaseEndpoint: storage.GlobalEndpoint,
 		Region:       "auto",
 		UsePathStyle: false,
+	}
+}
+
+// WithBucket sets the default bucket for Tigris operations. If this is not set
+// via the `TIGRIS_STORAGE_BUCKET` environment variable or this call, New() will
+// return ErrNoBucketName.
+func WithBucket(bucketName string) Option {
+	return func(o *Options) {
+		o.BucketName = bucketName
 	}
 }
 
