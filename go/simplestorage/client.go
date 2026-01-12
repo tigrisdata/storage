@@ -126,7 +126,7 @@ func (c *Client) Get(ctx context.Context, key string, opts ...ClientOption) (*Ob
 		Etag:         Lower(resp.ETag, ""),
 		Size:         Lower(resp.ContentLength, 0),
 		Version:      Lower(resp.VersionId, ""),
-		LastModified: Lower(resp.LastModified, time.Unix(1, 1)),
+		LastModified: Lower(resp.LastModified, time.Time{}),
 		Body:         resp.Body,
 	}, nil
 }
@@ -213,7 +213,7 @@ func (c *Client) List(ctx context.Context, prefix string, opts ...ClientOption) 
 			Key:          *obj.Key,
 			Etag:         Lower(obj.ETag, ""),
 			Size:         Lower(obj.Size, 0),
-			LastModified: Lower(obj.LastModified, time.Unix(1, 1)),
+			LastModified: Lower(obj.LastModified, time.Time{}),
 		})
 	}
 
