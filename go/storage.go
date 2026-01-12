@@ -6,6 +6,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
@@ -31,9 +32,11 @@ type Options struct {
 // defaults returns the default configuration data for the Tigris client.
 func (Options) defaults() Options {
 	return Options{
-		BaseEndpoint: "https://t3.storage.dev",
-		Region:       "auto",
-		UsePathStyle: false,
+		BaseEndpoint:    "https://t3.storage.dev",
+		Region:          "auto",
+		UsePathStyle:    false,
+		AccessKeyID:     os.Getenv("TIGRIS_STORAGE_ACCESS_KEY_ID"),
+		SecretAccessKey: os.Getenv("TIGRIS_STORAGE_SECRET_ACCESS_KEY"),
 	}
 }
 
