@@ -2,7 +2,7 @@
 
 Tigris is a globally distributed object storage service that provides low latency anywhere in the world, enabling developers to store and access any amount of data for a wide range of use cases.
 
-This monorepo contains multiple packages for Tigris object storage:
+This monorepo contains multiple JavaScript/TypeScript packages for Tigris object storage:
 
 - [`@tigrisdata/storage`](./packages/storage) - Tigris Storage SDK
 - [`@tigrisdata/keyv-tigris`](./packages/keyv-tigris) - Tigris adapter for [Keyv](https://keyv.org/)
