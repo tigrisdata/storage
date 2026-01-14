@@ -14,3 +14,11 @@ The Go SDK is now maintained in a separate repository:
 
 - Repository: [https://github.com/tigrisdata/storage-go](https://github.com/tigrisdata/storage-go)
 - Documentation: [https://pkg.go.dev/github.com/tigrisdata/storage-go](https://pkg.go.dev/github.com/tigrisdata/storage-go)
+
+Install with:
+
+```sh
+go get github.com/tigrisdata/storage-go
+```
+
+See the documentation for examples and quickstart advice.
