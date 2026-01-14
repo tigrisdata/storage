@@ -1,6 +1,8 @@
-# Tigris Storage SDK
+# Tigris Storage SDKs
 
 Tigris is a globally distributed object storage service that provides low latency anywhere in the world, enabling developers to store and access any amount of data for a wide range of use cases.
+
+## JavaScript/TypeScript SDK
 
 This monorepo contains multiple JavaScript/TypeScript packages for Tigris object storage:
 
