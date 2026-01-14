@@ -10,7 +10,7 @@ This monorepo contains multiple packages for Tigris object storage:
 
 ## Go SDK
 
-The Go SDK is now maintained in a separate repository:
+The Go SDK is maintained in a separate repository:
 
 - Repository: [https://github.com/tigrisdata/storage-go](https://github.com/tigrisdata/storage-go)
 - Documentation: [https://pkg.go.dev/github.com/tigrisdata/storage-go](https://pkg.go.dev/github.com/tigrisdata/storage-go)
