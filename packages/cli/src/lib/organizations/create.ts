@@ -1,7 +1,6 @@
-import { createOrganization } from '@tigrisdata/storage';
+import { createOrganization } from '@tigrisdata/iam';
 import { getOption } from '../../utils/options.js';
 import { getStorageConfig } from '../../auth/s3-client.js';
-import { getAuthClient } from '../../auth/client.js';
 import { getLoginMethod, getCredentials } from '../../auth/storage.js';
 import {
   printStart,
@@ -11,7 +10,7 @@ import {
   msg,
 } from '../../utils/messages.js';
 
-const context = msg('orgs', 'create');
+const context = msg('organizations', 'create');
 
 export default async function create(options: Record<string, unknown>) {
   printStart(context);
@@ -50,15 +49,8 @@ export default async function create(options: Record<string, unknown>) {
     process.exit(1);
   }
 
-  const authClient = getAuthClient();
-  const tokens = await authClient.refreshAccessToken();
+  const id = data.id;
 
-  if (tokens.idToken) {
-    await authClient.extractAndStoreOrganizations(tokens.idToken);
-  }
-
-  const orgId = data.id;
-
-  printSuccess(context, { name, id: orgId });
+  printSuccess(context, { name, id });
   printHint(context, { name });
 }

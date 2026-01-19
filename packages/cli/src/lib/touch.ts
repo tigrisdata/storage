@@ -38,4 +38,5 @@ export default async function touch(options: Record<string, unknown>) {
   }
 
   console.log(`Created '${bucket}/${path}'`);
+  process.exit(0);
 }

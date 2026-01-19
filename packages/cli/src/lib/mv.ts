@@ -66,6 +66,15 @@ export default async function mv(options: Record<string, unknown>) {
         ? srcPath.path
         : `${srcPath.path}/`;
 
+    // Check for same location (folder to itself)
+    const destPrefix = destPath.path
+      ? `${destPath.path.replace(/\/$/, '')}/`
+      : '';
+    if (srcPath.bucket === destPath.bucket && prefix === destPrefix) {
+      console.error('Source and destination are the same');
+      process.exit(1);
+    }
+
     const { items, error } = await listAllItems(
       srcPath.bucket,
       prefix || undefined,
@@ -134,6 +143,7 @@ export default async function mv(options: Record<string, unknown>) {
     }
 
     // Also move the folder marker if it exists (already checked above)
+    let movedMarker = false;
     if (hasFolderMarker) {
       if (destPath.path) {
         // Move folder marker to destination folder
@@ -148,7 +158,7 @@ export default async function mv(options: Record<string, unknown>) {
         if (markerResult.error) {
           console.error(`Failed to move folder marker: ${markerResult.error}`);
         } else {
-          moved++;
+          movedMarker = true;
         }
       } else {
         // Moving to root - just delete source folder marker, no marker at root
@@ -163,9 +173,14 @@ export default async function mv(options: Record<string, unknown>) {
             `Failed to remove source folder marker: ${removeError.message}`
           );
         } else {
-          moved++;
+          movedMarker = true;
         }
       }
+    }
+
+    // Only count folder marker if no regular files were moved (empty folder case)
+    if (moved === 0 && movedMarker) {
+      moved = 1;
     }
 
     console.log(`Moved ${moved} object(s)`);
@@ -199,6 +214,12 @@ export default async function mv(options: Record<string, unknown>) {
       }
     }
 
+    // Check for same location
+    if (srcPath.bucket === destPath.bucket && srcPath.path === destKey) {
+      console.error('Source and destination are the same');
+      process.exit(1);
+    }
+
     if (!force) {
       const confirmed = await confirm(
         `Are you sure you want to move '${srcPath.bucket}/${srcPath.path}'?`
@@ -224,6 +245,7 @@ export default async function mv(options: Record<string, unknown>) {
 
     console.log(`Moved ${src} -> ${destPath.bucket}/${destKey}`);
   }
+  process.exit(0);
 }
 
 async function moveObject(

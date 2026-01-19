@@ -1,5 +1,6 @@
+import { listOrganizations } from '@tigrisdata/iam';
 import { getOption } from '../../utils/options.js';
-import { getAuthClient } from '../../auth/client.js';
+import { getStorageConfig } from '../../auth/s3-client.js';
 import {
   storeSelectedOrganization,
   getLoginMethod,
@@ -12,7 +13,7 @@ import {
   msg,
 } from '../../utils/messages.js';
 
-const context = msg('orgs', 'select');
+const context = msg('organizations', 'select');
 
 export default async function select(options: Record<string, unknown>) {
   printStart(context);
@@ -42,38 +43,33 @@ export default async function select(options: Record<string, unknown>) {
     process.exit(1);
   }
 
-  try {
-    // Get authenticated client
-    const authClient = getAuthClient();
-    await authClient.getAccessToken();
+  const config = await getStorageConfig();
 
-    // Get available organizations
-    const orgs = await authClient.getOrganizations();
+  const { data, error } = await listOrganizations({ config });
 
-    // Find organization by name or ID
-    const org = orgs.find((o) => o.id === name || o.name === name);
-
-    if (!org) {
-      const availableOrgs = orgs
-        .map((o) => `   - ${o.name} (${o.id})`)
-        .join('\n');
-      printFailure(
-        context,
-        `Organization "${name}" not found\n\nAvailable organizations:\n${availableOrgs}`
-      );
-      process.exit(1);
-    }
-
-    // Store selected organization
-    await storeSelectedOrganization(org.id);
-
-    printSuccess(context, { name: org.name });
-  } catch (error) {
-    if (error instanceof Error) {
-      printFailure(context, error.message);
-    } else {
-      printFailure(context);
-    }
+  if (error) {
+    printFailure(context, error.message);
     process.exit(1);
   }
+
+  const orgs = data?.organizations ?? [];
+
+  // Find organization by name or ID
+  const org = orgs.find((o) => o.id === name || o.name === name);
+
+  if (!org) {
+    const availableOrgs = orgs
+      .map((o) => `   - ${o.name} (${o.id})`)
+      .join('\n');
+    printFailure(
+      context,
+      `Organization "${name}" not found\n\nAvailable organizations:\n${availableOrgs}`
+    );
+    process.exit(1);
+  }
+
+  // Store selected organization
+  await storeSelectedOrganization(org.id);
+
+  printSuccess(context, { name: org.name });
 }

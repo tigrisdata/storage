@@ -34,6 +34,6 @@ export function getTigrisConfig(): TigrisConfig {
   return {
     endpoint: process.env.TIGRIS_STORAGE_ENDPOINT || 'https://t3.storage.dev',
     iamEndpoint:
-      process.env.TIGRIS_STORAGE_IAM_ENDPOINT || 'https://iam.storageapi.dev',
+      process.env.TIGRIS_IAM_ENDPOINT || 'https://iam.storageapi.dev',
   };
 }

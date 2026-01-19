@@ -72,11 +72,11 @@ export default async function credentials(options: Record<string, unknown>) {
     process.exit(1);
   }
 
-  // Get endpoint: configured → env var → default
+  // Get endpoint: env var → configured → default
   const configuredCreds = getSavedCredentials();
   const endpoint =
-    configuredCreds?.endpoint ||
     process.env.TIGRIS_STORAGE_ENDPOINT ||
+    configuredCreds?.endpoint ||
     'https://t3.storage.dev';
 
   // Store as temporary credentials (cleared on logout)

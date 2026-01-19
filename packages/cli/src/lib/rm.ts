@@ -192,4 +192,5 @@ export default async function rm(options: Record<string, unknown>) {
 
     console.log(`Removed ${bucket}/${path}`);
   }
+  process.exit(0);
 }

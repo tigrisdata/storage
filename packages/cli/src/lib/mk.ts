@@ -30,6 +30,7 @@ export default async function mk(options: Record<string, unknown>) {
     }
 
     console.log(`Bucket '${bucket}' created`);
+    process.exit(0);
   } else {
     // Create a "folder" (empty object with trailing slash)
     const folderPath = path.endsWith('/') ? path : `${path}/`;
@@ -47,5 +48,6 @@ export default async function mk(options: Record<string, unknown>) {
     }
 
     console.log(`Folder '${bucket}/${folderPath}' created`);
+    process.exit(0);
   }
 }

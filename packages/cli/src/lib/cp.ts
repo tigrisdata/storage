@@ -50,6 +50,15 @@ export default async function cp(options: Record<string, unknown>) {
         ? srcPath.path
         : `${srcPath.path}/`;
 
+    // Check for same location (folder to itself)
+    const destPrefix = destPath.path
+      ? `${destPath.path.replace(/\/$/, '')}/`
+      : '';
+    if (srcPath.bucket === destPath.bucket && prefix === destPrefix) {
+      console.error('Source and destination are the same');
+      process.exit(1);
+    }
+
     const { items, error } = await listAllItems(
       srcPath.bucket,
       prefix || undefined,
@@ -89,6 +98,7 @@ export default async function cp(options: Record<string, unknown>) {
 
     // Also copy the folder marker if it exists and we have a destination path
     // Use prefix directly - it's already correctly computed for wildcards
+    let copiedMarker = false;
     if (destPath.path && prefix) {
       const { data: markerData } = await list({
         prefix,
@@ -111,9 +121,14 @@ export default async function cp(options: Record<string, unknown>) {
         if (markerResult.error) {
           console.error(`Failed to copy folder marker: ${markerResult.error}`);
         } else {
-          copied++;
+          copiedMarker = true;
         }
       }
+    }
+
+    // Only count folder marker if no regular files were copied (empty folder case)
+    if (copied === 0 && copiedMarker) {
+      copied = 1;
     }
 
     if (copied === 0) {
@@ -152,6 +167,12 @@ export default async function cp(options: Record<string, unknown>) {
       }
     }
 
+    // Check for same location
+    if (srcPath.bucket === destPath.bucket && srcPath.path === destKey) {
+      console.error('Source and destination are the same');
+      process.exit(1);
+    }
+
     const result = await copyObject(
       config,
       srcPath.bucket,
@@ -167,6 +188,7 @@ export default async function cp(options: Record<string, unknown>) {
 
     console.log(`Copied ${src} -> ${destPath.bucket}/${destKey}`);
   }
+  process.exit(0);
 }
 
 async function copyObject(

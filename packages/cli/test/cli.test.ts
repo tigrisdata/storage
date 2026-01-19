@@ -13,6 +13,8 @@ function runCli(args: string): {
   try {
     const stdout = execSync(`node dist/cli.js ${args}`, {
       encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'pipe'], // Ignore stdin to prevent hanging on prompts
+      timeout: 30000, // 30 second timeout per command
       env: {
         ...process.env,
         // Pass through auth env vars
@@ -28,7 +30,16 @@ function runCli(args: string): {
       stdout?: string;
       stderr?: string;
       status?: number;
+      signal?: string;
     };
+    // Check if it was a timeout
+    if (execError.signal === 'SIGTERM') {
+      return {
+        stdout: execError.stdout || '',
+        stderr: 'Command timed out after 30 seconds',
+        exitCode: 124,
+      };
+    }
     return {
       stdout: execError.stdout || '',
       stderr: execError.stderr || '',
@@ -512,7 +523,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Moved');
-      expect(result.stdout).toContain('3 object(s)');
+      expect(result.stdout).toContain('2 object(s)');
     });
 
     it('should not show source folder after wildcard move', () => {
