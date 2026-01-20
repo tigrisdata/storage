@@ -22,11 +22,7 @@ export function createStorageClient(
     };
   }
 
-  if (
-    !sessionToken &&
-    !hasCredentials &&
-    (!organizationId || organizationId === '')
-  ) {
+  if (!sessionToken && (!organizationId || organizationId === '')) {
     return { error: new Error('Organization ID is required') };
   }
 
