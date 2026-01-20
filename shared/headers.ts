@@ -1,4 +1,7 @@
 export enum TigrisHeaders {
+  ACL = 'X-Amz-Acl',
+  ACL_LIST_OBJECTS = 'X-Amz-Acl-Public-List-Objects-Enabled',
+  AUTHORIZATION = 'authorization',
   SESSION_TOKEN = 'x-amz-security-token',
   NAMESPACE = 'X-Tigris-Namespace',
   STORAGE_CLASS = 'X-Amz-Storage-Class',
