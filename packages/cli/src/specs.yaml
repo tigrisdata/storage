@@ -171,6 +171,24 @@ commands:
       onSuccess: 'Logged out. Your configured credentials are still saved.'
       onFailure: 'Failed to logout'
 
+  # credentials
+  - name: credentials
+    description: Manage and test credentials
+    alias: creds
+    operations:
+      - name: test
+        description: Test if credentials have access to Tigris (optionally to a specific bucket)
+        alias: t
+        messages:
+          onStart: 'Testing credentials...'
+          onSuccess: 'Credentials are valid'
+          onFailure: 'Credentials test failed'
+        arguments:
+          - name: bucket
+            description: Bucket name to test access against (optional)
+            alias: b
+            required: false
+
   #########################
   # Unix style commands
   #########################
