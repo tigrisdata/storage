@@ -25,6 +25,11 @@ export {
   type ListBucketSnapshotsOptions,
   type ListBucketSnapshotsResponse,
 } from './lib/bucket/snapshot';
+export {
+  updateBucket,
+  type UpdateBucketOptions,
+  type UpdateBucketResponse,
+} from './lib/bucket/update';
 export { get, type GetOptions, type GetResponse } from './lib/object/get';
 export { head, type HeadOptions, type HeadResponse } from './lib/object/head';
 export {
