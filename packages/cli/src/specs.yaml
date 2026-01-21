@@ -429,6 +429,39 @@ commands:
             type: positional
             required: true
             multiple: true
+      # set
+      - name: set
+        description: Update bucket settings
+        alias: s
+        messages:
+          onStart: 'Updating bucket...'
+          onSuccess: 'Bucket {{name}} updated successfully'
+          onFailure: 'Failed to update bucket'
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: positional
+            required: true
+          - name: access
+            description: Bucket access level
+            options: *access_options
+          - name: region
+            description: Allowed regions (can specify multiple)
+            options: *region_options
+            multiple: true
+          - name: allow-object-acl
+            description: Enable object-level ACL
+            type: boolean
+          - name: disable-directory-listing
+            description: Disable directory listing
+            type: boolean
+          - name: cache-control
+            description: Default cache-control header value
+          - name: custom-domain
+            description: Custom domain for the bucket
+          - name: enable-delete-protection
+            description: Enable delete protection
+            type: boolean
 
   #########################
   # Manage forks

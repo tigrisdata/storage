@@ -17,3 +17,19 @@ export function getOption<T>(
   }
   return defaultValue;
 }
+
+/**
+ * Parses a boolean value from string or boolean input
+ * - undefined → undefined
+ * - true (boolean) → true
+ * - false (boolean) → false
+ * - "true" (string) → true
+ * - "false" (string) → false
+ */
+export function parseBoolean(
+  value: string | boolean | undefined
+): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === 'boolean') return value;
+  return value === 'true';
+}

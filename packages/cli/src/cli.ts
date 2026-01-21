@@ -210,7 +210,10 @@ function addArgumentsToCommand(cmd: CommanderCommand, args: Argument[] = []) {
         : `--${arg.name}`;
 
       if (arg.type === 'flag') {
-        // Flags don't take values
+        // Flags don't take values - presence means true
+      } else if (arg.type === 'boolean') {
+        // Boolean options take optional value, defaulting to true when present without value
+        optionString += ' [value]';
       } else if (arg.options) {
         optionString += ' <value>';
       } else {
