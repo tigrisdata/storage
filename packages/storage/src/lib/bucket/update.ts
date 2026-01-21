@@ -3,9 +3,31 @@ import { createStorageClient } from '../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type UpdateBucketOptions = {
+  // access and sharing settings
   access?: 'public' | 'private';
-  consistency?: 'strict' | 'default';
-  region?: string | string[];
+  allowObjectAcl?: boolean;
+  disableDirectoryListing?: boolean;
+
+  // storage settings
+  // consistency?: 'strict' | 'default';
+  regions?: string | string[];
+  cacheControl?: string;
+
+  // data management settings
+  // TODO: Data Migration, TTL Config, Objects Lifecycle
+
+  // custom domain
+  customDomain?: string;
+
+  // cors settings
+  // TODO: Additional Headers, CORS Rules
+
+  // notification settings
+  // TODO: enableNotifications?: boolean;
+
+  // deletion settings
+  enableDeleteProtection?: boolean;
+
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
@@ -27,19 +49,44 @@ export async function updateBucket(
   const body: Record<string, unknown> = {};
   const headers: Record<string, string> = {};
 
+  // access and sharing settings
   if (options?.access !== undefined) {
     headers[TigrisHeaders.ACL] =
       options.access === 'public' ? 'public-read' : 'private';
   }
 
-  if (options?.consistency !== undefined) {
-    body.consistent = options.consistency === 'strict' ? true : false;
+  if (options?.allowObjectAcl !== undefined) {
+    body.acl_settings = { allow_object_acl: options.allowObjectAcl };
   }
 
-  if (options?.region !== undefined) {
-    body.object_regions = Array.isArray(options.region)
-      ? options.region.join(',')
-      : options.region;
+  if (options?.disableDirectoryListing !== undefined) {
+    headers[TigrisHeaders.ACL_LIST_OBJECTS] =
+      options.disableDirectoryListing === true ? 'false' : 'true';
+  }
+
+  // storage settings
+  /*if (options?.consistency !== undefined) {
+    body.consistent = options.consistency === 'strict' ? true : false;
+  }*/
+
+  if (options?.regions !== undefined) {
+    body.object_regions = Array.isArray(options.regions)
+      ? options.regions.join(',')
+      : options.regions;
+  }
+
+  if (options?.cacheControl !== undefined) {
+    body.cache_control = options.cacheControl;
+  }
+
+  // custom domain
+  if (options?.customDomain !== undefined) {
+    body.website = { domain_name: options.customDomain };
+  }
+
+  // deletion settings
+  if (options?.enableDeleteProtection !== undefined) {
+    body.protection = { protected: options.enableDeleteProtection };
   }
 
   const response = await client.request<
