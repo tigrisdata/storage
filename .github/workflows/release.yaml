@@ -22,7 +22,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Set up Node.js
+      # Set up Node.js with npm provenance
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -32,12 +32,10 @@ jobs:
       - run: npm run lint
 
       - name: Build packages
-        run: |
-          npm run build
+        run: npm run build
 
       - name: Lint packages
-        run: |
-          npm run publint
+        run: npm run publint
 
       - name: Test packages
         env:
@@ -45,14 +43,12 @@ jobs:
           TIGRIS_STORAGE_ACCESS_KEY_ID: ${{ secrets.TIGRIS_STORAGE_ACCESS_KEY_ID }}
           TIGRIS_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_STORAGE_SECRET_ACCESS_KEY }}
           TIGRIS_STORAGE_ENDPOINT: ${{ secrets.TIGRIS_STORAGE_ENDPOINT }}
-        run: |
-          npm run test
+        run: npm run test
 
       - run: npm audit signatures
 
-      # Release to GitHub and NPM
+      # Release packages in dependency order
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm run release
+        run: ./scripts/release.sh
