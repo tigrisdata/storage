@@ -131,7 +131,11 @@ export function createTigrisHttpClient(
       // Prepare body for signing
       let bodyString: string | undefined;
       if (req.body && req.method !== 'GET' && req.method !== 'HEAD') {
-        bodyString = JSON.stringify(req.body);
+        if (req.body instanceof URLSearchParams) {
+          bodyString = req.body.toString();
+        } else {
+          bodyString = JSON.stringify(req.body);
+        }
       }
 
       // Use credentials-based auth with signature if available
