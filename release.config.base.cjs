@@ -14,11 +14,18 @@ module.exports = (packageName) => {
         '@semantic-release/commit-analyzer',
         {
           releaseRules: [
+            // Scoped rules: only match commits for this package
             { scope, type: 'feat', release: 'minor' },
             { scope, type: 'fix', release: 'patch' },
             { scope, type: 'perf', release: 'patch' },
             { scope, type: 'refactor', release: 'patch' },
             { scope, breaking: true, release: 'major' },
+            // Catch-all: prevent OTHER scopes from triggering releases
+            // Uses negation pattern !(scope) to exclude this package's scope
+            { scope: `!(${scope})`, type: 'feat', release: false },
+            { scope: `!(${scope})`, type: 'fix', release: false },
+            { scope: `!(${scope})`, type: 'perf', release: false },
+            { scope: `!(${scope})`, type: 'refactor', release: false },
           ],
         },
       ],

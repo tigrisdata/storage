@@ -18,8 +18,13 @@ ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 # Parse arguments
 DRY_RUN=""
 if [[ "${1:-}" == "--dry-run" ]]; then
-  DRY_RUN="--dry-run --no-ci"
-  echo "🔍 Running in dry-run mode"
+  # Get current branch for local dry-run, or use GITHUB_HEAD_REF in CI PR context
+  CURRENT_BRANCH="${GITHUB_HEAD_REF:-$(git rev-parse --abbrev-ref HEAD)}"
+  # Skip npm verification in dry-run (only verify GitHub conditions)
+  DRY_RUN="--dry-run --no-ci --branches ${CURRENT_BRANCH} --verify-conditions @semantic-release/github"
+  # Unset GITHUB_ACTIONS so semantic-release doesn't try to read CI env vars
+  unset GITHUB_ACTIONS
+  echo "🔍 Running in dry-run mode on branch: ${CURRENT_BRANCH}"
 fi
 
 # Colors for output
