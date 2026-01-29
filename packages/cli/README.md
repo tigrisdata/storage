@@ -35,6 +35,8 @@ Run `tigris help` to see all available commands, or `tigris <command> help` for 
 ### Resources
 
 - `tigris organizations` - Manage organizations
+- `tigris access-keys` - Manage access keys
+- `tigris credentials` - Manage and test credentials
 - `tigris buckets` - Manage buckets
 - `tigris forks` - Manage forks
 - `tigris snapshots` - Manage snapshots
@@ -236,6 +238,73 @@ tigris organizations create <name>
 tigris organizations select <name>
 ```
 
+### `access-keys` | `keys`
+
+Manage access keys
+
+| Command | Description |
+|---------|-------------|
+| `access-keys list` (l) | List all access keys |
+| `access-keys create` (c) | Create a new access key |
+| `access-keys delete` (d) | Delete an access key |
+| `access-keys get` (g) | Get details of an access key |
+| `access-keys assign` (a) | Assign bucket roles to an access key |
+
+#### `access-keys list`
+
+```
+tigris access-keys list
+```
+
+#### `access-keys create`
+
+```
+tigris access-keys create <name>
+```
+
+#### `access-keys delete`
+
+```
+tigris access-keys delete <id>
+```
+
+#### `access-keys get`
+
+```
+tigris access-keys get <id>
+```
+
+#### `access-keys assign`
+
+```
+tigris access-keys assign <id> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-b, --bucket` | Bucket name (can specify multiple) |
+| `-r, --role` | Role to assign (can specify multiple to pair with buckets) |
+| `--admin` | Grant admin access to all buckets in the organization |
+| `--revoke-roles` | Revoke all bucket roles from the access key |
+
+### `credentials` | `creds`
+
+Manage and test credentials
+
+| Command | Description |
+|---------|-------------|
+| `credentials test` (t) | Test if credentials have access to Tigris (optionally to a specific bucket) |
+
+#### `credentials test`
+
+```
+tigris credentials test [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-b, --bucket` | Bucket name to test access against (optional) |
+
 ### Buckets
 
 Buckets are containers for objects. You can also create forks and snapshots of buckets.
@@ -250,6 +319,7 @@ Manage buckets
 | `buckets create` (c) | Create bucket |
 | `buckets get` (g) | Get bucket details |
 | `buckets delete` (d) | Delete bucket |
+| `buckets set` (s) | Update bucket settings |
 
 ##### `buckets list`
 
@@ -286,6 +356,22 @@ tigris buckets get <name>
 ```
 tigris buckets delete <name>
 ```
+
+##### `buckets set`
+
+```
+tigris buckets set <name> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--access` | Bucket access level |
+| `--region` | Allowed regions (can specify multiple) |
+| `--allow-object-acl` | Enable object-level ACL |
+| `--disable-directory-listing` | Disable directory listing |
+| `--cache-control` | Default cache-control header value |
+| `--custom-domain` | Custom domain for the bucket |
+| `--enable-delete-protection` | Enable delete protection |
 
 #### `forks` | `f`
 

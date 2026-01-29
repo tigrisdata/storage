@@ -189,7 +189,7 @@ function generateDocs(specs: Specs): string {
   lines.push('');
 
   // Resource management
-  const resourceCommands = ['organizations', 'buckets', 'forks', 'snapshots', 'objects'];
+  const resourceCommands = ['organizations', 'access-keys', 'credentials', 'buckets', 'forks', 'snapshots', 'objects'];
   const implementedResources = resourceCommands.filter((c) => {
     const cmd = specs.commands.find((s) => s.name === c);
     return cmd?.operations?.some((op) => isImplemented(c, op.name));
@@ -240,6 +240,22 @@ function generateDocs(specs: Specs): string {
     const orgsCmd = specs.commands.find((c) => c.name === 'organizations');
     if (orgsCmd) {
       lines.push(generateResourceSection(orgsCmd));
+    }
+  }
+
+  // Access Keys
+  if (implementedResources.includes('access-keys')) {
+    const accessKeysCmd = specs.commands.find((c) => c.name === 'access-keys');
+    if (accessKeysCmd) {
+      lines.push(generateResourceSection(accessKeysCmd));
+    }
+  }
+
+  // Credentials
+  if (implementedResources.includes('credentials')) {
+    const credentialsCmd = specs.commands.find((c) => c.name === 'credentials');
+    if (credentialsCmd) {
+      lines.push(generateResourceSection(credentialsCmd));
     }
   }
 

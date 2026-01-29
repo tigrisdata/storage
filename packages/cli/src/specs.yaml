@@ -189,6 +189,85 @@ commands:
             alias: b
             required: false
 
+  # access-keys
+  - name: access-keys
+    description: Manage access keys
+    alias: keys
+    operations:
+      - name: list
+        description: List all access keys
+        alias: l
+        messages:
+          onStart: ''
+          onSuccess: ''
+          onFailure: 'Failed to list access keys'
+          onEmpty: 'No access keys found'
+      - name: create
+        description: Create a new access key
+        alias: c
+        messages:
+          onStart: 'Creating access key...'
+          onSuccess: 'Access key created'
+          onFailure: 'Failed to create access key'
+        arguments:
+          - name: name
+            description: Name for the access key
+            type: positional
+            required: true
+      - name: delete
+        description: Delete an access key
+        alias: d
+        messages:
+          onStart: 'Deleting access key...'
+          onSuccess: 'Access key deleted'
+          onFailure: 'Failed to delete access key'
+        arguments:
+          - name: id
+            description: Access key ID
+            type: positional
+            required: true
+      - name: get
+        description: Get details of an access key
+        alias: g
+        messages:
+          onStart: ''
+          onSuccess: ''
+          onFailure: 'Failed to get access key'
+        arguments:
+          - name: id
+            description: Access key ID
+            type: positional
+            required: true
+      - name: assign
+        description: Assign bucket roles to an access key
+        alias: a
+        messages:
+          onStart: 'Assigning bucket roles...'
+          onSuccess: 'Bucket roles assigned'
+          onFailure: 'Failed to assign bucket roles'
+        arguments:
+          - name: id
+            description: Access key ID
+            type: positional
+            required: true
+          - name: bucket
+            alias: b
+            description: Bucket name (can specify multiple)
+            multiple: true
+          - name: role
+            alias: r
+            description: Role to assign (can specify multiple to pair with buckets)
+            multiple: true
+            options:
+              - Editor
+              - ReadOnly
+          - name: admin
+            description: Grant admin access to all buckets in the organization
+            type: flag
+          - name: revoke-roles
+            description: Revoke all bucket roles from the access key
+            type: flag
+
   #########################
   # Unix style commands
   #########################
