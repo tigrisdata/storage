@@ -5,13 +5,18 @@
 
 import { S3Client } from '@aws-sdk/client-s3';
 import type { HttpRequest } from '@aws-sdk/types';
+import { fromIni } from '@aws-sdk/credential-providers';
 import {
   getLoginMethod as getStoredLoginMethod,
-  getCredentials,
+  getStoredCredentials,
+  getEnvCredentials,
+  hasAwsProfile,
+  getAwsProfileConfig,
   getSelectedOrganization,
 } from './storage.js';
 import { getAuthClient } from './client.js';
 import { getAuth0Config, getTigrisConfig } from './config.js';
+import { DEFAULT_STORAGE_ENDPOINT } from '../constants.js';
 
 const tigrisConfig = getTigrisConfig();
 const auth0Config = getAuth0Config();
@@ -37,10 +42,26 @@ export type TigrisStorageConfig = {
 };
 
 export async function getStorageConfig(): Promise<TigrisStorageConfig> {
+  // 1. AWS profile (only if AWS_PROFILE is set)
+  if (hasAwsProfile()) {
+    const profile = process.env.AWS_PROFILE || 'default';
+    const profileConfig = await getAwsProfileConfig(profile);
+    const resolved = await fromIni({ profile })();
+    return {
+      accessKeyId: resolved.accessKeyId,
+      secretAccessKey: resolved.secretAccessKey,
+      endpoint:
+        profileConfig.endpoint ||
+        tigrisConfig.endpoint ||
+        DEFAULT_STORAGE_ENDPOINT,
+      iamEndpoint: profileConfig.iamEndpoint || tigrisConfig.iamEndpoint,
+    };
+  }
+
+  // 2. Login (oauth or credentials)
   const loginMethod = await getLoginMethod();
 
   if (loginMethod === 'oauth') {
-    // OAuth login - use access token and selected org
     const authClient = getAuthClient();
     const accessToken = await authClient.getAccessToken();
     const selectedOrg = getSelectedOrganization();
@@ -51,23 +72,40 @@ export async function getStorageConfig(): Promise<TigrisStorageConfig> {
       );
     }
 
-    const endpoint = tigrisConfig.endpoint;
-    const iamEndpoint = tigrisConfig.iamEndpoint;
-    const authDomain = auth0Config.domain;
-
     return {
       sessionToken: accessToken,
       accessKeyId: '',
       secretAccessKey: '',
-      endpoint,
+      endpoint: tigrisConfig.endpoint,
       organizationId: getSelectedOrganization() ?? undefined,
-      iamEndpoint,
-      authDomain,
+      iamEndpoint: tigrisConfig.iamEndpoint,
+      authDomain: auth0Config.domain,
     };
   }
 
-  // Either loginMethod is 'credentials' OR no loginMethod but credentials exist
-  const credentials = getCredentials();
+  if (loginMethod === 'credentials') {
+    const loginCredentials = getStoredCredentials();
+    if (loginCredentials) {
+      return {
+        accessKeyId: loginCredentials.accessKeyId,
+        secretAccessKey: loginCredentials.secretAccessKey,
+        endpoint: loginCredentials.endpoint,
+      };
+    }
+  }
+
+  // 3. Env vars
+  const envCredentials = getEnvCredentials();
+  if (envCredentials) {
+    return {
+      accessKeyId: envCredentials.accessKeyId,
+      secretAccessKey: envCredentials.secretAccessKey,
+      endpoint: envCredentials.endpoint,
+    };
+  }
+
+  // 4. Configured credentials
+  const credentials = getStoredCredentials();
 
   if (credentials) {
     return {
@@ -87,10 +125,26 @@ export async function getStorageConfig(): Promise<TigrisStorageConfig> {
  * Get configured S3 client based on login method
  */
 export async function getS3Client(): Promise<S3Client> {
+  // 1. AWS profile (only if AWS_PROFILE is set)
+  if (hasAwsProfile()) {
+    const profile = process.env.AWS_PROFILE || 'default';
+    const profileConfig = await getAwsProfileConfig(profile);
+    const client = new S3Client({
+      region: 'auto',
+      endpoint:
+        profileConfig.endpoint ||
+        tigrisConfig.endpoint ||
+        DEFAULT_STORAGE_ENDPOINT,
+      credentials: fromIni({ profile }),
+    });
+
+    return client;
+  }
+
+  // 2. Login (oauth or credentials)
   const loginMethod = await getLoginMethod();
 
   if (loginMethod === 'oauth') {
-    // OAuth login - use access token and selected org
     const authClient = getAuthClient();
     const accessToken = await authClient.getAccessToken();
     const selectedOrg = getSelectedOrganization();
@@ -101,13 +155,9 @@ export async function getS3Client(): Promise<S3Client> {
       );
     }
 
-    const endpoint = tigrisConfig.endpoint;
-
-    // Get credentials config to get endpoint if available, otherwise use default
-    // Create S3 client with custom headers for OAuth
     const client = new S3Client({
       region: 'auto',
-      endpoint,
+      endpoint: tigrisConfig.endpoint,
       credentials: {
         sessionToken: accessToken,
         accessKeyId: '', // Required by SDK but not used with token auth
@@ -133,11 +183,41 @@ export async function getS3Client(): Promise<S3Client> {
     return client;
   }
 
-  // Either loginMethod is 'credentials' OR no loginMethod but credentials exist
-  const credentials = getCredentials();
+  if (loginMethod === 'credentials') {
+    const loginCredentials = getStoredCredentials();
+    if (loginCredentials) {
+      const client = new S3Client({
+        region: 'auto',
+        endpoint: loginCredentials.endpoint,
+        credentials: {
+          accessKeyId: loginCredentials.accessKeyId,
+          secretAccessKey: loginCredentials.secretAccessKey,
+        },
+      });
+
+      return client;
+    }
+  }
+
+  // 3. Env vars
+  const envCredentials = getEnvCredentials();
+  if (envCredentials) {
+    const client = new S3Client({
+      region: 'auto',
+      endpoint: envCredentials.endpoint,
+      credentials: {
+        accessKeyId: envCredentials.accessKeyId,
+        secretAccessKey: envCredentials.secretAccessKey,
+      },
+    });
+
+    return client;
+  }
+
+  // 4. Configured credentials
+  const credentials = getStoredCredentials();
 
   if (credentials) {
-    // Create S3 client with access key and secret
     const client = new S3Client({
       region: 'auto',
       endpoint: credentials.endpoint,
@@ -160,11 +240,10 @@ export async function getS3Client(): Promise<S3Client> {
  * Check if user is authenticated (either method)
  */
 export async function isAuthenticated(): Promise<boolean> {
-  const method = await getLoginMethod();
-  if (method !== null) {
-    return true;
-  }
-  // Also check if credentials exist (e.g., after logout with configured credentials)
-  const credentials = getCredentials();
-  return credentials !== null;
+  return (
+    hasAwsProfile() ||
+    (await getLoginMethod()) !== null ||
+    getEnvCredentials() !== null ||
+    getStoredCredentials() !== null
+  );
 }

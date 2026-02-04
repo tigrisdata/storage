@@ -5,6 +5,7 @@ import {
   storeLoginMethod,
   storeTemporaryCredentials,
 } from '../../auth/storage.js';
+import { DEFAULT_STORAGE_ENDPOINT } from '../../constants.js';
 import {
   printStart,
   printSuccess,
@@ -72,12 +73,9 @@ export default async function credentials(options: Record<string, unknown>) {
     process.exit(1);
   }
 
-  // Get endpoint: env var → configured → default
+  // Get endpoint: configured → default
   const configuredCreds = getSavedCredentials();
-  const endpoint =
-    process.env.TIGRIS_STORAGE_ENDPOINT ||
-    configuredCreds?.endpoint ||
-    'https://t3.storage.dev';
+  const endpoint = configuredCreds?.endpoint || DEFAULT_STORAGE_ENDPOINT;
 
   // Store as temporary credentials (cleared on logout)
   await storeTemporaryCredentials({

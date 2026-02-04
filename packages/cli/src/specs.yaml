@@ -79,7 +79,7 @@ commands:
   #########################
   # configure
   - name: configure
-    description: Save credentials permanently. After running this, all commands work automatically
+    description: Save credentials permanently. After running this, all commands uses these credentials.
     alias: c
     messages:
       onStart: 'Saving credentials...'
@@ -189,84 +189,6 @@ commands:
             alias: b
             required: false
 
-  # access-keys
-  - name: access-keys
-    description: Manage access keys
-    alias: keys
-    operations:
-      - name: list
-        description: List all access keys
-        alias: l
-        messages:
-          onStart: ''
-          onSuccess: ''
-          onFailure: 'Failed to list access keys'
-          onEmpty: 'No access keys found'
-      - name: create
-        description: Create a new access key
-        alias: c
-        messages:
-          onStart: 'Creating access key...'
-          onSuccess: 'Access key created'
-          onFailure: 'Failed to create access key'
-        arguments:
-          - name: name
-            description: Name for the access key
-            type: positional
-            required: true
-      - name: delete
-        description: Delete an access key
-        alias: d
-        messages:
-          onStart: 'Deleting access key...'
-          onSuccess: 'Access key deleted'
-          onFailure: 'Failed to delete access key'
-        arguments:
-          - name: id
-            description: Access key ID
-            type: positional
-            required: true
-      - name: get
-        description: Get details of an access key
-        alias: g
-        messages:
-          onStart: ''
-          onSuccess: ''
-          onFailure: 'Failed to get access key'
-        arguments:
-          - name: id
-            description: Access key ID
-            type: positional
-            required: true
-      - name: assign
-        description: Assign bucket roles to an access key
-        alias: a
-        messages:
-          onStart: 'Assigning bucket roles...'
-          onSuccess: 'Bucket roles assigned'
-          onFailure: 'Failed to assign bucket roles'
-        arguments:
-          - name: id
-            description: Access key ID
-            type: positional
-            required: true
-          - name: bucket
-            alias: b
-            description: Bucket name (can specify multiple)
-            multiple: true
-          - name: role
-            alias: r
-            description: Role to assign (can specify multiple to pair with buckets)
-            multiple: true
-            options:
-              - Editor
-              - ReadOnly
-          - name: admin
-            description: Grant admin access to all buckets in the organization
-            type: flag
-          - name: revoke-roles
-            description: Revoke all bucket roles from the access key
-            type: flag
 
   #########################
   # Unix style commands
@@ -426,6 +348,8 @@ commands:
             type: positional
             required: true
             description: Name of the organization
+            examples:
+              - my-organization
       - name: select
         description: Select the organization to use
         alias: s
@@ -438,6 +362,8 @@ commands:
             type: positional
             required: true
             description: Name of the organization
+            examples:
+              - my-organization
 
   #########################
   # Manage buckets
@@ -464,7 +390,7 @@ commands:
       # create
       - name: create
         description: Create bucket
-        alias: [c]
+        alias: c
         messages:
           onStart: 'Creating bucket...'
           onSuccess: "Bucket '{{name}}' created successfully"
@@ -474,6 +400,8 @@ commands:
             description: Name of the bucket
             type: positional
             required: false
+            examples:
+              - my-bucket
           - name: access
             description: Access level
             alias: a
@@ -512,6 +440,8 @@ commands:
             description: Name of the bucket
             type: positional
             required: true
+            examples:
+              - my-bucket
       # delete
       - name: delete
         description: Delete bucket
@@ -526,6 +456,8 @@ commands:
             type: positional
             required: true
             multiple: true
+            examples:
+              - my-bucket
       # set
       - name: set
         description: Update bucket settings
@@ -539,6 +471,8 @@ commands:
             description: Name of the bucket
             type: positional
             required: true
+            examples:
+              - my-bucket
           - name: access
             description: Bucket access level
             options: *access_options
@@ -581,6 +515,8 @@ commands:
             description: Name of the source bucket
             type: positional
             required: true
+            examples:
+              - my-bucket
           - name: format
             description: Output format
             alias: f
@@ -599,10 +535,14 @@ commands:
             description: Name of the source bucket
             type: positional
             required: true
+            examples:
+              - my-bucket
           - name: fork-name
             description: Name for the new fork
             type: positional
             required: true
+            examples:
+              - my-fork
           - name: snapshot
             description: Create fork from a specific snapshot
             alias: s
@@ -628,6 +568,8 @@ commands:
             description: Name of the bucket
             type: positional
             required: true
+            examples:
+              - my-bucket
           - name: format
             description: Output format
             alias: f
@@ -646,10 +588,14 @@ commands:
             description: Name of the bucket
             type: positional
             required: true
+            examples:
+              - my-bucket
           - name: snapshot-name
             description: Name of the snapshot (optional)
             type: positional
             required: false
+            examples:
+              - my-snapshot
 
   #########################
   # Manage objects
@@ -672,6 +618,8 @@ commands:
             description: Name of the bucket
             type: positional
             required: true
+            examples:
+              - my-bucket
           - name: prefix
             description: Filter objects by prefix
             alias: p
@@ -693,10 +641,14 @@ commands:
             description: Name of the bucket
             type: positional
             required: true
+            examples:
+              - my-bucket
           - name: key
             description: Key of the object
             type: positional
             required: true
+            examples:
+              - my-file.txt
           - name: output
             description: Output file path (if not specified, prints to stdout)
             alias: o
@@ -717,14 +669,20 @@ commands:
             description: Name of the bucket
             type: positional
             required: true
+            examples:
+              - my-bucket
           - name: key
             description: Key for the object
             type: positional
             required: true
+            examples:
+              - my-file.txt
           - name: file
             description: Path to the file to upload
             type: positional
             required: true
+            examples:
+              - ./my-file.txt
           - name: access
             description: Access level
             alias: a
@@ -751,8 +709,101 @@ commands:
             description: Name of the bucket
             type: positional
             required: true
+            examples:
+              - my-bucket
           - name: key
             description: Key of the object (comma separated for multiple)
             type: positional
             required: true
             multiple: true
+            examples:
+              - my-file.txt
+
+  #########################
+  # Manage access keys
+  #########################
+  - name: access-keys
+    description: Manage access keys
+    alias: keys
+    operations:
+      - name: list
+        description: List all access keys
+        alias: l
+        messages:
+          onStart: ''
+          onSuccess: ''
+          onFailure: 'Failed to list access keys'
+          onEmpty: 'No access keys found'
+      - name: create
+        description: Create a new access key
+        alias: c
+        messages:
+          onStart: 'Creating access key...'
+          onSuccess: 'Access key created'
+          onFailure: 'Failed to create access key'
+        arguments:
+          - name: name
+            description: Name for the access key
+            type: positional
+            required: true
+            examples:
+              - my-key
+      - name: delete
+        description: Delete an access key
+        alias: d
+        messages:
+          onStart: 'Deleting access key...'
+          onSuccess: 'Access key deleted'
+          onFailure: 'Failed to delete access key'
+        arguments:
+          - name: id
+            description: Access key ID
+            type: positional
+            required: true
+            examples:
+              - tid_AaBbCcDdEeFf
+      - name: get
+        description: Get details of an access key
+        alias: g
+        messages:
+          onStart: ''
+          onSuccess: ''
+          onFailure: 'Failed to get access key'
+        arguments:
+          - name: id
+            description: Access key ID
+            type: positional
+            required: true
+            examples:
+              - tid_AaBbCcDdEeFf
+      - name: assign
+        description: Assign bucket roles to an access key
+        alias: a
+        messages:
+          onStart: 'Assigning bucket roles...'
+          onSuccess: 'Bucket roles assigned'
+          onFailure: 'Failed to assign bucket roles'
+        arguments:
+          - name: id
+            description: Access key ID
+            type: positional
+            required: true
+            examples:
+              - tid_AaBbCcDdEeFf
+          - name: bucket
+            alias: b
+            description: Bucket name (can specify multiple)
+            multiple: true
+          - name: role
+            alias: r
+            description: Role to assign (can specify multiple to pair with buckets)
+            multiple: true
+            options:
+              - Editor
+              - ReadOnly
+          - name: admin
+            description: Grant admin access to all buckets in the organization
+            type: flag
+          - name: revoke-roles
+            description: Revoke all bucket roles from the access key
+            type: flag

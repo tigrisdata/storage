@@ -5,8 +5,10 @@
 import { homedir } from 'os';
 import { join } from 'path';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { loadSharedConfigFiles } from '@smithy/shared-ini-file-loader';
 import { chmod } from 'fs/promises';
 import type { TokenSet, OrganizationInfo } from './types.js';
+import { DEFAULT_STORAGE_ENDPOINT } from '../constants.js';
 
 const CONFIG_DIR = join(homedir(), '.tigris');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
@@ -134,9 +136,112 @@ export function getSelectedOrganization(): string | null {
 }
 
 /**
- * Get stored credentials (checks temporary first, then saved)
+ * Get credentials from environment variables.
+ * If any TIGRIS_ var is set, use TIGRIS_ vars exclusively.
+ * Otherwise, fall back to AWS_ vars.
+ */
+export function getEnvCredentials(): CredentialsConfig | null {
+  // Check TIGRIS_ vars first
+  if (
+    process.env.TIGRIS_STORAGE_ACCESS_KEY_ID ||
+    process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY
+  ) {
+    const accessKeyId = process.env.TIGRIS_STORAGE_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY;
+
+    if (!accessKeyId || !secretAccessKey) {
+      return null;
+    }
+
+    const endpoint =
+      process.env.TIGRIS_STORAGE_ENDPOINT || DEFAULT_STORAGE_ENDPOINT;
+
+    return { accessKeyId, secretAccessKey, endpoint };
+  }
+
+  // Fall back to AWS_ vars
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+
+  if (!accessKeyId || !secretAccessKey) {
+    return null;
+  }
+
+  const endpoint = process.env.AWS_ENDPOINT_URL_S3 || DEFAULT_STORAGE_ENDPOINT;
+
+  return { accessKeyId, secretAccessKey, endpoint };
+}
+
+/**
+ * Check if user explicitly requested an AWS profile via AWS_PROFILE env var
+ */
+export function hasAwsProfile(): boolean {
+  if (!process.env.AWS_PROFILE) {
+    return false;
+  }
+  const awsDir = join(homedir(), '.aws');
+  return (
+    existsSync(join(awsDir, 'credentials')) ||
+    existsSync(join(awsDir, 'config'))
+  );
+}
+
+export type AwsProfileConfig = {
+  endpoint?: string;
+  iamEndpoint?: string;
+  region?: string;
+};
+
+/**
+ * Read profile config from ~/.aws/config using AWS SDK
+ */
+export async function getAwsProfileConfig(
+  profile: string
+): Promise<AwsProfileConfig> {
+  try {
+    const { configFile } = await loadSharedConfigFiles();
+    const profileConfig = configFile[profile];
+
+    if (!profileConfig) {
+      return {};
+    }
+
+    return {
+      endpoint:
+        profileConfig['endpoint_url_s3'] || profileConfig['endpoint_url'],
+      iamEndpoint: profileConfig['endpoint_url_iam'],
+      region: profileConfig['region'],
+    };
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Get non-login credentials in priority order:
+ * 1. Environment variables (TIGRIS_ACCESS_KEY / AWS_ACCESS_KEY_ID)
+ * 2. Temporary credentials (from 'tigris login')
+ * 3. Saved credentials (from 'tigris configure')
+ *
+ * Note: AWS profile and login method checks are handled in s3-client.ts
+ * Full resolution order (in s3-client): AWS_PROFILE → login → env vars → configured
  */
 export function getCredentials(): CredentialsConfig | null {
+  const config = readConfig();
+  return (
+    getEnvCredentials() ||
+    config.temporaryCredentials ||
+    config.credentials ||
+    null
+  );
+}
+
+/**
+ * Get stored credentials only (no env vars):
+ * 1. Temporary credentials (from 'tigris login')
+ * 2. Saved credentials (from 'tigris configure')
+ */
+export function getStoredCredentials(): CredentialsConfig | null {
   const config = readConfig();
   return config.temporaryCredentials || config.credentials || null;
 }

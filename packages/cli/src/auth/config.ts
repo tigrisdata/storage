@@ -1,3 +1,8 @@
+import {
+  DEFAULT_STORAGE_ENDPOINT,
+  DEFAULT_IAM_ENDPOINT,
+} from '../constants.js';
+
 /**
  * Auth0 configuration for CLI authentication
  */
@@ -17,10 +22,24 @@ export interface TigrisConfig {
  * In production, these should come from environment variables
  */
 export function getAuth0Config(): Auth0Config {
+  const isDev = process.env.TIGRIS_ENV === 'development';
+  const domain =
+    process.env.AUTH0_DOMAIN || isDev
+      ? 'auth-dev.tigris.dev'
+      : 'auth.tigris.dev';
+  const clientId =
+    process.env.AUTH0_CLIENT_ID || isDev
+      ? 'JdJVYIyw0O1uHi5L5OJH903qaWBgd3gF'
+      : 'DMejqeM3CQ4IqTjEcd3oA9eEiT40hn8D';
+  const audience =
+    process.env.AUTH0_AUDIENCE || isDev
+      ? 'https://tigris-api-dev'
+      : 'https://tigris-os-api';
+
   return {
-    domain: process.env.AUTH0_DOMAIN || 'auth.tigris.dev',
-    clientId: process.env.AUTH0_CLIENT_ID || 'DMejqeM3CQ4IqTjEcd3oA9eEiT40hn8D',
-    audience: process.env.AUTH0_AUDIENCE || 'https://tigris-os-api',
+    domain,
+    clientId,
+    audience,
   };
 }
 
@@ -31,9 +50,17 @@ export const TIGRIS_CLAIMS_NAMESPACE =
   process.env.TIGRIS_CLAIMS_NAMESPACE || 'https://tigris';
 
 export function getTigrisConfig(): TigrisConfig {
+  // If any TIGRIS_ endpoint var is set, use TIGRIS_ vars exclusively
+  if (process.env.TIGRIS_STORAGE_ENDPOINT || process.env.TIGRIS_IAM_ENDPOINT) {
+    return {
+      endpoint: process.env.TIGRIS_STORAGE_ENDPOINT || DEFAULT_STORAGE_ENDPOINT,
+      iamEndpoint: process.env.TIGRIS_IAM_ENDPOINT || DEFAULT_IAM_ENDPOINT,
+    };
+  }
+
+  // Fall back to AWS_ vars
   return {
-    endpoint: process.env.TIGRIS_STORAGE_ENDPOINT || 'https://t3.storage.dev',
-    iamEndpoint:
-      process.env.TIGRIS_IAM_ENDPOINT || 'https://iam.storageapi.dev',
+    endpoint: process.env.AWS_ENDPOINT_URL_S3 || DEFAULT_STORAGE_ENDPOINT,
+    iamEndpoint: process.env.AWS_ENDPOINT_URL_IAM || DEFAULT_IAM_ENDPOINT,
   };
 }
