@@ -101,12 +101,12 @@ export async function get(
       })
       .catch(handleError);
   } catch (error) {
-    return handleError(error);
+    return handleError(error as Error);
   }
 }
 
-const handleError = (error: unknown) => {
-  let errorMessage = 'Unexpected error while downloading from Tigris Storage';
+const handleError = (error: Error) => {
+  let errorMessage: string | undefined;
 
   if ((error as { Code?: string }).Code === 'AccessDenied') {
     errorMessage =
@@ -116,7 +116,15 @@ const handleError = (error: unknown) => {
     errorMessage = 'File not found in Tigris Storage';
   }
 
+  if (errorMessage) {
+    return {
+      error: new Error(errorMessage),
+    };
+  }
+
   return {
-    error: new Error(errorMessage),
+    error: new Error(
+      error?.message || 'Unexpected error while downloading from Tigris Storage'
+    ),
   };
 };

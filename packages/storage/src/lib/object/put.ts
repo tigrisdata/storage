@@ -112,14 +112,11 @@ export async function put(
 
   try {
     await upload.done();
-  } catch (error) {
+  } catch (error: any) {
     return {
-      error:
-        (error as { Code?: string }).Code === 'AccessDenied'
-          ? new Error(
-              `Access denied while uploading to Tigris Storage. Please check your credentials.`
-            )
-          : new Error(`Unexpected error while uploading to Tigris Storage`),
+      error: error.message
+        ? new Error(error.message)
+        : new Error(`Unexpected error while uploading to Tigris Storage`),
     };
   }
 
