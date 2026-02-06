@@ -680,7 +680,6 @@ commands:
           - name: file
             description: Path to the file to upload
             type: positional
-            required: true
             examples:
               - ./my-file.txt
           - name: access

@@ -1,4 +1,5 @@
-import { readFileSync, statSync } from 'fs';
+import { createReadStream, statSync } from 'fs';
+import { Readable } from 'stream';
 import { getOption } from '../../utils/options.js';
 import { formatOutput } from '../../utils/format.js';
 import { getStorageConfig } from '../../auth/s3-client.js';
@@ -37,30 +38,60 @@ export default async function putObject(options: Record<string, unknown>) {
     process.exit(1);
   }
 
-  if (!file) {
-    printFailure(context, 'File path is required');
+  // Check for stdin or file input
+  const hasStdin = !process.stdin.isTTY;
+
+  if (!file && !hasStdin) {
+    printFailure(context, 'File path is required (or pipe data via stdin)');
     process.exit(1);
   }
 
-  // Check if file exists
-  try {
-    statSync(file);
-  } catch {
-    printFailure(context, `File not found: ${file}`);
-    process.exit(1);
+  let body: ReadableStream;
+  let fileSize: number | undefined;
+
+  if (file) {
+    // Read from file
+    try {
+      const stats = statSync(file);
+      fileSize = stats.size;
+    } catch {
+      printFailure(context, `File not found: ${file}`);
+      process.exit(1);
+    }
+    const fileStream = createReadStream(file);
+    body = Readable.toWeb(fileStream) as ReadableStream;
+  } else {
+    // Read from stdin
+    body = Readable.toWeb(process.stdin) as ReadableStream;
   }
 
   const config = await getStorageConfig();
-  const body = readFileSync(file);
+
+  // Use multipart upload for files larger than 100MB (or always for stdin)
+  const useMultipart =
+    !file || (fileSize !== undefined && fileSize > 100 * 1024 * 1024);
 
   const { data, error } = await put(key, body, {
     access: access === 'public' ? 'public' : 'private',
     contentType,
+    multipart: useMultipart,
+    onUploadProgress: ({ loaded, percentage }) => {
+      if (fileSize !== undefined && fileSize > 0) {
+        process.stdout.write(
+          `\rUploading: ${formatSize(loaded)} / ${formatSize(fileSize)} (${percentage}%)`
+        );
+      } else {
+        process.stdout.write(`\rUploading: ${formatSize(loaded)}`);
+      }
+    },
     config: {
       ...config,
       bucket,
     },
   });
+
+  // Clear the progress line
+  process.stdout.write('\r' + ' '.repeat(60) + '\r');
 
   if (error) {
     printFailure(context, error.message);
@@ -70,7 +101,7 @@ export default async function putObject(options: Record<string, unknown>) {
   const result = [
     {
       path: data.path,
-      size: formatSize(data.size),
+      size: formatSize(data.size ?? fileSize ?? 0),
       contentType: data.contentType || '-',
       modified: data.modified,
     },
