@@ -143,6 +143,13 @@ export async function put(
     );
   }
 
+  if (contentSize === 0) {
+    const fileInfo = await head(path, { config: options?.config });
+    if (fileInfo.data !== undefined) {
+      contentSize = fileInfo.data.size;
+    }
+  }
+
   return {
     data: {
       contentDisposition: options?.contentDisposition ?? undefined,
