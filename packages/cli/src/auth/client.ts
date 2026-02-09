@@ -135,6 +135,24 @@ export class TigrisAuthClient {
 
         const data = response.data;
 
+        if (!data.id_token) {
+          throw new Error('No ID token found. Please try again.');
+        }
+
+        const idToken = data.id_token.split('.')[1];
+        const idTokenClaims = JSON.parse(
+          Buffer.from(idToken, 'base64').toString('utf8')
+        ) as IdTokenClaims;
+
+        if (idTokenClaims['email_verified'] === false) {
+          console.log(
+            'Email not verified. Please verify your email and try again.'
+          );
+          throw new Error(
+            'Email not verified. Please verify your email and try again.'
+          );
+        }
+
         // Calculate expiration time
         const expiresAt = Date.now() + (data.expires_in || 3600) * 1000;
 
