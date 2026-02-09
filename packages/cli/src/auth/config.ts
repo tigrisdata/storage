@@ -23,18 +23,15 @@ export interface TigrisConfig {
  */
 export function getAuth0Config(): Auth0Config {
   const isDev = process.env.TIGRIS_ENV === 'development';
-  const domain =
-    process.env.AUTH0_DOMAIN || isDev
-      ? 'auth-dev.tigris.dev'
-      : 'auth.tigris.dev';
-  const clientId =
-    process.env.AUTH0_CLIENT_ID || isDev
-      ? 'JdJVYIyw0O1uHi5L5OJH903qaWBgd3gF'
-      : 'DMejqeM3CQ4IqTjEcd3oA9eEiT40hn8D';
-  const audience =
-    process.env.AUTH0_AUDIENCE || isDev
-      ? 'https://tigris-api-dev'
-      : 'https://tigris-os-api';
+  const domain = isDev
+    ? 'auth-dev.tigris.dev'
+    : (process.env.AUTH0_DOMAIN ?? 'auth.tigris.dev');
+  const clientId = isDev
+    ? 'JdJVYIyw0O1uHi5L5OJH903qaWBgd3gF'
+    : (process.env.AUTH0_CLIENT_ID ?? 'DMejqeM3CQ4IqTjEcd3oA9eEiT40hn8D');
+  const audience = isDev
+    ? 'https://tigris-api-dev'
+    : (process.env.AUTH0_AUDIENCE ?? 'https://tigris-os-api');
 
   return {
     domain,
