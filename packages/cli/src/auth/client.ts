@@ -5,6 +5,7 @@
 
 import axios from 'axios';
 import open from 'open';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 import type {
   TokenSet,
   IdTokenClaims,
@@ -45,10 +46,35 @@ interface TokenResponse {
 export class TigrisAuthClient {
   private config: ReturnType<typeof getAuth0Config>;
   private baseUrl: string;
+  private jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
   constructor() {
     this.config = getAuth0Config();
     this.baseUrl = `https://${this.config.domain}`;
+  }
+
+  /**
+   * Get the JWKS key set for verifying JWTs, lazily initialized and cached.
+   */
+  private getJWKS() {
+    if (!this.jwks) {
+      this.jwks = createRemoteJWKSet(
+        new URL(`${this.baseUrl}/.well-known/jwks.json`)
+      );
+    }
+    return this.jwks;
+  }
+
+  /**
+   * Verify an ID token's signature against Auth0's JWKS and validate
+   * standard claims (issuer, audience, expiration).
+   */
+  async verifyIdToken(token: string): Promise<IdTokenClaims> {
+    const { payload } = await jwtVerify(token, this.getJWKS(), {
+      issuer: `${this.baseUrl}/`,
+      audience: this.config.clientId,
+    });
+    return payload as unknown as IdTokenClaims;
   }
 
   /**
@@ -139,10 +165,7 @@ export class TigrisAuthClient {
           throw new Error('No ID token found. Please try again.');
         }
 
-        const idToken = data.id_token.split('.')[1];
-        const idTokenClaims = JSON.parse(
-          Buffer.from(idToken, 'base64').toString('utf8')
-        ) as IdTokenClaims;
+        const idTokenClaims = await this.verifyIdToken(data.id_token);
 
         if (idTokenClaims['email_verified'] === false) {
           console.log(
@@ -277,13 +300,12 @@ export class TigrisAuthClient {
       );
     }
 
-    // Decode JWT (simple base64 decode - already validated by Auth0)
     try {
-      const payload = tokens.idToken.split('.')[1];
-      const decoded = Buffer.from(payload, 'base64').toString('utf8');
-      return JSON.parse(decoded);
-    } catch (error) {
-      throw new Error('Failed to decode ID token');
+      return await this.verifyIdToken(tokens.idToken);
+    } catch {
+      throw new Error(
+        'ID token verification failed. Please run "tigris login" to re-authenticate.'
+      );
     }
   }
 
@@ -298,9 +320,7 @@ export class TigrisAuthClient {
     }
 
     try {
-      const payload = idToken.split('.')[1];
-      const decoded = Buffer.from(payload, 'base64').toString('utf8');
-      const claims: IdTokenClaims = JSON.parse(decoded);
+      const claims = await this.verifyIdToken(idToken);
 
       // Extract Tigris namespace
       const tigrisNamespace = claims[TIGRIS_CLAIMS_NAMESPACE] as
