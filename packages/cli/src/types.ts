@@ -42,6 +42,13 @@ export interface CommandSpec {
   messages?: Messages;
 }
 
+export interface Specs {
+  name: string;
+  description: string;
+  version: string;
+  commands: CommandSpec[];
+}
+
 export interface ParsedPath {
   bucket: string;
   path: string;

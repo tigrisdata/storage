@@ -2,19 +2,19 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as YAML from 'yaml';
-import type { CommandSpec, OperationSpec, Argument } from '../types.js';
+import type { Specs, CommandSpec, OperationSpec, Argument } from '../types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-let cachedSpecs: { commands: CommandSpec[] } | null = null;
+let cachedSpecs: Specs | null = null;
 
 const specsPath = join(__dirname, 'specs.yaml');
 
-function loadSpecs(): { commands: CommandSpec[] } {
+export function loadSpecs(): Specs {
   if (!cachedSpecs) {
     const specsContent = readFileSync(specsPath, 'utf8');
-    cachedSpecs = YAML.parse(specsContent);
+    cachedSpecs = YAML.parse(specsContent, { schema: 'core' });
   }
   return cachedSpecs!;
 }

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 import { Command as CommanderCommand } from 'commander';
-import { readFileSync, existsSync } from 'fs';
+import { existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import * as YAML from 'yaml';
 import type { Argument, OperationSpec, CommandSpec } from './types.js';
+import { loadSpecs } from './utils/specs.js';
 import { version } from '../package.json';
 
 // Global handler for user cancellation (Ctrl+C) and unhandled errors
@@ -28,9 +28,7 @@ process.on('uncaughtException', (error) => {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const specsPath = join(__dirname, 'specs.yaml');
-const specsContent = readFileSync(specsPath, 'utf8');
-const specs = YAML.parse(specsContent);
+const specs = loadSpecs();
 
 /**
  * Check if a command/operation has an implementation
