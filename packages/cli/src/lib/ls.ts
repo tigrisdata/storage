@@ -1,6 +1,6 @@
 import { parsePath } from '../utils/path.js';
 import { getOption } from '../utils/options.js';
-import { formatOutput } from '../utils/format.js';
+import { formatOutput, formatSize } from '../utils/format.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { list, listBuckets } from '@tigrisdata/storage';
 
@@ -86,11 +86,4 @@ export default async function ls(options: Record<string, unknown>) {
   ]);
 
   console.log(output);
-}
-
-function formatSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
 }

@@ -2,7 +2,8 @@ import * as readline from 'readline';
 import { parsePath, isPathFolder, listAllItems } from '../utils/path.js';
 import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
-import { get, put, remove, list } from '@tigrisdata/storage';
+import { formatSize } from '../utils/format.js';
+import { get, put, remove, list, head } from '@tigrisdata/storage';
 
 async function confirm(message: string): Promise<boolean> {
   const rl = readline.createInterface({
@@ -235,7 +236,8 @@ export default async function mv(options: Record<string, unknown>) {
       srcPath.bucket,
       srcPath.path,
       destPath.bucket,
-      destKey
+      destKey,
+      true // show progress for single file
     );
 
     if (result.error) {
@@ -253,7 +255,8 @@ async function moveObject(
   srcBucket: string,
   srcKey: string,
   destBucket: string,
-  destKey: string
+  destKey: string,
+  showProgress = false
 ): Promise<{ error?: string }> {
   // Handle folder markers specially (empty objects ending with /)
   if (srcKey.endsWith('/')) {
@@ -286,6 +289,18 @@ async function moveObject(
     return {};
   }
 
+  // Get source object size for progress
+  let fileSize: number | undefined;
+  if (showProgress) {
+    const { data: headData } = await head(srcKey, {
+      config: {
+        ...config,
+        bucket: srcBucket,
+      },
+    });
+    fileSize = headData?.size;
+  }
+
   // Get source object
   const { data, error: getError } = await get(srcKey, 'stream', {
     config: {
@@ -298,13 +313,33 @@ async function moveObject(
     return { error: getError.message };
   }
 
+  // Use multipart for files larger than 100MB
+  const useMultipart = fileSize !== undefined && fileSize > 100 * 1024 * 1024;
+
   // Put to destination
   const { error: putError } = await put(destKey, data, {
+    multipart: useMultipart,
+    onUploadProgress: showProgress
+      ? ({ loaded }) => {
+          if (fileSize !== undefined && fileSize > 0) {
+            const pct = Math.round((loaded / fileSize) * 100);
+            process.stdout.write(
+              `\rMoving: ${formatSize(loaded)} / ${formatSize(fileSize)} (${pct}%)`
+            );
+          } else {
+            process.stdout.write(`\rMoving: ${formatSize(loaded)}`);
+          }
+        }
+      : undefined,
     config: {
       ...config,
       bucket: destBucket,
     },
   });
+
+  if (showProgress) {
+    process.stdout.write('\r' + ' '.repeat(60) + '\r');
+  }
 
   if (putError) {
     return { error: putError.message };
