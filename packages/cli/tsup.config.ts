@@ -13,7 +13,7 @@ export default defineConfig((options) => ({
   entry: ['src/cli.ts', 'src/**/*.ts'],
   format: ['esm'],
   dts: false,
-  splitting: false,
+  splitting: true,
   sourcemap: false,
   clean: true,
   minify: true,

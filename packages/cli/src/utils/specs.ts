@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as YAML from 'yaml';
@@ -9,25 +9,10 @@ const __dirname = dirname(__filename);
 
 let cachedSpecs: { commands: CommandSpec[] } | null = null;
 
-function findSpecsPath(): string {
-  // Try to find specs.yaml by walking up the directory tree
-  let currentDir = __dirname;
-
-  // Try up to 5 levels up
-  for (let i = 0; i < 5; i++) {
-    const specsPath = join(currentDir, 'specs.yaml');
-    if (existsSync(specsPath)) {
-      return specsPath;
-    }
-    currentDir = join(currentDir, '..');
-  }
-
-  throw new Error('Could not find specs.yaml');
-}
+const specsPath = join(__dirname, 'specs.yaml');
 
 function loadSpecs(): { commands: CommandSpec[] } {
   if (!cachedSpecs) {
-    const specsPath = findSpecsPath();
     const specsContent = readFileSync(specsPath, 'utf8');
     cachedSpecs = YAML.parse(specsContent);
   }
