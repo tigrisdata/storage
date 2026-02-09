@@ -16,6 +16,18 @@ export function formatJson(data: unknown): string {
 }
 
 /**
+ * Escapes special characters for safe XML output
+ */
+function escapeXml(value: unknown): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
  * Formats an object as XML
  */
 export function formatXmlObject(
@@ -23,7 +35,7 @@ export function formatXmlObject(
   indent: string = '    '
 ): string {
   return Object.entries(obj)
-    .map(([key, value]) => `${indent}<${key}>${value}</${key}>`)
+    .map(([key, value]) => `${indent}<${key}>${escapeXml(value)}</${key}>`)
     .join('\n');
 }
 
