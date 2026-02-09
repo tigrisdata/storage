@@ -2,11 +2,17 @@
  * Secure storage using a single config file
  */
 
-import { homedir } from 'os';
+import { homedir, platform } from 'os';
 import { join } from 'path';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+  chmodSync,
+} from 'fs';
+import { execFileSync } from 'child_process';
 import { loadSharedConfigFiles } from '@smithy/shared-ini-file-loader';
-import { chmod } from 'fs/promises';
 import type { TokenSet, OrganizationInfo } from './types.js';
 import { DEFAULT_STORAGE_ENDPOINT } from '../constants.js';
 
@@ -35,11 +41,43 @@ export interface CredentialsConfig {
 }
 
 /**
+ * Set restrictive permissions on a file or directory.
+ * On Unix: uses chmod. On Windows: uses icacls to restrict to current user only.
+ */
+function restrictPermissions(targetPath: string, mode: number): void {
+  if (platform() === 'win32') {
+    try {
+      const username = process.env.USERNAME;
+      if (username) {
+        execFileSync(
+          'icacls',
+          [targetPath, '/inheritance:r', '/grant:r', `${username}:F`],
+          { stdio: 'ignore' }
+        );
+      }
+    } catch {
+      console.warn(
+        `Warning: Could not set restrictive permissions on ${targetPath}. It may be accessible to other users.`
+      );
+    }
+  } else {
+    try {
+      chmodSync(targetPath, mode);
+    } catch {
+      console.warn(
+        `Warning: Could not set restrictive permissions on ${targetPath}. It may be accessible to other users.`
+      );
+    }
+  }
+}
+
+/**
  * Ensure config directory exists with secure permissions
  */
 function ensureConfigDir(): void {
   if (!existsSync(CONFIG_DIR)) {
     mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
+    restrictPermissions(CONFIG_DIR, 0o700);
   }
 }
 
@@ -64,13 +102,7 @@ function readConfig(): TigrisConfig {
 async function writeConfig(config: TigrisConfig): Promise<void> {
   ensureConfigDir();
   writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), { mode: 0o600 });
-
-  // Ensure file has restrictive permissions
-  try {
-    await chmod(CONFIG_FILE, 0o600);
-  } catch {
-    // Ignore chmod errors on Windows
-  }
+  restrictPermissions(CONFIG_FILE, 0o600);
 }
 
 /**
