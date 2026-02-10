@@ -439,8 +439,8 @@ async function copyRemoteToLocal(
 
     // Linux cp convention: trailing slash = contents only, no slash = include folder name
     const folderName =
-      !isWildcard && !srcParsed.path.endsWith('/')
-        ? srcParsed.path.split('/').filter(Boolean).pop()!
+      !isWildcard && srcParsed.path && !srcParsed.path.endsWith('/')
+        ? (srcParsed.path.split('/').filter(Boolean).pop() ?? '')
         : '';
 
     const { items, error } = await listAllItems(
@@ -572,8 +572,8 @@ async function copyRemoteToRemote(
 
     // Linux cp convention: trailing slash = contents only, no slash = include folder name
     const folderName =
-      !isWildcard && !srcParsed.path.endsWith('/')
-        ? srcParsed.path.split('/').filter(Boolean).pop()!
+      !isWildcard && srcParsed.path && !srcParsed.path.endsWith('/')
+        ? (srcParsed.path.split('/').filter(Boolean).pop() ?? '')
         : '';
 
     const destBase = destParsed.path?.replace(/\/$/, '') || '';

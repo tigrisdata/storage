@@ -97,8 +97,8 @@ export default async function mv(options: Record<string, unknown>) {
 
     // Linux cp convention: trailing slash = contents only, no slash = include folder name
     const folderName =
-      !isWildcard && !srcPath.path.endsWith('/')
-        ? srcPath.path.split('/').filter(Boolean).pop()!
+      !isWildcard && srcPath.path && !srcPath.path.endsWith('/')
+        ? (srcPath.path.split('/').filter(Boolean).pop() ?? '')
         : '';
 
     const destBase = destPath.path?.replace(/\/$/, '') || '';
