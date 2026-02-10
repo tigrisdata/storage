@@ -1,11 +1,20 @@
+import { parseAnyPath } from '../utils/path.js';
+
 export default async function stat(options: {
   path?: string;
   _positional?: string[];
 }) {
-  const path = options.path || options._positional?.[0];
+  const pathString = options.path || options._positional?.[0];
 
-  if (!path) {
+  if (!pathString) {
     console.error('path argument is required');
+    process.exit(1);
+  }
+
+  const { bucket } = parseAnyPath(pathString);
+
+  if (!bucket) {
+    console.error('Invalid path');
     process.exit(1);
   }
 

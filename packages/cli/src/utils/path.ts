@@ -72,6 +72,17 @@ export function parsePaths(src: string, dest: string): ParsedPaths {
 }
 
 /**
+ * Parses a path that may or may not have a t3:// or tigris:// prefix.
+ * Supports both remote prefixed paths and bare bucket/path paths.
+ */
+export function parseAnyPath(path: string): ParsedPath {
+  if (isRemotePath(path)) {
+    return parseRemotePath(path);
+  }
+  return parsePath(path);
+}
+
+/**
  * Converts a glob pattern to a RegExp.
  * `*` matches any characters except `/` (single-level wildcard).
  * All other regex metacharacters are escaped.

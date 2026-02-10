@@ -1,4 +1,4 @@
-import { parsePath } from '../utils/path.js';
+import { parseAnyPath } from '../utils/path.js';
 import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { createBucket, put } from '@tigrisdata/storage';
@@ -11,7 +11,7 @@ export default async function mk(options: Record<string, unknown>) {
     process.exit(1);
   }
 
-  const { bucket, path } = parsePath(pathString);
+  const { bucket, path } = parseAnyPath(pathString);
 
   if (!bucket) {
     console.error('Invalid path');

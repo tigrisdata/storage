@@ -200,10 +200,12 @@ commands:
     arguments:
       - name: path
         type: positional
-        description: a bucket or path in a bucket (if not provided, lists all buckets)
+        description: a bucket or path in a bucket (if not provided, lists all buckets). Supports t3:// and tigris:// prefixes.
         examples:
           - my-bucket
           - my-bucket/my-path
+          - t3://my-bucket
+          - t3://my-bucket/my-path
 
   # mk
   - name: mk
@@ -213,10 +215,12 @@ commands:
       - name: path
         required: true
         type: positional
-        description: a bucket or a folder in a bucket
+        description: a bucket or a folder in a bucket. Supports t3:// and tigris:// prefixes.
         examples:
           - my-bucket
           - my-bucket/my-path
+          - t3://my-bucket
+          - t3://my-bucket/my-path
 
   # touch
   - name: touch
@@ -225,9 +229,10 @@ commands:
       - name: path
         required: true
         type: positional
-        description: path to the object (bucket/key)
+        description: path to the object (bucket/key). Supports t3:// and tigris:// prefixes.
         examples:
           - my-bucket/my-file.txt
+          - t3://my-bucket/my-file.txt
 
   # stat
   - name: stat
@@ -236,10 +241,12 @@ commands:
       - name: path
         required: true
         type: positional
-        description: a bucket or a folder in a bucket or an object in a bucket or path
+        description: a bucket, folder, or object path. Supports t3:// and tigris:// prefixes.
         examples:
           - my-bucket
           - my-bucket/my-path
+          - t3://my-bucket
+          - t3://my-bucket/my-path
           - my-bucket/my-path/my-object.json
 
   # cp

@@ -1,4 +1,4 @@
-import { parsePath } from '../utils/path.js';
+import { parseAnyPath } from '../utils/path.js';
 import { getOption } from '../utils/options.js';
 import { formatOutput, formatSize } from '../utils/format.js';
 import { getStorageConfig } from '../auth/s3-client.js';
@@ -31,7 +31,7 @@ export default async function ls(options: Record<string, unknown>) {
     return;
   }
 
-  const { bucket, path } = parsePath(pathString);
+  const { bucket, path } = parseAnyPath(pathString);
 
   if (!bucket) {
     console.error('Invalid path');
