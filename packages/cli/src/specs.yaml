@@ -244,26 +244,32 @@ commands:
 
   # cp
   - name: cp
-    description: Copy a folder or an object
+    description: Copy files between local filesystem and Tigris, or within Tigris
     alias: copy
     arguments:
       - name: src
         required: true
         type: positional
-        description: a bucket, a folder in a bucket, an object in a bucket / path. Wildcard is supported.
+        description: source path. Use t3:// (or tigris://) prefix for remote Tigris paths, bare paths for local files. At least one side must be remote. Quote wildcard patterns to prevent shell expansion.
         examples:
-          - my-bucket
-          - my-bucket/my-path
-          - my-bucket/my-path/my-object.json
+          - ./file.txt
+          - ./dir/
+          - '"./dir/*.jpg"'
+          - t3://my-bucket/my-path/my-object.json
+          - t3://my-bucket/my-path/*
       - name: dest
         required: true
         type: positional
-        description: path to copy to
+        description: destination path. Use t3:// (or tigris://) prefix for remote Tigris paths, bare paths for local files.
         examples:
-          - my-bucket
-          - my-bucket/my-path
-          - my-bucket/my-path/*
-          - my-bucket/my-path/my-object.json
+          - .
+          - ./local-dir/
+          - t3://my-bucket
+          - t3://my-bucket/my-path/
+      - name: recursive
+        type: flag
+        alias: r
+        description: copy directories recursively
 
   # mv
   - name: mv

@@ -2,6 +2,24 @@ import { list } from '@tigrisdata/storage';
 import type { ParsedPath, ParsedPaths } from '../types.js';
 import type { TigrisStorageConfig } from '../auth/s3-client.js';
 
+const REMOTE_PREFIXES = ['t3://', 'tigris://'];
+
+/**
+ * Checks if a path is a remote Tigris path (starts with t3:// or tigris://)
+ */
+export function isRemotePath(path: string): boolean {
+  return REMOTE_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
+
+/**
+ * Strips the t3:// or tigris:// prefix from a remote path and parses it into bucket/path.
+ * Assumes the path has already been verified as remote via isRemotePath().
+ */
+export function parseRemotePath(path: string): ParsedPath {
+  const prefix = REMOTE_PREFIXES.find((p) => path.startsWith(p));
+  return parsePath(path.slice(prefix!.length));
+}
+
 /**
  * Parses a path string into bucket and path components
  * @param pathString - The path string in format "bucket/path/to/object"

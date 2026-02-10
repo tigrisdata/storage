@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parsePath, parsePaths } from '../../src/utils/path.js';
+import {
+  parsePath,
+  parsePaths,
+  isRemotePath,
+  parseRemotePath,
+} from '../../src/utils/path.js';
 
 describe('parsePath', () => {
   it('should parse bucket-only path', () => {
@@ -57,6 +62,80 @@ describe('parsePaths', () => {
     expect(result.source.path).toBe('folder/file.txt');
     expect(result.destination.bucket).toBe('bucket-b');
     expect(result.destination.path).toBe('');
+  });
+});
+
+describe('isRemotePath', () => {
+  it('should return true for t3:// prefixed paths', () => {
+    expect(isRemotePath('t3://my-bucket')).toBe(true);
+    expect(isRemotePath('t3://my-bucket/file.txt')).toBe(true);
+    expect(isRemotePath('t3://my-bucket/folder/')).toBe(true);
+  });
+
+  it('should return true for tigris:// prefixed paths', () => {
+    expect(isRemotePath('tigris://my-bucket')).toBe(true);
+    expect(isRemotePath('tigris://my-bucket/file.txt')).toBe(true);
+    expect(isRemotePath('tigris://my-bucket/folder/')).toBe(true);
+  });
+
+  it('should return false for bare paths', () => {
+    expect(isRemotePath('my-bucket')).toBe(false);
+    expect(isRemotePath('./file.txt')).toBe(false);
+    expect(isRemotePath('/absolute/path')).toBe(false);
+    expect(isRemotePath('../relative')).toBe(false);
+    expect(isRemotePath('')).toBe(false);
+  });
+
+  it('should return false for similar but incorrect prefixes', () => {
+    expect(isRemotePath('t3:/bucket')).toBe(false);
+    expect(isRemotePath('T3://bucket')).toBe(false);
+    expect(isRemotePath('s3://bucket')).toBe(false);
+    expect(isRemotePath('Tigris://bucket')).toBe(false);
+    expect(isRemotePath('tigris:/bucket')).toBe(false);
+  });
+});
+
+describe('parseRemotePath', () => {
+  it('should strip t3:// and parse bucket-only path', () => {
+    const result = parseRemotePath('t3://my-bucket');
+    expect(result.bucket).toBe('my-bucket');
+    expect(result.path).toBe('');
+  });
+
+  it('should strip t3:// and parse bucket with key', () => {
+    const result = parseRemotePath('t3://my-bucket/file.txt');
+    expect(result.bucket).toBe('my-bucket');
+    expect(result.path).toBe('file.txt');
+  });
+
+  it('should strip t3:// and parse nested path', () => {
+    const result = parseRemotePath('t3://my-bucket/folder/subfolder/file.txt');
+    expect(result.bucket).toBe('my-bucket');
+    expect(result.path).toBe('folder/subfolder/file.txt');
+  });
+
+  it('should handle trailing slash after t3:// strip', () => {
+    const result = parseRemotePath('t3://my-bucket/folder/');
+    expect(result.bucket).toBe('my-bucket');
+    expect(result.path).toBe('folder/');
+  });
+
+  it('should strip tigris:// and parse bucket-only path', () => {
+    const result = parseRemotePath('tigris://my-bucket');
+    expect(result.bucket).toBe('my-bucket');
+    expect(result.path).toBe('');
+  });
+
+  it('should strip tigris:// and parse bucket with key', () => {
+    const result = parseRemotePath('tigris://my-bucket/folder/file.txt');
+    expect(result.bucket).toBe('my-bucket');
+    expect(result.path).toBe('folder/file.txt');
+  });
+
+  it('should handle wildcard paths after t3:// strip', () => {
+    const result = parseRemotePath('t3://my-bucket/folder/*');
+    expect(result.bucket).toBe('my-bucket');
+    expect(result.path).toBe('folder/*');
   });
 });
 
