@@ -21,16 +21,16 @@ Run `tigris help` to see all available commands, or `tigris <command> help` for 
 - `tigris ls [path]` - List buckets or objects in a bucket or path
 - `tigris mk <path>` - Create a bucket or a folder in a bucket
 - `tigris touch <path>` - Create an empty object in a bucket
-- `tigris cp <src> <dest>` - Copy a folder or an object
-- `tigris mv <src> <dest>` - Move a folder or an object
-- `tigris rm <path>` - Remove a bucket or a folder in a bucket or an object in a bucket or path
+- `tigris cp <src> <dest>` - Copy files between local filesystem and Tigris, or within Tigris
+- `tigris mv <src> <dest>` - Move objects within Tigris
+- `tigris rm <path>` - Remove a bucket, folder, or object from Tigris
 
 ### Authentication
 
 - `tigris login` - Start a session. Use OAuth (default) or temporary credentials that override your saved config
 - `tigris logout` - End your session. Clears login state but keeps credentials from 'configure'
 - `tigris whoami` - Show information about the current user
-- `tigris configure` - Save credentials permanently. After running this, all commands work automatically
+- `tigris configure` - Save credentials permanently. After running this, all commands uses these credentials.
 
 ### Resources
 
@@ -58,6 +58,7 @@ tigris ls [path]
 ```bash
 tigris ls my-bucket
 tigris ls my-bucket/my-path
+tigris ls t3://my-bucket
 ```
 
 ### `mk` | `create`
@@ -72,6 +73,7 @@ tigris mk <path>
 ```bash
 tigris mk my-bucket
 tigris mk my-bucket/my-path
+tigris mk t3://my-bucket
 ```
 
 ### `touch`
@@ -85,15 +87,20 @@ tigris touch <path>
 **Examples:**
 ```bash
 tigris touch my-bucket/my-file.txt
+tigris touch t3://my-bucket/my-file.txt
 ```
 
 ### `cp` | `copy`
 
-Copy a folder or an object
+Copy files between local filesystem and Tigris, or within Tigris
 
 ```
-tigris cp <src> <dest>
+tigris cp <src> <dest> [flags]
 ```
+
+| Flag | Description |
+|------|-------------|
+| `-r, --recursive` | copy directories recursively |
 
 **Examples:**
 ```bash
@@ -103,7 +110,7 @@ tigris cp bucket/folder/ other-bucket/folder/
 
 ### `mv` | `move`
 
-Move a folder or an object
+Move objects within Tigris
 
 ```
 tigris mv <src> <dest> [flags]
@@ -111,6 +118,7 @@ tigris mv <src> <dest> [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-r, --recursive` | move directories recursively |
 | `-f, --force` | Skip confirmation prompt |
 
 **Examples:**
@@ -121,7 +129,7 @@ tigris mv bucket/folder/ other-bucket/folder/
 
 ### `rm` | `remove`
 
-Remove a bucket or a folder in a bucket or an object in a bucket or path
+Remove a bucket, folder, or object from Tigris
 
 ```
 tigris rm <path> [flags]
@@ -129,13 +137,14 @@ tigris rm <path> [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-r, --recursive` | remove directories recursively |
 | `-f, --force` | Skip confirmation prompt |
 
 **Examples:**
 ```bash
-tigris rm my-bucket
-tigris rm my-bucket/my-path
-tigris rm my-bucket/my-path/*
+tigris rm t3://my-bucket
+tigris rm t3://my-bucket/my-path/my-object.json
+tigris rm t3://my-bucket/my-path/
 ```
 
 ## Authentication
@@ -191,7 +200,7 @@ tigris whoami
 
 ### `configure` | `c`
 
-Save credentials permanently. After running this, all commands work automatically
+Save credentials permanently. After running this, all commands uses these credentials.
 
 ```
 tigris configure [flags]
@@ -463,7 +472,7 @@ tigris objects get <bucket> <key> [flags]
 #### `objects put`
 
 ```
-tigris objects put <bucket> <key> <file> [flags]
+tigris objects put <bucket> <key> [file] [flags]
 ```
 
 | Flag | Description |
