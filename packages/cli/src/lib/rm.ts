@@ -1,5 +1,12 @@
 import * as readline from 'readline';
-import { parsePath, isPathFolder, listAllItems } from '../utils/path.js';
+import {
+  isRemotePath,
+  parseRemotePath,
+  isPathFolder,
+  listAllItems,
+  globToRegex,
+  wildcardPrefix,
+} from '../utils/path.js';
 import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { remove, removeBucket, list } from '@tigrisdata/storage';
@@ -21,13 +28,19 @@ async function confirm(message: string): Promise<boolean> {
 export default async function rm(options: Record<string, unknown>) {
   const pathString = getOption<string>(options, ['path']);
   const force = getOption<boolean>(options, ['force', 'f', 'F']);
+  const recursive = !!getOption<boolean>(options, ['recursive', 'r']);
 
   if (!pathString) {
     console.error('path argument is required');
     process.exit(1);
   }
 
-  const { bucket, path } = parsePath(pathString);
+  if (!isRemotePath(pathString)) {
+    console.error('Path must be a remote Tigris path (t3:// or tigris://)');
+    process.exit(1);
+  }
+
+  const { bucket, path } = parseRemotePath(pathString);
 
   if (!bucket) {
     console.error('Invalid path');
@@ -36,8 +49,9 @@ export default async function rm(options: Record<string, unknown>) {
 
   const config = await getStorageConfig();
 
-  // If no path, remove the bucket
-  if (!path) {
+  // If no path and no trailing slash, remove the bucket
+  const rawEndsWithSlash = pathString.endsWith('/');
+  if (!path && !rawEndsWithSlash) {
     if (!force) {
       const confirmed = await confirm(
         `Are you sure you want to delete bucket '${bucket}'?`
@@ -60,18 +74,25 @@ export default async function rm(options: Record<string, unknown>) {
   }
 
   // Check if it's a wildcard or folder
-  const isWildcard = pathString.includes('*');
-  let isFolder = path.endsWith('/');
+  const isWildcard = path.includes('*');
+  let isFolder = path.endsWith('/') || (!path && rawEndsWithSlash);
 
   // If not explicitly a folder, check if it's a prefix with objects
   if (!isWildcard && !isFolder) {
     isFolder = await isPathFolder(bucket, path, config);
   }
 
+  if (isFolder && !isWildcard && !recursive) {
+    console.error(
+      `Source is a remote folder (not removed). Use -r to remove recursively.`
+    );
+    process.exit(1);
+  }
+
   if (isWildcard || isFolder) {
     // List and remove multiple objects
     const prefix = isWildcard
-      ? path.replace('*', '')
+      ? wildcardPrefix(path)
       : path.endsWith('/')
         ? path
         : `${path}/`;
@@ -87,7 +108,17 @@ export default async function rm(options: Record<string, unknown>) {
       process.exit(1);
     }
 
-    const itemsToRemove = items;
+    let itemsToRemove = items;
+
+    if (isWildcard) {
+      const filePattern = path.split('/').pop()!;
+      const regex = globToRegex(filePattern);
+      itemsToRemove = itemsToRemove.filter((item) => {
+        const rel = prefix ? item.name.slice(prefix.length) : item.name;
+        if (!recursive && rel.includes('/')) return false;
+        return regex.test(rel.split('/').pop()!);
+      });
+    }
 
     // Also check if the folder marker itself exists (e.g., "hello/")
     const folderMarker = prefix;
@@ -97,7 +128,7 @@ export default async function rm(options: Record<string, unknown>) {
 
     // If folder marker not in list, check if it exists separately
     let hasSeparateFolderMarker = false;
-    if (!hasFolderMarkerInList) {
+    if (!hasFolderMarkerInList && !isWildcard) {
       const { data: markerData } = await list({
         prefix: folderMarker,
         limit: 1,
@@ -141,7 +172,7 @@ export default async function rm(options: Record<string, unknown>) {
       if (removeError) {
         console.error(`Failed to remove ${item.name}: ${removeError.message}`);
       } else {
-        console.log(`Removed ${bucket}/${item.name}`);
+        console.log(`Removed t3://${bucket}/${item.name}`);
         removed++;
       }
     }
@@ -160,7 +191,7 @@ export default async function rm(options: Record<string, unknown>) {
           `Failed to remove ${folderMarker}: ${removeError.message}`
         );
       } else {
-        console.log(`Removed ${bucket}/${folderMarker}`);
+        console.log(`Removed t3://${bucket}/${folderMarker}`);
         removed++;
       }
     }
@@ -170,7 +201,7 @@ export default async function rm(options: Record<string, unknown>) {
     // Remove single object
     if (!force) {
       const confirmed = await confirm(
-        `Are you sure you want to delete '${bucket}/${path}'?`
+        `Are you sure you want to delete 't3://${bucket}/${path}'?`
       );
       if (!confirmed) {
         console.log('Aborted');
@@ -190,7 +221,7 @@ export default async function rm(options: Record<string, unknown>) {
       process.exit(1);
     }
 
-    console.log(`Removed ${bucket}/${path}`);
+    console.log(`Removed t3://${bucket}/${path}`);
   }
   process.exit(0);
 }

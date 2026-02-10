@@ -302,18 +302,22 @@ commands:
 
   # rm
   - name: rm
-    description: Remove a bucket or a folder in a bucket or an object in a bucket or path
+    description: Remove a bucket, folder, or object from Tigris
     alias: remove
     arguments:
       - name: path
         type: positional
         required: true
-        description: a bucket, a folder in a bucket, an object in a bucket / path. Wildcard is supported.
+        description: remote path. Use t3:// (or tigris://) prefix. Bucket-only path removes the bucket. Quote wildcard patterns to prevent shell expansion.
         examples:
-          - my-bucket
-          - my-bucket/my-path
-          - my-bucket/my-path/*
-          - my-bucket/my-path/my-object.json
+          - t3://my-bucket
+          - t3://my-bucket/my-path/my-object.json
+          - t3://my-bucket/my-path/
+          - '"t3://my-bucket/my-path/*.jpg"'
+      - name: recursive
+        type: flag
+        alias: r
+        description: remove directories recursively
       - name: force
         type: flag
         alias: f
