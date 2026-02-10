@@ -100,10 +100,15 @@ export function checkForUpdates(): void {
   const cache = readUpdateCache();
 
   if (cache && isNewerVersion(currentVersion, cache.latestVersion)) {
+    const line1 = `Update available: ${currentVersion} → ${cache.latestVersion}`;
+    const line2 = 'Run `npm install -g @tigrisdata/cli` to upgrade.';
+    const width = Math.max(line1.length, line2.length) + 4;
+    const top = '┌' + '─'.repeat(width - 2) + '┐';
+    const bot = '└' + '─'.repeat(width - 2) + '┘';
+    const pad = (s: string) => '│ ' + s.padEnd(width - 4) + ' │';
     console.log(
-      `\nUpdate available: ${currentVersion} → ${cache.latestVersion}`
+      `\n${top}\n${pad('')}\n${pad(line1)}\n${pad(line2)}\n${pad('')}\n${bot}\n`
     );
-    console.log('Run `npm install -g @tigrisdata/cli` to upgrade.\n');
   }
 
   const intervalMs =

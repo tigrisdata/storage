@@ -89,9 +89,11 @@ export default async function mv(options: Record<string, unknown>) {
     // List and move multiple objects
     const prefix = isWildcard
       ? wildcardPrefix(srcPath.path)
-      : srcPath.path.endsWith('/')
-        ? srcPath.path
-        : `${srcPath.path}/`;
+      : srcPath.path
+        ? srcPath.path.endsWith('/')
+          ? srcPath.path
+          : `${srcPath.path}/`
+        : '';
 
     // Linux cp convention: trailing slash = contents only, no slash = include folder name
     const folderName =

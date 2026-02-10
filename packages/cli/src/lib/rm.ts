@@ -93,9 +93,11 @@ export default async function rm(options: Record<string, unknown>) {
     // List and remove multiple objects
     const prefix = isWildcard
       ? wildcardPrefix(path)
-      : path.endsWith('/')
-        ? path
-        : `${path}/`;
+      : path
+        ? path.endsWith('/')
+          ? path
+          : `${path}/`
+        : '';
 
     const { items, error } = await listAllItems(
       bucket,

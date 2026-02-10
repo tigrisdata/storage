@@ -431,9 +431,11 @@ async function copyRemoteToLocal(
   if (isWildcard || isFolder) {
     const prefix = isWildcard
       ? wildcardPrefix(srcParsed.path)
-      : srcParsed.path.endsWith('/')
-        ? srcParsed.path
-        : `${srcParsed.path}/`;
+      : srcParsed.path
+        ? srcParsed.path.endsWith('/')
+          ? srcParsed.path
+          : `${srcParsed.path}/`
+        : '';
 
     // Linux cp convention: trailing slash = contents only, no slash = include folder name
     const folderName =
@@ -562,9 +564,11 @@ async function copyRemoteToRemote(
   if (isWildcard || isFolder) {
     const prefix = isWildcard
       ? wildcardPrefix(srcParsed.path)
-      : srcParsed.path.endsWith('/')
-        ? srcParsed.path
-        : `${srcParsed.path}/`;
+      : srcParsed.path
+        ? srcParsed.path.endsWith('/')
+          ? srcParsed.path
+          : `${srcParsed.path}/`
+        : '';
 
     // Linux cp convention: trailing slash = contents only, no slash = include folder name
     const folderName =
