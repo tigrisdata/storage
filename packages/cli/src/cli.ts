@@ -6,6 +6,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import type { Argument, OperationSpec, CommandSpec } from './types.js';
 import { loadSpecs } from './utils/specs.js';
+import { checkForUpdates } from './utils/update-check.js';
 import { version } from '../package.json';
 
 // Global handler for user cancellation (Ctrl+C) and unhandled errors
@@ -564,3 +565,4 @@ program.action(() => {
 });
 
 program.parse();
+checkForUpdates();
