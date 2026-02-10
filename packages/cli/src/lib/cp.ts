@@ -15,6 +15,8 @@ import {
   parseRemotePath,
   isPathFolder,
   listAllItems,
+  globToRegex,
+  wildcardPrefix,
 } from '../utils/path.js';
 import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
@@ -58,28 +60,6 @@ function listLocalFiles(dirPath: string): string[] {
       const parent = e.parentPath ?? (e as unknown as { path: string }).path;
       return join(parent, e.name);
     });
-}
-
-/**
- * Converts a glob pattern to a RegExp.
- * `*` matches any characters except `/` (single-level wildcard).
- * All other regex metacharacters are escaped.
- */
-function globToRegex(pattern: string): RegExp {
-  const escaped = pattern
-    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*/g, '[^/]*');
-  return new RegExp('^' + escaped + '$');
-}
-
-/**
- * For a wildcard path, returns the directory prefix up to the `*`.
- * e.g. `folder/*.txt` → `folder/`, `*.txt` → ``, `a/b/*` → `a/b/`
- */
-function wildcardPrefix(wildcardPath: string): string {
-  const starIndex = wildcardPath.indexOf('*');
-  const slashBefore = wildcardPath.lastIndexOf('/', starIndex);
-  return slashBefore >= 0 ? wildcardPath.slice(0, slashBefore + 1) : '';
 }
 
 function listLocalFilesWithWildcard(

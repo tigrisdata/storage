@@ -4,6 +4,8 @@ import {
   parsePaths,
   isRemotePath,
   parseRemotePath,
+  globToRegex,
+  wildcardPrefix,
 } from '../../src/utils/path.js';
 
 describe('parsePath', () => {
@@ -136,6 +138,112 @@ describe('parseRemotePath', () => {
     const result = parseRemotePath('t3://my-bucket/folder/*');
     expect(result.bucket).toBe('my-bucket');
     expect(result.path).toBe('folder/*');
+  });
+});
+
+describe('globToRegex', () => {
+  it('should match simple wildcard', () => {
+    const regex = globToRegex('*');
+    expect(regex.test('file.txt')).toBe(true);
+    expect(regex.test('photo.jpg')).toBe(true);
+    expect(regex.test('')).toBe(true);
+  });
+
+  it('should not match across slashes', () => {
+    const regex = globToRegex('*');
+    expect(regex.test('folder/file.txt')).toBe(false);
+  });
+
+  it('should match wildcard with extension', () => {
+    const regex = globToRegex('*.txt');
+    expect(regex.test('file.txt')).toBe(true);
+    expect(regex.test('notes.txt')).toBe(true);
+    expect(regex.test('file.jpg')).toBe(false);
+    expect(regex.test('file.txt.bak')).toBe(false);
+    expect(regex.test('folder/file.txt')).toBe(false);
+  });
+
+  it('should match wildcard with prefix', () => {
+    const regex = globToRegex('img_*');
+    expect(regex.test('img_001.jpg')).toBe(true);
+    expect(regex.test('img_')).toBe(true);
+    expect(regex.test('photo_001.jpg')).toBe(false);
+  });
+
+  it('should match wildcard with prefix and extension', () => {
+    const regex = globToRegex('data_*.csv');
+    expect(regex.test('data_2024.csv')).toBe(true);
+    expect(regex.test('data_.csv')).toBe(true);
+    expect(regex.test('data_2024.txt')).toBe(false);
+    expect(regex.test('other_2024.csv')).toBe(false);
+  });
+
+  it('should escape regex metacharacters', () => {
+    const regex = globToRegex('file(1).txt');
+    expect(regex.test('file(1).txt')).toBe(true);
+    expect(regex.test('file1.txt')).toBe(false);
+  });
+
+  it('should escape dots', () => {
+    const regex = globToRegex('*.tar.gz');
+    expect(regex.test('archive.tar.gz')).toBe(true);
+    expect(regex.test('archivetargz')).toBe(false);
+  });
+
+  it('should escape square brackets', () => {
+    const regex = globToRegex('file[1].txt');
+    expect(regex.test('file[1].txt')).toBe(true);
+    expect(regex.test('file1.txt')).toBe(false);
+  });
+
+  it('should escape plus and question mark', () => {
+    const regex = globToRegex('file+name?.txt');
+    expect(regex.test('file+name?.txt')).toBe(true);
+    expect(regex.test('fileename.txt')).toBe(false);
+  });
+
+  it('should handle exact match with no wildcard', () => {
+    const regex = globToRegex('exact-file.txt');
+    expect(regex.test('exact-file.txt')).toBe(true);
+    expect(regex.test('other-file.txt')).toBe(false);
+    expect(regex.test('exact-file.txt.bak')).toBe(false);
+  });
+
+  it('should handle multiple wildcards', () => {
+    const regex = globToRegex('*_backup_*');
+    expect(regex.test('db_backup_2024')).toBe(true);
+    expect(regex.test('_backup_')).toBe(true);
+    expect(regex.test('folder/db_backup_2024')).toBe(false);
+  });
+});
+
+describe('wildcardPrefix', () => {
+  it('should return folder prefix for folder/*.txt', () => {
+    expect(wildcardPrefix('folder/*.txt')).toBe('folder/');
+  });
+
+  it('should return empty string for *.txt', () => {
+    expect(wildcardPrefix('*.txt')).toBe('');
+  });
+
+  it('should return nested prefix for a/b/*.txt', () => {
+    expect(wildcardPrefix('a/b/*.txt')).toBe('a/b/');
+  });
+
+  it('should return prefix for a/b/*', () => {
+    expect(wildcardPrefix('a/b/*')).toBe('a/b/');
+  });
+
+  it('should return empty string for *', () => {
+    expect(wildcardPrefix('*')).toBe('');
+  });
+
+  it('should handle prefix with star mid-name', () => {
+    expect(wildcardPrefix('folder/img_*')).toBe('folder/');
+  });
+
+  it('should handle deeply nested paths', () => {
+    expect(wildcardPrefix('a/b/c/d/*.log')).toBe('a/b/c/d/');
   });
 });
 

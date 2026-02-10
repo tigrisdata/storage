@@ -71,6 +71,28 @@ export function parsePaths(src: string, dest: string): ParsedPaths {
   };
 }
 
+/**
+ * Converts a glob pattern to a RegExp.
+ * `*` matches any characters except `/` (single-level wildcard).
+ * All other regex metacharacters are escaped.
+ */
+export function globToRegex(pattern: string): RegExp {
+  const escaped = pattern
+    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '[^/]*');
+  return new RegExp('^' + escaped + '$');
+}
+
+/**
+ * For a wildcard path, returns the directory prefix up to the `*`.
+ * e.g. `folder/*.txt` → `folder/`, `*.txt` → ``, `a/b/*` → `a/b/`
+ */
+export function wildcardPrefix(wildcardPath: string): string {
+  const starIndex = wildcardPath.indexOf('*');
+  const slashBefore = wildcardPath.lastIndexOf('/', starIndex);
+  return slashBefore >= 0 ? wildcardPath.slice(0, slashBefore + 1) : '';
+}
+
 export type ListItem = {
   id: string;
   name: string;

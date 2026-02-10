@@ -1,5 +1,12 @@
 import * as readline from 'readline';
-import { parsePath, isPathFolder, listAllItems } from '../utils/path.js';
+import {
+  isRemotePath,
+  parseRemotePath,
+  isPathFolder,
+  listAllItems,
+  globToRegex,
+  wildcardPrefix,
+} from '../utils/path.js';
 import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { formatSize } from '../utils/format.js';
@@ -23,14 +30,22 @@ export default async function mv(options: Record<string, unknown>) {
   const src = getOption<string>(options, ['src']);
   const dest = getOption<string>(options, ['dest']);
   const force = getOption<boolean>(options, ['force', 'f', 'F']);
+  const recursive = !!getOption<boolean>(options, ['recursive', 'r']);
 
   if (!src || !dest) {
     console.error('both src and dest arguments are required');
     process.exit(1);
   }
 
-  const srcPath = parsePath(src);
-  const destPath = parsePath(dest);
+  if (!isRemotePath(src) || !isRemotePath(dest)) {
+    console.error(
+      'Both src and dest must be remote Tigris paths (t3:// or tigris://)'
+    );
+    process.exit(1);
+  }
+
+  const srcPath = parseRemotePath(src);
+  const destPath = parseRemotePath(dest);
 
   if (!srcPath.bucket) {
     console.error('Invalid source path');
@@ -43,7 +58,10 @@ export default async function mv(options: Record<string, unknown>) {
   }
 
   // Cannot move a bucket itself
-  if (!srcPath.path) {
+  // t3://bucket (no path, no trailing slash) = error
+  // t3://bucket/ (no path, trailing slash) = move all contents from bucket root
+  const rawEndsWithSlash = src.endsWith('/');
+  if (!srcPath.path && !rawEndsWithSlash) {
     console.error('Cannot move a bucket. Provide a path within the bucket.');
     process.exit(1);
   }
@@ -51,27 +69,48 @@ export default async function mv(options: Record<string, unknown>) {
   const config = await getStorageConfig();
 
   // Check if source is a single object or a prefix (folder/wildcard)
-  const isWildcard = src.includes('*');
-  let isFolder = src.endsWith('/');
+  const isWildcard = srcPath.path.includes('*');
+  let isFolder =
+    srcPath.path.endsWith('/') || (!srcPath.path && rawEndsWithSlash);
 
   // If not explicitly a folder, check if it's a prefix with objects
   if (!isWildcard && !isFolder && srcPath.path) {
     isFolder = await isPathFolder(srcPath.bucket, srcPath.path, config);
   }
 
+  if (isFolder && !isWildcard && !recursive) {
+    console.error(
+      `Source is a remote folder (not moved). Use -r to move recursively.`
+    );
+    process.exit(1);
+  }
+
   if (isWildcard || isFolder) {
     // List and move multiple objects
     const prefix = isWildcard
-      ? srcPath.path.replace('*', '')
+      ? wildcardPrefix(srcPath.path)
       : srcPath.path.endsWith('/')
         ? srcPath.path
         : `${srcPath.path}/`;
 
-    // Check for same location (folder to itself)
-    const destPrefix = destPath.path
-      ? `${destPath.path.replace(/\/$/, '')}/`
+    // Linux cp convention: trailing slash = contents only, no slash = include folder name
+    const folderName =
+      !isWildcard && !srcPath.path.endsWith('/')
+        ? srcPath.path.split('/').filter(Boolean).pop()!
+        : '';
+
+    const destBase = destPath.path?.replace(/\/$/, '') || '';
+    const effectiveDestPrefix = [destBase, folderName]
+      .filter(Boolean)
+      .join('/');
+    const effectiveDestPrefixWithSlash = effectiveDestPrefix
+      ? `${effectiveDestPrefix}/`
       : '';
-    if (srcPath.bucket === destPath.bucket && prefix === destPrefix) {
+
+    if (
+      srcPath.bucket === destPath.bucket &&
+      prefix === effectiveDestPrefixWithSlash
+    ) {
       console.error('Source and destination are the same');
       process.exit(1);
     }
@@ -88,10 +127,19 @@ export default async function mv(options: Record<string, unknown>) {
     }
 
     // Filter out folder markers - they're handled separately below
-    const itemsToMove = items.filter((item) => item.name !== prefix);
+    let itemsToMove = items.filter((item) => item.name !== prefix);
+
+    if (isWildcard) {
+      const filePattern = srcPath.path.split('/').pop()!;
+      const regex = globToRegex(filePattern);
+      itemsToMove = itemsToMove.filter((item) => {
+        const rel = prefix ? item.name.slice(prefix.length) : item.name;
+        if (!recursive && rel.includes('/')) return false;
+        return regex.test(rel.split('/').pop()!);
+      });
+    }
 
     // Check if folder marker exists
-    // Use prefix directly - it's already correctly computed for wildcards
     const { data: markerData } = await list({
       prefix,
       limit: 1,
@@ -123,8 +171,8 @@ export default async function mv(options: Record<string, unknown>) {
     let moved = 0;
     for (const item of itemsToMove) {
       const relativePath = prefix ? item.name.slice(prefix.length) : item.name;
-      const destKey = destPath.path
-        ? `${destPath.path.replace(/\/$/, '')}/${relativePath}`
+      const destKey = effectiveDestPrefix
+        ? `${effectiveDestPrefix}/${relativePath}`
         : relativePath;
 
       const moveResult = await moveObject(
@@ -138,7 +186,9 @@ export default async function mv(options: Record<string, unknown>) {
       if (moveResult.error) {
         console.error(`Failed to move ${item.name}: ${moveResult.error}`);
       } else {
-        console.log(`Moved ${item.name} -> ${destPath.bucket}/${destKey}`);
+        console.log(
+          `Moved t3://${srcPath.bucket}/${item.name} -> t3://${destPath.bucket}/${destKey}`
+        );
         moved++;
       }
     }
@@ -146,9 +196,9 @@ export default async function mv(options: Record<string, unknown>) {
     // Also move the folder marker if it exists (already checked above)
     let movedMarker = false;
     if (hasFolderMarker) {
-      if (destPath.path) {
+      if (effectiveDestPrefix) {
         // Move folder marker to destination folder
-        const destFolderMarker = `${destPath.path.replace(/\/$/, '')}/`;
+        const destFolderMarker = `${effectiveDestPrefix}/`;
         const markerResult = await moveObject(
           config,
           srcPath.bucket,
@@ -187,18 +237,13 @@ export default async function mv(options: Record<string, unknown>) {
     console.log(`Moved ${moved} object(s)`);
   } else {
     // Move single object
-    if (!srcPath.path) {
-      console.error('Source object key is required');
-      process.exit(1);
-    }
-
     const srcFileName = srcPath.path.split('/').pop()!;
     let destKey: string;
 
     if (!destPath.path) {
       // No dest path, use source filename
       destKey = srcFileName;
-    } else if (dest.endsWith('/')) {
+    } else if (destPath.path.endsWith('/')) {
       // Explicit folder destination
       destKey = `${destPath.path}${srcFileName}`;
     } else {
@@ -223,7 +268,7 @@ export default async function mv(options: Record<string, unknown>) {
 
     if (!force) {
       const confirmed = await confirm(
-        `Are you sure you want to move '${srcPath.bucket}/${srcPath.path}'?`
+        `Are you sure you want to move 't3://${srcPath.bucket}/${srcPath.path}'?`
       );
       if (!confirmed) {
         console.log('Aborted');
@@ -245,7 +290,9 @@ export default async function mv(options: Record<string, unknown>) {
       process.exit(1);
     }
 
-    console.log(`Moved ${src} -> ${destPath.bucket}/${destKey}`);
+    console.log(
+      `Moved t3://${srcPath.bucket}/${srcPath.path} -> t3://${destPath.bucket}/${destKey}`
+    );
   }
   process.exit(0);
 }

@@ -273,24 +273,28 @@ commands:
 
   # mv
   - name: mv
-    description: Move a folder or an object
+    description: Move objects within Tigris
     alias: move
     arguments:
       - name: src
         type: positional
         required: true
-        description: path to move from
+        description: remote source path. Use t3:// (or tigris://) prefix. Quote wildcard patterns to prevent shell expansion.
         examples:
-          - my-bucket/my-path
-          - my-bucket/my-path/*
-          - my-bucket/my-path/my-object.json
+          - t3://my-bucket/my-path/my-object.json
+          - t3://my-bucket/my-path/
+          - '"t3://my-bucket/my-path/*.jpg"'
       - name: dest
         type: positional
         required: true
-        description: path to move to
+        description: remote destination path. Use t3:// (or tigris://) prefix.
         examples:
-          - my-bucket
-          - my-bucket/new-path
+          - t3://my-bucket
+          - t3://my-bucket/new-path/
+      - name: recursive
+        type: flag
+        alias: r
+        description: move directories recursively
       - name: force
         type: flag
         alias: f
