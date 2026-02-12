@@ -21,6 +21,21 @@ import { DEFAULT_STORAGE_ENDPOINT } from '../constants.js';
 const tigrisConfig = getTigrisConfig();
 const auth0Config = getAuth0Config();
 
+/**
+ * Trigger interactive login when not authenticated and stdin is a TTY.
+ * Returns true if login was triggered, false if non-interactive or already attempted.
+ */
+let autoLoginAttempted = false;
+async function triggerAutoLogin(): Promise<boolean> {
+  if (autoLoginAttempted || !process.stdin.isTTY) return false;
+  autoLoginAttempted = true;
+  console.log('Not authenticated. Starting login...\n');
+  const { default: login } = await import('../lib/login/select.js');
+  await login({});
+  console.log();
+  return true;
+}
+
 export type LoginMethod = 'oauth' | 'credentials';
 
 /**
@@ -115,7 +130,10 @@ export async function getStorageConfig(): Promise<TigrisStorageConfig> {
     };
   }
 
-  // No valid auth method found
+  // No valid auth method found — try auto-login in interactive terminals
+  if (await triggerAutoLogin()) {
+    return getStorageConfig();
+  }
   throw new Error(
     'Not authenticated. Please run "tigris login" or "tigris configure" first.'
   );
@@ -230,7 +248,10 @@ export async function getS3Client(): Promise<S3Client> {
     return client;
   }
 
-  // No valid auth method found
+  // No valid auth method found — try auto-login in interactive terminals
+  if (await triggerAutoLogin()) {
+    return getS3Client();
+  }
   throw new Error(
     'Not authenticated. Please run "tigris login" or "tigris configure" first.'
   );
