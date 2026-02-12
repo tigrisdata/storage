@@ -3,11 +3,16 @@ import { join } from 'path';
 import { homedir } from 'os';
 import https from 'https';
 import { version as currentVersion } from '../../package.json';
-import { NPM_REGISTRY_URL, UPDATE_CHECK_INTERVAL_MS } from '../constants.js';
+import {
+  NPM_REGISTRY_URL,
+  UPDATE_CHECK_INTERVAL_MS,
+  UPDATE_NOTIFY_INTERVAL_MS,
+} from '../constants.js';
 
 interface UpdateCheckCache {
   latestVersion: string;
   lastChecked: number;
+  lastNotified?: number;
 }
 
 const CACHE_PATH = join(homedir(), '.tigris', 'update-check.json');
@@ -87,7 +92,9 @@ function fetchLatestVersionInBackground(): void {
     });
     req.end();
     // Unref so the request doesn't keep the process alive
-    req.unref();
+    req.on('socket', (socket) => {
+      socket.unref();
+    });
   } catch {
     // Silent on failure
   }
@@ -99,16 +106,26 @@ export function checkForUpdates(): void {
 
   const cache = readUpdateCache();
 
+  const notifyIntervalMs =
+    Number(process.env.TIGRIS_UPDATE_NOTIFY_INTERVAL_MS) ||
+    UPDATE_NOTIFY_INTERVAL_MS;
+
   if (cache && isNewerVersion(currentVersion, cache.latestVersion)) {
-    const line1 = `Update available: ${currentVersion} → ${cache.latestVersion}`;
-    const line2 = 'Run `npm install -g @tigrisdata/cli` to upgrade.';
-    const width = Math.max(line1.length, line2.length) + 4;
-    const top = '┌' + '─'.repeat(width - 2) + '┐';
-    const bot = '└' + '─'.repeat(width - 2) + '┘';
-    const pad = (s: string) => '│ ' + s.padEnd(width - 4) + ' │';
-    console.log(
-      `\n${top}\n${pad('')}\n${pad(line1)}\n${pad(line2)}\n${pad('')}\n${bot}\n`
-    );
+    if (
+      !cache.lastNotified ||
+      Date.now() - cache.lastNotified > notifyIntervalMs
+    ) {
+      const line1 = `Update available: ${currentVersion} → ${cache.latestVersion}`;
+      const line2 = 'Run `npm install -g @tigrisdata/cli` to upgrade.';
+      const width = Math.max(line1.length, line2.length) + 4;
+      const top = '┌' + '─'.repeat(width - 2) + '┐';
+      const bot = '└' + '─'.repeat(width - 2) + '┘';
+      const pad = (s: string) => '│ ' + s.padEnd(width - 4) + ' │';
+      console.log(
+        `\n${top}\n${pad('')}\n${pad(line1)}\n${pad(line2)}\n${pad('')}\n${bot}\n`
+      );
+      writeUpdateCache({ ...cache, lastNotified: Date.now() });
+    }
   }
 
   const intervalMs =
