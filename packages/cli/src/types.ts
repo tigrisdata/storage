@@ -27,6 +27,7 @@ export interface OperationSpec {
   description: string;
   alias?: string | string[];
   arguments?: Argument[];
+  examples?: string[];
   message?: string;
   messages?: Messages;
 }
@@ -36,6 +37,7 @@ export interface CommandSpec {
   description: string;
   alias?: string;
   arguments?: Argument[];
+  examples?: string[];
   operations?: OperationSpec[];
   default?: string;
   message?: string;

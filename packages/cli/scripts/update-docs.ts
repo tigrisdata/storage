@@ -60,22 +60,32 @@ function generateCommandSection(cmd: CommandSpec): string {
     lines.push('');
   }
 
-  const positionals = cmd.arguments?.filter((a) => a.type === 'positional') || [];
-  if (positionals.length > 0 && positionals.some((p) => p.examples?.length)) {
+  if (cmd.examples && cmd.examples.length > 0) {
     lines.push('**Examples:**');
     lines.push('```bash');
-    if (positionals.length === 1 && positionals[0].examples) {
-      for (const ex of positionals[0].examples.slice(0, 3)) {
-        lines.push(`tigris ${cmd.name} ${ex}`);
-      }
-    } else if (positionals.length >= 2) {
-      if (cmd.name === 'cp' || cmd.name === 'mv') {
-        lines.push(`tigris ${cmd.name} bucket/file.txt bucket/copy.txt`);
-        lines.push(`tigris ${cmd.name} bucket/folder/ other-bucket/folder/`);
-      }
+    for (const ex of cmd.examples) {
+      lines.push(ex);
     }
     lines.push('```');
     lines.push('');
+  } else {
+    const positionals = cmd.arguments?.filter((a) => a.type === 'positional') || [];
+    if (positionals.length > 0 && positionals.some((p) => p.examples?.length)) {
+      lines.push('**Examples:**');
+      lines.push('```bash');
+      if (positionals.length === 1 && positionals[0].examples) {
+        for (const ex of positionals[0].examples.slice(0, 3)) {
+          lines.push(`tigris ${cmd.name} ${ex}`);
+        }
+      } else if (positionals.length >= 2) {
+        if (cmd.name === 'cp' || cmd.name === 'mv') {
+          lines.push(`tigris ${cmd.name} bucket/file.txt bucket/copy.txt`);
+          lines.push(`tigris ${cmd.name} bucket/folder/ other-bucket/folder/`);
+        }
+      }
+      lines.push('```');
+      lines.push('');
+    }
   }
 
   return lines.join('\n');
@@ -141,6 +151,16 @@ function generateOperationSection(parentName: string, op: OperationSpec, headerL
       const defaultStr = arg.default !== undefined ? ` (default: ${arg.default})` : '';
       lines.push(`| \`${flagName}\` | ${arg.description}${defaultStr} |`);
     }
+    lines.push('');
+  }
+
+  if (op.examples && op.examples.length > 0) {
+    lines.push('**Examples:**');
+    lines.push('```bash');
+    for (const ex of op.examples) {
+      lines.push(ex);
+    }
+    lines.push('```');
     lines.push('');
   }
 

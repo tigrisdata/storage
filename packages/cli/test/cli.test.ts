@@ -76,7 +76,7 @@ describe('CLI Help Commands', () => {
     const result = runCli('ls help');
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('ls');
-    expect(result.stdout).toContain('List buckets or objects');
+    expect(result.stdout).toContain('List all buckets');
   });
 
   it('should show cp help', () => {

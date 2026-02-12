@@ -79,8 +79,11 @@ commands:
   #########################
   # configure
   - name: configure
-    description: Save credentials permanently. After running this, all commands uses these credentials.
+    description: Save access-key credentials to ~/.tigris/config.json for persistent use across all commands
     alias: c
+    examples:
+      - "tigris configure --access-key tid_AaBb --access-secret tsec_XxYy"
+      - "tigris configure --endpoint https://custom.endpoint.dev"
     messages:
       onStart: 'Saving credentials...'
       onSuccess: 'Credentials saved to ~/.tigris/config.json. You can now use all tigris commands.'
@@ -101,7 +104,11 @@ commands:
 
   # login
   - name: login
-    description: Start a session. Use OAuth (default) or temporary credentials that override your saved config
+    description: Start a session via OAuth (default) or temporary credentials. Session state is cleared on logout
+    examples:
+      - "tigris login"
+      - "tigris login oauth"
+      - "tigris login credentials --access-key tid_AaBb --access-secret tsec_XxYy"
     messages:
       onStart: ''
       onSuccess: 'Login successful'
@@ -126,8 +133,10 @@ commands:
           onFailure: 'Login failed'
       # oauth
       - name: oauth
-        description: Login via browser (OAuth2 device flow). Best for interactive use
+        description: Login via browser using OAuth2 device flow. Best for interactive use
         alias: o
+        examples:
+          - "tigris login oauth"
         messages:
           onStart: 'Opening browser for authentication...'
           onSuccess: "Logged in successfully\nOrganization '{{org}}' selected"
@@ -136,8 +145,11 @@ commands:
           hint: "You have {{count}} organizations.\nRun \"tigris orgs list\" to switch."
       # credentials
       - name: credentials
-        description: Login with access key + secret. Creates a temporary session (cleared on logout)
+        description: Login with an access key and secret. Creates a temporary session that is cleared on logout
         alias: c
+        examples:
+          - "tigris login credentials --access-key tid_AaBb --access-secret tsec_XxYy"
+          - "tigris login credentials"
         messages:
           onStart: 'Authenticating...'
           onSuccess: 'Logged in with credentials'
@@ -155,8 +167,10 @@ commands:
 
   # whoami
   - name: whoami
-    description: Show information about the current user
+    description: Print the currently authenticated user, organization, and auth method
     alias: w
+    examples:
+      - "tigris whoami"
     messages:
       onStart: ''
       onSuccess: ''
@@ -165,7 +179,9 @@ commands:
 
   # logout
   - name: logout
-    description: End your session. Clears login state but keeps credentials from 'configure'
+    description: End the current session and clear login state. Credentials saved via 'configure' are kept
+    examples:
+      - "tigris logout"
     messages:
       onStart: 'Logging out...'
       onSuccess: 'Logged out. Your configured credentials are still saved.'
@@ -173,12 +189,18 @@ commands:
 
   # credentials
   - name: credentials
-    description: Manage and test credentials
+    description: Test whether your current credentials can reach Tigris and optionally verify access to a specific bucket
     alias: creds
+    examples:
+      - "tigris credentials test"
+      - "tigris credentials test --bucket my-bucket"
     operations:
       - name: test
-        description: Test if credentials have access to Tigris (optionally to a specific bucket)
+        description: Verify that current credentials are valid. Optionally checks access to a specific bucket
         alias: t
+        examples:
+          - "tigris credentials test"
+          - "tigris credentials test --bucket my-bucket"
         messages:
           onStart: 'Testing credentials...'
           onSuccess: 'Credentials are valid'
@@ -195,12 +217,20 @@ commands:
   #########################
   # ls
   - name: ls
-    description: List buckets or objects in a bucket or path
+    description: List all buckets (no arguments) or objects under a bucket/prefix path. Accepts bare names or t3:// URIs
     alias: list
+    examples:
+      - "tigris ls"
+      - "tigris ls my-bucket"
+      - "tigris ls my-bucket/images/"
+      - "tigris ls t3://my-bucket/prefix/"
+    messages:
+      onFailure: 'Failed to list. Verify the bucket exists and your credentials have access'
+      onEmpty: 'No results found. Run "tigris ls" to see all buckets'
     arguments:
       - name: path
         type: positional
-        description: a bucket or path in a bucket (if not provided, lists all buckets). Supports t3:// and tigris:// prefixes.
+        description: A bucket name or bucket/prefix path. Omit to list all buckets. Supports t3:// and tigris:// prefixes
         examples:
           - my-bucket
           - my-bucket/my-path
@@ -209,13 +239,19 @@ commands:
 
   # mk
   - name: mk
-    description: Create a bucket or a folder in a bucket
+    description: Create a bucket (bare name) or a folder inside a bucket (bucket/folder/ with trailing slash)
     alias: create
+    examples:
+      - "tigris mk my-bucket"
+      - "tigris mk my-bucket/images/"
+      - "tigris mk t3://my-bucket"
+    messages:
+      onFailure: 'Failed to create. Check the name is valid and your credentials have write access'
     arguments:
       - name: path
         required: true
         type: positional
-        description: a bucket or a folder in a bucket. Supports t3:// and tigris:// prefixes.
+        description: A bucket name or bucket/folder/ path. Trailing slash creates a folder inside the bucket. Supports t3:// and tigris:// prefixes
         examples:
           - my-bucket
           - my-bucket/my-path
@@ -224,24 +260,29 @@ commands:
 
   # touch
   - name: touch
-    description: Create an empty object in a bucket
+    description: Create an empty (zero-byte) object at the given bucket/key path
+    examples:
+      - "tigris touch my-bucket/placeholder.txt"
+      - "tigris touch t3://my-bucket/logs/"
+    messages:
+      onFailure: 'Failed to create object. Verify the bucket exists and your credentials have write access'
     arguments:
       - name: path
         required: true
         type: positional
-        description: path to the object (bucket/key). Supports t3:// and tigris:// prefixes.
+        description: Object path as bucket/key. Supports t3:// and tigris:// prefixes
         examples:
           - my-bucket/my-file.txt
           - t3://my-bucket/my-file.txt
 
   # stat
   - name: stat
-    description: Get the details of a bucket or a folder in a bucket or an object in a bucket or path
+    description: Show metadata (size, last-modified, content-type, storage tier) for a bucket, folder, or object
     arguments:
       - name: path
         required: true
         type: positional
-        description: a bucket, folder, or object path. Supports t3:// and tigris:// prefixes.
+        description: A bucket name, folder path, or object key. Supports t3:// and tigris:// prefixes
         examples:
           - my-bucket
           - my-bucket/my-path
@@ -251,13 +292,20 @@ commands:
 
   # cp
   - name: cp
-    description: Copy files between local filesystem and Tigris, or within Tigris
+    description: Copy files between local filesystem and Tigris, or between paths within Tigris. At least one side must be a remote t3:// path
     alias: copy
+    examples:
+      - "tigris cp ./file.txt t3://my-bucket/file.txt"
+      - "tigris cp t3://my-bucket/file.txt ./local-copy.txt"
+      - "tigris cp t3://my-bucket/src/ t3://my-bucket/dest/ -r"
+      - "tigris cp ./images/ t3://my-bucket/images/ -r"
+    messages:
+      onFailure: 'Copy failed. Verify both paths are correct and credentials have access'
     arguments:
       - name: src
         required: true
         type: positional
-        description: source path. Use t3:// (or tigris://) prefix for remote Tigris paths, bare paths for local files. At least one side must be remote. Quote wildcard patterns to prevent shell expansion.
+        description: Source path. Use t3:// (or tigris://) prefix for remote Tigris paths, bare paths for local files. At least one side must be remote. Quote wildcard patterns to prevent shell expansion
         examples:
           - ./file.txt
           - ./dir/
@@ -267,7 +315,7 @@ commands:
       - name: dest
         required: true
         type: positional
-        description: destination path. Use t3:// (or tigris://) prefix for remote Tigris paths, bare paths for local files.
+        description: Destination path. Use t3:// (or tigris://) prefix for remote Tigris paths, bare paths for local files
         examples:
           - .
           - ./local-dir/
@@ -276,17 +324,23 @@ commands:
       - name: recursive
         type: flag
         alias: r
-        description: copy directories recursively
+        description: Copy directories recursively
 
   # mv
   - name: mv
-    description: Move objects within Tigris
+    description: Move (rename) objects within Tigris. Both source and destination must be remote t3:// paths
     alias: move
+    examples:
+      - "tigris mv t3://my-bucket/old.txt t3://my-bucket/new.txt -f"
+      - "tigris mv t3://my-bucket/old-dir/ t3://my-bucket/new-dir/ -rf"
+      - "tigris mv my-bucket/a.txt my-bucket/b.txt -f"
+    messages:
+      onFailure: 'Move failed. Verify both paths are remote and credentials have access'
     arguments:
       - name: src
         type: positional
         required: true
-        description: remote source path. Use t3:// (or tigris://) prefix. Quote wildcard patterns to prevent shell expansion.
+        description: Remote source path. Use t3:// (or tigris://) prefix. Quote wildcard patterns to prevent shell expansion
         examples:
           - t3://my-bucket/my-path/my-object.json
           - t3://my-bucket/my-path/
@@ -294,14 +348,14 @@ commands:
       - name: dest
         type: positional
         required: true
-        description: remote destination path. Use t3:// (or tigris://) prefix.
+        description: Remote destination path. Use t3:// (or tigris://) prefix
         examples:
           - t3://my-bucket
           - t3://my-bucket/new-path/
       - name: recursive
         type: flag
         alias: r
-        description: move directories recursively
+        description: Move directories recursively
       - name: force
         type: flag
         alias: f
@@ -309,13 +363,20 @@ commands:
 
   # rm
   - name: rm
-    description: Remove a bucket, folder, or object from Tigris
+    description: Remove a bucket, folder, or object from Tigris. A bare bucket name deletes the bucket itself
     alias: remove
+    examples:
+      - "tigris rm t3://my-bucket/file.txt -f"
+      - "tigris rm t3://my-bucket/folder/ -rf"
+      - "tigris rm t3://my-bucket -f"
+      - 'tigris rm "t3://my-bucket/logs/*.tmp" -f'
+    messages:
+      onFailure: 'Remove failed. Verify the path exists and credentials have delete access'
     arguments:
       - name: path
         type: positional
         required: true
-        description: remote path. Use t3:// (or tigris://) prefix. Bucket-only path removes the bucket. Quote wildcard patterns to prevent shell expansion.
+        description: Remote path to remove. A bucket-only path removes the bucket. Use t3:// (or tigris://) prefix. Quote wildcard patterns to prevent shell expansion
         examples:
           - t3://my-bucket
           - t3://my-bucket/my-path/my-object.json
@@ -324,7 +385,7 @@ commands:
       - name: recursive
         type: flag
         alias: r
-        description: remove directories recursively
+        description: Remove directories recursively
       - name: force
         type: flag
         alias: f
@@ -335,12 +396,19 @@ commands:
   #########################
   - name: organizations
     alias: orgs
-    description: Manage organizations
+    description: List, create, and switch between organizations. An organization is a workspace that contains your resources like buckets and access keys
+    examples:
+      - "tigris orgs list"
+      - "tigris orgs create my-org"
+      - "tigris orgs select my-org"
     operations:
       # list
       - name: list
-        description: List organizations
+        description: List all organizations you belong to and interactively select one as active
         alias: l
+        examples:
+          - "tigris orgs list"
+          - "tigris orgs list --format json"
         messages:
           onStart: 'Listing organizations...'
           onSuccess: "Organization '{{name}}' selected"
@@ -348,7 +416,7 @@ commands:
           onEmpty: "No organizations found. You may need to re-authenticate.\nRun: tigris login"
         arguments:
           - name: format
-            description: Format
+            description: Output format
             alias: f
             options: [json, table, xml, select]
             default: select
@@ -357,8 +425,10 @@ commands:
             alias: i
             type: flag
       - name: create
-        description: Create organization
+        description: Create a new organization with the given name
         alias: c
+        examples:
+          - "tigris orgs create my-org"
         messages:
           onStart: 'Creating organization...'
           onSuccess: "Organization '{{name}}' created successfully\nOrganization ID: {{id}}"
@@ -372,8 +442,10 @@ commands:
             examples:
               - my-organization
       - name: select
-        description: Select the organization to use
+        description: Set the named organization as your active org for all subsequent commands
         alias: s
+        examples:
+          - "tigris orgs select my-org"
         messages:
           onStart: ''
           onSuccess: "Organization '{{name}}' selected"
@@ -390,13 +462,21 @@ commands:
   # Manage buckets
   #########################
   - name: buckets
-    description: Manage buckets
+    description: Create, inspect, update, and delete buckets. Buckets are top-level containers that hold objects
     alias: b
+    examples:
+      - "tigris buckets list"
+      - "tigris buckets create my-bucket"
+      - "tigris buckets get my-bucket"
+      - "tigris buckets delete my-bucket"
     operations:
       # list
       - name: list
-        description: List buckets
+        description: List all buckets in the current organization
         alias: l
+        examples:
+          - "tigris buckets list"
+          - "tigris buckets list --format json"
         messages:
           onStart: 'Listing buckets...'
           onSuccess: 'Found {{count}} bucket(s)'
@@ -404,14 +484,18 @@ commands:
           onEmpty: 'No buckets found'
         arguments:
           - name: format
-            description: Format
+            description: Output format
             alias: f
             options: [json, table, xml]
             default: table
       # create
       - name: create
-        description: Create bucket
+        description: Create a new bucket with optional access, tier, consistency, and region settings
         alias: c
+        examples:
+          - "tigris buckets create my-bucket"
+          - "tigris buckets create my-bucket --access public --region iad"
+          - "tigris buckets create my-bucket --enable-snapshots --default-tier STANDARD_IA"
         messages:
           onStart: 'Creating bucket...'
           onSuccess: "Bucket '{{name}}' created successfully"
@@ -450,8 +534,10 @@ commands:
             default: 'global'
       # get
       - name: get
-        description: Get bucket details
+        description: Show details for a bucket including access level, region, tier, and custom domain
         alias: g
+        examples:
+          - "tigris buckets get my-bucket"
         messages:
           onStart: 'Getting bucket details...'
           onSuccess: ''
@@ -465,8 +551,11 @@ commands:
               - my-bucket
       # delete
       - name: delete
-        description: Delete bucket
+        description: Delete one or more buckets by name. The bucket must be empty or delete-protection must be off
         alias: d
+        examples:
+          - "tigris buckets delete my-bucket"
+          - "tigris buckets delete bucket-a,bucket-b"
         messages:
           onStart: 'Deleting bucket...'
           onSuccess: "Bucket '{{name}}' deleted successfully"
@@ -481,8 +570,12 @@ commands:
               - my-bucket
       # set
       - name: set
-        description: Update bucket settings
+        description: Update settings on an existing bucket such as access level, region, caching, or custom domain
         alias: s
+        examples:
+          - "tigris buckets set my-bucket --access public"
+          - "tigris buckets set my-bucket --region iad,fra --cache-control 'max-age=3600'"
+          - "tigris buckets set my-bucket --custom-domain assets.example.com"
         messages:
           onStart: 'Updating bucket...'
           onSuccess: 'Bucket {{name}} updated successfully'
@@ -519,13 +612,19 @@ commands:
   # Manage forks
   #########################
   - name: forks
-    description: Manage forks
+    description: List and create forks. A fork is a writable copy-on-write clone of a bucket, useful for testing or branching data
     alias: f
+    examples:
+      - "tigris forks list my-bucket"
+      - "tigris forks create my-bucket my-fork"
     operations:
       # list
       - name: list
-        description: List forks of a bucket
+        description: List all forks created from the given source bucket
         alias: l
+        examples:
+          - "tigris forks list my-bucket"
+          - "tigris forks list my-bucket --format json"
         messages:
           onStart: 'Listing forks...'
           onSuccess: 'Found {{count}} fork(s)'
@@ -545,8 +644,11 @@ commands:
             default: table
       # create
       - name: create
-        description: Create a fork of a bucket
+        description: Create a new fork (copy-on-write clone) of the source bucket. Optionally fork from a specific snapshot
         alias: c
+        examples:
+          - "tigris forks create my-bucket my-fork"
+          - "tigris forks create my-bucket my-fork --snapshot snap-2025-01-01"
         messages:
           onStart: 'Creating fork...'
           onSuccess: "Fork '{{forkName}}' created from '{{name}}'"
@@ -572,13 +674,19 @@ commands:
   # Manage snapshots
   #########################
   - name: snapshots
-    description: Manage snapshots
+    description: List and take snapshots. A snapshot is a point-in-time, read-only copy of a bucket's state
     alias: s
+    examples:
+      - "tigris snapshots list my-bucket"
+      - "tigris snapshots take my-bucket"
     operations:
       # list
       - name: list
-        description: List snapshots of a bucket
+        description: List all snapshots for the given bucket, ordered by creation time
         alias: l
+        examples:
+          - "tigris snapshots list my-bucket"
+          - "tigris snapshots list my-bucket --format json"
         messages:
           onStart: 'Listing snapshots...'
           onSuccess: 'Found {{count}} snapshot(s)'
@@ -598,8 +706,11 @@ commands:
             default: table
       # take
       - name: take
-        description: Take a snapshot of a bucket
+        description: Take a new snapshot of the bucket's current state. Optionally provide a name for the snapshot
         alias: t
+        examples:
+          - "tigris snapshots take my-bucket"
+          - "tigris snapshots take my-bucket my-snapshot"
         messages:
           onStart: 'Taking snapshot...'
           onSuccess: "Snapshot '{{snapshotName}}' taken for bucket '{{name}}'"
@@ -612,7 +723,7 @@ commands:
             examples:
               - my-bucket
           - name: snapshot-name
-            description: Name of the snapshot (optional)
+            description: Name of the snapshot (optional, auto-generated if omitted)
             type: positional
             required: false
             examples:
@@ -622,13 +733,22 @@ commands:
   # Manage objects
   #########################
   - name: objects
-    description: Manage objects
+    description: Low-level object operations for listing, downloading, uploading, and deleting individual objects in a bucket
     alias: o
+    examples:
+      - "tigris objects list my-bucket"
+      - "tigris objects get my-bucket report.pdf --output ./report.pdf"
+      - "tigris objects put my-bucket report.pdf ./report.pdf"
+      - "tigris objects delete my-bucket report.pdf"
     operations:
       # list
       - name: list
-        description: List objects in a bucket
+        description: List objects in a bucket, optionally filtered by a key prefix
         alias: l
+        examples:
+          - "tigris objects list my-bucket"
+          - "tigris objects list my-bucket --prefix images/"
+          - "tigris objects list my-bucket --format json"
         messages:
           onStart: 'Listing objects...'
           onSuccess: 'Found {{count}} object(s)'
@@ -642,7 +762,7 @@ commands:
             examples:
               - my-bucket
           - name: prefix
-            description: Filter objects by prefix
+            description: Filter objects by key prefix (e.g. "images/" to list only images)
             alias: p
           - name: format
             description: Output format
@@ -651,8 +771,11 @@ commands:
             default: table
       # get
       - name: get
-        description: Get an object
+        description: Download an object by key. Prints to stdout by default, or saves to a file with --output
         alias: g
+        examples:
+          - "tigris objects get my-bucket config.json"
+          - "tigris objects get my-bucket archive.zip --output ./archive.zip --mode stream"
         messages:
           onStart: 'Getting object...'
           onSuccess: ''
@@ -674,13 +797,16 @@ commands:
             description: Output file path (if not specified, prints to stdout)
             alias: o
           - name: mode
-            description: Response mode (auto-detected from extension if not specified)
+            description: 'Response mode: "string" loads into memory, "stream" writes in chunks (auto-detected from extension if not specified)'
             alias: m
             options: [string, stream]
       # put
       - name: put
-        description: Upload an object
+        description: Upload a local file as an object. Content-type is auto-detected from extension unless overridden
         alias: p
+        examples:
+          - "tigris objects put my-bucket report.pdf ./report.pdf"
+          - "tigris objects put my-bucket logo.png ./logo.png --access public --content-type image/png"
         messages:
           onStart: 'Uploading object...'
           onSuccess: "Object '{{key}}' uploaded successfully"
@@ -699,7 +825,7 @@ commands:
             examples:
               - my-file.txt
           - name: file
-            description: Path to the file to upload
+            description: Path to the local file to upload
             type: positional
             examples:
               - ./my-file.txt
@@ -709,7 +835,7 @@ commands:
             options: *access_options
             default: private
           - name: content-type
-            description: Content type
+            description: Content type (auto-detected from extension if omitted)
             alias: t
           - name: format
             description: Output format
@@ -718,8 +844,11 @@ commands:
             default: table
       # delete
       - name: delete
-        description: Delete an object
+        description: Delete one or more objects by key from the given bucket
         alias: d
+        examples:
+          - "tigris objects delete my-bucket old-file.txt"
+          - "tigris objects delete my-bucket file-a.txt,file-b.txt"
         messages:
           onStart: 'Deleting object...'
           onSuccess: "Object '{{key}}' deleted successfully"
@@ -743,20 +872,28 @@ commands:
   # Manage access keys
   #########################
   - name: access-keys
-    description: Manage access keys
+    description: Create, list, inspect, delete, and assign roles to access keys. Access keys are credentials used for programmatic API access
     alias: keys
+    examples:
+      - "tigris access-keys list"
+      - "tigris access-keys create my-ci-key"
+      - "tigris access-keys assign tid_AaBb --bucket my-bucket --role Editor"
     operations:
       - name: list
-        description: List all access keys
+        description: List all access keys in the current organization
         alias: l
+        examples:
+          - "tigris access-keys list"
         messages:
           onStart: ''
           onSuccess: ''
           onFailure: 'Failed to list access keys'
           onEmpty: 'No access keys found'
       - name: create
-        description: Create a new access key
+        description: Create a new access key with the given name. Returns the key ID and secret (shown only once)
         alias: c
+        examples:
+          - "tigris access-keys create my-ci-key"
         messages:
           onStart: 'Creating access key...'
           onSuccess: 'Access key created'
@@ -769,8 +906,10 @@ commands:
             examples:
               - my-key
       - name: delete
-        description: Delete an access key
+        description: Permanently delete an access key by its ID. This revokes all access immediately
         alias: d
+        examples:
+          - "tigris access-keys delete tid_AaBbCcDdEeFf"
         messages:
           onStart: 'Deleting access key...'
           onSuccess: 'Access key deleted'
@@ -783,8 +922,10 @@ commands:
             examples:
               - tid_AaBbCcDdEeFf
       - name: get
-        description: Get details of an access key
+        description: Show details for an access key including its name, creation date, and assigned bucket roles
         alias: g
+        examples:
+          - "tigris access-keys get tid_AaBbCcDdEeFf"
         messages:
           onStart: ''
           onSuccess: ''
@@ -797,8 +938,13 @@ commands:
             examples:
               - tid_AaBbCcDdEeFf
       - name: assign
-        description: Assign bucket roles to an access key
+        description: Assign per-bucket roles to an access key. Pair each --bucket with a --role (Editor or ReadOnly), or use --admin for org-wide access
         alias: a
+        examples:
+          - "tigris access-keys assign tid_AaBb --bucket my-bucket --role Editor"
+          - "tigris access-keys assign tid_AaBb --bucket a,b --role Editor,ReadOnly"
+          - "tigris access-keys assign tid_AaBb --admin"
+          - "tigris access-keys assign tid_AaBb --revoke-roles"
         messages:
           onStart: 'Assigning bucket roles...'
           onSuccess: 'Bucket roles assigned'
@@ -812,11 +958,11 @@ commands:
               - tid_AaBbCcDdEeFf
           - name: bucket
             alias: b
-            description: Bucket name (can specify multiple)
+            description: Bucket name (can specify multiple, comma-separated). Each bucket is paired positionally with a --role value
             multiple: true
           - name: role
             alias: r
-            description: Role to assign (can specify multiple to pair with buckets)
+            description: Role to assign (can specify multiple, comma-separated). Each role pairs with the corresponding --bucket value
             multiple: true
             options:
               - Editor

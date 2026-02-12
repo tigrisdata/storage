@@ -138,6 +138,14 @@ function showCommandHelp(command: CommandSpec) {
     console.log();
   }
 
+  if (command.examples && command.examples.length > 0) {
+    console.log('Examples:');
+    command.examples.forEach((ex) => {
+      console.log(`  ${ex}`);
+    });
+    console.log();
+  }
+
   console.log(
     `Use "${specs.name} ${command.name} <operation> help" for more information about an operation.`
   );
@@ -152,6 +160,14 @@ function showOperationHelp(command: CommandSpec, operation: OperationSpec) {
     console.log('Arguments:');
     operation.arguments.forEach((arg) => {
       console.log(formatArgumentHelp(arg));
+    });
+    console.log();
+  }
+
+  if (operation.examples && operation.examples.length > 0) {
+    console.log('Examples:');
+    operation.examples.forEach((ex) => {
+      console.log(`  ${ex}`);
     });
     console.log();
   }
