@@ -14,6 +14,7 @@
   },
   "files": [
     "dist",
+    "postinstall.cjs",
     "README.md"
   ],
   "publishConfig": {
@@ -33,6 +34,7 @@
     "test:integration": "vitest run test/cli.test.ts",
     "publint": "publint",
     "updatedocs": "tsx scripts/update-docs.ts",
+    "postinstall": "node postinstall.cjs",
     "prepublishOnly": "npm run build",
     "clean": "rm -rf dist",
     "semantic-release": "semantic-release",
