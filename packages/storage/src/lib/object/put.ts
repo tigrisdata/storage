@@ -112,10 +112,13 @@ export async function put(
 
   try {
     await upload.done();
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const { message } = error as {
+      message: string;
+    };
     return {
-      error: error.message
-        ? new Error(error.message)
+      error: message
+        ? new Error(message)
         : new Error(`Unexpected error while uploading to Tigris Storage`),
     };
   }

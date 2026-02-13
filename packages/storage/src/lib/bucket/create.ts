@@ -32,6 +32,10 @@ export type CreateBucketOptions = {
   sourceBucketSnapshot?: string;
   access?: 'public' | 'private';
   defaultTier?: StorageClass;
+  /**
+   * @deprecated This property is deprecated and will be removed in the next major version
+   * @see https://www.tigrisdata.com/docs/buckets/create-bucket/#bucket-consistency
+   */
   consistency?: 'strict' | 'default';
   region?: string | string[];
   config?: Omit<TigrisStorageConfig, 'bucket'>;
