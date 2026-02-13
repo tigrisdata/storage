@@ -74,7 +74,9 @@ function fetchLatestVersionInBackground(): void {
         try {
           const json = JSON.parse(data);
           if (typeof json.version === 'string') {
+            const existing = readUpdateCache();
             writeUpdateCache({
+              ...existing,
               latestVersion: json.version,
               lastChecked: Date.now(),
             });
