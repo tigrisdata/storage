@@ -4,6 +4,7 @@ import { get } from '../lib/object/get';
 import { head } from '../lib/object/head';
 import { list } from '../lib/object/list';
 import { remove } from '../lib/object/remove';
+import { updateObject } from '../lib/object/update';
 import { shouldSkipIntegrationTests } from './setup';
 import { config } from '../lib/config';
 
@@ -237,6 +238,71 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
 
       // Should succeed silently for non-existent files
       expect(result.error).toBeUndefined();
+      expect(result.data).toBeUndefined();
+    });
+  });
+
+  describe('updateObject', () => {
+    const updateFileName = `test-update-${Date.now()}.txt`;
+
+    beforeEach(async () => {
+      await put(updateFileName, 'update test content', { config });
+    });
+
+    afterEach(async () => {
+      // Clean up both old and potentially renamed files
+      await remove(updateFileName, { config });
+    });
+
+    it('should return error when no options provided', async () => {
+      const result = await updateObject(updateFileName);
+      expect(result.error).toBeDefined();
+      expect(result.error?.message).toBe('No update options provided');
+    });
+
+    it('should return error on rename failure', async () => {
+      const newKey = `test-renamed-${Date.now()}.txt`;
+      const result = await updateObject(updateFileName, {
+        key: newKey,
+        config,
+      });
+
+      // Rename via HTTP client requires CopyObject permission
+      expect(result.error).toBeDefined();
+      expect(result.data).toBeUndefined();
+    });
+
+    it('should update access to public', async () => {
+      const result = await updateObject(updateFileName, {
+        access: 'public',
+        config,
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(result.data?.path).toBe(updateFileName);
+    });
+
+    it('should update access to private', async () => {
+      const result = await updateObject(updateFileName, {
+        access: 'private',
+        config,
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(result.data?.path).toBe(updateFileName);
+    });
+
+    it('should not update access when rename fails', async () => {
+      const newKey = `test-renamed-public-${Date.now()}.txt`;
+
+      // When rename fails, access update should not run
+      const result = await updateObject(updateFileName, {
+        key: newKey,
+        access: 'public',
+        config,
+      });
+
+      expect(result.error).toBeDefined();
       expect(result.data).toBeUndefined();
     });
   });

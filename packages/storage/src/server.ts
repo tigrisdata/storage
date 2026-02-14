@@ -57,6 +57,11 @@ export {
 export { put, type PutOptions, type PutResponse } from './lib/object/put';
 export { remove, type RemoveOptions } from './lib/object/remove';
 export {
+  updateObject,
+  type UpdateObjectOptions,
+  type UpdateObjectResponse,
+} from './lib/object/update';
+export {
   handleClientUpload,
   type ClientUploadRequest,
 } from './lib/upload/server';
