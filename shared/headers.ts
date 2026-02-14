@@ -13,4 +13,6 @@ export enum TigrisHeaders {
   HAS_FORKS = 'X-Tigris-Is-Fork-Parent',
   FORK_SOURCE_BUCKET = 'X-Tigris-Fork-Source-Bucket',
   FORK_SOURCE_BUCKET_SNAPSHOT = 'X-Tigris-Fork-Source-Bucket-Snapshot',
+  RENAME = 'X-Tigris-Rename',
+  COPY_SOURCE = 'X-Amz-Copy-Source',
 }
