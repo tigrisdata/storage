@@ -62,6 +62,11 @@ export {
   type UpdateObjectResponse,
 } from './lib/object/update';
 export {
+  getStats,
+  type GetStatsOptions,
+  type StatsResponse,
+} from './lib/stats';
+export {
   handleClientUpload,
   type ClientUploadRequest,
 } from './lib/upload/server';
