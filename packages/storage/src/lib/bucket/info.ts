@@ -1,8 +1,6 @@
-import { HeadBucketCommand } from '@aws-sdk/client-s3';
-import type { HttpResponse } from '@aws-sdk/types';
-import { TigrisHeaders } from '@shared/index';
-import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import { StorageClass } from './create';
+import { createStorageClient } from '../http-client';
 
 export type GetBucketInfoOptions = {
   config?: TigrisStorageConfig;
@@ -10,77 +8,128 @@ export type GetBucketInfoOptions = {
 
 export type BucketInfoResponse = {
   isSnapshotEnabled: boolean;
+  /**
+   * @deprecated
+   * @see forkInfo.hasChildren
+   * This property is deprecated and will be removed in the next major version
+   */
   hasForks: boolean;
+  /**
+   * @deprecated
+   * @see forkInfo.parents[0].bucketName
+   * This property is deprecated and will be removed in the next major version
+   */
   sourceBucketName?: string;
+  /**
+   * @deprecated
+   * @see forkInfo.parents[0].snapshot
+   * This property is deprecated and will be removed in the next major version
+   */
   sourceBucketSnapshot?: string;
+
+  forkInfo:
+    | {
+        hasChildren: boolean;
+        parents: Array<{
+          bucketName: string;
+          forkCreatedAt: Date;
+          snapshot: string;
+          snapshotCreatedAt: Date;
+        }>;
+      }
+    | undefined;
+  settings: {
+    allowObjectAcl: boolean;
+    defaultTier: StorageClass;
+  };
+  sizeInfo: {
+    numberOfObjects: number | undefined;
+    size: number | undefined;
+    numberOfObjectsAllVersions: number | undefined;
+  };
+};
+
+type BucketInfoApiResponse = {
+  ForkInfo?: {
+    HasChildren: boolean;
+    Parents: Array<{
+      BucketName: string;
+      ForkCreatedAt: string;
+      Snapshot: string;
+      SnapshotCreatedAt: string;
+    }>;
+  };
+  name: string;
+  storage_class: StorageClass;
+  type?: 1;
+  tier_sizes: Record<string, number>;
+  acl_settings?: {
+    allow_object_acl: boolean;
+  };
+  estimated_unique_rows?: number; // number of objects
+  estimated_size?: number; // estimated size of the bucket in bytes
+  estimated_rows?: number; // estimated number of objects in the bucket (all versions)
 };
 
 export async function getBucketInfo(
   bucketName: string,
   options?: GetBucketInfoOptions
 ): Promise<TigrisStorageResponse<BucketInfoResponse, Error>> {
-  const { data: tigrisClient, error } = createTigrisClient(
-    options?.config,
-    true
-  );
+  const { data: storageHttpClient, error: storageHttpClientError } =
+    createStorageClient(options?.config);
 
-  if (error) {
-    return { error };
+  if (storageHttpClientError) {
+    return { error: storageHttpClientError };
   }
 
-  const command = new HeadBucketCommand({ Bucket: bucketName });
-
-  let headers: Record<string, string> = {};
-
-  command.middlewareStack.add(
-    (next) => async (args) => {
-      const result = await next(args);
-      headers = (result.response as HttpResponse).headers;
-
-      return result;
-    },
-    { step: 'deserialize' }
-  );
-
   try {
-    return tigrisClient
-      .send(command)
-      .then(() => {
-        return {
-          data: {
-            isSnapshotEnabled:
-              headers[TigrisHeaders.SNAPSHOT_ENABLED.toLowerCase()] !==
-                undefined &&
-              headers[TigrisHeaders.SNAPSHOT_ENABLED.toLowerCase()] === 'true',
-            hasForks:
-              headers[TigrisHeaders.HAS_FORKS.toLowerCase()] !== undefined &&
-              headers[TigrisHeaders.HAS_FORKS.toLowerCase()] === 'true',
-            ...(headers[TigrisHeaders.FORK_SOURCE_BUCKET.toLowerCase()] !==
-            undefined
-              ? {
-                  sourceBucketName:
-                    headers[TigrisHeaders.FORK_SOURCE_BUCKET.toLowerCase()],
-                }
-              : {}),
-            ...(headers[
-              TigrisHeaders.FORK_SOURCE_BUCKET_SNAPSHOT.toLowerCase()
-            ] !== undefined
-              ? {
-                  sourceBucketSnapshot:
-                    headers[
-                      TigrisHeaders.FORK_SOURCE_BUCKET_SNAPSHOT.toLowerCase()
-                    ],
-                }
-              : {}),
-          },
-        };
-      })
-      .catch((error) => {
-        return {
-          error: new Error(`Unable to get bucket info ${error.message}`),
-        };
-      });
-  } catch {
-    return { error: new Error('Unable to get bucket info') };
+    const response = await storageHttpClient.request<
+      unknown,
+      BucketInfoApiResponse
+    >({
+      method: 'GET',
+      path: `/${bucketName}?metadata&with-size=true`,
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+
+    if (response.error) {
+      return { error: response.error };
+    }
+
+    const data = {
+      isSnapshotEnabled: response.data.type === 1,
+      hasForks: response.data.ForkInfo?.HasChildren ?? false,
+      sourceBucketName: response.data.ForkInfo?.Parents?.[0]?.BucketName,
+      sourceBucketSnapshot: response.data.ForkInfo?.Parents?.[0]?.Snapshot,
+
+      forkInfo: response.data.ForkInfo
+        ? {
+            hasChildren: response.data.ForkInfo.HasChildren,
+            parents: response.data.ForkInfo.Parents?.map((parent) => ({
+              bucketName: parent.BucketName,
+              forkCreatedAt: new Date(parent.ForkCreatedAt),
+              snapshot: parent.Snapshot,
+              snapshotCreatedAt: new Date(parent.SnapshotCreatedAt),
+            })) ?? [],
+          }
+        : undefined,
+      settings: {
+        allowObjectAcl: response.data.acl_settings?.allow_object_acl ?? false,
+        defaultTier: response.data.storage_class as StorageClass,
+      },
+      sizeInfo: {
+        numberOfObjects: response.data.estimated_unique_rows ?? undefined,
+        size: response.data.estimated_size ?? undefined,
+        numberOfObjectsAllVersions: response.data.estimated_rows ?? undefined,
+      },
+    };
+
+    return { data };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
   }
 }
