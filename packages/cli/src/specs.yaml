@@ -867,6 +867,34 @@ commands:
             multiple: true
             examples:
               - my-file.txt
+      # set
+      - name: set
+        description: Update settings on an existing object such as access level
+        alias: s
+        examples:
+          - "tigris objects set my-bucket my-file.txt --access public"
+          - "tigris objects set my-bucket my-file.txt --access private"
+        messages:
+          onStart: 'Updating object...'
+          onSuccess: "Object '{{key}}' updated successfully"
+          onFailure: 'Failed to update object'
+        arguments:
+          - name: bucket
+            description: Name of the bucket
+            type: positional
+            required: true
+          - name: key
+            description: Key of the object
+            type: positional
+            required: true
+          - name: access
+            description: Access level
+            alias: a
+            options: *access_options
+            required: true
+          - name: new-key
+            description: Rename the object to a new key
+            alias: n
 
   #########################
   # Manage access keys

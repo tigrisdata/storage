@@ -92,7 +92,7 @@ export async function getStorageConfig(): Promise<TigrisStorageConfig> {
       accessKeyId: '',
       secretAccessKey: '',
       endpoint: tigrisConfig.endpoint,
-      organizationId: getSelectedOrganization() ?? undefined,
+      organizationId: selectedOrg,
       iamEndpoint: tigrisConfig.iamEndpoint,
       authDomain: auth0Config.domain,
     };
