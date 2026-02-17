@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { createIAMClient } from '../http-client';
+import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
 import { TigrisIAMConfig, TigrisIAMResponse } from '../types';
 import { AccessKey } from './list';
 
@@ -51,7 +51,7 @@ export async function createAccessKey(
     IAMCreateAccessKeyResponse
   >({
     method: 'POST',
-    path: `/?Action=CreateAccessKeyWithBucketsRole`,
+    path: IAM_ENDPOINTS.createAccessKey,
     body: formData,
     headers,
   });

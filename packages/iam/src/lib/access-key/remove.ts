@@ -1,4 +1,4 @@
-import { createIAMClient } from '../http-client';
+import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
 import { TigrisIAMConfig, TigrisIAMResponse } from '../types';
 
 export type RemoveAccessKeyOptions = {
@@ -31,7 +31,7 @@ export async function removeAccessKey(
 
   const response = await client.request<URLSearchParams, unknown>({
     method: 'POST',
-    path: ``,
+    path: IAM_ENDPOINTS.removeAccessKey,
     body: formData,
     headers,
   });

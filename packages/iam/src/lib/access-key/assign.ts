@@ -1,4 +1,4 @@
-import { createIAMClient } from '../http-client';
+import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
 import { TigrisIAMConfig, TigrisIAMResponse } from '../types';
 import { getAccessKey } from './get';
 
@@ -76,7 +76,7 @@ export async function assignBucketRoles(
     }
   >({
     method: 'POST',
-    path: `/?Action=UpdateAccessKeyWithBucketsRole`,
+    path: IAM_ENDPOINTS.assignAccessKeys,
     body: formData,
     headers,
   });

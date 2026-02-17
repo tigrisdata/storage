@@ -1,4 +1,4 @@
-import { createIAMClient } from '../http-client';
+import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
 import type { TigrisIAMConfig, TigrisIAMResponse } from '../types';
 
 export interface Organization {
@@ -34,7 +34,7 @@ export async function listOrganizations(
 
   const response = await client.request<unknown, IAMNamespacesResponse>({
     method: 'GET',
-    path: `/tigris-iam/namespaces`,
+    path: IAM_ENDPOINTS.listOrganizations,
   });
 
   if (response.error) {
