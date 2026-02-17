@@ -14,6 +14,8 @@ export const IAM_ENDPOINTS = {
   removeAccessKey: '/?Action=DeleteAccessKey',
   revokeAccessKey: '/?Action=UpdateAccessKeyWithBucketsRole',
   // Policies
+  addPolicy: '/?Action=CreatePolicy',
+  editPolicy: '/?Action=UpdatePolicy',
   getPolicy: '/?Action=GetPolicyDetailed',
   listPolicies: '/?Action=ListPolicies',
 };
