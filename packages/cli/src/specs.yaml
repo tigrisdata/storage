@@ -277,18 +277,29 @@ commands:
 
   # stat
   - name: stat
-    description: Show metadata (size, last-modified, content-type, storage tier) for a bucket, folder, or object
+    description: Show storage stats (no args), bucket info, or object metadata
+    examples:
+      - "tigris stat"
+      - "tigris stat t3://my-bucket"
+      - "tigris stat t3://my-bucket/my-object.json"
+    messages:
+      onStart: ''
+      onSuccess: ''
+      onFailure: 'Failed to get stats'
     arguments:
       - name: path
-        required: true
+        required: false
         type: positional
-        description: A bucket name, folder path, or object key. Supports t3:// and tigris:// prefixes
+        description: Optional bucket or object path. Without it, shows overall storage stats
         examples:
-          - my-bucket
-          - my-bucket/my-path
           - t3://my-bucket
           - t3://my-bucket/my-path
-          - my-bucket/my-path/my-object.json
+          - t3://my-bucket/my-object.json
+      - name: format
+        description: Output format
+        alias: f
+        options: [json, table, xml]
+        default: table
 
   # cp
   - name: cp

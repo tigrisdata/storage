@@ -83,7 +83,7 @@
     "@aws-sdk/credential-providers": "^3.981.0",
     "@smithy/shared-ini-file-loader": "^4.4.3",
     "@tigrisdata/iam": "^1.1.0",
-    "@tigrisdata/storage": "^2.12.2",
+    "@tigrisdata/storage": "^2.13.0",
     "axios": "^1.12.2",
     "commander": "^11.0.0",
     "enquirer": "^2.4.1",
