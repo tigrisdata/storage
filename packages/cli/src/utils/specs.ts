@@ -20,27 +20,39 @@ export function loadSpecs(): Specs {
 }
 
 export function getCommandSpec(
-  commandName: string,
+  commandPath: string,
   operationName?: string
 ): OperationSpec | CommandSpec | null {
   const specs = loadSpecs();
-  const command = specs.commands.find(
-    (cmd: CommandSpec) => cmd.name === commandName
-  );
 
-  if (!command) {
+  // Split command path for nested commands (e.g., "iam policies" -> ["iam", "policies"])
+  const pathParts = commandPath.split(' ').filter(Boolean);
+
+  // Traverse the command hierarchy
+  let current: CommandSpec | undefined;
+  let commands: CommandSpec[] = specs.commands;
+
+  for (const part of pathParts) {
+    current = commands.find((cmd: CommandSpec) => cmd.name === part);
+    if (!current) {
+      return null;
+    }
+    commands = current.commands || [];
+  }
+
+  if (!current) {
     return null;
   }
 
-  if (operationName && command.operations) {
+  // If operation specified, find it in the current command's children
+  if (operationName && current.commands) {
     return (
-      command.operations.find(
-        (op: OperationSpec) => op.name === operationName
-      ) || null
+      current.commands.find((cmd: CommandSpec) => cmd.name === operationName) ||
+      null
     );
   }
 
-  return command;
+  return current;
 }
 
 export function getArgumentSpec(

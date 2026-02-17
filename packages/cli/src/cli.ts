@@ -4,7 +4,7 @@ import { Command as CommanderCommand } from 'commander';
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import type { Argument, OperationSpec, CommandSpec } from './types.js';
+import type { Argument, CommandSpec } from './types.js';
 import { loadSpecs } from './utils/specs.js';
 import { checkForUpdates } from './utils/update-check.js';
 import { version } from '../package.json';
@@ -32,23 +32,29 @@ const __dirname = dirname(__filename);
 const specs = loadSpecs();
 
 /**
- * Check if a command/operation has an implementation
+ * Validate command name to prevent path traversal attacks
+ * Only allows alphanumeric, hyphens, and underscores
  */
-function hasImplementation(
-  commandName: string,
-  operationName?: string
-): boolean {
-  const paths = operationName
-    ? [
-        join(__dirname, 'lib', commandName, `${operationName}.js`),
-        join(__dirname, 'lib', commandName, operationName, 'index.js'),
-      ]
-    : [
-        join(__dirname, 'lib', `${commandName}.js`),
-        join(__dirname, 'lib', commandName, 'index.js'),
-      ];
+function isValidCommandName(name: string): boolean {
+  return /^[a-zA-Z0-9_-]+$/.test(name);
+}
 
-  return paths.some((p) => existsSync(p));
+/**
+ * Check if a command path has an implementation
+ * @param pathParts - Array of command path parts, e.g., ['iam', 'policies', 'get']
+ */
+function hasImplementation(pathParts: string[]): boolean {
+  if (pathParts.length === 0) return false;
+
+  // Try direct file: lib/iam/policies/get.js
+  const directPath = join(__dirname, 'lib', ...pathParts) + '.js';
+  if (existsSync(directPath)) return true;
+
+  // Try index file: lib/iam/policies/get/index.js
+  const indexPath = join(__dirname, 'lib', ...pathParts, 'index.js');
+  if (existsSync(indexPath)) return true;
+
+  return false;
 }
 
 function formatArgumentHelp(arg: Argument): string {
@@ -59,7 +65,7 @@ function formatArgumentHelp(arg: Argument): string {
   } else {
     optionPart = `  --${arg.name}`;
     // Only show short option if it's a single character (Commander requirement)
-    if (arg.alias && arg.alias.length === 1) {
+    if (arg.alias && typeof arg.alias === 'string' && arg.alias.length === 1) {
       optionPart += `, -${arg.alias}`;
     }
   }
@@ -107,24 +113,28 @@ function formatArgumentHelp(arg: Argument): string {
   return `${paddedOptionPart}${description}`;
 }
 
-function showCommandHelp(command: CommandSpec) {
-  console.log(`\n${specs.name} ${command.name} - ${command.description}\n`);
+/**
+ * Show help for a command at any nesting level
+ */
+function showCommandHelp(command: CommandSpec, pathParts: string[]) {
+  const fullPath = pathParts.join(' ');
+  console.log(`\n${specs.name} ${fullPath} - ${command.description}\n`);
 
-  if (command.operations && command.operations.length > 0) {
-    const availableOps = command.operations.filter((op) =>
-      hasImplementation(command.name, op.name)
+  if (command.commands && command.commands.length > 0) {
+    const availableCmds = command.commands.filter((cmd) =>
+      commandHasAnyImplementation(cmd, [...pathParts, cmd.name])
     );
 
-    if (availableOps.length > 0) {
-      console.log('Operations:');
-      availableOps.forEach((op) => {
-        let operationPart = `  ${op.name}`;
-        if (op.alias) {
-          const aliases = Array.isArray(op.alias) ? op.alias : [op.alias];
-          operationPart += ` (${aliases.join(', ')})`;
+    if (availableCmds.length > 0) {
+      console.log('Commands:');
+      availableCmds.forEach((cmd) => {
+        let cmdPart = `  ${cmd.name}`;
+        if (cmd.alias) {
+          const aliases = Array.isArray(cmd.alias) ? cmd.alias : [cmd.alias];
+          cmdPart += ` (${aliases.join(', ')})`;
         }
-        const paddedOperationPart = operationPart.padEnd(24);
-        console.log(`${paddedOperationPart}${op.description}`);
+        const paddedCmdPart = cmdPart.padEnd(24);
+        console.log(`${paddedCmdPart}${cmd.description}`);
       });
       console.log();
     }
@@ -146,43 +156,29 @@ function showCommandHelp(command: CommandSpec) {
     console.log();
   }
 
-  console.log(
-    `Use "${specs.name} ${command.name} <operation> help" for more information about an operation.`
-  );
-}
-
-function showOperationHelp(command: CommandSpec, operation: OperationSpec) {
-  console.log(
-    `\n${specs.name} ${command.name} ${operation.name} - ${operation.description}\n`
-  );
-
-  if (operation.arguments && operation.arguments.length > 0) {
-    console.log('Arguments:');
-    operation.arguments.forEach((arg) => {
-      console.log(formatArgumentHelp(arg));
-    });
-    console.log();
-  }
-
-  if (operation.examples && operation.examples.length > 0) {
-    console.log('Examples:');
-    operation.examples.forEach((ex) => {
-      console.log(`  ${ex}`);
-    });
-    console.log();
+  if (command.commands && command.commands.length > 0) {
+    console.log(
+      `Use "${specs.name} ${fullPath} <command> help" for more information about a command.`
+    );
   }
 }
 
-function commandHasAnyImplementation(command: CommandSpec): boolean {
-  // Check if command itself has implementation
-  if (hasImplementation(command.name)) {
+/**
+ * Recursively check if a command or any of its children have implementations
+ */
+function commandHasAnyImplementation(
+  command: CommandSpec,
+  pathParts: string[]
+): boolean {
+  // Check if this command itself has implementation (leaf node)
+  if (hasImplementation(pathParts)) {
     return true;
   }
 
-  // Check if any operation has implementation
-  if (command.operations) {
-    return command.operations.some((op) =>
-      hasImplementation(command.name, op.name)
+  // Check if any child command has implementation
+  if (command.commands) {
+    return command.commands.some((child) =>
+      commandHasAnyImplementation(child, [...pathParts, child.name])
     );
   }
 
@@ -194,12 +190,17 @@ function showMainHelp() {
   console.log('Usage: tigris [command] [options]\n');
   console.log('Commands:');
 
-  const availableCommands = specs.commands.filter(commandHasAnyImplementation);
+  const availableCommands = specs.commands.filter((cmd) =>
+    commandHasAnyImplementation(cmd, [cmd.name])
+  );
 
   availableCommands.forEach((command: CommandSpec) => {
     let commandPart = `  ${command.name}`;
     if (command.alias) {
-      commandPart += ` (${command.alias})`;
+      const aliases = Array.isArray(command.alias)
+        ? command.alias
+        : [command.alias];
+      commandPart += ` (${aliases.join(', ')})`;
     }
     const paddedCommandPart = commandPart.padEnd(24);
     console.log(`${paddedCommandPart}${command.description}`);
@@ -219,7 +220,8 @@ function addArgumentsToCommand(cmd: CommanderCommand, args: Argument[] = []) {
       // Handle regular flag/option arguments
       // Commander expects single-character short options: -p, --prefix <value>
       // Multi-character aliases are not supported by Commander
-      const hasValidShortOption = arg.alias && arg.alias.length === 1;
+      const hasValidShortOption =
+        arg.alias && typeof arg.alias === 'string' && arg.alias.length === 1;
       let optionString = hasValidShortOption
         ? `-${arg.alias}, --${arg.name}`
         : `--${arg.name}`;
@@ -275,7 +277,7 @@ function getOptionValue(
 ): unknown {
   if (args) {
     const argDef = args.find((a) => a.name === argName);
-    if (argDef && argDef.alias) {
+    if (argDef && argDef.alias && typeof argDef.alias === 'string') {
       const aliasKey =
         argDef.alias.charAt(0).toUpperCase() + argDef.alias.slice(1);
       if (options[aliasKey] !== undefined) {
@@ -304,16 +306,17 @@ function camelCase(str: string): string {
   return str.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
 }
 
+/**
+ * Load module from path parts
+ * @param pathParts - Array of command path parts, e.g., ['iam', 'policies', 'get']
+ */
 async function loadModule(
-  commandName: string,
-  operationName?: string
+  pathParts: string[]
 ): Promise<{ module: Record<string, unknown> | null; error: string | null }> {
-  const paths = operationName
-    ? [
-        `./lib/${commandName}/${operationName}.js`,
-        `./lib/${commandName}/${operationName}/index.js`,
-      ]
-    : [`./lib/${commandName}.js`, `./lib/${commandName}/index.js`];
+  const paths = [
+    `./lib/${pathParts.join('/')}.js`,
+    `./lib/${pathParts.join('/')}/index.js`,
+  ];
 
   for (const path of paths) {
     const module = await import(path).catch(() => null);
@@ -322,15 +325,16 @@ async function loadModule(
     }
   }
 
-  const cmdDisplay = operationName
-    ? `${commandName} ${operationName}`
-    : commandName;
+  const cmdDisplay = pathParts.join(' ');
   return { module: null, error: `Command not found: ${cmdDisplay}` };
 }
 
+/**
+ * Load and execute a command
+ * @param pathParts - Array of command path parts
+ */
 async function loadAndExecuteCommand(
-  commandName: string,
-  operationName?: string,
+  pathParts: string[],
   positionalArgs: string[] = [],
   options: Record<string, unknown> = {},
   message?: string
@@ -342,32 +346,25 @@ async function loadAndExecuteCommand(
   }
 
   // Load module
-  const { module, error: loadError } = await loadModule(
-    commandName,
-    operationName
-  );
+  const { module, error: loadError } = await loadModule(pathParts);
 
   if (loadError || !module) {
     console.error(loadError);
     process.exit(1);
   }
 
-  // Get command function
-  const functionName = operationName || commandName;
+  // Get command function - use default export or named export matching last path part
+  const functionName = pathParts[pathParts.length - 1];
   const commandFunction = module.default || module[functionName];
 
   if (typeof commandFunction !== 'function') {
-    console.error(`Command not implemented: ${functionName}`);
+    console.error(`Command not implemented: ${pathParts.join(' ')}`);
     process.exit(1);
   }
 
   // Execute command - let errors propagate naturally
   await commandFunction({ ...options, _positional: positionalArgs });
 }
-
-const program = new CommanderCommand();
-
-program.name(specs.name).description(specs.description).version(specs.version);
 
 function extractArgumentValues(
   args: Argument[],
@@ -426,148 +423,129 @@ function extractArgumentValues(
   return result;
 }
 
-specs.commands.forEach((command: CommandSpec) => {
-  const commandCmd = program
-    .command(command.name)
-    .description(command.description);
+/**
+ * Recursively register commands from spec
+ */
+function registerCommands(
+  parent: CommanderCommand,
+  commandSpecs: CommandSpec[],
+  pathParts: string[] = []
+) {
+  for (const spec of commandSpecs) {
+    // Validate command name to prevent path traversal
+    if (!isValidCommandName(spec.name)) {
+      console.error(
+        `Invalid command name "${spec.name}": only alphanumeric, hyphens, and underscores allowed`
+      );
+      process.exit(1);
+    }
 
-  if (command.alias) {
-    commandCmd.alias(command.alias);
-  }
+    const currentPath = [...pathParts, spec.name];
+    const cmd = parent.command(spec.name).description(spec.description);
 
-  if (command.operations && command.operations.length > 0) {
-    command.operations.forEach((operationSpec: OperationSpec) => {
-      const subCmd = commandCmd
-        .command(operationSpec.name)
-        .description(operationSpec.description);
+    // Handle aliases
+    if (spec.alias) {
+      const aliases = Array.isArray(spec.alias) ? spec.alias : [spec.alias];
+      aliases.forEach((alias) => cmd.alias(alias));
+    }
 
-      if (operationSpec.alias) {
-        const aliases = Array.isArray(operationSpec.alias)
-          ? operationSpec.alias
-          : [operationSpec.alias];
-        aliases.forEach((alias: string) => subCmd.alias(alias));
+    // Check if this command has children
+    if (spec.commands && spec.commands.length > 0) {
+      // Has children - recurse
+      registerCommands(cmd, spec.commands, currentPath);
+
+      // Check for default command
+      if (spec.default) {
+        const defaultCmd = spec.commands.find((c) => c.name === spec.default);
+        if (defaultCmd) {
+          // Add arguments from both parent and default child
+          addArgumentsToCommand(cmd, spec.arguments);
+          addArgumentsToCommand(cmd, defaultCmd.arguments);
+
+          const allArguments = [
+            ...(spec.arguments || []),
+            ...(defaultCmd.arguments || []),
+          ];
+
+          cmd.action(async (...args) => {
+            const options = args.pop();
+            const positionalArgs = args;
+
+            if (
+              allArguments.length > 0 &&
+              !validateRequiredWhen(
+                allArguments,
+                extractArgumentValues(allArguments, positionalArgs, options)
+              )
+            ) {
+              return;
+            }
+
+            await loadAndExecuteCommand(
+              [...currentPath, defaultCmd.name],
+              positionalArgs,
+              extractArgumentValues(allArguments, positionalArgs, options),
+              spec.message || defaultCmd.message
+            );
+          });
+        }
+      } else {
+        // No default - show help when command is called without subcommand
+        cmd.action(() => {
+          showCommandHelp(spec, currentPath);
+        });
       }
 
-      addArgumentsToCommand(subCmd, operationSpec.arguments);
+      // Add help subcommand
+      cmd
+        .command('help')
+        .description('Show help for this command')
+        .action(() => {
+          showCommandHelp(spec, currentPath);
+        });
+    } else {
+      // Leaf node - this is an executable command
+      addArgumentsToCommand(cmd, spec.arguments);
 
-      subCmd.action(async (...args) => {
-        // Handle both positional and option arguments
-        const options = args.pop(); // Last argument is always options
-        const positionalArgs = args; // Remaining are positional arguments
+      cmd.action(async (...args) => {
+        const options = args.pop();
+        const positionalArgs = args;
 
         if (
-          operationSpec.arguments &&
+          spec.arguments &&
           !validateRequiredWhen(
-            operationSpec.arguments,
-            extractArgumentValues(
-              operationSpec.arguments,
-              positionalArgs,
-              options
-            )
+            spec.arguments,
+            extractArgumentValues(spec.arguments, positionalArgs, options)
           )
         ) {
           return;
         }
 
         await loadAndExecuteCommand(
-          command.name,
-          operationSpec.name,
+          currentPath,
           positionalArgs,
-          extractArgumentValues(
-            operationSpec.arguments || [],
-            positionalArgs,
-            options
-          ),
-          operationSpec.message
+          extractArgumentValues(spec.arguments || [], positionalArgs, options),
+          spec.message
         );
       });
 
-      subCmd
+      // Add help for leaf commands too
+      cmd
         .command('help')
-        .description('Show help for this operation')
+        .description('Show help for this command')
         .action(() => {
-          showOperationHelp(command, operationSpec);
+          showCommandHelp(spec, currentPath);
         });
-    });
-
-    if (command.default) {
-      const defaultOperation = command.operations?.find(
-        (c: OperationSpec) => c.name === command.default
-      );
-
-      if (defaultOperation) {
-        // Add both command-level and default operation arguments
-        addArgumentsToCommand(commandCmd, command.arguments);
-        addArgumentsToCommand(commandCmd, defaultOperation.arguments);
-
-        // Merge command and operation arguments for validation/extraction
-        const allArguments = [
-          ...(command.arguments || []),
-          ...(defaultOperation.arguments || []),
-        ];
-
-        commandCmd.action(async (...args) => {
-          const options = args.pop();
-          const positionalArgs = args;
-
-          if (
-            allArguments.length > 0 &&
-            !validateRequiredWhen(
-              allArguments,
-              extractArgumentValues(allArguments, positionalArgs, options)
-            )
-          ) {
-            return;
-          }
-
-          await loadAndExecuteCommand(
-            command.name,
-            defaultOperation.name,
-            positionalArgs,
-            extractArgumentValues(allArguments, positionalArgs, options),
-            command.message || defaultOperation.message
-          );
-        });
-      }
-    } else {
-      commandCmd.action(() => {
-        showCommandHelp(command);
-      });
     }
-  } else {
-    addArgumentsToCommand(commandCmd, command.arguments);
-
-    commandCmd.action(async (...args) => {
-      const options = args.pop();
-      const positionalArgs = args;
-
-      if (
-        command.arguments &&
-        !validateRequiredWhen(
-          command.arguments,
-          extractArgumentValues(command.arguments, positionalArgs, options)
-        )
-      ) {
-        return;
-      }
-
-      await loadAndExecuteCommand(
-        command.name,
-        undefined,
-        positionalArgs,
-        extractArgumentValues(command.arguments || [], positionalArgs, options),
-        command.message
-      );
-    });
   }
+}
 
-  commandCmd
-    .command('help')
-    .description('Show help for this command')
-    .action(() => {
-      showCommandHelp(command);
-    });
-});
+const program = new CommanderCommand();
+
+program.name(specs.name).description(specs.description).version(specs.version);
+
+// Register all commands recursively
+registerCommands(program, specs.commands);
 
 program
   .command('help')

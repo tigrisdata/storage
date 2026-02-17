@@ -123,7 +123,7 @@ commands:
         description: Secret for temporary credentials
         alias: secret
         required: false
-    operations:
+    commands:
       # login (main interactive operation)
       - name: select
         description: Choose how to login - OAuth (browser) or credentials (access key)
@@ -194,7 +194,7 @@ commands:
     examples:
       - "tigris credentials test"
       - "tigris credentials test --bucket my-bucket"
-    operations:
+    commands:
       - name: test
         description: Verify that current credentials are valid. Optionally checks access to a specific bucket
         alias: t
@@ -412,7 +412,7 @@ commands:
       - "tigris orgs list"
       - "tigris orgs create my-org"
       - "tigris orgs select my-org"
-    operations:
+    commands:
       # list
       - name: list
         description: List all organizations you belong to and interactively select one as active
@@ -480,7 +480,7 @@ commands:
       - "tigris buckets create my-bucket"
       - "tigris buckets get my-bucket"
       - "tigris buckets delete my-bucket"
-    operations:
+    commands:
       # list
       - name: list
         description: List all buckets in the current organization
@@ -628,7 +628,7 @@ commands:
     examples:
       - "tigris forks list my-bucket"
       - "tigris forks create my-bucket my-fork"
-    operations:
+    commands:
       # list
       - name: list
         description: List all forks created from the given source bucket
@@ -690,7 +690,7 @@ commands:
     examples:
       - "tigris snapshots list my-bucket"
       - "tigris snapshots take my-bucket"
-    operations:
+    commands:
       # list
       - name: list
         description: List all snapshots for the given bucket, ordered by creation time
@@ -751,7 +751,7 @@ commands:
       - "tigris objects get my-bucket report.pdf --output ./report.pdf"
       - "tigris objects put my-bucket report.pdf ./report.pdf"
       - "tigris objects delete my-bucket report.pdf"
-    operations:
+    commands:
       # list
       - name: list
         description: List objects in a bucket, optionally filtered by a key prefix
@@ -917,7 +917,7 @@ commands:
       - "tigris access-keys list"
       - "tigris access-keys create my-ci-key"
       - "tigris access-keys assign tid_AaBb --bucket my-bucket --role Editor"
-    operations:
+    commands:
       - name: list
         description: List all access keys in the current organization
         alias: l
@@ -1012,3 +1012,128 @@ commands:
           - name: revoke-roles
             description: Revoke all bucket roles from the access key
             type: flag
+
+  #########################
+  # IAM - Identity and Access Management
+  #########################
+  - name: iam
+    description: Identity and Access Management - manage policies, roles, and permissions
+    examples:
+      - "tigris iam policies list"
+      - "tigris iam policies get arn:aws:iam::org_id:policy/my-policy"
+      - "tigris iam policies create my-policy --document policy.json"
+    commands:
+      - name: policies
+        description: Manage IAM policies. Policies define permissions for access keys
+        alias: p
+        examples:
+          - "tigris iam policies list"
+          - "tigris iam policies get"
+        commands:
+          - name: list
+            description: List all policies in the current organization
+            alias: l
+            examples:
+              - "tigris iam policies list"
+            messages:
+              onStart: ''
+              onSuccess: ''
+              onFailure: 'Failed to list policies'
+              onEmpty: 'No policies found'
+            arguments:
+              - name: format
+                description: Output format
+                alias: f
+                options: [json, table, xml]
+                default: table
+          - name: get
+            description: Show details for a policy including its document and attached users. If no ARN provided, shows interactive selection
+            alias: g
+            examples:
+              - "tigris iam policies get"
+              - "tigris iam policies get arn:aws:iam::org_id:policy/my-policy"
+            messages:
+              onStart: ''
+              onSuccess: ''
+              onFailure: 'Failed to get policy'
+              onEmpty: 'No policies found'
+            arguments:
+              - name: resource
+                description: Policy ARN. If omitted, shows interactive selection
+                type: positional
+                required: false
+                examples:
+                  - arn:aws:iam::org_id:policy/my-policy
+              - name: format
+                description: Output format
+                alias: f
+                options: [json, table, xml]
+                default: table
+          - name: create
+            description: Create a new policy with the given name and policy document. Document can be provided via file, inline JSON, or stdin
+            alias: c
+            examples:
+              - "tigris iam policies create my-policy --document policy.json"
+              - "tigris iam policies create my-policy --document '{\"Version\":\"2012-10-17\",\"Statement\":[...]}'"
+              - "cat policy.json | tigris iam policies create my-policy"
+            messages:
+              onStart: 'Creating policy...'
+              onSuccess: "Policy '{{name}}' created"
+              onFailure: 'Failed to create policy'
+            arguments:
+              - name: name
+                description: Policy name
+                type: positional
+                required: true
+                examples:
+                  - my-policy
+              - name: document
+                description: Policy document (JSON file path or inline JSON). If omitted, reads from stdin
+                alias: d
+                required: false
+              - name: description
+                description: Policy description
+          - name: edit
+            description: Update an existing policy's document. Document can be provided via file, inline JSON, or stdin. If no ARN provided, shows interactive selection
+            alias: e
+            examples:
+              - "tigris iam policies edit --document policy.json"
+              - "tigris iam policies edit arn:aws:iam::org_id:policy/my-policy --document policy.json"
+              - "cat policy.json | tigris iam policies edit arn:aws:iam::org_id:policy/my-policy"
+            messages:
+              onStart: 'Updating policy...'
+              onSuccess: "Policy '{{resource}}' updated"
+              onFailure: 'Failed to update policy'
+              onEmpty: 'No policies found'
+            arguments:
+              - name: resource
+                description: Policy ARN. If omitted, shows interactive selection
+                type: positional
+                required: false
+                examples:
+                  - arn:aws:iam::org_id:policy/my-policy
+              - name: document
+                description: New policy document (JSON file path or inline JSON). If omitted, reads from stdin
+                alias: d
+                required: false
+              - name: description
+                description: Update policy description
+                required: false
+          - name: delete
+            description: Delete a policy. If no ARN provided, shows interactive selection
+            alias: d
+            examples:
+              - "tigris iam policies delete"
+              - "tigris iam policies delete arn:aws:iam::org_id:policy/my-policy"
+            messages:
+              onStart: 'Deleting policy...'
+              onSuccess: "Policy '{{resource}}' deleted"
+              onFailure: 'Failed to delete policy'
+              onEmpty: 'No policies found'
+            arguments:
+              - name: resource
+                description: Policy ARN. If omitted, shows interactive selection
+                type: positional
+                required: false
+                examples:
+                  - arn:aws:iam::org_id:policy/my-policy

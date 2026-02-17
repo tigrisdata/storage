@@ -66,7 +66,16 @@ export interface TableColumn {
   key: string;
   header: string;
   width?: number;
+  maxWidth?: number;
   align?: 'left' | 'right';
+}
+
+/**
+ * Truncate string with ellipsis if it exceeds maxLength
+ */
+function truncate(str: string, maxLength: number): string {
+  if (str.length <= maxLength) return str;
+  return str.slice(0, maxLength - 1) + '…';
 }
 
 /**
@@ -103,13 +112,19 @@ function formatDate(date: Date): string {
 }
 
 /**
- * Calculate column widths based on content
+ * Calculate column widths based on content and terminal size
+ * Prioritizes shrinking wider columns first to preserve readability of shorter ones
  */
 function calculateColumnWidths<T extends Record<string, unknown>>(
   items: T[],
   columns: TableColumn[]
 ): number[] {
-  return columns.map((col) => {
+  const terminalWidth = process.stdout.columns || 120;
+  // Account for borders: '│ ' + cells.join(' │ ') + ' │' = 2 + 3(n-1) + 2 = 3n + 1
+  const borderOverhead = columns.length * 3 + 1;
+  const availableWidth = terminalWidth - borderOverhead;
+
+  const rawWidths = columns.map((col) => {
     // If width is explicitly set, use it
     if (col.width) {
       return col.width;
@@ -122,8 +137,45 @@ function calculateColumnWidths<T extends Record<string, unknown>>(
       return Math.max(max, value.length);
     }, 0);
 
-    return Math.max(headerWidth, maxValueWidth);
+    let width = Math.max(headerWidth, maxValueWidth);
+
+    // Apply maxWidth constraint
+    if (col.maxWidth && width > col.maxWidth) {
+      width = col.maxWidth;
+    }
+
+    return width;
   });
+
+  // If total width exceeds terminal, shrink widest columns first
+  let totalWidth = rawWidths.reduce((sum, w) => sum + w, 0);
+  if (totalWidth <= availableWidth) {
+    return rawWidths;
+  }
+
+  const finalWidths = [...rawWidths];
+  const minWidths = columns.map((col) => Math.max(col.header.length, 8));
+
+  // Keep shrinking until we fit
+  while (totalWidth > availableWidth) {
+    // Find the widest column that can still be shrunk
+    let maxIdx = -1;
+    let maxWidth = 0;
+    for (let i = 0; i < finalWidths.length; i++) {
+      if (finalWidths[i] > minWidths[i] && finalWidths[i] > maxWidth) {
+        maxWidth = finalWidths[i];
+        maxIdx = i;
+      }
+    }
+
+    if (maxIdx === -1) break; // Can't shrink anymore
+
+    // Shrink the widest column by 1
+    finalWidths[maxIdx]--;
+    totalWidth--;
+  }
+
+  return finalWidths;
 }
 
 /**
@@ -151,7 +203,9 @@ export function formatTable<T extends Record<string, unknown>>(
   // Header row
   const headerRow =
     '│ ' +
-    columns.map((col, i) => col.header.padEnd(widths[i])).join(' │ ') +
+    columns
+      .map((col, i) => truncate(col.header, widths[i]).padEnd(widths[i]))
+      .join(' │ ') +
     ' │';
   lines.push(headerRow);
 
@@ -161,7 +215,7 @@ export function formatTable<T extends Record<string, unknown>>(
   // Data rows
   items.forEach((item) => {
     const cells = columns.map((col, i) => {
-      const value = formatCellValue(item[col.key]);
+      const value = truncate(formatCellValue(item[col.key]), widths[i]);
       return col.align === 'right'
         ? value.padStart(widths[i])
         : value.padEnd(widths[i]);

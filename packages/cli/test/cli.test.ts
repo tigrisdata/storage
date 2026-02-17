@@ -104,7 +104,7 @@ describe('CLI Help Commands', () => {
   it('should show buckets help', () => {
     const result = runCli('buckets help');
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('Operations:');
+    expect(result.stdout).toContain('Commands:');
     expect(result.stdout).toContain('list');
     expect(result.stdout).toContain('create');
   });
@@ -112,7 +112,7 @@ describe('CLI Help Commands', () => {
   it('should show objects help', () => {
     const result = runCli('objects help');
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('Operations:');
+    expect(result.stdout).toContain('Commands:');
     expect(result.stdout).toContain('list');
     expect(result.stdout).toContain('get');
     expect(result.stdout).toContain('put');

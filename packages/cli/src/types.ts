@@ -22,27 +22,21 @@ export interface Messages {
   hint?: string;
 }
 
-export interface OperationSpec {
+// Recursive command structure - supports nth level nesting
+export interface CommandSpec {
   name: string;
   description: string;
   alias?: string | string[];
   arguments?: Argument[];
   examples?: string[];
-  message?: string;
-  messages?: Messages;
-}
-
-export interface CommandSpec {
-  name: string;
-  description: string;
-  alias?: string;
-  arguments?: Argument[];
-  examples?: string[];
-  operations?: OperationSpec[];
+  commands?: CommandSpec[]; // recursive - can nest infinitely
   default?: string;
   message?: string;
   messages?: Messages;
 }
+
+// Backwards compatibility alias
+export type OperationSpec = CommandSpec;
 
 export interface Specs {
   name: string;
