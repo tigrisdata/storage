@@ -2,6 +2,21 @@ import { createTigrisHttpClient, type TigrisHttpClient } from '@shared/index';
 import { config } from './config';
 import type { TigrisIAMConfig, TigrisIAMResponse } from './types';
 
+export const IAM_ENDPOINTS = {
+  // Organizations
+  createOrganization: '/tigris-iam/namespaces',
+  listOrganizations: '/tigris-iam/namespaces',
+  // Access Keys
+  assignAccessKeys: '/?Action=UpdateAccessKeyWithBucketsRole',
+  createAccessKey: '/?Action=CreateAccessKeyWithBucketsRole',
+  getAccessKey: '/?Detailed',
+  listAccessKeys: '/?Detailed',
+  removeAccessKey: '/?Action=DeleteAccessKey',
+  revokeAccessKey: '/?Action=UpdateAccessKeyWithBucketsRole',
+  // Policies
+  listPolicies: '/?Action=ListPolicies',
+};
+
 function getIAMEndpoint(options?: TigrisIAMConfig): string {
   return (
     options?.iamEndpoint ?? config.iamEndpoint ?? 'https://iam.storageapi.dev'

@@ -1,4 +1,4 @@
-import { createIAMClient } from '../http-client';
+import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
 import { TigrisIAMConfig, TigrisIAMResponse } from '../types';
 
 export type RevokeAllBucketRolesOptions = {
@@ -37,7 +37,7 @@ export async function revokeAllBucketRoles(
     }
   >({
     method: 'POST',
-    path: `/?Action=UpdateAccessKeyWithBucketsRole`,
+    path: IAM_ENDPOINTS.revokeAccessKey,
     body: formData,
     headers,
   });

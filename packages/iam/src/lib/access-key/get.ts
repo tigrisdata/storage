@@ -1,4 +1,4 @@
-import { createIAMClient } from '../http-client';
+import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
 import { TigrisIAMConfig, TigrisIAMResponse } from '../types';
 import { AccessKey, IAMAccessKeysResponse } from './list';
 
@@ -27,7 +27,7 @@ export async function getAccessKey(
   const response = await client.request<URLSearchParams, IAMAccessKeysResponse>(
     {
       method: 'POST',
-      path: `/?Detailed`,
+      path: IAM_ENDPOINTS.getAccessKey,
       body: formData,
       headers,
     }
