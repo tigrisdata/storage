@@ -33,6 +33,7 @@ export {
   type Organization,
 } from './lib/organization/list';
 export { addPolicy, type AddPolicyOptions } from './lib/policy/add';
+export { deletePolicy, type DeletePolicyOptions } from './lib/policy/delete';
 export { editPolicy, type EditPolicyOptions } from './lib/policy/edit';
 export {
   getPolicy,
