@@ -23,11 +23,33 @@ export async function executeWithConcurrency<T>(
     }
   }
 
-  const workers = Array.from(
-    { length: Math.min(limit, tasks.length) },
-    () => runNext()
+  const workers = Array.from({ length: Math.min(limit, tasks.length) }, () =>
+    runNext()
   );
 
   await Promise.all(workers);
   return results;
 }
+
+export const handleError = (error: Error) => {
+  let errorMessage: string | undefined;
+
+  if ((error as { Code?: string }).Code === 'AccessDenied') {
+    errorMessage = 'Access denied. Please check your credentials.';
+  }
+  if ((error as { Code?: string }).Code === 'NoSuchKey') {
+    errorMessage = 'File not found in Tigris Storage';
+  }
+
+  if (errorMessage) {
+    return {
+      error: new Error(errorMessage),
+    };
+  }
+
+  return {
+    error: new Error(
+      error?.message || 'Unexpected error while processing request'
+    ),
+  };
+};

@@ -1,4 +1,27 @@
 export {
+  assignBucketRoles,
+  type AssignBucketRolesOptions,
+} from './lib/access-key/assign';
+export {
+  createAccessKey,
+  type CreateAccessKeyOptions,
+} from './lib/access-key/create';
+export { getAccessKey, type GetAccessKeyOptions } from './lib/access-key/get';
+export {
+  listAccessKeys,
+  type AccessKey,
+  type ListAccessKeysOptions,
+  type ListAccessKeysResponse,
+} from './lib/access-key/list';
+export {
+  removeAccessKey,
+  type RemoveAccessKeyOptions,
+} from './lib/access-key/remove';
+export {
+  revokeAllBucketRoles,
+  type RevokeAllBucketRolesOptions,
+} from './lib/access-key/revoke';
+export {
   createOrganization,
   type CreateOrganizationOptions,
   type CreateOrganizationResponse,
@@ -10,28 +33,17 @@ export {
   type Organization,
 } from './lib/organization/list';
 export {
-  listAccessKeys,
-  type ListAccessKeysOptions,
-  type ListAccessKeysResponse,
-  type AccessKey,
-} from './lib/access-key/list';
+  getPolicy,
+  type GetPolicyOptions,
+  type GetPolicyResponse,
+} from './lib/policy/get';
 export {
-  createAccessKey,
-  type CreateAccessKeyOptions,
-} from './lib/access-key/create';
+  listPolicies,
+  type ListPoliciesOptions,
+  type ListPoliciesResponse,
+} from './lib/policy/list';
 export {
-  removeAccessKey,
-  type RemoveAccessKeyOptions,
-} from './lib/access-key/remove';
-export {
-  getAccessKey,
-  type GetAccessKeyOptions,
-} from './lib/access-key/get';
-export {
-  assignBucketRoles,
-  type AssignBucketRolesOptions,
-} from './lib/access-key/assign';
-export {
-  revokeAllBucketRoles,
-  type RevokeAllBucketRolesOptions,
-} from './lib/access-key/revoke';
+  type Policy,
+  type PolicyDocument,
+  type PolicyStatement,
+} from './lib/policy/types';
