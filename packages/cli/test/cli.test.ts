@@ -101,6 +101,47 @@ describe('CLI Help Commands', () => {
     expect(result.stdout).toContain('--force');
   });
 
+  it('should show mk help', () => {
+    const result = runCli('mk help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('mk');
+    expect(result.stdout).toContain('path');
+  });
+
+  it('should show touch help', () => {
+    const result = runCli('touch help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('touch');
+    expect(result.stdout).toContain('path');
+  });
+
+  it('should show stat help', () => {
+    const result = runCli('stat help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('stat');
+    expect(result.stdout).toContain('path');
+  });
+
+  it('should show configure help', () => {
+    const result = runCli('configure help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('configure');
+    expect(result.stdout).toContain('--access-key');
+  });
+
+  it('should show login help', () => {
+    const result = runCli('login help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('login');
+    expect(result.stdout).toContain('Commands:');
+  });
+
+  it('should show whoami help', () => {
+    const result = runCli('whoami help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('whoami');
+  });
+
   it('should show buckets help', () => {
     const result = runCli('buckets help');
     expect(result.exitCode).toBe(0);
@@ -116,6 +157,78 @@ describe('CLI Help Commands', () => {
     expect(result.stdout).toContain('list');
     expect(result.stdout).toContain('get');
     expect(result.stdout).toContain('put');
+  });
+
+  it('should show organizations help', () => {
+    const result = runCli('organizations help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('Commands:');
+    expect(result.stdout).toContain('list');
+    expect(result.stdout).toContain('create');
+  });
+
+  it('should show orgs alias help', () => {
+    const result = runCli('orgs help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('Commands:');
+  });
+
+  it('should show forks help', () => {
+    const result = runCli('forks help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('Commands:');
+    expect(result.stdout).toContain('list');
+    expect(result.stdout).toContain('create');
+  });
+
+  it('should show snapshots help', () => {
+    const result = runCli('snapshots help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('Commands:');
+    expect(result.stdout).toContain('list');
+    expect(result.stdout).toContain('take');
+  });
+
+  it('should show access-keys help', () => {
+    const result = runCli('access-keys help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('Commands:');
+    expect(result.stdout).toContain('list');
+    expect(result.stdout).toContain('create');
+    expect(result.stdout).toContain('delete');
+  });
+
+  // Nested command tests (iam policies)
+  it('should show iam help', () => {
+    const result = runCli('iam help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('Commands:');
+    expect(result.stdout).toContain('policies');
+  });
+
+  it('should show iam policies help', () => {
+    const result = runCli('iam policies help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('Commands:');
+    expect(result.stdout).toContain('list');
+    expect(result.stdout).toContain('get');
+    expect(result.stdout).toContain('create');
+    expect(result.stdout).toContain('edit');
+    expect(result.stdout).toContain('delete');
+  });
+
+  it('should show iam policies list help', () => {
+    const result = runCli('iam policies list help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('list');
+    expect(result.stdout).toContain('--format');
+  });
+
+  it('should support iam alias', () => {
+    const result = runCli('iam p help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('Commands:');
+    expect(result.stdout).toContain('list');
   });
 });
 
