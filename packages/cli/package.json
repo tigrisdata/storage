@@ -37,7 +37,7 @@
     "postinstall": "node postinstall.cjs",
     "generate:registry": "tsx scripts/generate-registry.ts",
     "build:binary": "npm run generate:registry && tsx scripts/build-binaries.ts",
-    "build:binary:current": "bun build src/cli-binary.ts --compile --outfile=bin/tigris",
+    "build:binary:current": "npm run generate:registry && bun build src/cli-binary.ts --compile --outfile=bin/tigris",
     "prepublishOnly": "npm run build",
     "clean": "rm -rf dist",
     "semantic-release": "semantic-release",
