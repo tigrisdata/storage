@@ -10,7 +10,14 @@ const copySpecs = () => {
 };
 
 export default defineConfig((options) => ({
-  entry: ['src/cli.ts', 'src/**/*.ts'],
+  entry: [
+    'src/cli.ts',
+    'src/**/*.ts',
+    // Exclude binary-only files (use bun-specific import syntax)
+    '!src/cli-binary.ts',
+    '!src/specs-embedded.ts',
+    '!src/command-registry.ts',
+  ],
   format: ['esm'],
   dts: false,
   splitting: true,

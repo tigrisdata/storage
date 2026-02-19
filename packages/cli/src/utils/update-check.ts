@@ -43,23 +43,51 @@ function writeUpdateCache(cache: UpdateCheckCache): void {
 }
 
 export function isNewerVersion(current: string, latest: string): boolean {
-  const parse = (v: string): number[] | null => {
-    const cleaned = v.startsWith('v') ? v.slice(1) : v;
+  const parse = (
+    v: string
+  ): {
+    major: number;
+    minor: number;
+    patch: number;
+    prerelease: string | null;
+  } | null => {
+    let cleaned = v.startsWith('v') ? v.slice(1) : v;
+
+    // Split off prerelease suffix (e.g., "1.2.3-alpha.1" -> "1.2.3" + "alpha.1")
+    let prerelease: string | null = null;
+    const dashIndex = cleaned.indexOf('-');
+    if (dashIndex !== -1) {
+      prerelease = cleaned.slice(dashIndex + 1);
+      cleaned = cleaned.slice(0, dashIndex);
+    }
+
     const parts = cleaned.split('.');
     if (parts.length !== 3) return null;
+
     const nums = parts.map(Number);
     if (nums.some(isNaN)) return null;
-    return nums;
+
+    return { major: nums[0], minor: nums[1], patch: nums[2], prerelease };
   };
 
   const cur = parse(current);
   const lat = parse(latest);
   if (!cur || !lat) return false;
 
-  for (let i = 0; i < 3; i++) {
-    if (lat[i] > cur[i]) return true;
-    if (lat[i] < cur[i]) return false;
-  }
+  // Compare major.minor.patch
+  if (lat.major > cur.major) return true;
+  if (lat.major < cur.major) return false;
+  if (lat.minor > cur.minor) return true;
+  if (lat.minor < cur.minor) return false;
+  if (lat.patch > cur.patch) return true;
+  if (lat.patch < cur.patch) return false;
+
+  // Same version number - compare prerelease
+  // A stable release (no prerelease) is newer than a prerelease
+  if (cur.prerelease && !lat.prerelease) return true;
+  // A prerelease is not newer than a stable release
+  if (!cur.prerelease && lat.prerelease) return false;
+  // Both are prereleases or both are stable with same version
   return false;
 }
 
@@ -117,8 +145,20 @@ export function checkForUpdates(): void {
       !cache.lastNotified ||
       Date.now() - cache.lastNotified > notifyIntervalMs
     ) {
+      const isBinary =
+        (globalThis as { __TIGRIS_BINARY?: boolean }).__TIGRIS_BINARY === true;
+      const isWindows = process.platform === 'win32';
       const line1 = `Update available: ${currentVersion} → ${cache.latestVersion}`;
-      const line2 = 'Run `npm install -g @tigrisdata/cli` to upgrade.';
+      let line2: string;
+      if (!isBinary) {
+        line2 = 'Run `npm install -g @tigrisdata/cli` to upgrade.';
+      } else if (isWindows) {
+        line2 =
+          'Run `irm https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.ps1 | iex`';
+      } else {
+        line2 =
+          'Run `curl -fsSL https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.sh | sh`';
+      }
       const width = Math.max(line1.length, line2.length) + 4;
       const top = '┌' + '─'.repeat(width - 2) + '┐';
       const bot = '└' + '─'.repeat(width - 2) + '┘';

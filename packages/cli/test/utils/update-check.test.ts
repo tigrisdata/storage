@@ -73,4 +73,37 @@ describe('isNewerVersion', () => {
     expect(isNewerVersion('1.0.0', '1.0.100')).toBe(true);
     expect(isNewerVersion('1.99.0', '2.0.0')).toBe(true);
   });
+
+  // Prerelease version tests
+  it('should parse prerelease versions correctly', () => {
+    expect(isNewerVersion('1.0.0-alpha.1', '1.0.1')).toBe(true);
+    expect(isNewerVersion('1.0.0-beta.2', '2.0.0')).toBe(true);
+  });
+
+  it('should consider stable newer than same-version prerelease', () => {
+    expect(isNewerVersion('1.0.0-alpha.1', '1.0.0')).toBe(true);
+    expect(isNewerVersion('1.0.0-beta.5', '1.0.0')).toBe(true);
+    expect(isNewerVersion('1.2.3-rc.1', '1.2.3')).toBe(true);
+  });
+
+  it('should not consider prerelease newer than stable of same version', () => {
+    expect(isNewerVersion('1.0.0', '1.0.0-alpha.1')).toBe(false);
+    expect(isNewerVersion('1.0.0', '1.0.0-beta.5')).toBe(false);
+  });
+
+  it('should handle prerelease to prerelease of same version', () => {
+    // Same base version, both prereleases - neither is "newer"
+    expect(isNewerVersion('1.0.0-alpha.1', '1.0.0-alpha.2')).toBe(false);
+    expect(isNewerVersion('1.0.0-alpha.1', '1.0.0-beta.1')).toBe(false);
+  });
+
+  it('should handle newer base version even with prerelease', () => {
+    expect(isNewerVersion('1.0.0-alpha.1', '1.0.1-alpha.1')).toBe(true);
+    expect(isNewerVersion('1.0.0', '1.0.1-alpha.1')).toBe(true);
+  });
+
+  it('should handle v prefix with prereleases', () => {
+    expect(isNewerVersion('v1.0.0-alpha.1', 'v1.0.0')).toBe(true);
+    expect(isNewerVersion('v1.0.0-beta.1', '1.0.0')).toBe(true);
+  });
 });

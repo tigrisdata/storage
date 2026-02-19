@@ -11,6 +11,13 @@ let cachedSpecs: Specs | null = null;
 
 const specsPath = join(__dirname, 'specs.yaml');
 
+/**
+ * Pre-populate the specs cache (used by binary builds where readFileSync is unavailable).
+ */
+export function setSpecs(specs: Specs): void {
+  cachedSpecs = specs;
+}
+
 export function loadSpecs(): Specs {
   if (!cachedSpecs) {
     const specsContent = readFileSync(specsPath, 'utf8');
