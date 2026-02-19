@@ -1,7 +1,12 @@
 import { createOrganization } from '@tigrisdata/iam';
 import { getOption } from '../../utils/options.js';
 import { getStorageConfig } from '../../auth/s3-client.js';
-import { getLoginMethod, getCredentials } from '../../auth/storage.js';
+import {
+  getLoginMethod,
+  getCredentials,
+  getSelectedOrganization,
+} from '../../auth/storage.js';
+import { isFlyUser } from '../../auth/fly.js';
 import {
   printStart,
   printSuccess,
@@ -30,6 +35,17 @@ export default async function create(options: Record<string, unknown>) {
         'Not authenticated. Please run "tigris login" to login with your Tigris account.'
       );
     }
+    return;
+  }
+
+  // Fly users cannot create organizations
+  const selectedOrg = getSelectedOrganization();
+  if (isFlyUser(selectedOrg ?? undefined)) {
+    console.log(
+      'Organization creation is not available for Fly.io users.\n' +
+        'Your organizations are managed through Fly.io.\n\n' +
+        'Visit https://fly.io to manage your organizations.'
+    );
     return;
   }
 

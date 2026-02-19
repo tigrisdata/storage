@@ -8,6 +8,8 @@ import {
   getLoginMethod,
   getCredentials,
 } from '../../auth/storage.js';
+import { getAuthClient } from '../../auth/client.js';
+import { isFlyUser, fetchOrganizationsFromUserInfo } from '../../auth/fly.js';
 import Enquirer from 'enquirer';
 import {
   printStart,
@@ -42,16 +44,31 @@ export default async function list(options: Record<string, unknown>) {
 
   const format = getOption<string>(options, ['format', 'f', 'F'], 'select');
 
-  const config = await getStorageConfig();
+  // For Fly users, fetch organizations from userinfo endpoint
+  const authClient = getAuthClient();
+  const accessToken = await authClient.getAccessToken();
+  const tokenOrgs = await fetchOrganizationsFromUserInfo(accessToken);
+  const flyUser = tokenOrgs?.some((org) => isFlyUser(org.id)) ?? false;
 
-  const { data, error } = await listOrganizations({ config });
+  let orgs: { id: string; name: string; slug: string }[];
 
-  if (error) {
-    printFailure(context, error.message);
-    process.exit(1);
+  if (flyUser && tokenOrgs) {
+    orgs = tokenOrgs.map((org) => ({
+      id: org.id,
+      name: org.name,
+      slug: org.name,
+    }));
+  } else {
+    const config = await getStorageConfig();
+    const { data, error } = await listOrganizations({ config });
+
+    if (error) {
+      printFailure(context, error.message);
+      process.exit(1);
+    }
+
+    orgs = data?.organizations ?? [];
   }
-
-  const orgs = data?.organizations ?? [];
 
   if (orgs.length === 0) {
     printEmpty(context);
