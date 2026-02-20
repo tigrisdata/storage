@@ -164,6 +164,7 @@ export default async function create(options: Record<string, unknown>) {
     defaultTier: (defaultTier ?? 'STANDARD') as StorageClass,
     consistency: consistency === 'strict' ? 'strict' : 'default',
     enableSnapshot: enableSnapshots === true,
+    access: access as 'public' | 'private',
     region:
       region !== 'global' && region !== undefined
         ? region.split(',')
