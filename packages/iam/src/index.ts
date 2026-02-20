@@ -50,3 +50,19 @@ export {
   type PolicyDocument,
   type PolicyStatement,
 } from './lib/policy/types';
+export { inviteUser, type InviteUserOptions } from './lib/users/invite';
+export {
+  listUsers,
+  type ListUsersOptions,
+  type ListUsersResponse,
+} from './lib/users/list';
+export { removeUser, type RemoveUserOptions } from './lib/users/remove';
+export {
+  revokeInvitation,
+  type RevokeInvitationOptions,
+} from './lib/users/revoke-invitation';
+export { type Invitation, type User } from './lib/users/types';
+export {
+  updateUserRole,
+  type UpdateUserRoleOptions,
+} from './lib/users/update-role';

@@ -1,8 +1,14 @@
 import { createTigrisHttpClient, type TigrisHttpClient } from '@shared/index';
-import { config } from './config';
+import { config, DEFAULT_ENDPOINTS } from './config';
 import type { TigrisIAMConfig, TigrisIAMResponse } from './types';
 
 export const IAM_ENDPOINTS = {
+  // Users
+  revokeInvitation: '/tigris-iam/invitations',
+  removeUser: '/tigris-iam/namespaces',
+  inviteUser: '/tigris-iam/invitations',
+  listUsers: '/users/get-org?SkipNativeOrgCache=true',
+  updateUserRole: '/tigris-iam/namespaces',
   // Organizations
   createOrganization: '/tigris-iam/namespaces',
   listOrganizations: '/tigris-iam/namespaces',
@@ -22,13 +28,16 @@ export const IAM_ENDPOINTS = {
 };
 
 function getIAMEndpoint(options?: TigrisIAMConfig): string {
-  return (
-    options?.iamEndpoint ?? config.iamEndpoint ?? 'https://iam.storageapi.dev'
-  );
+  return options?.iamEndpoint ?? config.iamEndpoint ?? DEFAULT_ENDPOINTS.iam;
+}
+
+function getManagementEndpoint(options?: TigrisIAMConfig): string {
+  return options?.mgmtEndpoint ?? config.mgmtEndpoint ?? DEFAULT_ENDPOINTS.mgmt;
 }
 
 export function createIAMClient(
-  options?: TigrisIAMConfig
+  options?: TigrisIAMConfig,
+  isManagement?: boolean
 ): TigrisIAMResponse<TigrisHttpClient, Error> {
   const sessionToken = options?.sessionToken ?? config.sessionToken;
   const organizationId = options?.organizationId ?? config.organizationId;
@@ -42,7 +51,9 @@ export function createIAMClient(
   }
 
   return createTigrisHttpClient({
-    baseUrl: getIAMEndpoint(options),
+    baseUrl: isManagement
+      ? getManagementEndpoint(options)
+      : getIAMEndpoint(options),
     sessionToken,
     organizationId,
   });

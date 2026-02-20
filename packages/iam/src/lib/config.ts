@@ -1,29 +1,22 @@
-import {
-  isNode,
-  loadEnv,
-  missingConfigError as baseMissingConfigError,
-} from '@shared/index';
+import { isNode, loadEnv } from '@shared/index';
 import type { TigrisIAMConfig } from './types';
 
-const configMap: Record<keyof TigrisIAMConfig, string> = {
-  iamEndpoint: 'TIGRIS_IAM_ENDPOINT',
-  sessionToken: 'TIGRIS_SESSION_TOKEN',
-  organizationId: 'TIGRIS_ORGANIZATION_ID',
+export const DEFAULT_ENDPOINTS = {
+  iam: 'https://iam.storageapi.dev',
+  mgmt: 'https://mgmt.storageapi.dev',
 };
-
-export const missingConfigError = (key: string) =>
-  baseMissingConfigError(key, configMap[key as keyof TigrisIAMConfig]);
 
 function loadIAMConfig(): TigrisIAMConfig {
   loadEnv();
 
   const config: TigrisIAMConfig = {
-    iamEndpoint: 'https://iam.storageapi.dev',
+    iamEndpoint: DEFAULT_ENDPOINTS.iam,
+    mgmtEndpoint: DEFAULT_ENDPOINTS.mgmt,
   };
 
   if (isNode()) {
-    config.iamEndpoint =
-      process.env.TIGRIS_IAM_ENDPOINT ?? 'https://iam.storageapi.dev';
+    config.iamEndpoint = process.env.TIGRIS_IAM_ENDPOINT;
+    config.mgmtEndpoint = process.env.TIGRIS_MGMT_ENDPOINT;
     config.sessionToken = process.env.TIGRIS_SESSION_TOKEN;
     config.organizationId = process.env.TIGRIS_ORGANIZATION_ID;
   }
