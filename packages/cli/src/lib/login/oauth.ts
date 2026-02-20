@@ -45,7 +45,7 @@ export async function oauth(): Promise<void> {
     } else {
       printSuccess(context, { org: 'none' });
     }
-  } catch (error) {
+  } catch {
     printFailure(context);
     process.exit(1);
   }

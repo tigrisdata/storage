@@ -204,7 +204,8 @@ export class TigrisAuthClient {
 
           // Any other error should stop polling
           throw new Error(
-            error.response.data?.error_description || 'Authentication failed'
+            error.response.data?.error_description || 'Authentication failed',
+            { cause: error }
           );
         }
 
@@ -241,7 +242,8 @@ export class TigrisAuthClient {
    * Refresh access token using refresh token
    */
   async refreshAccessToken(tokens?: TokenSet): Promise<TokenSet> {
-    let tokenSet: TokenSet | null = null;
+    let tokenSet: TokenSet | null;
+
     if (!tokens?.refreshToken) {
       tokenSet = await getTokens();
     } else {
@@ -279,9 +281,10 @@ export class TigrisAuthClient {
 
       await storeTokens(newTokens);
       return newTokens;
-    } catch (error) {
+    } catch {
       // Refresh failed, clear tokens and prompt re-login
       await clearTokens();
+
       throw new Error(
         'Token refresh failed. Please run "tigris login" to re-authenticate.'
       );
@@ -355,7 +358,7 @@ export class TigrisAuthClient {
       }
 
       storeOrganizations(availableOrgs);
-    } catch (error) {
+    } catch {
       // Silently fail - organizations will need to be fetched another way
     }
   }

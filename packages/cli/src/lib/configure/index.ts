@@ -90,7 +90,7 @@ export default async function configure(options: Record<string, unknown>) {
     await storeLoginMethod('credentials');
 
     printSuccess(context);
-  } catch (error) {
+  } catch {
     printFailure(context, 'Failed to save credentials');
     process.exit(1);
   }
