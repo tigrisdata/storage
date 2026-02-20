@@ -1,6 +1,7 @@
 import {
   DEFAULT_STORAGE_ENDPOINT,
   DEFAULT_IAM_ENDPOINT,
+  DEFAULT_MGMT_ENDPOINT,
 } from '../constants.js';
 
 /**
@@ -15,6 +16,7 @@ export interface Auth0Config {
 export interface TigrisConfig {
   endpoint: string;
   iamEndpoint: string;
+  mgmtEndpoint: string;
 }
 
 /**
@@ -52,6 +54,7 @@ export function getTigrisConfig(): TigrisConfig {
     return {
       endpoint: process.env.TIGRIS_STORAGE_ENDPOINT || DEFAULT_STORAGE_ENDPOINT,
       iamEndpoint: process.env.TIGRIS_IAM_ENDPOINT || DEFAULT_IAM_ENDPOINT,
+      mgmtEndpoint: process.env.TIGRIS_MGMT_ENDPOINT || DEFAULT_MGMT_ENDPOINT,
     };
   }
 
@@ -59,5 +62,6 @@ export function getTigrisConfig(): TigrisConfig {
   return {
     endpoint: process.env.AWS_ENDPOINT_URL_S3 || DEFAULT_STORAGE_ENDPOINT,
     iamEndpoint: process.env.AWS_ENDPOINT_URL_IAM || DEFAULT_IAM_ENDPOINT,
+    mgmtEndpoint: process.env.AWS_ENDPOINT_URL_MGMT || DEFAULT_MGMT_ENDPOINT,
   };
 }

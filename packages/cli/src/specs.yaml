@@ -1017,11 +1017,12 @@ commands:
   # IAM - Identity and Access Management
   #########################
   - name: iam
-    description: Identity and Access Management - manage policies, roles, and permissions
+    description: Identity and Access Management - manage policies, users, and permissions
     examples:
       - "tigris iam policies list"
-      - "tigris iam policies get arn:aws:iam::org_id:policy/my-policy"
       - "tigris iam policies create my-policy --document policy.json"
+      - "tigris iam users list"
+      - "tigris iam users invite user@example.com --role member"
     commands:
       - name: policies
         description: Manage IAM policies. Policies define permissions for access keys
@@ -1137,3 +1138,115 @@ commands:
                 required: false
                 examples:
                   - arn:aws:iam::org_id:policy/my-policy
+
+      - name: users
+        description: Manage organization users and invitations
+        alias: u
+        examples:
+          - "tigris iam users list"
+          - "tigris iam users invite user@example.com --role member"
+          - "tigris iam users remove user@example.com"
+        commands:
+          - name: list
+            description: List all users and pending invitations in the organization
+            alias: l
+            examples:
+              - "tigris iam users list"
+              - "tigris iam users list --format json"
+            messages:
+              onStart: ''
+              onSuccess: ''
+              onFailure: 'Failed to list users'
+              onEmpty: 'No users found in this organization'
+            arguments:
+              - name: format
+                description: Output format
+                alias: f
+                options: [json, table, xml]
+                default: table
+          - name: invite
+            description: Invite users to the organization by email
+            alias: i
+            examples:
+              - "tigris iam users invite user@example.com"
+              - "tigris iam users invite user@example.com --role admin"
+              - "tigris iam users invite user1@example.com,user2@example.com"
+            messages:
+              onStart: 'Sending invitation...'
+              onSuccess: "Invitation sent to '{{email}}'"
+              onFailure: 'Failed to send invitation'
+            arguments:
+              - name: email
+                description: Email address(es) to invite (comma-separated for multiple)
+                type: positional
+                required: true
+                multiple: true
+                examples:
+                  - user@example.com
+                  - user1@example.com,user2@example.com
+              - name: role
+                description: Role to assign to the invited user(s)
+                alias: r
+                options: [admin, member]
+                default: member
+          - name: revoke-invitation
+            description: Revoke pending invitations. If no invitation ID provided, shows interactive selection
+            alias: ri
+            examples:
+              - "tigris iam users revoke-invitation"
+              - "tigris iam users revoke-invitation invitation_id"
+              - "tigris iam users revoke-invitation id1,id2,id3"
+            messages:
+              onStart: 'Revoking invitation...'
+              onSuccess: "Invitation(s) revoked"
+              onFailure: 'Failed to revoke invitation'
+              onEmpty: 'No pending invitations found'
+            arguments:
+              - name: resource
+                description: Invitation ID(s) (comma-separated for multiple). If omitted, shows interactive selection
+                type: positional
+                required: false
+                multiple: true
+          - name: update-role
+            description: Update user roles in the organization. If no user ID provided, shows interactive selection
+            alias: ur
+            examples:
+              - "tigris iam users update-role --role admin"
+              - "tigris iam users update-role user_id --role member"
+              - "tigris iam users update-role id1,id2 --role admin"
+              - "tigris iam users update-role id1,id2 --role admin,member"
+            messages:
+              onStart: 'Updating user role...'
+              onSuccess: "Role updated"
+              onFailure: 'Failed to update user role'
+              onEmpty: 'No users found in this organization'
+            arguments:
+              - name: resource
+                description: User ID(s) (comma-separated for multiple). If omitted, shows interactive selection
+                type: positional
+                required: false
+                multiple: true
+              - name: role
+                description: Role(s) to assign (comma-separated). Each role pairs with the corresponding user ID. If one role is given, it applies to all users
+                alias: r
+                required: true
+                options: [admin, member]
+                multiple: true
+          - name: remove
+            description: Remove users from the organization. If no user ID provided, shows interactive selection
+            alias: rm
+            examples:
+              - "tigris iam users remove"
+              - "tigris iam users remove user@example.com"
+              - "tigris iam users remove user@example.com,user@example.net"
+            messages:
+              onStart: 'Removing user...'
+              onSuccess: "User(s) removed"
+              onFailure: 'Failed to remove user'
+              onEmpty: 'No users found in this organization'
+            arguments:
+              - name: resource
+                description: User ID(s) (comma-separated for multiple). If omitted, shows interactive selection
+                type: positional
+                required: false
+                multiple: true
