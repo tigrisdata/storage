@@ -52,6 +52,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "dotenv": "^17.2.1"
+    "dotenv": "^17.3.1"
   }
 }
