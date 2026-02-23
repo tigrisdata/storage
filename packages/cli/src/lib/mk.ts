@@ -22,7 +22,10 @@ export default async function mk(options: Record<string, unknown>) {
 
   if (!path) {
     // Create a bucket
-    const access = getOption<string>(options, ['access', 'a', 'A']);
+    const isPublic = getOption<boolean>(options, ['public']);
+    const access = isPublic
+      ? 'public'
+      : getOption<string>(options, ['access', 'a', 'A']);
     const enableSnapshots = getOption<boolean>(options, [
       'enableSnapshots',
       'enable-snapshots',
@@ -42,7 +45,7 @@ export default async function mk(options: Record<string, unknown>) {
       defaultTier: (defaultTier ?? 'STANDARD') as StorageClass,
       consistency: consistency === 'strict' ? 'strict' : 'default',
       enableSnapshot: enableSnapshots === true,
-      access: access as 'public' | 'private',
+      access: (access ?? 'private') as 'public' | 'private',
       region:
         region !== 'global' && region !== undefined
           ? region.split(',')

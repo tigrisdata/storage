@@ -75,6 +75,7 @@ tigris mk <path> [flags]
 | Flag | Description |
 |------|-------------|
 | `-a, --access` | Access level (only applies when creating a bucket) |
+| `--public` | Shorthand for --access public (only applies when creating a bucket) |
 | `-s, --enable-snapshots` | Enable snapshots for the bucket (only applies when creating a bucket) |
 | `-t, --default-tier` | Default storage tier (only applies when creating a bucket) |
 | `-c, --consistency` | Consistency level (only applies when creating a bucket) |
@@ -467,6 +468,7 @@ tigris buckets create [name] [flags]
 | Flag | Description |
 |------|-------------|
 | `-a, --access` | Access level (default: private) |
+| `--public` | Shorthand for --access public |
 | `-s, --enable-snapshots` | Enable snapshots for the bucket (default: false) |
 | `-t, --default-tier` | Choose the default tier for the bucket (default: STANDARD) |
 | `-c, --consistency` | Choose the consistency level for the bucket (default: default) |

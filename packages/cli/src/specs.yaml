@@ -263,6 +263,9 @@ commands:
         alias: a
         options: *access_options
         default: private
+      - name: public
+        description: Shorthand for --access public (only applies when creating a bucket)
+        type: flag
       - name: enable-snapshots
         description: Enable snapshots for the bucket (only applies when creating a bucket)
         alias: s
@@ -549,6 +552,9 @@ commands:
             alias: a
             options: *access_options
             default: private
+          - name: public
+            description: Shorthand for --access public
+            type: flag
           - name: enable-snapshots
             description: Enable snapshots for the bucket
             alias: s

@@ -24,9 +24,12 @@ export default async function create(options: Record<string, unknown>) {
 
   // Extract all options from specs.yaml
   let name = getOption<string>(options, ['name']);
-  let access = promptAll
-    ? undefined
-    : getOption<string>(options, ['access', 'a', 'A']);
+  const isPublic = getOption<boolean>(options, ['public']);
+  let access = isPublic
+    ? 'public'
+    : promptAll
+      ? undefined
+      : getOption<string>(options, ['access', 'a', 'A']);
   let enableSnapshots = promptAll
     ? undefined
     : getOption<boolean>(options, ['enable-snapshots', 's', 'S']);
@@ -59,7 +62,7 @@ export default async function create(options: Record<string, unknown>) {
     });
   }
 
-  if (!access || promptAll) {
+  if ((!access || promptAll) && !isPublic) {
     const accessSpec = getArgumentSpec('buckets', 'access', 'create');
     const choices = buildPromptChoices(accessSpec!);
     const defaultIndex = choices?.findIndex(
@@ -164,7 +167,7 @@ export default async function create(options: Record<string, unknown>) {
     defaultTier: (defaultTier ?? 'STANDARD') as StorageClass,
     consistency: consistency === 'strict' ? 'strict' : 'default',
     enableSnapshot: enableSnapshots === true,
-    access: access as 'public' | 'private',
+    access: (access ?? 'private') as 'public' | 'private',
     region:
       region !== 'global' && region !== undefined
         ? region.split(',')
