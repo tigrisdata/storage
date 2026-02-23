@@ -24,6 +24,7 @@ Run `tigris help` to see all available commands, or `tigris <command> help` for 
 - `tigris cp <src> <dest>` - Copy files between local filesystem and Tigris, or between paths within Tigris. At least one side must be a remote t3:// path
 - `tigris mv <src> <dest>` - Move (rename) objects within Tigris. Both source and destination must be remote t3:// paths
 - `tigris rm <path>` - Remove a bucket, folder, or object from Tigris. A bare bucket name deletes the bucket itself
+- `tigris stat [path]` - Show storage stats (no args), bucket info, or object metadata
 
 ### Authentication
 
@@ -41,6 +42,7 @@ Run `tigris help` to see all available commands, or `tigris <command> help` for 
 - `tigris forks` - List and create forks. A fork is a writable copy-on-write clone of a bucket, useful for testing or branching data
 - `tigris snapshots` - List and take snapshots. A snapshot is a point-in-time, read-only copy of a bucket's state
 - `tigris objects` - Low-level object operations for listing, downloading, uploading, and deleting individual objects in a bucket
+- `tigris iam` - Identity and Access Management - manage policies, users, and permissions
 
 ---
 
@@ -67,12 +69,21 @@ tigris ls t3://my-bucket/prefix/
 Create a bucket (bare name) or a folder inside a bucket (bucket/folder/ with trailing slash)
 
 ```
-tigris mk <path>
+tigris mk <path> [flags]
 ```
+
+| Flag | Description |
+|------|-------------|
+| `-a, --access` | Access level (only applies when creating a bucket) |
+| `-s, --enable-snapshots` | Enable snapshots for the bucket (only applies when creating a bucket) |
+| `-t, --default-tier` | Default storage tier (only applies when creating a bucket) |
+| `-c, --consistency` | Consistency level (only applies when creating a bucket) |
+| `-r, --region` | Region (only applies when creating a bucket) |
 
 **Examples:**
 ```bash
 tigris mk my-bucket
+tigris mk my-bucket --access public --region iad
 tigris mk my-bucket/images/
 tigris mk t3://my-bucket
 ```
@@ -150,6 +161,25 @@ tigris rm t3://my-bucket/file.txt -f
 tigris rm t3://my-bucket/folder/ -rf
 tigris rm t3://my-bucket -f
 tigris rm "t3://my-bucket/logs/*.tmp" -f
+```
+
+### `stat`
+
+Show storage stats (no args), bucket info, or object metadata
+
+```
+tigris stat [path] [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-f, --format` | Output format |
+
+**Examples:**
+```bash
+tigris stat
+tigris stat t3://my-bucket
+tigris stat t3://my-bucket/my-object.json
 ```
 
 ## Authentication
@@ -583,6 +613,7 @@ Low-level object operations for listing, downloading, uploading, and deleting in
 | `objects get` (g) | Download an object by key. Prints to stdout by default, or saves to a file with --output |
 | `objects put` (p) | Upload a local file as an object. Content-type is auto-detected from extension unless overridden |
 | `objects delete` (d) | Delete one or more objects by key from the given bucket |
+| `objects set` (s) | Update settings on an existing object such as access level |
 
 #### `objects list`
 
@@ -647,6 +678,212 @@ tigris objects delete <bucket> <key>
 ```bash
 tigris objects delete my-bucket old-file.txt
 tigris objects delete my-bucket file-a.txt,file-b.txt
+```
+
+#### `objects set`
+
+```
+tigris objects set <bucket> <key> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-a, --access` | Access level |
+| `-n, --new-key` | Rename the object to a new key |
+
+**Examples:**
+```bash
+tigris objects set my-bucket my-file.txt --access public
+tigris objects set my-bucket my-file.txt --access private
+```
+
+### `iam`
+
+Identity and Access Management - manage policies, users, and permissions
+
+| Command | Description |
+|---------|-------------|
+| `iam policies` (p) | Manage IAM policies. Policies define permissions for access keys |
+| `iam users` (u) | Manage organization users and invitations |
+
+#### `iam policies` | `p`
+
+Manage IAM policies. Policies define permissions for access keys
+
+| Command | Description |
+|---------|-------------|
+| `iam policies list` (l) | List all policies in the current organization |
+| `iam policies get` (g) | Show details for a policy including its document and attached users. If no ARN provided, shows interactive selection |
+| `iam policies create` (c) | Create a new policy with the given name and policy document. Document can be provided via file, inline JSON, or stdin |
+| `iam policies edit` (e) | Update an existing policy's document. Document can be provided via file, inline JSON, or stdin. If no ARN provided, shows interactive selection |
+| `iam policies delete` (d) | Delete a policy. If no ARN provided, shows interactive selection |
+
+##### `iam policies list`
+
+```
+tigris iam policies list [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-f, --format` | Output format (default: table) |
+
+**Examples:**
+```bash
+tigris iam policies list
+```
+
+##### `iam policies get`
+
+```
+tigris iam policies get [resource] [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-f, --format` | Output format (default: table) |
+
+**Examples:**
+```bash
+tigris iam policies get
+tigris iam policies get arn:aws:iam::org_id:policy/my-policy
+```
+
+##### `iam policies create`
+
+```
+tigris iam policies create <name> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-d, --document` | Policy document (JSON file path or inline JSON). If omitted, reads from stdin |
+| `--description` | Policy description |
+
+**Examples:**
+```bash
+tigris iam policies create my-policy --document policy.json
+tigris iam policies create my-policy --document '{"Version":"2012-10-17","Statement":[...]}'
+cat policy.json | tigris iam policies create my-policy
+```
+
+##### `iam policies edit`
+
+```
+tigris iam policies edit [resource] [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-d, --document` | New policy document (JSON file path or inline JSON). If omitted, reads from stdin |
+| `--description` | Update policy description |
+
+**Examples:**
+```bash
+tigris iam policies edit --document policy.json
+tigris iam policies edit arn:aws:iam::org_id:policy/my-policy --document policy.json
+cat policy.json | tigris iam policies edit arn:aws:iam::org_id:policy/my-policy
+```
+
+##### `iam policies delete`
+
+```
+tigris iam policies delete [resource]
+```
+
+**Examples:**
+```bash
+tigris iam policies delete
+tigris iam policies delete arn:aws:iam::org_id:policy/my-policy
+```
+
+#### `iam users` | `u`
+
+Manage organization users and invitations
+
+| Command | Description |
+|---------|-------------|
+| `iam users list` (l) | List all users and pending invitations in the organization |
+| `iam users invite` (i) | Invite users to the organization by email |
+| `iam users revoke-invitation` (ri) | Revoke pending invitations. If no invitation ID provided, shows interactive selection |
+| `iam users update-role` (ur) | Update user roles in the organization. If no user ID provided, shows interactive selection |
+| `iam users remove` (rm) | Remove users from the organization. If no user ID provided, shows interactive selection |
+
+##### `iam users list`
+
+```
+tigris iam users list [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-f, --format` | Output format (default: table) |
+
+**Examples:**
+```bash
+tigris iam users list
+tigris iam users list --format json
+```
+
+##### `iam users invite`
+
+```
+tigris iam users invite <email> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-r, --role` | Role to assign to the invited user(s) (default: member) |
+
+**Examples:**
+```bash
+tigris iam users invite user@example.com
+tigris iam users invite user@example.com --role admin
+tigris iam users invite user1@example.com,user2@example.com
+```
+
+##### `iam users revoke-invitation`
+
+```
+tigris iam users revoke-invitation [resource]
+```
+
+**Examples:**
+```bash
+tigris iam users revoke-invitation
+tigris iam users revoke-invitation invitation_id
+tigris iam users revoke-invitation id1,id2,id3
+```
+
+##### `iam users update-role`
+
+```
+tigris iam users update-role [resource] [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-r, --role` | Role(s) to assign (comma-separated). Each role pairs with the corresponding user ID. If one role is given, it applies to all users |
+
+**Examples:**
+```bash
+tigris iam users update-role --role admin
+tigris iam users update-role user_id --role member
+tigris iam users update-role id1,id2 --role admin
+tigris iam users update-role id1,id2 --role admin,member
+```
+
+##### `iam users remove`
+
+```
+tigris iam users remove [resource]
+```
+
+**Examples:**
+```bash
+tigris iam users remove
+tigris iam users remove user@example.com
+tigris iam users remove user@example.com,user@example.net
 ```
 
 ## License
