@@ -243,6 +243,7 @@ commands:
     alias: create
     examples:
       - "tigris mk my-bucket"
+      - "tigris mk my-bucket --access public --region iad"
       - "tigris mk my-bucket/images/"
       - "tigris mk t3://my-bucket"
     messages:
@@ -257,6 +258,31 @@ commands:
           - my-bucket/my-path
           - t3://my-bucket
           - t3://my-bucket/my-path
+      - name: access
+        description: Access level (only applies when creating a bucket)
+        alias: a
+        options: *access_options
+        default: private
+      - name: enable-snapshots
+        description: Enable snapshots for the bucket (only applies when creating a bucket)
+        alias: s
+        type: flag
+        default: false
+      - name: default-tier
+        description: Default storage tier (only applies when creating a bucket)
+        alias: t
+        options: *tier_options
+        default: STANDARD
+      - name: consistency
+        description: Consistency level (only applies when creating a bucket)
+        alias: c
+        options: *consistency_options
+        default: default
+      - name: region
+        description: Region (only applies when creating a bucket)
+        alias: r
+        options: *region_options
+        default: 'global'
 
   # touch
   - name: touch

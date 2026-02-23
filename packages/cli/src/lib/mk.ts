@@ -1,7 +1,7 @@
 import { parseAnyPath } from '../utils/path.js';
 import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
-import { createBucket, put } from '@tigrisdata/storage';
+import { createBucket, put, type StorageClass } from '@tigrisdata/storage';
 
 export default async function mk(options: Record<string, unknown>) {
   const pathString = getOption<string>(options, ['path']);
@@ -22,7 +22,33 @@ export default async function mk(options: Record<string, unknown>) {
 
   if (!path) {
     // Create a bucket
-    const { error } = await createBucket(bucket, { config });
+    const access = getOption<string>(options, ['access', 'a', 'A']);
+    const enableSnapshots = getOption<boolean>(options, [
+      'enableSnapshots',
+      'enable-snapshots',
+      's',
+      'S',
+    ]);
+    const defaultTier = getOption<string>(options, [
+      'defaultTier',
+      'default-tier',
+      't',
+      'T',
+    ]);
+    const consistency = getOption<string>(options, ['consistency', 'c', 'C']);
+    const region = getOption<string>(options, ['region', 'r', 'R']);
+
+    const { error } = await createBucket(bucket, {
+      defaultTier: (defaultTier ?? 'STANDARD') as StorageClass,
+      consistency: consistency === 'strict' ? 'strict' : 'default',
+      enableSnapshot: enableSnapshots === true,
+      access: access as 'public' | 'private',
+      region:
+        region !== 'global' && region !== undefined
+          ? region.split(',')
+          : undefined,
+      config,
+    });
 
     if (error) {
       console.error(error.message);
