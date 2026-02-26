@@ -30,3 +30,28 @@ export type BucketLocations = {
   type: 'global',
   values?: never,
 };
+
+export type BucketMigration = {
+  enabled: boolean;
+  accessKey?: string;
+  secretKey?: string;
+  region?: string;
+  name?: string;
+  endpoint?: string;
+  writeThrough?: boolean;
+};
+
+export type BucketTtl = {
+  id?: string;
+  enabled?: boolean;
+  days?: number;
+  date?: string;
+};
+
+export type BucketLifecycleRule = {
+  id?: string;
+  enabled?: boolean;
+  storageClass?: Omit<StorageClass, 'STANDARD'>;
+  days?: number;
+  date?: string;
+};
