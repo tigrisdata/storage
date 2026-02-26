@@ -1,5 +1,5 @@
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
-import type { StorageClass } from './types';
+import type { BucketLifecycleRule, BucketMigration, BucketTtl, StorageClass } from './types';
 import { createStorageClient } from '../http-client';
 
 export type GetBucketInfoOptions = {
@@ -41,6 +41,11 @@ export type BucketInfoResponse = {
   settings: {
     allowObjectAcl: boolean;
     defaultTier: StorageClass;
+    lifecycleRules?: BucketLifecycleRule[];
+    dataMigration?: Omit<BucketMigration, 'enabled'>;
+    ttlConfig?: BucketTtl;
+    customDomain?: string;
+    deleteProtection: boolean;
   };
   sizeInfo: {
     numberOfObjects: number | undefined;
@@ -49,7 +54,7 @@ export type BucketInfoResponse = {
   };
 };
 
-type BucketInfoApiResponse = {
+type GetBucketInfoApiResponseBody = {
   ForkInfo?: {
     HasChildren: boolean;
     Parents: Array<{
@@ -63,12 +68,40 @@ type BucketInfoApiResponse = {
   storage_class: StorageClass;
   type?: 1;
   tier_sizes: Record<string, number>;
+  shadow_bucket?: {
+    access_key?: string;
+    secret_key?: string;
+    region?: string;
+    name?: string;
+    endpoint?: string;
+    write_through?: boolean;
+  };
+  website?: {
+    domain_name: string;
+  };
+  protection?: {
+    protected: boolean;
+  };
   acl_settings?: {
     allow_object_acl: boolean;
   };
   estimated_unique_rows?: number; // number of objects
   estimated_size?: number; // estimated size of the bucket in bytes
   estimated_rows?: number; // estimated number of objects in the bucket (all versions)
+  lifecycle_rules?: {
+    id?: string;
+    expiration?: {
+      days?: number;
+      date?: string;
+      enabled: boolean;
+    };
+    transitions?: {
+      storage_class: StorageClass;
+      date?: string;
+      days?: number;
+    }[];
+    status: 1 | 2; // 1: active, 2: disabled
+  }[];
 };
 
 export async function getBucketInfo(
@@ -85,7 +118,7 @@ export async function getBucketInfo(
   try {
     const response = await storageHttpClient.request<
       unknown,
-      BucketInfoApiResponse
+      GetBucketInfoApiResponseBody
     >({
       method: 'GET',
       path: `/${bucketName}?metadata&with-size=true`,
@@ -97,6 +130,8 @@ export async function getBucketInfo(
     if (response.error) {
       return { error: response.error };
     }
+
+    const ttlConfig = response.data.lifecycle_rules?.find((rule) => rule.expiration !== undefined);
 
     const data: BucketInfoResponse = {
       isSnapshotEnabled: response.data.type === 1,
@@ -118,6 +153,29 @@ export async function getBucketInfo(
       settings: {
         allowObjectAcl: response.data.acl_settings?.allow_object_acl ?? false,
         defaultTier: response.data.storage_class as StorageClass,
+        customDomain: response.data.website?.domain_name,
+        deleteProtection: response.data.protection?.protected ?? false,
+        dataMigration: response.data.shadow_bucket ? {
+          accessKey: response.data.shadow_bucket.access_key,
+          secretKey: response.data.shadow_bucket.secret_key,
+          region: response.data.shadow_bucket.region,
+          name: response.data.shadow_bucket.name,
+          endpoint: response.data.shadow_bucket.endpoint,
+          writeThrough: response.data.shadow_bucket.write_through,
+        } : undefined,
+        ttlConfig: ttlConfig ? {
+          enabled: ttlConfig.status === 1,
+          days: ttlConfig.expiration?.days,
+          date: ttlConfig.expiration?.date,
+          id: ttlConfig.id,
+        } : undefined,
+        lifecycleRules: response.data.lifecycle_rules?.filter((rule) => rule.expiration === undefined).map((rule) => ({
+          storageClass: rule.transitions?.[0]?.storage_class as StorageClass,
+          days: rule.transitions?.[0]?.days,
+          date: rule.transitions?.[0]?.date,
+          enabled: rule.status === 1,
+          id: rule.id,
+        })) ?? undefined,
       },
       sizeInfo: {
         numberOfObjects: response.data.estimated_unique_rows ?? undefined,
