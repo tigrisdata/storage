@@ -3,28 +3,9 @@ import type { HttpRequest } from '@aws-sdk/types';
 import { TigrisHeaders } from '@shared/index';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import { availableRegions, validateLocationValues, validateRegions } from './utils/regions';
+import type { BucketLocations, StorageClass } from './types';
 
-const availableRegions = [
-  'usa',
-  'eur',
-  'ams',
-  'fra',
-  'gru',
-  'iad',
-  'jnb',
-  'lhr',
-  'nrt',
-  'ord',
-  'sin',
-  'sjc',
-  'syd',
-];
-
-export type StorageClass =
-  | 'STANDARD'
-  | 'STANDARD_IA'
-  | 'GLACIER'
-  | 'GLACIER_IR';
 
 export type CreateBucketOptions = {
   enableSnapshot?: boolean;
@@ -33,11 +14,16 @@ export type CreateBucketOptions = {
   access?: 'public' | 'private';
   defaultTier?: StorageClass;
   /**
-   * @deprecated This property is deprecated and will be removed in the next major version
-   * @see https://www.tigrisdata.com/docs/buckets/create-bucket/#bucket-consistency
+   * @deprecated This property is deprecated and will be removed in the next major version. Use locations instead.
+   * @see https://www.tigrisdata.com/docs/buckets/locations/
    */
   consistency?: 'strict' | 'default';
+  /**
+   * @deprecated This property is deprecated and will be removed in the next major version. Use locations instead.
+   * @see https://www.tigrisdata.com/docs/buckets/locations/
+   */
   region?: string | string[];
+  locations?: BucketLocations;
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
@@ -62,26 +48,25 @@ export async function createBucket(
   }
 
   if (options?.region && options?.region !== undefined) {
-    if (Array.isArray(options.region)) {
-      if (
-        !options.region.every((region) => availableRegions.includes(region))
-      ) {
-        return {
-          error: new Error(
-            'Invalid regions specified, possible values are: ' +
-              availableRegions.join(', ')
-          ),
-        };
-      }
-    } else {
-      if (!availableRegions.includes(options.region)) {
-        return {
-          error: new Error(
-            'Invalid region specified, possible values are: ' +
-              availableRegions.join(', ')
-          ),
-        };
-      }
+    console.warn(
+      'The region property is deprecated and will be removed in the next major version. Use object_regions instead.'
+    );
+    if (!validateRegions(options.region)) {
+      return {
+        error: new Error(
+          'Invalid regions specified, possible values are: ' +
+          availableRegions.join(', ')
+        ),
+      };
+    }
+  }
+
+  if (options?.locations && options?.locations !== undefined) {
+    const validation = validateLocationValues(options.locations);
+    if (!validation.valid) {
+      return {
+        error: new Error(validation.error),
+      };
     }
   }
 
@@ -109,6 +94,14 @@ export async function createBucket(
         req.headers[TigrisHeaders.REGIONS] = Array.isArray(options.region)
           ? options.region.join(',')
           : options.region;
+      }
+
+      if (options?.locations && options?.locations !== undefined && options.locations.type !== 'global') {
+        req.headers[TigrisHeaders.REGIONS] = Array.isArray(
+          options.locations.values
+        )
+          ? options.locations.values.join(',')
+          : options.locations.values;
       }
 
       const result = await next(args);
