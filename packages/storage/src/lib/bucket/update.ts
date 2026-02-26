@@ -1,33 +1,32 @@
 import { TigrisHeaders } from '@shared/headers';
 import { createStorageClient } from '../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import { BucketLocations } from './types';
+import { validateLocationValues } from './utils/regions';
+
+type UpdateBucketRequestBody = {
+  acl_settings?: { allow_object_acl: boolean };
+  object_regions?: string;
+  cache_control?: string;
+  website?: { domain_name: string };
+  protection?: { protected: boolean };
+};
 
 export type UpdateBucketOptions = {
   // access and sharing settings
   access?: 'public' | 'private';
   allowObjectAcl?: boolean;
   disableDirectoryListing?: boolean;
-
   // storage settings
-  // consistency?: 'strict' | 'default';
+  /**
+   * @deprecated This property is deprecated and will be removed in the next major version. Use locations instead.
+   * @see https://www.tigrisdata.com/docs/buckets/locations/
+   */
   regions?: string | string[];
+  locations?: BucketLocations;
   cacheControl?: string;
-
-  // data management settings
-  // TODO: Data Migration, TTL Config, Objects Lifecycle
-
-  // custom domain
   customDomain?: string;
-
-  // cors settings
-  // TODO: Additional Headers, CORS Rules
-
-  // notification settings
-  // TODO: enableNotifications?: boolean;
-
-  // deletion settings
   enableDeleteProtection?: boolean;
-
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
@@ -46,7 +45,7 @@ export async function updateBucket(
     return { error };
   }
 
-  const body: Record<string, unknown> = {};
+  const body: UpdateBucketRequestBody = {};
   const headers: Record<string, string> = {};
 
   // access and sharing settings
@@ -65,14 +64,26 @@ export async function updateBucket(
   }
 
   // storage settings
-  /*if (options?.consistency !== undefined) {
-    body.consistent = options.consistency === 'strict' ? true : false;
-  }*/
-
   if (options?.regions !== undefined) {
+    console.warn(
+      'The regions property is deprecated and will be removed in the next major version. Use object_regions instead.'
+    );
     body.object_regions = Array.isArray(options.regions)
       ? options.regions.join(',')
       : options.regions;
+  }
+
+  if (options?.locations && options?.locations !== undefined) {
+    const validation = validateLocationValues(options.locations);
+    if (validation.valid) {
+      body.object_regions = Array.isArray(options.locations.values)
+        ? options.locations.values.join(',')
+        : options.locations.values;
+    } else {
+      return {
+        error: new Error(validation.error),
+      };
+    }
   }
 
   if (options?.cacheControl !== undefined) {

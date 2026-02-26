@@ -1,5 +1,5 @@
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
-import { StorageClass } from './create';
+import type { StorageClass } from './types';
 import { createStorageClient } from '../http-client';
 
 export type GetBucketInfoOptions = {
@@ -28,16 +28,16 @@ export type BucketInfoResponse = {
   sourceBucketSnapshot?: string;
 
   forkInfo:
-    | {
-        hasChildren: boolean;
-        parents: Array<{
-          bucketName: string;
-          forkCreatedAt: Date;
-          snapshot: string;
-          snapshotCreatedAt: Date;
-        }>;
-      }
-    | undefined;
+  | {
+    hasChildren: boolean;
+    parents: Array<{
+      bucketName: string;
+      forkCreatedAt: Date;
+      snapshot: string;
+      snapshotCreatedAt: Date;
+    }>;
+  }
+  | undefined;
   settings: {
     allowObjectAcl: boolean;
     defaultTier: StorageClass;
@@ -98,7 +98,7 @@ export async function getBucketInfo(
       return { error: response.error };
     }
 
-    const data = {
+    const data: BucketInfoResponse = {
       isSnapshotEnabled: response.data.type === 1,
       hasForks: response.data.ForkInfo?.HasChildren ?? false,
       sourceBucketName: response.data.ForkInfo?.Parents?.[0]?.BucketName,
@@ -106,14 +106,14 @@ export async function getBucketInfo(
 
       forkInfo: response.data.ForkInfo
         ? {
-            hasChildren: response.data.ForkInfo.HasChildren,
-            parents: response.data.ForkInfo.Parents?.map((parent) => ({
-              bucketName: parent.BucketName,
-              forkCreatedAt: new Date(parent.ForkCreatedAt),
-              snapshot: parent.Snapshot,
-              snapshotCreatedAt: new Date(parent.SnapshotCreatedAt),
-            })) ?? [],
-          }
+          hasChildren: response.data.ForkInfo.HasChildren,
+          parents: response.data.ForkInfo.Parents?.map((parent) => ({
+            bucketName: parent.BucketName,
+            forkCreatedAt: new Date(parent.ForkCreatedAt),
+            snapshot: parent.Snapshot,
+            snapshotCreatedAt: new Date(parent.SnapshotCreatedAt),
+          })) ?? [],
+        }
         : undefined,
       settings: {
         allowObjectAcl: response.data.acl_settings?.allow_object_acl ?? false,
