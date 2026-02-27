@@ -1,6 +1,6 @@
-import { createStorageClient } from "../../http-client";
-import type { TigrisStorageConfig, TigrisStorageResponse } from "../../types";
-import type { StorageClass } from "../types";
+import { createStorageClient } from '../../http-client';
+import type { TigrisStorageConfig, TigrisStorageResponse } from '../../types';
+import type { StorageClass } from '../types';
 
 export type UpdateBucketBodyLifecycleStatus = 1 | 2;
 
@@ -33,21 +33,46 @@ export type UpdateBucketBody = {
   }[];
   website?: { domain_name: string };
   protection?: { protected: boolean };
+  object_notifications?:
+    | {
+        enabled: boolean;
+        web_hook: string;
+        filter?: string;
+      }
+    | {
+        enabled: boolean;
+        web_hook: string;
+        filter?: string;
+        auth: {
+          token: string;
+        };
+      }
+    | {
+        enabled: boolean;
+        web_hook: string;
+        filter?: string;
+        auth: {
+          basic_user: string;
+          basic_pass: string;
+        };
+      };
 };
 
 export type SetBucketSettingsOptions = {
   headers?: Record<string, string>;
   body?: UpdateBucketBody;
   config?: Omit<TigrisStorageConfig, 'bucket'>;
-}
+};
 
 export type UpdateBucketResponse = {
   bucket: string;
   updated: boolean;
 };
 
-export async function setBucketSettings(bucketName: string, options?: SetBucketSettingsOptions): Promise<TigrisStorageResponse<UpdateBucketResponse, Error>> {
-
+export async function setBucketSettings(
+  bucketName: string,
+  options?: SetBucketSettingsOptions
+): Promise<TigrisStorageResponse<UpdateBucketResponse, Error>> {
   const { data: client, error } = createStorageClient(options?.config);
 
   if (error || !client) {
@@ -73,7 +98,11 @@ export async function setBucketSettings(bucketName: string, options?: SetBucketS
   });
 
   if (response.error) {
-    return { error: response.error.message ? new Error(response.error.message) : response.error };
+    return {
+      error: response.error.message
+        ? new Error(response.error.message)
+        : response.error,
+    };
   }
 
   if (response.data.status === 'error') {
