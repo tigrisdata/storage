@@ -78,30 +78,32 @@ export type BucketCorsRule = {
   maxAge?: number;
 };
 
-type BucketNotificationMethodBase = {
-  enabled: boolean;
-  url: string;
+type BucketNotificationBase = {
+  enabled?: boolean;
+  url?: string;
   filter?: string;
 };
 
-type BucketNotificationMethodBasicAuthentication =
-  BucketNotificationMethodBase & {
-    auth: {
-      username: string;
-      password: string;
-    };
+type BucketNotificationBasicAuth = BucketNotificationBase & {
+  auth: {
+    username: string;
+    password: string;
+    token?: never;
   };
+};
 
-type BucketNotificationTokenAuthentication = BucketNotificationMethodBase & {
+type BucketNotificationTokenAuth = BucketNotificationBase & {
   auth: {
     token: string;
+    username?: never;
+    password?: never;
   };
 };
 
 export type BucketNotification =
-  | BucketNotificationMethodBase
-  | BucketNotificationMethodBasicAuthentication
-  | BucketNotificationTokenAuthentication;
+  | BucketNotificationBase
+  | BucketNotificationBasicAuth
+  | BucketNotificationTokenAuth;
 
 export type UpdateBucketResponse = {
   bucket: string;

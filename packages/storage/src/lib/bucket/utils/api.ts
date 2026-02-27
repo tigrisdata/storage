@@ -1,6 +1,8 @@
 import { StorageClass } from '../types';
 
 type BucketApiNotifications =
+  | Record<string, never>
+  | { enabled: false }
   | {
       enabled: boolean;
       web_hook: string;
