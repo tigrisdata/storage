@@ -71,7 +71,7 @@ export type BucketLifecycleRule = {
 };
 
 export type BucketCorsRule = {
-  allowedOrigin: string | string[];
+  allowedOrigins: string | string[];
   allowedMethods?: string | string[];
   allowedHeaders?: string | string[];
   exposeHeaders?: string | string[];
