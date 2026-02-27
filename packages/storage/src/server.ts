@@ -17,6 +17,10 @@ export {
 } from './lib/bucket/list';
 export { removeBucket, type RemoveBucketOptions } from './lib/bucket/remove';
 export {
+  setBucketCors,
+  type SetBucketCorsOptions,
+} from './lib/bucket/set/cors';
+export {
   setBucketLifecycle,
   type SetBucketLifecycleOptions,
 } from './lib/bucket/set/lifecycle';
@@ -24,15 +28,11 @@ export {
   setBucketMigration,
   type SetBucketMigrationOptions,
 } from './lib/bucket/set/migration';
-export { setBucketTtl, type SetBucketTtlOptions } from './lib/bucket/set/ttl';
 export {
   setBucketNotifications,
   type SetBucketNotificationsOptions,
 } from './lib/bucket/set/notifications';
-export {
-  setBucketCors,
-  type SetBucketCorsOptions,
-} from './lib/bucket/set/cors';
+export { setBucketTtl, type SetBucketTtlOptions } from './lib/bucket/set/ttl';
 export {
   createBucketSnapshot,
   listBucketSnapshots,
@@ -42,15 +42,16 @@ export {
   type ListBucketSnapshotsResponse,
 } from './lib/bucket/snapshot';
 export {
-  type BucketLocations,
-  type StorageClass,
   type BucketCorsRule,
-} from './lib/bucket/types';
-export {
-  updateBucket,
-  type UpdateBucketOptions,
+  type BucketLifecycleRule,
+  type BucketLocations,
+  type BucketMigration,
+  type BucketNotification,
+  type BucketTtl,
+  type StorageClass,
   type UpdateBucketResponse,
-} from './lib/bucket/update';
+} from './lib/bucket/types';
+export { updateBucket, type UpdateBucketOptions } from './lib/bucket/update';
 export { get, type GetOptions, type GetResponse } from './lib/object/get';
 export { head, type HeadOptions, type HeadResponse } from './lib/object/head';
 export {

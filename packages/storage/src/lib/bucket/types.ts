@@ -21,7 +21,7 @@ export type StorageClass =
 
 export type BucketLocationMulti = (typeof multiRegions)[number];
 
-export type BucketLocationDaulOrSingle = (typeof singleOrDualRegions)[number];
+export type BucketLocationDualOrSingle = (typeof singleOrDualRegions)[number];
 
 export type BucketLocations =
   | {
@@ -32,12 +32,12 @@ export type BucketLocations =
   | {
       // High availability with data residency across regions of choice. Strong consistency for requests in same region, eventual consistency globally.
       type: 'dual';
-      values: BucketLocationDaulOrSingle | BucketLocationDaulOrSingle[];
+      values: BucketLocationDualOrSingle | BucketLocationDualOrSingle[];
     }
   | {
       // Data redundancy across availability zones in a single region. Strong consistency globally.
       type: 'single';
-      values: BucketLocationDaulOrSingle;
+      values: BucketLocationDualOrSingle;
     }
   | {
       // Data distributed globally. Strong consistency for requests in same region, eventual consistency globally.
@@ -65,7 +65,7 @@ export type BucketTtl = {
 export type BucketLifecycleRule = {
   id?: string;
   enabled?: boolean;
-  storageClass?: Omit<StorageClass, 'STANDARD'>;
+  storageClass?: Exclude<StorageClass, 'STANDARD'>;
   days?: number;
   date?: string;
 };
@@ -102,3 +102,8 @@ export type BucketNotification =
   | BucketNotificationMethodBase
   | BucketNotificationMethodBasicAuthentication
   | BucketNotificationTokenAuthentication;
+
+export type UpdateBucketResponse = {
+  bucket: string;
+  updated: boolean;
+};

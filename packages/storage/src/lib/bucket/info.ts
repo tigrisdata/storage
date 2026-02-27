@@ -160,8 +160,10 @@ export async function getBucketInfo(
           response.data.lifecycle_rules
             ?.filter((rule) => rule.expiration === undefined)
             .map((rule) => ({
-              storageClass: rule.transitions?.[0]
-                ?.storage_class as StorageClass,
+              storageClass: rule.transitions?.[0]?.storage_class as Exclude<
+                StorageClass,
+                'STANDARD'
+              >,
               days: rule.transitions?.[0]?.days,
               date: rule.transitions?.[0]?.date,
               enabled: rule.status === 1,

@@ -1,5 +1,6 @@
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../../types';
-import { setBucketSettings, type UpdateBucketResponse } from './set';
+import type { UpdateBucketResponse } from '../types';
+import { setBucketSettings } from './set';
 import { getBucketInfo } from '../info';
 import { buildLifecycleRules } from '../utils/lifecycle';
 import { validateDays, validateAndFormatDate } from '../utils/date';

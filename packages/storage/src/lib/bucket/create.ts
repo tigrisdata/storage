@@ -52,7 +52,7 @@ export async function createBucket(
 
   if (options?.region && options?.region !== undefined) {
     console.warn(
-      'The region property is deprecated and will be removed in the next major version. Use object_regions instead.'
+      'The region property is deprecated and will be removed in the next major version. Use locations instead.'
     );
     if (!validateRegions(options.region)) {
       return {
