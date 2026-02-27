@@ -31,6 +31,15 @@ export type UpdateBucketBody = {
     }[];
     status: UpdateBucketBodyLifecycleStatus; // 1: active, 2: disabled
   }[];
+  cors?: {
+    rules: {
+      allowedOrigin: string[];
+      allowedMethods: string[];
+      allowedHeaders: string[];
+      exposeHeaders: string[];
+      maxAge?: number;
+    }[];
+  } | null;
   website?: { domain_name: string };
   protection?: { protected: boolean };
   object_notifications?:

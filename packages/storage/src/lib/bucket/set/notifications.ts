@@ -1,33 +1,11 @@
 import { TigrisStorageConfig, TigrisStorageResponse } from 'src/lib/types';
 import { UpdateBucketResponse } from '../update';
 import { setBucketSettings, SetBucketSettingsOptions } from './set';
-
-type BucketNotificationMethodBase = {
-  enabled: boolean;
-  url: string;
-  filter?: string;
-};
-
-type BucketNotificationMethodBasicAuthentication =
-  BucketNotificationMethodBase & {
-    auth: {
-      username: string;
-      password: string;
-    };
-  };
-
-type BucketNotificationTokenAuthentication = BucketNotificationMethodBase & {
-  auth: {
-    token: string;
-  };
-};
+import { BucketNotification } from '../types';
 
 export type SetBucketNotificationsOptions = {
   config?: Omit<TigrisStorageConfig, 'bucket'>;
-  notificationConfig:
-    | BucketNotificationMethodBase
-    | BucketNotificationMethodBasicAuthentication
-    | BucketNotificationTokenAuthentication;
+  notificationConfig: BucketNotification;
 };
 
 export async function setBucketNotifications(
