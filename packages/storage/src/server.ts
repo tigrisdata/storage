@@ -1,52 +1,55 @@
 export {
   createBucket,
   type CreateBucketOptions,
-  type CreateBucketResponse
+  type CreateBucketResponse,
 } from './lib/bucket/create';
 export {
   getBucketInfo,
   type BucketInfoResponse,
-  type GetBucketInfoOptions
+  type GetBucketInfoOptions,
 } from './lib/bucket/info';
 export {
   listBuckets,
   type Bucket,
   type BucketOwner,
   type ListBucketsOptions,
-  type ListBucketsResponse
+  type ListBucketsResponse,
 } from './lib/bucket/list';
 export { removeBucket, type RemoveBucketOptions } from './lib/bucket/remove';
 export {
   setBucketLifecycle,
-  type SetBucketLifecycleOptions
+  type SetBucketLifecycleOptions,
 } from './lib/bucket/set/lifecycle';
 export {
   setBucketMigration,
-  type SetBucketMigrationOptions
+  type SetBucketMigrationOptions,
 } from './lib/bucket/set/migration';
-export {
-  setBucketTtl,
-  type SetBucketTtlOptions
-} from './lib/bucket/set/ttl';
+export { setBucketTtl, type SetBucketTtlOptions } from './lib/bucket/set/ttl';
 export {
   setBucketNotifications,
-  type SetBucketNotificationsOptions
+  type SetBucketNotificationsOptions,
 } from './lib/bucket/set/notifications';
+export {
+  setBucketCors,
+  type SetBucketCorsOptions,
+} from './lib/bucket/set/cors';
 export {
   createBucketSnapshot,
   listBucketSnapshots,
   type CreateBucketSnapshotOptions,
   type CreateBucketSnapshotResponse,
   type ListBucketSnapshotsOptions,
-  type ListBucketSnapshotsResponse
+  type ListBucketSnapshotsResponse,
 } from './lib/bucket/snapshot';
 export {
-  type BucketLocations, type StorageClass
+  type BucketLocations,
+  type StorageClass,
+  type BucketCorsRule,
 } from './lib/bucket/types';
 export {
   updateBucket,
   type UpdateBucketOptions,
-  type UpdateBucketResponse
+  type UpdateBucketResponse,
 } from './lib/bucket/update';
 export { get, type GetOptions, type GetResponse } from './lib/object/get';
 export { head, type HeadOptions, type HeadResponse } from './lib/object/head';
@@ -54,7 +57,7 @@ export {
   list,
   type ListItem,
   type ListOptions,
-  type ListResponse
+  type ListResponse,
 } from './lib/object/list';
 export {
   completeMultipartUpload,
@@ -65,28 +68,27 @@ export {
   type GetPartsPresignedUrlsOptions,
   type GetPartsPresignedUrlsResponse,
   type InitMultipartUploadOptions,
-  type InitMultipartUploadResponse
+  type InitMultipartUploadResponse,
 } from './lib/object/multipart';
 export {
   getPresignedUrl,
   type GetPresignedUrlOptions,
-  type GetPresignedUrlResponse
+  type GetPresignedUrlResponse,
 } from './lib/object/presigned-url';
 export { put, type PutOptions, type PutResponse } from './lib/object/put';
 export { remove, type RemoveOptions } from './lib/object/remove';
 export {
   updateObject,
   type UpdateObjectOptions,
-  type UpdateObjectResponse
+  type UpdateObjectResponse,
 } from './lib/object/update';
 export {
   getStats,
   type GetStatsOptions,
-  type StatsResponse
+  type StatsResponse,
 } from './lib/stats';
 export {
   handleClientUpload,
-  type ClientUploadRequest
+  type ClientUploadRequest,
 } from './lib/upload/server';
 export { UploadAction } from './lib/upload/shared';
-
