@@ -650,6 +650,108 @@ commands:
           - name: enable-delete-protection
             description: Enable delete protection
             type: boolean
+      # set-ttl
+      - name: set-ttl
+        description: Configure object expiration (TTL) on a bucket. Objects expire after a number of days or on a specific date
+        examples:
+          - "tigris buckets set-ttl my-bucket --days 30"
+          - "tigris buckets set-ttl my-bucket --date 2026-06-01"
+          - "tigris buckets set-ttl my-bucket --disable"
+        messages:
+          onStart: 'Updating TTL settings...'
+          onSuccess: 'TTL settings updated for bucket {{name}}'
+          onFailure: 'Failed to update TTL settings'
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: positional
+            required: true
+            examples:
+              - my-bucket
+          - name: days
+            description: Expire objects after this many days
+            alias: d
+          - name: date
+            description: Expire objects on this date (ISO-8601, e.g. 2026-06-01)
+          - name: enable
+            description: Enable TTL on the bucket (uses existing lifecycle rules)
+            type: flag
+          - name: disable
+            description: Disable TTL on the bucket
+            type: flag
+      # set-migration
+      - name: set-migration
+        description: Configure data migration from an external S3-compatible source bucket. Tigris will pull objects on demand from the source
+        examples:
+          - "tigris buckets set-migration my-bucket --bucket source-bucket --endpoint https://s3.amazonaws.com --region us-east-1 --access-key AKIA... --secret-key wJal..."
+          - "tigris buckets set-migration my-bucket --bucket source-bucket --endpoint https://s3.amazonaws.com --region us-east-1 --access-key AKIA... --secret-key wJal... --write-through"
+          - "tigris buckets set-migration my-bucket --disable"
+        messages:
+          onStart: 'Updating migration settings...'
+          onSuccess: 'Migration settings updated for bucket {{name}}'
+          onFailure: 'Failed to update migration settings'
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: positional
+            required: true
+            examples:
+              - my-bucket
+          - name: bucket
+            description: Name of the source bucket to migrate from
+            alias: b
+          - name: endpoint
+            description: Endpoint URL of the source S3-compatible service
+            alias: e
+          - name: region
+            description: Region of the source bucket
+            alias: r
+          - name: access-key
+            description: Access key for the source bucket
+            alias: key
+          - name: secret-key
+            description: Secret key for the source bucket
+            alias: secret
+          - name: write-through
+            description: Enable write-through mode (writes go to both source and Tigris)
+            type: flag
+          - name: disable
+            description: Disable migration and clear all migration settings
+            type: flag
+      # set-transition
+      - name: set-transition
+        description: Configure a lifecycle transition rule on a bucket. Automatically move objects to a different storage class after a number of days or on a specific date
+        examples:
+          - "tigris buckets set-transition my-bucket --storage-class STANDARD_IA --days 30"
+          - "tigris buckets set-transition my-bucket --storage-class GLACIER --date 2026-06-01"
+          - "tigris buckets set-transition my-bucket --enable"
+          - "tigris buckets set-transition my-bucket --disable"
+        messages:
+          onStart: 'Updating lifecycle transition rule...'
+          onSuccess: 'Lifecycle transition rule updated for bucket {{name}}'
+          onFailure: 'Failed to update lifecycle transition rule'
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: positional
+            required: true
+            examples:
+              - my-bucket
+          - name: storage-class
+            description: Target storage class to transition objects to
+            alias: s
+            options: *tier_options
+          - name: days
+            description: Transition objects after this many days
+            alias: d
+          - name: date
+            description: Transition objects on this date (ISO-8601, e.g. 2026-06-01)
+          - name: enable
+            description: Enable lifecycle transition rules on the bucket
+            type: flag
+          - name: disable
+            description: Disable lifecycle transition rules on the bucket
+            type: flag
 
   #########################
   # Manage forks
