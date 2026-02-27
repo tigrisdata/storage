@@ -4,12 +4,15 @@ import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import { BucketLocations } from './types';
 import { validateLocationValues } from './utils/regions';
 
+type AdditionalHeaders = { 'X-Content-Type-Options': 'nosniff' };
+
 type UpdateBucketRequestBody = {
   acl_settings?: { allow_object_acl: boolean };
   object_regions?: string;
   cache_control?: string;
   website?: { domain_name: string };
   protection?: { protected: boolean };
+  additional_http_headers?: AdditionalHeaders | null;
 };
 
 export type UpdateBucketOptions = {
@@ -26,6 +29,7 @@ export type UpdateBucketOptions = {
   locations?: BucketLocations;
   cacheControl?: string;
   customDomain?: string;
+  enableAdditionalHeaders?: boolean;
   enableDeleteProtection?: boolean;
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
@@ -98,6 +102,11 @@ export async function updateBucket(
   // deletion settings
   if (options?.enableDeleteProtection !== undefined) {
     body.protection = { protected: options.enableDeleteProtection };
+  }
+
+  // additional headers
+  if (options?.enableAdditionalHeaders !== undefined) {
+    body.additional_http_headers = options.enableAdditionalHeaders === true ? { 'X-Content-Type-Options': 'nosniff' } : null;
   }
 
   const response = await client.request<
