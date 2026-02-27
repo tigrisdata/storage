@@ -53,7 +53,7 @@ type BucketApiSettings = {
       enabled: boolean;
     };
     transitions?: {
-      storage_class: Omit<StorageClass, 'STANDARD'>;
+      storage_class: Exclude<StorageClass, 'STANDARD'>;
       date?: string;
       days?: number;
     }[];

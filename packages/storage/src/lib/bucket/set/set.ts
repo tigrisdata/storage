@@ -1,16 +1,12 @@
 import { createStorageClient } from '../../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../../types';
+import type { UpdateBucketResponse } from '../types';
 import type { UpdateBucketBody } from '../utils/api';
 
 export type SetBucketSettingsOptions = {
   headers?: Record<string, string>;
   body?: UpdateBucketBody;
   config?: Omit<TigrisStorageConfig, 'bucket'>;
-};
-
-export type UpdateBucketResponse = {
-  bucket: string;
-  updated: boolean;
 };
 
 export async function setBucketSettings(

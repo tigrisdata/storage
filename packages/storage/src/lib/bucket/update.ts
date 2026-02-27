@@ -1,6 +1,7 @@
 import { TigrisHeaders } from '@shared/headers';
 import { createStorageClient } from '../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import type { UpdateBucketResponse } from './types';
 import { BucketLocations } from './types';
 import { validateLocationValues } from './utils/regions';
 
@@ -34,11 +35,6 @@ export type UpdateBucketOptions = {
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
-export type UpdateBucketResponse = {
-  bucket: string;
-  updated: boolean;
-};
-
 export async function updateBucket(
   bucketName: string,
   options?: UpdateBucketOptions
@@ -70,7 +66,7 @@ export async function updateBucket(
   // storage settings
   if (options?.regions !== undefined) {
     console.warn(
-      'The regions property is deprecated and will be removed in the next major version. Use object_regions instead.'
+      'The regions property is deprecated and will be removed in the next major version. Use locations instead.'
     );
     body.object_regions = Array.isArray(options.regions)
       ? options.regions.join(',')
@@ -80,9 +76,12 @@ export async function updateBucket(
   if (options?.locations && options?.locations !== undefined) {
     const validation = validateLocationValues(options.locations);
     if (validation.valid) {
-      body.object_regions = Array.isArray(options.locations.values)
-        ? options.locations.values.join(',')
-        : options.locations.values;
+      body.object_regions =
+        options.locations.type === 'global'
+          ? ''
+          : Array.isArray(options.locations.values)
+            ? options.locations.values.join(',')
+            : options.locations.values;
     } else {
       return {
         error: new Error(validation.error),

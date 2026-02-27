@@ -55,9 +55,19 @@ export function buildLifecycleRules(
   // Transition rule: use new config if provided, otherwise preserve existing
   // Only 1 rule with 1 transition allowed
   if (update.lifecycleRules !== undefined && update.lifecycleRules.length > 0) {
-    rules.push(
-      formatTransitionRule(update.lifecycleRules[0], existingTransition)
-    );
+    const updateRule = update.lifecycleRules[0];
+    const isToggleOnly =
+      updateRule.storageClass === undefined &&
+      updateRule.days === undefined &&
+      updateRule.date === undefined;
+
+    if (isToggleOnly && !existingTransition) {
+      return {
+        error: new Error('No existing lifecycle rule found to update'),
+      };
+    }
+
+    rules.push(formatTransitionRule(updateRule, existingTransition));
   } else if (existingTransition) {
     rules.push(formatTransitionRule({}, existingTransition));
   }

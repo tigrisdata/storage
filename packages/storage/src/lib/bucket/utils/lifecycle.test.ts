@@ -389,6 +389,27 @@ describe('buildLifecycleRules', () => {
     });
   });
 
+  describe('Lifecycle transition - toggle only (no storageClass/days/date)', () => {
+    it('returns error when toggling enabled: false but no existing rule', () => {
+      const { rules, error } = buildLifecycleRules(
+        {},
+        { lifecycleRules: [{ enabled: false }] }
+      );
+      expect(error).toBeInstanceOf(Error);
+      expect(error!.message).toBe('No existing lifecycle rule found to update');
+      expect(rules).toBeUndefined();
+    });
+
+    it('returns error when toggling enabled: true but no existing rule', () => {
+      const { error } = buildLifecycleRules(
+        {},
+        { lifecycleRules: [{ enabled: true }] }
+      );
+      expect(error).toBeInstanceOf(Error);
+      expect(error!.message).toBe('No existing lifecycle rule found to update');
+    });
+  });
+
   describe('Lifecycle transition - preserving existing when not updating', () => {
     it('preserves existing transition when only updating TTL', () => {
       const { rules } = buildLifecycleRules(

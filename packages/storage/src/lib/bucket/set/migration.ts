@@ -1,10 +1,6 @@
 import { TigrisStorageConfig, TigrisStorageResponse } from '../../types';
-import { BucketMigration } from '../types';
-import {
-  setBucketSettings,
-  SetBucketSettingsOptions,
-  UpdateBucketResponse,
-} from './set';
+import { BucketMigration, UpdateBucketResponse } from '../types';
+import { setBucketSettings, SetBucketSettingsOptions } from './set';
 
 export type SetBucketMigrationOptions = {
   dataMigration?: BucketMigration;

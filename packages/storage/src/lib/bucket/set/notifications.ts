@@ -1,5 +1,5 @@
-import { TigrisStorageConfig, TigrisStorageResponse } from 'src/lib/types';
-import { UpdateBucketResponse } from '../update';
+import { TigrisStorageConfig, TigrisStorageResponse } from '../../types';
+import type { UpdateBucketResponse } from '../types';
 import { setBucketSettings, SetBucketSettingsOptions } from './set';
 import { BucketNotification } from '../types';
 
