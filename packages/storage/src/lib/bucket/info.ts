@@ -68,7 +68,11 @@ export type BucketInfoResponse = {
 function mapNotification(
   n: NonNullable<GetBucketInfoApiResponseBody['object_notifications']>
 ): BucketNotification {
-  const base = { enabled: n.enabled, url: n.web_hook, filter: n.filter };
+  const base = {
+    enabled: n.enabled,
+    url: 'web_hook' in n ? n.web_hook : undefined,
+    filter: 'filter' in n ? n.filter : undefined,
+  };
 
   if ('auth' in n) {
     if ('token' in n.auth) {
