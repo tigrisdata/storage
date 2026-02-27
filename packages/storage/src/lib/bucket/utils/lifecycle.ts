@@ -1,7 +1,9 @@
 import type { BucketLifecycleRule, BucketTtl } from '../types';
 import type { UpdateBucketBody } from './api';
 
-type LifecycleRuleBody = NonNullable<UpdateBucketBody['lifecycle_rules']>[number];
+type LifecycleRuleBody = NonNullable<
+  UpdateBucketBody['lifecycle_rules']
+>[number];
 
 /**
  * Builds the `lifecycle_rules` array for the API request body.
@@ -40,7 +42,9 @@ export function buildLifecycleRules(
       update.ttlConfig.date === undefined;
 
     if (isToggleOnly && !existingTtl) {
-      return { error: new Error('No existing TTL configuration found to update') };
+      return {
+        error: new Error('No existing TTL configuration found to update'),
+      };
     }
 
     rules.push(formatTtlRule(update.ttlConfig, existingTtl));
@@ -51,7 +55,9 @@ export function buildLifecycleRules(
   // Transition rule: use new config if provided, otherwise preserve existing
   // Only 1 rule with 1 transition allowed
   if (update.lifecycleRules !== undefined && update.lifecycleRules.length > 0) {
-    rules.push(formatTransitionRule(update.lifecycleRules[0], existingTransition));
+    rules.push(
+      formatTransitionRule(update.lifecycleRules[0], existingTransition)
+    );
   } else if (existingTransition) {
     rules.push(formatTransitionRule({}, existingTransition));
   }
@@ -99,23 +105,28 @@ function formatTransitionRule(
   const storageClass = rule.storageClass ?? existing?.storageClass;
   return {
     id: existing?.id ?? rule.id ?? crypto.randomUUID(),
-    transitions: storageClass !== undefined ? [{
-      storage_class: storageClass,
-      ...(rule.days !== undefined
-        ? { days: rule.days }
-        : rule.date !== undefined
-          ? {}
-          : existing?.days !== undefined
-            ? { days: existing.days }
-            : undefined),
-      ...(rule.date !== undefined
-        ? { date: rule.date }
-        : rule.days !== undefined
-          ? {}
-          : existing?.date !== undefined
-            ? { date: existing.date }
-            : undefined),
-    }] : undefined,
+    transitions:
+      storageClass !== undefined
+        ? [
+            {
+              storage_class: storageClass,
+              ...(rule.days !== undefined
+                ? { days: rule.days }
+                : rule.date !== undefined
+                  ? {}
+                  : existing?.days !== undefined
+                    ? { days: existing.days }
+                    : undefined),
+              ...(rule.date !== undefined
+                ? { date: rule.date }
+                : rule.days !== undefined
+                  ? {}
+                  : existing?.date !== undefined
+                    ? { date: existing.date }
+                    : undefined),
+            },
+          ]
+        : undefined,
     status: toStatus(enabled),
   };
 }

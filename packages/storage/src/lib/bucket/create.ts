@@ -3,9 +3,12 @@ import type { HttpRequest } from '@aws-sdk/types';
 import { TigrisHeaders } from '@shared/index';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
-import { availableRegions, validateLocationValues, validateRegions } from './utils/regions';
+import {
+  availableRegions,
+  validateLocationValues,
+  validateRegions,
+} from './utils/regions';
 import type { BucketLocations, StorageClass } from './types';
-
 
 export type CreateBucketOptions = {
   enableSnapshot?: boolean;
@@ -55,7 +58,7 @@ export async function createBucket(
       return {
         error: new Error(
           'Invalid regions specified, possible values are: ' +
-          availableRegions.join(', ')
+            availableRegions.join(', ')
         ),
       };
     }
@@ -96,7 +99,11 @@ export async function createBucket(
           : options.region;
       }
 
-      if (options?.locations && options?.locations !== undefined && options.locations.type !== 'global') {
+      if (
+        options?.locations &&
+        options?.locations !== undefined &&
+        options.locations.type !== 'global'
+      ) {
         req.headers[TigrisHeaders.REGIONS] = Array.isArray(
           options.locations.values
         )

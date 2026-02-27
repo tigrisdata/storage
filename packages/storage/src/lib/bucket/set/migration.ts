@@ -1,13 +1,20 @@
-import { TigrisStorageConfig, TigrisStorageResponse } from "../../types";
-import { BucketMigration } from "../types";
-import { setBucketSettings, SetBucketSettingsOptions, UpdateBucketResponse } from "./set";
+import { TigrisStorageConfig, TigrisStorageResponse } from '../../types';
+import { BucketMigration } from '../types';
+import {
+  setBucketSettings,
+  SetBucketSettingsOptions,
+  UpdateBucketResponse,
+} from './set';
 
 export type SetBucketMigrationOptions = {
   dataMigration?: BucketMigration;
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
-export async function setBucketMigration(bucketName: string, options?: SetBucketMigrationOptions): Promise<TigrisStorageResponse<UpdateBucketResponse, Error>> {
+export async function setBucketMigration(
+  bucketName: string,
+  options?: SetBucketMigrationOptions
+): Promise<TigrisStorageResponse<UpdateBucketResponse, Error>> {
   const body: SetBucketSettingsOptions['body'] = {};
   if (options?.dataMigration !== undefined) {
     if (!options.dataMigration.enabled) {

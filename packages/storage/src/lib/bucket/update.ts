@@ -106,7 +106,10 @@ export async function updateBucket(
 
   // additional headers
   if (options?.enableAdditionalHeaders !== undefined) {
-    body.additional_http_headers = options.enableAdditionalHeaders === true ? { 'X-Content-Type-Options': 'nosniff' } : null;
+    body.additional_http_headers =
+      options.enableAdditionalHeaders === true
+        ? { 'X-Content-Type-Options': 'nosniff' }
+        : null;
   }
 
   const response = await client.request<
