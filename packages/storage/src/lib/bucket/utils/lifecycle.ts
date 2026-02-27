@@ -1,8 +1,5 @@
 import type { BucketLifecycleRule, BucketTtl } from '../types';
-import type {
-  UpdateBucketBody,
-  UpdateBucketBodyLifecycleStatus,
-} from '../set/set';
+import type { UpdateBucketBody } from './api';
 
 type LifecycleRuleBody = NonNullable<UpdateBucketBody['lifecycle_rules']>[number];
 
@@ -62,7 +59,7 @@ export function buildLifecycleRules(
   return { rules: rules.length > 0 ? rules : undefined };
 }
 
-function toStatus(enabled: boolean): UpdateBucketBodyLifecycleStatus {
+function toStatus(enabled: boolean): 1 | 2 {
   return enabled ? 1 : 2;
 }
 

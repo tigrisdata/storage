@@ -59,7 +59,7 @@ export async function setBucketCors(
   const body: SetBucketSettingsOptions['body'] = {
     cors: {
       rules: options.rules.map((rule) => ({
-        allowedOrigin: normalizeField(rule.allowedOrigin),
+        allowedOrigin: normalizeField(rule.allowedOrigins),
         allowedMethods: rule.allowedMethods
           ? normalizeField(rule.allowedMethods)
           : [],
@@ -96,11 +96,14 @@ function validateWildcard(
 }
 
 function validateRule(rule: BucketCorsRule, index: number): string | undefined {
-  if (!rule.allowedOrigin || normalizeField(rule.allowedOrigin).length === 0) {
+  if (
+    !rule.allowedOrigins ||
+    normalizeField(rule.allowedOrigins).length === 0
+  ) {
     return `Rule ${index + 1}: allowedOrigin is required`;
   }
 
-  const origins = normalizeField(rule.allowedOrigin);
+  const origins = normalizeField(rule.allowedOrigins);
   const originsError = validateWildcard(origins, 'allowedOrigin', index);
   if (originsError) return originsError;
 

@@ -7,6 +7,7 @@ import type {
   BucketTtl,
   StorageClass,
 } from './types';
+import type { GetBucketInfoApiResponseBody } from './utils/api';
 import { createStorageClient } from '../http-client';
 
 export type GetBucketInfoOptions = {
@@ -64,82 +65,6 @@ export type BucketInfoResponse = {
   };
 };
 
-type GetBucketInfoApiResponseBody = {
-  additional_http_headers?: Record<string, string>;
-  ForkInfo?: {
-    HasChildren: boolean;
-    Parents: Array<{
-      BucketName: string;
-      ForkCreatedAt: string;
-      Snapshot: string;
-      SnapshotCreatedAt: string;
-    }>;
-  };
-  name: string;
-  storage_class: StorageClass;
-  type?: 1;
-  tier_sizes: Record<string, number>;
-  shadow_bucket?: {
-    access_key?: string;
-    secret_key?: string;
-    region?: string;
-    name?: string;
-    endpoint?: string;
-    write_through?: boolean;
-  };
-  website?: {
-    domain_name: string;
-  };
-  protection?: {
-    protected: boolean;
-  };
-  acl_settings?: {
-    allow_object_acl: boolean;
-  };
-  estimated_unique_rows?: number; // number of objects
-  estimated_size?: number; // estimated size of the bucket in bytes
-  estimated_rows?: number; // estimated number of objects in the bucket (all versions)
-  lifecycle_rules?: {
-    id?: string;
-    expiration?: {
-      days?: number;
-      date?: string;
-      enabled: boolean;
-    };
-    transitions?: {
-      storage_class: StorageClass;
-      date?: string;
-      days?: number;
-    }[];
-    status: 1 | 2; // 1: active, 2: disabled
-  }[];
-  cors?: {
-    rules: BucketCorsRule[];
-  };
-  object_notifications?:
-    | {
-        enabled: boolean;
-        web_hook: string;
-        filter?: string;
-      }
-    | {
-        enabled: boolean;
-        web_hook: string;
-        filter?: string;
-        auth: {
-          token: string;
-        };
-      }
-    | {
-        enabled: boolean;
-        web_hook: string;
-        filter?: string;
-        auth: {
-          basic_user: string;
-          basic_pass: string;
-        };
-      };
-};
 
 function mapNotification(
   n: NonNullable<GetBucketInfoApiResponseBody['object_notifications']>
@@ -243,7 +168,14 @@ export async function getBucketInfo(
               enabled: rule.status === 1,
               id: rule.id,
             })) ?? undefined,
-        corsRules: response.data.cors?.rules ?? [],
+        corsRules:
+          response.data.cors?.rules.map((rule) => ({
+            allowedOrigins: rule.allowedOrigin,
+            allowedMethods: rule.allowedMethods,
+            allowedHeaders: rule.allowedHeaders,
+            exposeHeaders: rule.exposeHeaders,
+            maxAge: rule.maxAge,
+          })) ?? [],
         notifications: response.data.object_notifications
           ? mapNotification(response.data.object_notifications)
           : undefined,
