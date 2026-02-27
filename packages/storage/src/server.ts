@@ -17,6 +17,18 @@ export {
 } from './lib/bucket/list';
 export { removeBucket, type RemoveBucketOptions } from './lib/bucket/remove';
 export {
+  setBucketLifecycle,
+  type SetBucketLifecycleOptions
+} from './lib/bucket/set/lifecycle';
+export {
+  setBucketMigration,
+  type SetBucketMigrationOptions
+} from './lib/bucket/set/migration';
+export {
+  setBucketTtl,
+  type SetBucketTtlOptions
+} from './lib/bucket/set/ttl';
+export {
   createBucketSnapshot,
   listBucketSnapshots,
   type CreateBucketSnapshotOptions,
