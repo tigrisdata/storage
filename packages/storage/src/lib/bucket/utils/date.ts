@@ -12,7 +12,9 @@ export function validateDays(days: number): string | undefined {
  * Validates a date string and formats it to ISO-8601 (YYYY-MM-DD) in UTC.
  * Returns the formatted date string, or an error.
  */
-export function validateAndFormatDate(date: string): { value: string } | { error: string } {
+export function validateAndFormatDate(
+  date: string
+): { value: string } | { error: string } {
   const parsed = new Date(date);
   if (isNaN(parsed.getTime())) {
     return { error: 'date must be a valid date' };

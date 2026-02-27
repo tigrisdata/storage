@@ -65,7 +65,6 @@ export type BucketInfoResponse = {
   };
 };
 
-
 function mapNotification(
   n: NonNullable<GetBucketInfoApiResponseBody['object_notifications']>
 ): BucketNotification {

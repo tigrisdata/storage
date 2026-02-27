@@ -1,8 +1,13 @@
-import { multiRegions, singleOrDualRegions, type BucketLocations } from '../types';
+import {
+  multiRegions,
+  singleOrDualRegions,
+  type BucketLocations,
+} from '../types';
 
-
-
-export const availableRegions: string[] = [...multiRegions, ...singleOrDualRegions];
+export const availableRegions: string[] = [
+  ...multiRegions,
+  ...singleOrDualRegions,
+];
 
 export const validateRegions = (regions: string | string[]): boolean => {
   if (Array.isArray(regions)) {

@@ -16,7 +16,9 @@ const ttlConfig = (overrides?: Partial<BucketTtl>): BucketTtl => ({
   ...overrides,
 });
 
-const lifecycleRule = (overrides?: Partial<BucketLifecycleRule>): BucketLifecycleRule => ({
+const lifecycleRule = (
+  overrides?: Partial<BucketLifecycleRule>
+): BucketLifecycleRule => ({
   id: 'transition-existing',
   enabled: true,
   storageClass: 'GLACIER',
@@ -35,10 +37,13 @@ describe('buildLifecycleRules', () => {
     });
 
     it('returns undefined when update fields are explicitly undefined', () => {
-      const { rules, error } = buildLifecycleRules({}, {
-        ttlConfig: undefined,
-        lifecycleRules: undefined,
-      });
+      const { rules, error } = buildLifecycleRules(
+        {},
+        {
+          ttlConfig: undefined,
+          lifecycleRules: undefined,
+        }
+      );
       expect(error).toBeUndefined();
       expect(rules).toBeUndefined();
     });
@@ -46,9 +51,12 @@ describe('buildLifecycleRules', () => {
 
   describe('TTL - creating new', () => {
     it('creates a new TTL rule with days', () => {
-      const { rules, error } = buildLifecycleRules({}, {
-        ttlConfig: { days: 30 },
-      });
+      const { rules, error } = buildLifecycleRules(
+        {},
+        {
+          ttlConfig: { days: 30 },
+        }
+      );
       expect(error).toBeUndefined();
       expect(rules).toHaveLength(1);
       expect(rules![0]).toEqual({
@@ -59,9 +67,12 @@ describe('buildLifecycleRules', () => {
     });
 
     it('creates a new TTL rule with date', () => {
-      const { rules, error } = buildLifecycleRules({}, {
-        ttlConfig: { date: '2026-12-31' },
-      });
+      const { rules, error } = buildLifecycleRules(
+        {},
+        {
+          ttlConfig: { date: '2026-12-31' },
+        }
+      );
       expect(error).toBeUndefined();
       expect(rules).toHaveLength(1);
       expect(rules![0]).toEqual({
@@ -72,25 +83,34 @@ describe('buildLifecycleRules', () => {
     });
 
     it('defaults to enabled: true for new TTL rule when enabled is not specified', () => {
-      const { rules } = buildLifecycleRules({}, {
-        ttlConfig: { days: 7 },
-      });
+      const { rules } = buildLifecycleRules(
+        {},
+        {
+          ttlConfig: { days: 7 },
+        }
+      );
       expect(rules![0].expiration!.enabled).toBe(true);
       expect(rules![0].status).toBe(1);
     });
 
     it('respects enabled: false for new TTL rule', () => {
-      const { rules } = buildLifecycleRules({}, {
-        ttlConfig: { enabled: false, days: 7 },
-      });
+      const { rules } = buildLifecycleRules(
+        {},
+        {
+          ttlConfig: { enabled: false, days: 7 },
+        }
+      );
       expect(rules![0].expiration!.enabled).toBe(false);
       expect(rules![0].status).toBe(2);
     });
 
     it('generates a new ID when no existing rule', () => {
-      const { rules } = buildLifecycleRules({}, {
-        ttlConfig: { days: 10 },
-      });
+      const { rules } = buildLifecycleRules(
+        {},
+        {
+          ttlConfig: { days: 10 },
+        }
+      );
       expect(rules![0].id).toBe('test-uuid-0000');
     });
   });
@@ -117,7 +137,10 @@ describe('buildLifecycleRules', () => {
         { ttlConfig: ttlConfig({ days: 30, date: undefined }) },
         { ttlConfig: { date: '2026-06-01' } }
       );
-      expect(rules![0].expiration).toEqual({ date: '2026-06-01', enabled: true });
+      expect(rules![0].expiration).toEqual({
+        date: '2026-06-01',
+        enabled: true,
+      });
       expect(rules![0].expiration).not.toHaveProperty('days');
     });
 
@@ -147,10 +170,19 @@ describe('buildLifecycleRules', () => {
 
     it('disables existing TTL and preserves date', () => {
       const { rules } = buildLifecycleRules(
-        { ttlConfig: ttlConfig({ date: '2026-12-31', days: undefined, enabled: true }) },
+        {
+          ttlConfig: ttlConfig({
+            date: '2026-12-31',
+            days: undefined,
+            enabled: true,
+          }),
+        },
         { ttlConfig: { enabled: false } }
       );
-      expect(rules![0].expiration).toEqual({ date: '2026-12-31', enabled: false });
+      expect(rules![0].expiration).toEqual({
+        date: '2026-12-31',
+        enabled: false,
+      });
     });
 
     it('enables existing disabled TTL and preserves days', () => {
@@ -166,20 +198,30 @@ describe('buildLifecycleRules', () => {
     });
 
     it('returns error when toggling TTL but no existing rule', () => {
-      const { rules, error } = buildLifecycleRules({}, {
-        ttlConfig: { enabled: false },
-      });
+      const { rules, error } = buildLifecycleRules(
+        {},
+        {
+          ttlConfig: { enabled: false },
+        }
+      );
       expect(error).toBeInstanceOf(Error);
-      expect(error!.message).toBe('No existing TTL configuration found to update');
+      expect(error!.message).toBe(
+        'No existing TTL configuration found to update'
+      );
       expect(rules).toBeUndefined();
     });
 
     it('returns error when toggling enabled: true but no existing rule', () => {
-      const { error } = buildLifecycleRules({}, {
-        ttlConfig: { enabled: true },
-      });
+      const { error } = buildLifecycleRules(
+        {},
+        {
+          ttlConfig: { enabled: true },
+        }
+      );
       expect(error).toBeInstanceOf(Error);
-      expect(error!.message).toBe('No existing TTL configuration found to update');
+      expect(error!.message).toBe(
+        'No existing TTL configuration found to update'
+      );
     });
   });
 
@@ -199,20 +241,32 @@ describe('buildLifecycleRules', () => {
 
     it('preserves existing TTL when no update provided', () => {
       const { rules } = buildLifecycleRules(
-        { ttlConfig: ttlConfig({ date: '2026-06-01', days: undefined, enabled: false }) },
+        {
+          ttlConfig: ttlConfig({
+            date: '2026-06-01',
+            days: undefined,
+            enabled: false,
+          }),
+        },
         {}
       );
       expect(rules).toHaveLength(1);
-      expect(rules![0].expiration).toEqual({ date: '2026-06-01', enabled: false });
+      expect(rules![0].expiration).toEqual({
+        date: '2026-06-01',
+        enabled: false,
+      });
       expect(rules![0].status).toBe(2);
     });
   });
 
   describe('Lifecycle transition - creating new', () => {
     it('creates a new transition rule with days', () => {
-      const { rules, error } = buildLifecycleRules({}, {
-        lifecycleRules: [{ storageClass: 'GLACIER', days: 90 }],
-      });
+      const { rules, error } = buildLifecycleRules(
+        {},
+        {
+          lifecycleRules: [{ storageClass: 'GLACIER', days: 90 }],
+        }
+      );
       expect(error).toBeUndefined();
       expect(rules).toHaveLength(1);
       expect(rules![0]).toEqual({
@@ -223,9 +277,12 @@ describe('buildLifecycleRules', () => {
     });
 
     it('creates a new transition rule with date', () => {
-      const { rules } = buildLifecycleRules({}, {
-        lifecycleRules: [{ storageClass: 'GLACIER_IR', date: '2026-12-31' }],
-      });
+      const { rules } = buildLifecycleRules(
+        {},
+        {
+          lifecycleRules: [{ storageClass: 'GLACIER_IR', date: '2026-12-31' }],
+        }
+      );
       expect(rules![0]).toEqual({
         id: 'test-uuid-0000',
         transitions: [{ storage_class: 'GLACIER_IR', date: '2026-12-31' }],
@@ -234,16 +291,24 @@ describe('buildLifecycleRules', () => {
     });
 
     it('defaults to enabled: true for new transition rule', () => {
-      const { rules } = buildLifecycleRules({}, {
-        lifecycleRules: [{ storageClass: 'STANDARD_IA', days: 30 }],
-      });
+      const { rules } = buildLifecycleRules(
+        {},
+        {
+          lifecycleRules: [{ storageClass: 'STANDARD_IA', days: 30 }],
+        }
+      );
       expect(rules![0].status).toBe(1);
     });
 
     it('respects enabled: false for new transition rule', () => {
-      const { rules } = buildLifecycleRules({}, {
-        lifecycleRules: [{ enabled: false, storageClass: 'GLACIER', days: 90 }],
-      });
+      const { rules } = buildLifecycleRules(
+        {},
+        {
+          lifecycleRules: [
+            { enabled: false, storageClass: 'GLACIER', days: 90 },
+          ],
+        }
+      );
       expect(rules![0].status).toBe(2);
     });
   });
@@ -285,7 +350,11 @@ describe('buildLifecycleRules', () => {
 
     it('switches from date to days and removes date', () => {
       const { rules } = buildLifecycleRules(
-        { lifecycleRules: [lifecycleRule({ date: '2026-06-01', days: undefined })] },
+        {
+          lifecycleRules: [
+            lifecycleRule({ date: '2026-06-01', days: undefined }),
+          ],
+        },
         { lifecycleRules: [{ days: 60 }] }
       );
       expect(rules![0].transitions![0]).not.toHaveProperty('date');
@@ -304,7 +373,15 @@ describe('buildLifecycleRules', () => {
 
     it('preserves existing date when only updating enabled', () => {
       const { rules } = buildLifecycleRules(
-        { lifecycleRules: [lifecycleRule({ date: '2026-12-31', days: undefined, enabled: true })] },
+        {
+          lifecycleRules: [
+            lifecycleRule({
+              date: '2026-12-31',
+              days: undefined,
+              enabled: true,
+            }),
+          ],
+        },
         { lifecycleRules: [{ enabled: false }] }
       );
       expect(rules![0].transitions![0].date).toBe('2026-12-31');
@@ -347,10 +424,13 @@ describe('buildLifecycleRules', () => {
     });
 
     it('creates both TTL and transition from scratch', () => {
-      const { rules } = buildLifecycleRules({}, {
-        ttlConfig: { days: 30 },
-        lifecycleRules: [{ storageClass: 'GLACIER', days: 90 }],
-      });
+      const { rules } = buildLifecycleRules(
+        {},
+        {
+          ttlConfig: { days: 30 },
+          lifecycleRules: [{ storageClass: 'GLACIER', days: 90 }],
+        }
+      );
       expect(rules).toHaveLength(2);
       expect(rules![0].expiration).toBeDefined();
       expect(rules![1].transitions).toBeDefined();
@@ -430,12 +510,15 @@ describe('buildLifecycleRules', () => {
 
   describe('only first lifecycle rule is used', () => {
     it('ignores additional lifecycle rules beyond the first', () => {
-      const { rules } = buildLifecycleRules({}, {
-        lifecycleRules: [
-          { storageClass: 'GLACIER', days: 90 },
-          { storageClass: 'STANDARD_IA', days: 30 },
-        ],
-      });
+      const { rules } = buildLifecycleRules(
+        {},
+        {
+          lifecycleRules: [
+            { storageClass: 'GLACIER', days: 90 },
+            { storageClass: 'STANDARD_IA', days: 30 },
+          ],
+        }
+      );
       expect(rules).toHaveLength(1);
       expect(rules![0].transitions![0].storage_class).toBe('GLACIER');
     });
@@ -443,9 +526,12 @@ describe('buildLifecycleRules', () => {
 
   describe('empty lifecycle rules array', () => {
     it('does not create a transition rule from empty array', () => {
-      const { rules } = buildLifecycleRules({}, {
-        lifecycleRules: [],
-      });
+      const { rules } = buildLifecycleRules(
+        {},
+        {
+          lifecycleRules: [],
+        }
+      );
       expect(rules).toBeUndefined();
     });
 
