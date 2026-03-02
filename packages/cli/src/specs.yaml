@@ -752,6 +752,50 @@ commands:
           - name: disable
             description: Disable lifecycle transition rules on the bucket
             type: flag
+      # set-notifications
+      - name: set-notifications
+        description: Configure object event notifications on a bucket. Sends webhook requests to a URL when objects are created, updated, or deleted
+        examples:
+          - "tigris buckets set-notifications my-bucket --url https://example.com/webhook"
+          - "tigris buckets set-notifications my-bucket --url https://example.com/webhook --token secret123"
+          - "tigris buckets set-notifications my-bucket --url https://example.com/webhook --username admin --password secret"
+          - "tigris buckets set-notifications my-bucket --url https://example.com/webhook --filter 'images/*'"
+          - "tigris buckets set-notifications my-bucket --enable"
+          - "tigris buckets set-notifications my-bucket --disable"
+          - "tigris buckets set-notifications my-bucket --reset"
+        messages:
+          onStart: 'Updating notification settings...'
+          onSuccess: 'Notification settings updated for bucket {{name}}'
+          onFailure: 'Failed to update notification settings'
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: positional
+            required: true
+            examples:
+              - my-bucket
+          - name: url
+            description: Webhook URL to send notifications to (must be http or https)
+            alias: u
+          - name: filter
+            description: Event filter pattern (e.g. 'images/*')
+            alias: f
+          - name: token
+            description: Token for webhook authentication
+            alias: t
+          - name: username
+            description: Username for basic webhook authentication
+          - name: password
+            description: Password for basic webhook authentication
+          - name: enable
+            description: Enable notifications on the bucket (uses existing config)
+            type: flag
+          - name: disable
+            description: Disable notifications on the bucket (preserves existing config)
+            type: flag
+          - name: reset
+            description: Clear all notification settings on the bucket
+            type: flag
 
   #########################
   # Manage forks
