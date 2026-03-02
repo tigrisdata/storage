@@ -22,6 +22,7 @@ import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { formatSize } from '../utils/format.js';
 import { get, put, list, head } from '@tigrisdata/storage';
+import { executeWithConcurrency } from '../utils/concurrency.js';
 import type { ParsedPath } from '../types.js';
 
 type CopyDirection = 'local-to-remote' | 'remote-to-local' | 'remote-to-remote';
@@ -108,10 +109,12 @@ async function uploadFile(
   const fileStream = createReadStream(localPath);
   const body = Readable.toWeb(fileStream) as ReadableStream;
 
-  const useMultipart = fileSize !== undefined && fileSize > 100 * 1024 * 1024;
+  const useMultipart = fileSize !== undefined && fileSize > 16 * 1024 * 1024;
 
   const { error: putError } = await put(key, body, {
     multipart: useMultipart,
+    partSize: useMultipart ? 16 * 1024 * 1024 : undefined,
+    queueSize: useMultipart ? 8 : undefined,
     onUploadProgress: showProgress
       ? ({ loaded }) => {
           if (fileSize !== undefined && fileSize > 0) {
@@ -243,10 +246,12 @@ async function copyObject(
     return { error: getError.message };
   }
 
-  const useMultipart = fileSize !== undefined && fileSize > 100 * 1024 * 1024;
+  const useMultipart = fileSize !== undefined && fileSize > 16 * 1024 * 1024;
 
   const { error: putError } = await put(destKey, data, {
     multipart: useMultipart,
+    partSize: useMultipart ? 16 * 1024 * 1024 : undefined,
+    queueSize: useMultipart ? 8 : undefined,
     onUploadProgress: showProgress
       ? ({ loaded }) => {
           if (fileSize !== undefined && fileSize > 0) {
@@ -294,9 +299,7 @@ async function copyLocalToRemote(
     }
 
     const wildcardDir = dirname(localPath);
-    let copied = 0;
-    for (const file of files) {
-      // Use relative path to preserve directory structure when recursive
+    const tasks = files.map((file) => async () => {
       const relPath = relative(wildcardDir, file);
       const destKey = destParsed.path
         ? `${destParsed.path.replace(/\/$/, '')}/${relPath}`
@@ -305,11 +308,14 @@ async function copyLocalToRemote(
       const result = await uploadFile(file, destParsed.bucket, destKey, config);
       if (result.error) {
         console.error(`Failed to upload ${file}: ${result.error}`);
+        return false;
       } else {
         console.log(`Uploaded ${file} -> t3://${destParsed.bucket}/${destKey}`);
-        copied++;
+        return true;
       }
-    }
+    });
+    const results = await executeWithConcurrency(tasks, 8);
+    const copied = results.filter(Boolean).length;
     console.log(`Uploaded ${copied} file(s)`);
     return;
   }
@@ -339,8 +345,7 @@ async function copyLocalToRemote(
     // Linux cp convention: trailing slash = contents only, no slash = include dir name
     const dirName = src.endsWith('/') ? '' : basename(localPath);
 
-    let copied = 0;
-    for (const file of files) {
+    const dirTasks = files.map((file) => async () => {
       const relativePath = relative(localPath, file);
       const parts = [
         destParsed.path?.replace(/\/$/, ''),
@@ -352,11 +357,14 @@ async function copyLocalToRemote(
       const result = await uploadFile(file, destParsed.bucket, destKey, config);
       if (result.error) {
         console.error(`Failed to upload ${file}: ${result.error}`);
+        return false;
       } else {
         console.log(`Uploaded ${file} -> t3://${destParsed.bucket}/${destKey}`);
-        copied++;
+        return true;
       }
-    }
+    });
+    const dirResults = await executeWithConcurrency(dirTasks, 8);
+    const copied = dirResults.filter(Boolean).length;
     console.log(`Uploaded ${copied} file(s)`);
   } else {
     // Single file
@@ -471,8 +479,7 @@ async function copyRemoteToLocal(
       return;
     }
 
-    let downloaded = 0;
-    for (const item of filesToDownload) {
+    const downloadTasks = filesToDownload.map((item) => async () => {
       const relativePath = prefix ? item.name.slice(prefix.length) : item.name;
       const localFilePath = folderName
         ? join(localDest, folderName, relativePath)
@@ -486,13 +493,16 @@ async function copyRemoteToLocal(
       );
       if (result.error) {
         console.error(`Failed to download ${item.name}: ${result.error}`);
+        return false;
       } else {
         console.log(
           `Downloaded t3://${srcParsed.bucket}/${item.name} -> ${localFilePath}`
         );
-        downloaded++;
+        return true;
       }
-    }
+    });
+    const downloadResults = await executeWithConcurrency(downloadTasks, 8);
+    const downloaded = downloadResults.filter(Boolean).length;
     console.log(`Downloaded ${downloaded} file(s)`);
   } else {
     // Single object
@@ -615,8 +625,7 @@ async function copyRemoteToRemote(
       });
     }
 
-    let copied = 0;
-    for (const item of itemsToCopy) {
+    const copyTasks = itemsToCopy.map((item) => async () => {
       const relativePath = prefix ? item.name.slice(prefix.length) : item.name;
       const destKey = effectiveDestPrefix
         ? `${effectiveDestPrefix}/${relativePath}`
@@ -632,13 +641,16 @@ async function copyRemoteToRemote(
 
       if (copyResult.error) {
         console.error(`Failed to copy ${item.name}: ${copyResult.error}`);
+        return false;
       } else {
         console.log(
           `Copied t3://${srcParsed.bucket}/${item.name} -> t3://${destParsed.bucket}/${destKey}`
         );
-        copied++;
+        return true;
       }
-    }
+    });
+    const copyResults = await executeWithConcurrency(copyTasks, 8);
+    let copied = copyResults.filter(Boolean).length;
 
     // Copy folder marker if exists
     let copiedMarker = false;

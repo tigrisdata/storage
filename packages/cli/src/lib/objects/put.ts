@@ -67,14 +67,16 @@ export default async function putObject(options: Record<string, unknown>) {
 
   const config = await getStorageConfig();
 
-  // Use multipart upload for files larger than 100MB (or always for stdin)
+  // Use multipart upload for files larger than 16MB (or always for stdin)
   const useMultipart =
-    !file || (fileSize !== undefined && fileSize > 100 * 1024 * 1024);
+    !file || (fileSize !== undefined && fileSize > 16 * 1024 * 1024);
 
   const { data, error } = await put(key, body, {
     access: access === 'public' ? 'public' : 'private',
     contentType,
     multipart: useMultipart,
+    partSize: useMultipart ? 16 * 1024 * 1024 : undefined,
+    queueSize: useMultipart ? 8 : undefined,
     onUploadProgress: ({ loaded, percentage }) => {
       if (fileSize !== undefined && fileSize > 0) {
         process.stdout.write(
