@@ -24,6 +24,8 @@ export type PutOptions = {
   contentType?: string;
   contentDisposition?: 'attachment' | 'inline';
   multipart?: boolean;
+  partSize?: number;
+  queueSize?: number;
   abortController?: AbortController;
   onUploadProgress?: PutOnUploadProgress;
   config?: TigrisStorageConfig;
@@ -84,8 +86,9 @@ export async function put(
       ContentDisposition: contentDisposition,
       ACL: access,
     },
-    partSize: options?.multipart ? 1024 * 1024 * 5 : 0,
-    leavePartsOnError: options?.multipart ? false : true,
+    partSize: options?.partSize ?? (options?.multipart ? 1024 * 1024 * 5 : 0),
+    queueSize: options?.queueSize,
+    leavePartsOnError: options?.multipart || options?.partSize ? false : true,
     abortController: options?.abortController
       ? options.abortController
       : new AbortController(),
