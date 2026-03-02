@@ -2,6 +2,7 @@ import { getOption, parseBoolean } from '../../utils/options.js';
 import { getStorageConfig } from '../../auth/s3-client.js';
 import { getSelectedOrganization } from '../../auth/storage.js';
 import { updateBucket, type UpdateBucketOptions } from '@tigrisdata/storage';
+import { parseLocations } from '../../utils/locations.js';
 import {
   printStart,
   printSuccess,
@@ -16,7 +17,18 @@ export default async function set(options: Record<string, unknown>) {
 
   const name = getOption<string>(options, ['name']);
   const access = getOption<string>(options, ['access']);
-  const region = getOption<string | string[]>(options, ['region']);
+  let locations = getOption<string | string[]>(options, ['locations']);
+
+  // Handle deprecated --region option
+  const deprecatedRegion = getOption<string | string[]>(options, ['region']);
+  if (deprecatedRegion !== undefined) {
+    console.warn(
+      'Warning: --region is deprecated, use --locations instead. See https://www.tigrisdata.com/docs/buckets/locations/'
+    );
+    if (locations === undefined) {
+      locations = deprecatedRegion;
+    }
+  }
   const allowObjectAcl = getOption<string | boolean>(options, [
     'allow-object-acl',
     'allowObjectAcl',
@@ -50,7 +62,8 @@ export default async function set(options: Record<string, unknown>) {
   // Check if at least one setting is provided
   if (
     access === undefined &&
-    region === undefined &&
+    locations === undefined &&
+    deprecatedRegion === undefined &&
     allowObjectAcl === undefined &&
     disableDirectoryListing === undefined &&
     cacheControl === undefined &&
@@ -71,8 +84,8 @@ export default async function set(options: Record<string, unknown>) {
     updateOptions.access = access as 'public' | 'private';
   }
 
-  if (region !== undefined) {
-    updateOptions.regions = Array.isArray(region) ? region : [region];
+  if (locations !== undefined) {
+    updateOptions.locations = parseLocations(locations);
   }
 
   if (allowObjectAcl !== undefined) {

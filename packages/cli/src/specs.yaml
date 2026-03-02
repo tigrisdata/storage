@@ -28,6 +28,8 @@ definitions:
       description: Strict read-after-write consistency globally. Latency will be higher than the default.
 
   region_options: &region_options
+
+  location_options: &location_options
     - name: Global
       value: 'global'
       description: Global
@@ -277,14 +279,19 @@ commands:
         options: *tier_options
         default: STANDARD
       - name: consistency
-        description: Consistency level (only applies when creating a bucket)
+        description: (Deprecated, use --locations) Consistency level (only applies when creating a bucket)
         alias: c
         options: *consistency_options
-        default: default
+        deprecated: true
       - name: region
-        description: Region (only applies when creating a bucket)
+        description: (Deprecated, use --locations) Region (only applies when creating a bucket)
         alias: r
         options: *region_options
+        deprecated: true
+      - name: locations
+        description: Location for the bucket (only applies when creating a bucket)
+        alias: l
+        options: *location_options
         default: 'global'
 
   # touch
@@ -530,11 +537,11 @@ commands:
             default: table
       # create
       - name: create
-        description: Create a new bucket with optional access, tier, consistency, and region settings
+        description: Create a new bucket with optional access, tier, and location settings
         alias: c
         examples:
           - "tigris buckets create my-bucket"
-          - "tigris buckets create my-bucket --access public --region iad"
+          - "tigris buckets create my-bucket --access public --locations iad"
           - "tigris buckets create my-bucket --enable-snapshots --default-tier STANDARD_IA"
         messages:
           onStart: 'Creating bucket...'
@@ -566,14 +573,19 @@ commands:
             options: *tier_options
             default: STANDARD
           - name: consistency
-            description: Choose the consistency level for the bucket
+            description: (Deprecated, use --locations) Choose the consistency level for the bucket
             alias: c
             options: *consistency_options
-            default: default
+            deprecated: true
           - name: region
-            description: Region
+            description: (Deprecated, use --locations) Region
             alias: r
             options: *region_options
+            deprecated: true
+          - name: locations
+            description: Location for the bucket
+            alias: l
+            options: *location_options
             default: 'global'
       # get
       - name: get
@@ -613,11 +625,11 @@ commands:
               - my-bucket
       # set
       - name: set
-        description: Update settings on an existing bucket such as access level, region, caching, or custom domain
+        description: Update settings on an existing bucket such as access level, location, caching, or custom domain
         alias: s
         examples:
           - "tigris buckets set my-bucket --access public"
-          - "tigris buckets set my-bucket --region iad,fra --cache-control 'max-age=3600'"
+          - "tigris buckets set my-bucket --locations iad,fra --cache-control 'max-age=3600'"
           - "tigris buckets set my-bucket --custom-domain assets.example.com"
         messages:
           onStart: 'Updating bucket...'
@@ -634,8 +646,13 @@ commands:
             description: Bucket access level
             options: *access_options
           - name: region
-            description: Allowed regions (can specify multiple)
+            description: (Deprecated, use --locations) Allowed regions (can specify multiple)
             options: *region_options
+            multiple: true
+            deprecated: true
+          - name: locations
+            description: Bucket location (can specify up to two for dual-region)
+            options: *location_options
             multiple: true
           - name: allow-object-acl
             description: Enable object-level ACL

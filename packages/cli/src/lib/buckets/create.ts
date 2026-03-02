@@ -4,6 +4,12 @@ import { getArgumentSpec, buildPromptChoices } from '../../utils/specs.js';
 import { StorageClass, createBucket } from '@tigrisdata/storage';
 import { getStorageConfig } from '../../auth/s3-client';
 import {
+  parseLocations,
+  multiRegionChoices,
+  singleRegionChoices,
+} from '../../utils/locations.js';
+import type { BucketLocations } from '@tigrisdata/storage';
+import {
   printStart,
   printSuccess,
   printFailure,
@@ -17,147 +23,155 @@ const context = msg('buckets', 'create');
 export default async function create(options: Record<string, unknown>) {
   printStart(context);
 
-  // Check if user provided any actual arguments
-  // Commander auto-fills defaults, so we need to check if user explicitly provided values
-  // The only way to know is if name (positional, no default) is provided
-  const promptAll = !getOption<string>(options, ['name']);
-
-  // Extract all options from specs.yaml
   let name = getOption<string>(options, ['name']);
   const isPublic = getOption<boolean>(options, ['public']);
   let access = isPublic
     ? 'public'
-    : promptAll
-      ? undefined
-      : getOption<string>(options, ['access', 'a', 'A']);
-  let enableSnapshots = promptAll
-    ? undefined
-    : getOption<boolean>(options, ['enable-snapshots', 's', 'S']);
-  let defaultTier = promptAll
-    ? undefined
-    : getOption<string>(options, ['default-tier', 't', 'T']);
-  let consistency = promptAll
-    ? undefined
-    : getOption<string>(options, ['consistency', 'c', 'C']);
-  let region = promptAll
-    ? undefined
-    : getOption<string>(options, ['region', 'r', 'R']);
+    : getOption<string>(options, ['access', 'a', 'A']);
+  let enableSnapshots = getOption<boolean>(options, [
+    'enable-snapshots',
+    's',
+    'S',
+  ]);
+  let defaultTier = getOption<string>(options, ['default-tier', 't', 'T']);
+  let locations = getOption<string>(options, ['locations', 'l', 'L']);
 
-  // Build interactive prompts for missing parameters
-  const questions: Array<{
-    type: string;
-    name: string;
-    message: string;
-    required?: boolean;
-    choices?: Array<{ name: string; message: string; value: string }>;
-    initial?: number | boolean | string;
-  }> = [];
-
-  if (!name || promptAll) {
-    questions.push({
-      type: 'input',
-      name: 'name',
-      message: 'Bucket name:',
-      required: true,
-    });
+  // Handle deprecated --region and --consistency options
+  const deprecatedRegion = getOption<string>(options, ['region', 'r', 'R']);
+  const deprecatedConsistency = getOption<string>(options, [
+    'consistency',
+    'c',
+    'C',
+  ]);
+  if (deprecatedRegion !== undefined) {
+    console.warn(
+      'Warning: --region is deprecated, use --locations instead. See https://www.tigrisdata.com/docs/buckets/locations/'
+    );
+    if (locations === undefined) {
+      locations = deprecatedRegion;
+    }
+  }
+  if (deprecatedConsistency !== undefined) {
+    console.warn(
+      'Warning: --consistency is deprecated, use --locations instead. See https://www.tigrisdata.com/docs/buckets/locations/'
+    );
   }
 
-  if ((!access || promptAll) && !isPublic) {
+  // Interactive mode: prompt for all values when no name is provided.
+  const interactive = !name;
+
+  let parsedLocations: BucketLocations | undefined;
+
+  if (interactive) {
     const accessSpec = getArgumentSpec('buckets', 'access', 'create');
-    const choices = buildPromptChoices(accessSpec!);
-    const defaultIndex = choices?.findIndex(
+    const accessChoices = buildPromptChoices(accessSpec!);
+    const accessDefault = accessChoices?.findIndex(
       (c) => c.value === accessSpec?.default
     );
-    questions.push({
-      type: 'select',
-      name: 'access',
-      message: 'Access level:',
-      choices: choices || [],
-      initial:
-        defaultIndex !== undefined && defaultIndex >= 0 ? defaultIndex : 0,
-    });
-  }
 
-  if (!defaultTier || promptAll) {
     const tierSpec = getArgumentSpec('buckets', 'default-tier', 'create');
-    const choices = buildPromptChoices(tierSpec!);
-    const defaultIndex = choices?.findIndex(
+    const tierChoices = buildPromptChoices(tierSpec!);
+    const tierDefault = tierChoices?.findIndex(
       (c) => c.value === tierSpec?.default
     );
-    questions.push({
-      type: 'select',
-      name: 'defaultTier',
-      message: 'Default storage tier:',
-      choices: choices || [],
-      initial:
-        defaultIndex !== undefined && defaultIndex >= 0 ? defaultIndex : 0,
-    });
-  }
 
-  if (!consistency || promptAll) {
-    const consistencySpec = getArgumentSpec('buckets', 'consistency', 'create');
-    const choices = buildPromptChoices(consistencySpec!);
-    const defaultIndex = choices?.findIndex(
-      (c) => c.value === consistencySpec?.default
-    );
-    questions.push({
-      type: 'select',
-      name: 'consistency',
-      message: 'Consistency level:',
-      choices: choices || [],
-      initial:
-        defaultIndex !== undefined && defaultIndex >= 0 ? defaultIndex : 0,
-    });
-  }
-
-  if (!region || promptAll) {
-    const regionSpec = getArgumentSpec('buckets', 'region', 'create');
-    const choices = buildPromptChoices(regionSpec!);
-    const defaultIndex = choices?.findIndex(
-      (c) => c.value === regionSpec?.default
-    );
-    questions.push({
-      type: 'select',
-      name: 'region',
-      message: 'Region:',
-      choices: choices || [],
-      initial:
-        defaultIndex !== undefined && defaultIndex >= 0 ? defaultIndex : 0,
-    });
-  }
-
-  if (enableSnapshots === undefined || promptAll) {
-    questions.push({
-      type: 'confirm',
-      name: 'enableSnapshots',
-      message: 'Enable snapshots?',
-      initial: true,
-    });
-  }
-
-  // Prompt for missing values
-  if (questions.length > 0) {
     const responses = await prompt<{
-      name?: string;
-      access?: string;
-      enableSnapshots?: boolean;
-      defaultTier?: string;
-      consistency?: string;
-      region?: string;
-    }>(questions);
+      name: string;
+      access: string;
+      defaultTier: string;
+      enableSnapshots: boolean;
+    }>([
+      {
+        type: 'input',
+        name: 'name',
+        message: 'Bucket name:',
+        required: true,
+      },
+      {
+        type: 'select',
+        name: 'access',
+        message: 'Access level:',
+        choices: accessChoices || [],
+        initial:
+          accessDefault !== undefined && accessDefault >= 0 ? accessDefault : 0,
+      },
+      {
+        type: 'select',
+        name: 'defaultTier',
+        message: 'Default storage tier:',
+        choices: tierChoices || [],
+        initial:
+          tierDefault !== undefined && tierDefault >= 0 ? tierDefault : 0,
+      },
+      {
+        type: 'confirm',
+        name: 'enableSnapshots',
+        message: 'Enable snapshots?',
+        initial: true,
+      },
+    ]);
 
-    name = name || responses.name;
-    access = access || responses.access;
-    enableSnapshots =
-      enableSnapshots !== undefined
-        ? enableSnapshots
-        : responses.enableSnapshots;
-    defaultTier = defaultTier || responses.defaultTier;
-    consistency = consistency || responses.consistency;
-    region = region !== undefined ? region : responses.region;
+    name = responses.name;
+    access = responses.access;
+    defaultTier = responses.defaultTier;
+    enableSnapshots = responses.enableSnapshots;
+
+    // Location selection: type first, then region(s) based on type
+    const { locationType } = await prompt<{ locationType: string }>({
+      type: 'select',
+      name: 'locationType',
+      message: 'Location type:',
+      choices: [
+        { name: 'global', message: 'Global' },
+        { name: 'multi', message: 'Multi-region (USA or Europe)' },
+        { name: 'dual', message: 'Dual region' },
+        { name: 'single', message: 'Single region' },
+      ],
+    });
+
+    if (locationType === 'global') {
+      parsedLocations = { type: 'global' };
+    } else if (locationType === 'multi') {
+      const { region } = await prompt<{ region: string }>({
+        type: 'select',
+        name: 'region',
+        message: 'Multi-region:',
+        choices: multiRegionChoices.map((c) => ({
+          name: c.value,
+          message: c.name,
+        })),
+      });
+      parsedLocations = parseLocations(region);
+    } else if (locationType === 'single') {
+      const { region } = await prompt<{ region: string }>({
+        type: 'select',
+        name: 'region',
+        message: 'Region:',
+        choices: singleRegionChoices.map((c) => ({
+          name: c.value,
+          message: c.name,
+        })),
+      });
+      parsedLocations = parseLocations(region);
+    } else {
+      const { regions } = await prompt<{ regions: string[] }>({
+        type: 'multiselect',
+        name: 'regions',
+        message:
+          'Press space key to select regions (multiple supported) and enter to confirm:',
+        choices: singleRegionChoices.map((c) => ({
+          name: c.value,
+          message: c.name,
+        })),
+      } as Parameters<typeof prompt>[0]);
+      if (regions.length === 0) {
+        printFailure(context, 'At least one region is required');
+        process.exit(1);
+      }
+      parsedLocations = parseLocations(regions);
+    }
   }
 
-  // Validate required fields
   if (!name) {
     printFailure(context, 'Bucket name is required');
     process.exit(1);
@@ -165,13 +179,9 @@ export default async function create(options: Record<string, unknown>) {
 
   const { error } = await createBucket(name, {
     defaultTier: (defaultTier ?? 'STANDARD') as StorageClass,
-    consistency: consistency === 'strict' ? 'strict' : 'default',
     enableSnapshot: enableSnapshots === true,
     access: (access ?? 'private') as 'public' | 'private',
-    region:
-      region !== 'global' && region !== undefined
-        ? region.split(',')
-        : undefined,
+    locations: parsedLocations ?? parseLocations(locations ?? 'global'),
     config: await getStorageConfig(),
   });
 

@@ -2,6 +2,7 @@ import { parseAnyPath } from '../utils/path.js';
 import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { createBucket, put, type StorageClass } from '@tigrisdata/storage';
+import { parseLocations } from '../utils/locations.js';
 
 export default async function mk(options: Record<string, unknown>) {
   const pathString = getOption<string>(options, ['path']);
@@ -38,18 +39,34 @@ export default async function mk(options: Record<string, unknown>) {
       't',
       'T',
     ]);
-    const consistency = getOption<string>(options, ['consistency', 'c', 'C']);
-    const region = getOption<string>(options, ['region', 'r', 'R']);
+    let locations = getOption<string>(options, ['locations', 'l', 'L']);
+
+    // Handle deprecated --region and --consistency options
+    const deprecatedRegion = getOption<string>(options, ['region', 'r', 'R']);
+    const deprecatedConsistency = getOption<string>(options, [
+      'consistency',
+      'c',
+      'C',
+    ]);
+    if (deprecatedRegion !== undefined) {
+      console.warn(
+        'Warning: --region is deprecated, use --locations instead. See https://www.tigrisdata.com/docs/buckets/locations/'
+      );
+      if (locations === undefined) {
+        locations = deprecatedRegion;
+      }
+    }
+    if (deprecatedConsistency !== undefined) {
+      console.warn(
+        'Warning: --consistency is deprecated, use --locations instead. See https://www.tigrisdata.com/docs/buckets/locations/'
+      );
+    }
 
     const { error } = await createBucket(bucket, {
       defaultTier: (defaultTier ?? 'STANDARD') as StorageClass,
-      consistency: consistency === 'strict' ? 'strict' : 'default',
       enableSnapshot: enableSnapshots === true,
       access: (access ?? 'private') as 'public' | 'private',
-      region:
-        region !== 'global' && region !== undefined
-          ? region.split(',')
-          : undefined,
+      locations: parseLocations(locations ?? 'global'),
       config,
     });
 
