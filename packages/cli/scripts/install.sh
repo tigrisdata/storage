@@ -3,7 +3,7 @@
 # Usage: curl -fsSL https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.sh | sh
 #
 # Environment variables:
-#   TIGRIS_INSTALL_DIR  - Installation directory (default: ~/.tigris/bin)
+#   TIGRIS_INSTALL_DIR  - Installation directory (default: /usr/local/bin)
 #   TIGRIS_VERSION      - Specific version to install (default: latest)
 #   TIGRIS_REPO         - GitHub repo (default: tigrisdata/cli)
 #   TIGRIS_DOWNLOAD_URL - Direct download URL (skips version detection, for testing)
@@ -13,7 +13,7 @@ set -e
 
 REPO="${TIGRIS_REPO:-tigrisdata/cli}"
 BINARY_NAME="tigris"
-DEFAULT_INSTALL_DIR="$HOME/.tigris/bin"
+DEFAULT_INSTALL_DIR="/usr/local/bin"
 
 # Colors (disabled if not a terminal)
 if [ -t 1 ]; then
@@ -152,6 +152,46 @@ add_to_path() {
   export PATH="$INSTALL_DIR:$PATH"
 }
 
+cleanup_old_install() {
+  OLD_DIR="$HOME/.tigris/bin"
+
+  # Nothing to clean up
+  if [ ! -d "$OLD_DIR" ]; then
+    return 0
+  fi
+
+  # Only clean up if there's actually an old tigris binary there
+  if [ ! -f "$OLD_DIR/tigris" ] && [ ! -f "$OLD_DIR/t3" ]; then
+    return 0
+  fi
+
+  info "Found previous installation at $OLD_DIR, cleaning up..."
+
+  # Remove old binary and symlink
+  rm -f "$OLD_DIR/tigris" "$OLD_DIR/t3"
+
+  # Remove ~/.tigris/bin if empty, then ~/.tigris if empty
+  rmdir "$OLD_DIR" 2>/dev/null || true
+  rmdir "$HOME/.tigris" 2>/dev/null || true
+
+  # Remove PATH entry from shell profiles
+  for PROFILE_FILE in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.profile"; do
+    if [ -f "$PROFILE_FILE" ] && grep -q '\.tigris/bin' "$PROFILE_FILE" 2>/dev/null; then
+      # Filter out the Tigris CLI comment and export line
+      grep -v '# Tigris CLI' "$PROFILE_FILE" | grep -v '\.tigris/bin' > "${PROFILE_FILE}.tmp"
+      mv "${PROFILE_FILE}.tmp" "$PROFILE_FILE"
+      info "Removed old PATH entry from $PROFILE_FILE"
+    fi
+  done
+
+  # Clean up fish shell if applicable
+  if command -v fish > /dev/null 2>&1; then
+    fish -c "set -e fish_user_paths (contains -i $OLD_DIR \$fish_user_paths)" 2>/dev/null || true
+  fi
+
+  success "Cleaned up old installation"
+}
+
 show_banner() {
   cat << 'EOF'
 
@@ -186,6 +226,11 @@ main() {
   # Determine install directory
   INSTALL_DIR="${TIGRIS_INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
   mkdir -p "$INSTALL_DIR"
+
+  # Clean up old ~/.tigris/bin installation if upgrading to new default location
+  if [ "$INSTALL_DIR" != "$HOME/.tigris/bin" ]; then
+    cleanup_old_install
+  fi
 
   # Construct archive/binary names
   if [ "$OS" = "windows" ]; then
@@ -259,16 +304,16 @@ main() {
 
   success "Installed $BINARY_NAME to ${INSTALL_DIR}/${BINARY_FILE}"
 
-  # Add to PATH (skip if testing)
-  if [ "${TIGRIS_SKIP_PATH:-}" != "1" ]; then
+  # Add to PATH if not using default /usr/local/bin (which is already in PATH)
+  if [ "${TIGRIS_SKIP_PATH:-}" != "1" ] && [ "$INSTALL_DIR" != "/usr/local/bin" ]; then
     add_to_path "$INSTALL_DIR"
   fi
 
   # Show welcome banner
   show_banner
 
-  # Remind about new shell if PATH was modified
-  if ! command -v tigris > /dev/null 2>&1; then
+  # Remind about new shell if PATH was modified (only for custom install dirs)
+  if [ "$INSTALL_DIR" != "/usr/local/bin" ] && ! command -v tigris > /dev/null 2>&1; then
     warn "You may need to restart your shell or run: source ~/.${SHELL_NAME}rc"
   fi
 }
