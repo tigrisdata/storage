@@ -178,7 +178,7 @@ cleanup_old_install() {
   for PROFILE_FILE in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.profile"; do
     if [ -f "$PROFILE_FILE" ] && grep -q '\.tigris/bin' "$PROFILE_FILE" 2>/dev/null; then
       # Filter out the Tigris CLI comment and export line
-      grep -v '# Tigris CLI' "$PROFILE_FILE" | grep -v '\.tigris/bin' > "${PROFILE_FILE}.tmp"
+      { grep -v '# Tigris CLI' "$PROFILE_FILE" | grep -v '\.tigris/bin' || true; } > "${PROFILE_FILE}.tmp"
       mv "${PROFILE_FILE}.tmp" "$PROFILE_FILE"
       info "Removed old PATH entry from $PROFILE_FILE"
     fi

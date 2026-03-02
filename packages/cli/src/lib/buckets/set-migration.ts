@@ -31,16 +31,29 @@ export default async function setMigration(options: Record<string, unknown>) {
     process.exit(1);
   }
 
-  if (disable) {
-    const config = await getStorageConfig();
-    const selectedOrg = getSelectedOrganization();
-    const finalConfig = {
-      ...config,
-      ...(selectedOrg && !config.organizationId
-        ? { organizationId: selectedOrg }
-        : {}),
-    };
+  if (
+    disable &&
+    (bucket !== undefined ||
+      endpoint !== undefined ||
+      region !== undefined ||
+      accessKey !== undefined ||
+      secretKey !== undefined ||
+      writeThrough !== undefined)
+  ) {
+    printFailure(context, 'Cannot use --disable with other migration options');
+    process.exit(1);
+  }
 
+  const config = await getStorageConfig();
+  const selectedOrg = getSelectedOrganization();
+  const finalConfig = {
+    ...config,
+    ...(selectedOrg && !config.organizationId
+      ? { organizationId: selectedOrg }
+      : {}),
+  };
+
+  if (disable) {
     const { error } = await setBucketMigration(name, {
       dataMigration: { enabled: false },
       config: finalConfig,
@@ -62,15 +75,6 @@ export default async function setMigration(options: Record<string, unknown>) {
     );
     process.exit(1);
   }
-
-  const config = await getStorageConfig();
-  const selectedOrg = getSelectedOrganization();
-  const finalConfig = {
-    ...config,
-    ...(selectedOrg && !config.organizationId
-      ? { organizationId: selectedOrg }
-      : {}),
-  };
 
   const { error } = await setBucketMigration(name, {
     dataMigration: {

@@ -19,6 +19,17 @@ definitions:
       value: GLACIER_IR
       description: Lowest-cost storage for long-lived data that is rarely accessed and requires retrieval in milliseconds.
 
+  transition_tier_options: &transition_tier_options
+    - name: Infrequent Access
+      value: STANDARD_IA
+      description: Lower-cost storage for data that is accessed less frequently but requires rapid access when needed.
+    - name: Archive
+      value: GLACIER
+      description: Low-cost storage for data archiving. Long-term data archiving with infrequent access.
+    - name: Instant Retrieval Archive
+      value: GLACIER_IR
+      description: Lowest-cost storage for long-lived data that is rarely accessed and requires retrieval in milliseconds.
+
   consistency_options: &consistency_options
     - name: Default
       value: default
@@ -760,7 +771,7 @@ commands:
           - name: storage-class
             description: Target storage class to transition objects to
             alias: s
-            options: *tier_options
+            options: *transition_tier_options
           - name: days
             description: Transition objects after this many days
             alias: d

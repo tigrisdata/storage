@@ -63,7 +63,6 @@ export default async function set(options: Record<string, unknown>) {
   if (
     access === undefined &&
     locations === undefined &&
-    deprecatedRegion === undefined &&
     allowObjectAcl === undefined &&
     disableDirectoryListing === undefined &&
     cacheControl === undefined &&

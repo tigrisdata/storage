@@ -164,8 +164,8 @@ export default async function create(options: Record<string, unknown>) {
           message: c.name,
         })),
       } as Parameters<typeof prompt>[0]);
-      if (regions.length === 0) {
-        printFailure(context, 'At least one region is required');
+      if (regions.length < 2) {
+        printFailure(context, 'Dual region requires at least two regions');
         process.exit(1);
       }
       parsedLocations = parseLocations(regions);
