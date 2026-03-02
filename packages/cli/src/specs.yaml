@@ -650,6 +650,9 @@ commands:
           - name: enable-delete-protection
             description: Enable delete protection
             type: boolean
+          - name: enable-additional-headers
+            description: Enable additional HTTP headers (X-Content-Type-Options nosniff)
+            type: boolean
       # set-ttl
       - name: set-ttl
         description: Configure object expiration (TTL) on a bucket. Objects expire after a number of days or on a specific date

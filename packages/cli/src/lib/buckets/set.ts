@@ -37,6 +37,10 @@ export default async function set(options: Record<string, unknown>) {
     'enable-delete-protection',
     'enableDeleteProtection',
   ]);
+  const enableAdditionalHeaders = getOption<string | boolean>(options, [
+    'enable-additional-headers',
+    'enableAdditionalHeaders',
+  ]);
 
   if (!name) {
     printFailure(context, 'Bucket name is required');
@@ -51,7 +55,8 @@ export default async function set(options: Record<string, unknown>) {
     disableDirectoryListing === undefined &&
     cacheControl === undefined &&
     customDomain === undefined &&
-    enableDeleteProtection === undefined
+    enableDeleteProtection === undefined &&
+    enableAdditionalHeaders === undefined
   ) {
     printFailure(context, 'At least one setting is required');
     process.exit(1);
@@ -90,6 +95,12 @@ export default async function set(options: Record<string, unknown>) {
 
   if (enableDeleteProtection !== undefined) {
     updateOptions.enableDeleteProtection = parseBoolean(enableDeleteProtection);
+  }
+
+  if (enableAdditionalHeaders !== undefined) {
+    updateOptions.enableAdditionalHeaders = parseBoolean(
+      enableAdditionalHeaders
+    );
   }
 
   // Include organization ID if available (needed for updateBucket API)
