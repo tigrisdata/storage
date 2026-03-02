@@ -799,6 +799,43 @@ commands:
           - name: reset
             description: Clear all notification settings on the bucket
             type: flag
+      # set-cors
+      - name: set-cors
+        description: Configure CORS rules on a bucket. Each invocation adds a rule unless --override or --reset is used
+        examples:
+          - "tigris buckets set-cors my-bucket --origins '*' --methods GET,HEAD"
+          - "tigris buckets set-cors my-bucket --origins https://example.com --methods GET,POST --headers Content-Type,Authorization --max-age 3600"
+          - "tigris buckets set-cors my-bucket --origins https://example.com --override"
+          - "tigris buckets set-cors my-bucket --reset"
+        messages:
+          onStart: 'Updating CORS settings...'
+          onSuccess: 'CORS settings updated for bucket {{name}}'
+          onFailure: 'Failed to update CORS settings'
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: positional
+            required: true
+            examples:
+              - my-bucket
+          - name: origins
+            description: Allowed origins (comma-separated, or '*' for all)
+            alias: o
+          - name: methods
+            description: Allowed HTTP methods (comma-separated, e.g. GET,POST,PUT)
+            alias: m
+          - name: headers
+            description: Allowed request headers (comma-separated, or '*' for all)
+          - name: expose-headers
+            description: Response headers to expose (comma-separated)
+          - name: max-age
+            description: 'Preflight cache duration in seconds (default: 3600)'
+          - name: override
+            description: Replace all existing CORS rules instead of appending
+            type: flag
+          - name: reset
+            description: Clear all CORS rules on the bucket
+            type: flag
 
   #########################
   # Manage forks
