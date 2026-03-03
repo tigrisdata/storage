@@ -348,6 +348,43 @@ commands:
         options: [json, table, xml]
         default: table
 
+  # presign
+  - name: presign
+    description: Generate a presigned URL for temporary access to an object without credentials
+    examples:
+      - "tigris presign my-bucket/file.txt"
+      - "tigris presign t3://my-bucket/report.pdf --method put --expires-in 7200"
+      - "tigris presign my-bucket/image.png --format json"
+      - "tigris presign my-bucket/data.csv --access-key tid_AaBb"
+    messages:
+      onStart: ''
+      onSuccess: ''
+      onFailure: 'Failed to generate presigned URL'
+    arguments:
+      - name: path
+        required: true
+        type: positional
+        description: Object path as bucket/key. Supports t3:// and tigris:// prefixes
+        examples:
+          - my-bucket/my-file.txt
+          - t3://my-bucket/my-file.txt
+      - name: method
+        description: HTTP method for the presigned URL
+        alias: m
+        options: [get, put]
+        default: get
+      - name: expires-in
+        description: URL expiry time in seconds
+        alias: e
+        default: '3600'
+      - name: access-key
+        description: Access key ID to use for signing. If not provided, resolved from credentials or prompted interactively
+      - name: format
+        description: Output format
+        alias: f
+        options: [url, json]
+        default: url
+
   # cp
   - name: cp
     description: Copy files between local filesystem and Tigris, or between paths within Tigris. At least one side must be a remote t3:// path
