@@ -827,7 +827,7 @@ commands:
           - "tigris buckets set-notifications my-bucket --url https://example.com/webhook"
           - "tigris buckets set-notifications my-bucket --url https://example.com/webhook --token secret123"
           - "tigris buckets set-notifications my-bucket --url https://example.com/webhook --username admin --password secret"
-          - "tigris buckets set-notifications my-bucket --url https://example.com/webhook --filter 'images/*'"
+          - 'tigris buckets set-notifications my-bucket --url https://example.com/webhook --filter "WHERE `key` REGEXP \"^images\""'
           - "tigris buckets set-notifications my-bucket --enable"
           - "tigris buckets set-notifications my-bucket --disable"
           - "tigris buckets set-notifications my-bucket --reset"
@@ -846,7 +846,7 @@ commands:
             description: Webhook URL to send notifications to (must be http or https)
             alias: u
           - name: filter
-            description: Event filter pattern (e.g. 'images/*')
+            description: "SQL WHERE clause to filter events by key (e.g. WHERE `key` REGEXP \"^images\")"
             alias: f
           - name: token
             description: Token for webhook authentication
