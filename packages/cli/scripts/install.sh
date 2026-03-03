@@ -225,7 +225,13 @@ main() {
 
   # Determine install directory
   INSTALL_DIR="${TIGRIS_INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
-  mkdir -p "$INSTALL_DIR"
+  if ! mkdir -p "$INSTALL_DIR" 2>/dev/null; then
+    if command -v sudo > /dev/null 2>&1; then
+      sudo mkdir -p "$INSTALL_DIR"
+    else
+      error "Cannot create ${INSTALL_DIR} and sudo is not available. Set TIGRIS_INSTALL_DIR to a writable path."
+    fi
+  fi
 
   # Clean up old ~/.tigris/bin installation if upgrading to new default location
   if [ "$INSTALL_DIR" != "$HOME/.tigris/bin" ]; then
@@ -295,12 +301,23 @@ main() {
     fi
   fi
 
+  # Determine if we need elevated privileges
+  SUDO=""
+  if [ ! -w "$INSTALL_DIR" ]; then
+    if command -v sudo > /dev/null 2>&1; then
+      warn "Elevated permissions required to install to ${INSTALL_DIR}"
+      SUDO="sudo"
+    else
+      error "No write permission to ${INSTALL_DIR} and sudo is not available. Set TIGRIS_INSTALL_DIR to a writable path."
+    fi
+  fi
+
   # Install binary
-  mv "$EXTRACTED_BINARY" "${INSTALL_DIR}/${BINARY_FILE}"
-  chmod +x "${INSTALL_DIR}/${BINARY_FILE}"
+  $SUDO mv "$EXTRACTED_BINARY" "${INSTALL_DIR}/${BINARY_FILE}"
+  $SUDO chmod +x "${INSTALL_DIR}/${BINARY_FILE}"
 
   # Create t3 symlink
-  ln -sf "${INSTALL_DIR}/${BINARY_FILE}" "${INSTALL_DIR}/t3" 2>/dev/null || true
+  $SUDO ln -sf "${INSTALL_DIR}/${BINARY_FILE}" "${INSTALL_DIR}/t3" 2>/dev/null || true
 
   success "Installed $BINARY_NAME to ${INSTALL_DIR}/${BINARY_FILE}"
 
