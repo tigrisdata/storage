@@ -15,11 +15,24 @@ export function createTigrisClient(
   const endpoint = options?.endpoint ?? config.endpoint;
   const bucket = options?.bucket ?? config.bucket;
 
-  const skipAccessKeyCheck =
-    options?.sessionToken !== undefined &&
+  if (
+    options?.credentialProvider !== undefined &&
+    (!options?.organizationId || options.organizationId === '')
+  ) {
+    return missingConfigError('organizationId');
+  }
+
+  const hasCredentialProvider =
+    options?.credentialProvider !== undefined &&
     options?.organizationId !== undefined &&
-    options.sessionToken !== '' &&
     options.organizationId !== '';
+
+  const skipAccessKeyCheck =
+    hasCredentialProvider ||
+    (options?.sessionToken !== undefined &&
+      options?.organizationId !== undefined &&
+      options.sessionToken !== '' &&
+      options.organizationId !== '');
 
   if (!bucket && !skipBucketCheck) {
     return missingConfigError('bucket');
@@ -37,29 +50,40 @@ export function createTigrisClient(
     return missingConfigError('endpoint');
   }
 
-  let key = `${accessKeyId}-${endpoint}`;
+  let key: string | undefined = `${accessKeyId}-${endpoint}`;
 
-  if (options?.sessionToken && options?.organizationId) {
+  if (hasCredentialProvider) {
+    // Credential providers are opaque functions — cannot safely cache
+    key = undefined;
+  } else if (options?.sessionToken && options?.organizationId) {
     key = `${options.sessionToken}-${options.organizationId}-${endpoint}`;
   }
 
-  const cachedClient = cachedClients.get(key);
-
-  if (cachedClient !== undefined) {
-    return { data: cachedClient };
+  if (key) {
+    const cachedClient = cachedClients.get(key);
+    if (cachedClient !== undefined) {
+      return { data: cachedClient };
+    }
   }
 
+  const credentials = hasCredentialProvider
+    ? options!.credentialProvider!
+    : {
+        accessKeyId: accessKeyId ?? '',
+        secretAccessKey: secretAccessKey ?? '',
+        sessionToken: options?.sessionToken ?? undefined,
+      };
+
   const client = new S3Client({
-    credentials: {
-      accessKeyId: accessKeyId ?? '',
-      secretAccessKey: secretAccessKey ?? '',
-      sessionToken: options?.sessionToken ?? undefined,
-    },
+    credentials,
     region: 'auto',
     endpoint: endpoint ?? 'https://t3.storage.dev',
   });
 
-  if (options?.sessionToken && options?.organizationId) {
+  if (
+    (options?.sessionToken || hasCredentialProvider) &&
+    options?.organizationId
+  ) {
     client.middlewareStack.add(
       (next) => async (args) => {
         const req = args.request as HttpRequest;
@@ -79,7 +103,9 @@ export function createTigrisClient(
     return { error: new Error('Unable to create Tigris client') };
   }
 
-  cachedClients.set(key, client);
+  if (key) {
+    cachedClients.set(key, client);
+  }
 
   return { data: client };
 }
