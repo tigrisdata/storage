@@ -7,6 +7,12 @@ export type TigrisStorageConfig = {
   endpoint?: string;
   sessionToken?: string;
   organizationId?: string;
+  credentialProvider?: () => Promise<{
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken?: string;
+    expiration?: Date;
+  }>;
 };
 
 export type TigrisStorageResponse<T, E = Error> = TigrisResponse<T, E>;
