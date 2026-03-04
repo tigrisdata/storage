@@ -10,6 +10,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { calculateUploadParams } from '../../utils/upload.js';
 
 const context = msg('objects', 'put');
 
@@ -65,18 +66,17 @@ export default async function putObject(options: Record<string, unknown>) {
     body = Readable.toWeb(process.stdin) as ReadableStream;
   }
 
-  const config = await getStorageConfig();
+  const config = await getStorageConfig({ withCredentialProvider: true });
 
-  // Use multipart upload for files larger than 16MB (or always for stdin)
-  const useMultipart =
-    !file || (fileSize !== undefined && fileSize > 16 * 1024 * 1024);
+  // For stdin (no file), always use multipart since we don't know the size
+  const uploadParams = file
+    ? calculateUploadParams(fileSize)
+    : { multipart: true, partSize: 5 * 1024 * 1024, queueSize: 8 };
 
   const { data, error } = await put(key, body, {
     access: access === 'public' ? 'public' : 'private',
     contentType,
-    multipart: useMultipart,
-    partSize: useMultipart ? 16 * 1024 * 1024 : undefined,
-    queueSize: useMultipart ? 8 : undefined,
+    ...uploadParams,
     onUploadProgress: ({ loaded, percentage }) => {
       if (fileSize !== undefined && fileSize > 0) {
         process.stdout.write(

@@ -54,9 +54,17 @@ export type TigrisStorageConfig = {
   organizationId?: string;
   iamEndpoint?: string;
   authDomain?: string;
+  credentialProvider?: () => Promise<{
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken?: string;
+    expiration?: Date;
+  }>;
 };
 
-export async function getStorageConfig(): Promise<TigrisStorageConfig> {
+export async function getStorageConfig(options?: {
+  withCredentialProvider?: boolean;
+}): Promise<TigrisStorageConfig> {
   // 1. AWS profile (only if AWS_PROFILE is set)
   if (hasAwsProfile()) {
     const profile = process.env.AWS_PROFILE || 'default';
@@ -78,7 +86,6 @@ export async function getStorageConfig(): Promise<TigrisStorageConfig> {
 
   if (loginMethod === 'oauth') {
     const authClient = getAuthClient();
-    const accessToken = await authClient.getAccessToken();
     const selectedOrg = getSelectedOrganization();
 
     if (!selectedOrg) {
@@ -88,9 +95,20 @@ export async function getStorageConfig(): Promise<TigrisStorageConfig> {
     }
 
     return {
-      sessionToken: accessToken,
+      sessionToken: await authClient.getAccessToken(),
       accessKeyId: '',
       secretAccessKey: '',
+      // Only include credentialProvider for long-running operations (uploads)
+      // that need token refresh. Short-lived operations (ls, rm, head) use
+      // the static sessionToken above and benefit from S3Client caching.
+      ...(options?.withCredentialProvider && {
+        credentialProvider: async () => ({
+          accessKeyId: '',
+          secretAccessKey: '',
+          sessionToken: await authClient.getAccessToken(),
+          expiration: new Date(Date.now() + 10 * 60 * 1000),
+        }),
+      }),
       endpoint: tigrisConfig.endpoint,
       organizationId: selectedOrg,
       iamEndpoint: tigrisConfig.iamEndpoint,
@@ -132,7 +150,7 @@ export async function getStorageConfig(): Promise<TigrisStorageConfig> {
 
   // No valid auth method found — try auto-login in interactive terminals
   if (await triggerAutoLogin()) {
-    return getStorageConfig();
+    return getStorageConfig(options);
   }
   throw new Error(
     'Not authenticated. Please run "tigris login" or "tigris configure" first.'
@@ -164,7 +182,6 @@ export async function getS3Client(): Promise<S3Client> {
 
   if (loginMethod === 'oauth') {
     const authClient = getAuthClient();
-    const accessToken = await authClient.getAccessToken();
     const selectedOrg = getSelectedOrganization();
 
     if (!selectedOrg) {
@@ -173,14 +190,17 @@ export async function getS3Client(): Promise<S3Client> {
       );
     }
 
+    const credentialProvider = async () => ({
+      accessKeyId: '',
+      secretAccessKey: '',
+      sessionToken: await authClient.getAccessToken(),
+      expiration: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
     const client = new S3Client({
       region: 'auto',
       endpoint: tigrisConfig.endpoint,
-      credentials: {
-        sessionToken: accessToken,
-        accessKeyId: '', // Required by SDK but not used with token auth
-        secretAccessKey: '', // Required by SDK but not used with token auth
-      },
+      credentials: credentialProvider,
     });
 
     // Add middleware to inject custom headers

@@ -23,6 +23,7 @@ import { getStorageConfig } from '../auth/s3-client.js';
 import { formatSize } from '../utils/format.js';
 import { get, put, list, head } from '@tigrisdata/storage';
 import { executeWithConcurrency } from '../utils/concurrency.js';
+import { calculateUploadParams } from '../utils/upload.js';
 import type { ParsedPath } from '../types.js';
 
 type CopyDirection = 'local-to-remote' | 'remote-to-local' | 'remote-to-remote';
@@ -109,12 +110,8 @@ async function uploadFile(
   const fileStream = createReadStream(localPath);
   const body = Readable.toWeb(fileStream) as ReadableStream;
 
-  const useMultipart = fileSize !== undefined && fileSize > 16 * 1024 * 1024;
-
   const { error: putError } = await put(key, body, {
-    multipart: useMultipart,
-    partSize: useMultipart ? 16 * 1024 * 1024 : undefined,
-    queueSize: useMultipart ? 8 : undefined,
+    ...calculateUploadParams(fileSize),
     onUploadProgress: showProgress
       ? ({ loaded }) => {
           if (fileSize !== undefined && fileSize > 0) {
@@ -246,12 +243,8 @@ async function copyObject(
     return { error: getError.message };
   }
 
-  const useMultipart = fileSize !== undefined && fileSize > 16 * 1024 * 1024;
-
   const { error: putError } = await put(destKey, data, {
-    multipart: useMultipart,
-    partSize: useMultipart ? 16 * 1024 * 1024 : undefined,
-    queueSize: useMultipart ? 8 : undefined,
+    ...calculateUploadParams(fileSize),
     onUploadProgress: showProgress
       ? ({ loaded }) => {
           if (fileSize !== undefined && fileSize > 0) {
@@ -749,7 +742,7 @@ export default async function cp(options: Record<string, unknown>) {
 
   const recursive = !!getOption<boolean>(options, ['recursive', 'r']);
   const direction = detectDirection(src, dest);
-  const config = await getStorageConfig();
+  const config = await getStorageConfig({ withCredentialProvider: true });
 
   switch (direction) {
     case 'local-to-remote': {

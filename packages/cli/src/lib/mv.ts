@@ -11,6 +11,7 @@ import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { formatSize } from '../utils/format.js';
 import { get, put, remove, list, head } from '@tigrisdata/storage';
+import { calculateUploadParams } from '../utils/upload.js';
 
 async function confirm(message: string): Promise<boolean> {
   const rl = readline.createInterface({
@@ -66,7 +67,7 @@ export default async function mv(options: Record<string, unknown>) {
     process.exit(1);
   }
 
-  const config = await getStorageConfig();
+  const config = await getStorageConfig({ withCredentialProvider: true });
 
   // Check if source is a single object or a prefix (folder/wildcard)
   const isWildcard = srcPath.path.includes('*');
@@ -338,17 +339,14 @@ async function moveObject(
     return {};
   }
 
-  // Get source object size for progress
-  let fileSize: number | undefined;
-  if (showProgress) {
-    const { data: headData } = await head(srcKey, {
-      config: {
-        ...config,
-        bucket: srcBucket,
-      },
-    });
-    fileSize = headData?.size;
-  }
+  // Get source object size for upload params and progress
+  const { data: headData } = await head(srcKey, {
+    config: {
+      ...config,
+      bucket: srcBucket,
+    },
+  });
+  const fileSize = headData?.size;
 
   // Get source object
   const { data, error: getError } = await get(srcKey, 'stream', {
@@ -362,12 +360,9 @@ async function moveObject(
     return { error: getError.message };
   }
 
-  // Use multipart for files larger than 100MB
-  const useMultipart = fileSize !== undefined && fileSize > 100 * 1024 * 1024;
-
   // Put to destination
   const { error: putError } = await put(destKey, data, {
-    multipart: useMultipart,
+    ...calculateUploadParams(fileSize),
     onUploadProgress: showProgress
       ? ({ loaded }) => {
           if (fileSize !== undefined && fileSize > 0) {
