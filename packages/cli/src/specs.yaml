@@ -699,7 +699,7 @@ commands:
             multiple: true
             deprecated: true
           - name: locations
-            description: Bucket location (can specify up to two for dual-region)
+            description: Bucket location (see https://www.tigrisdata.com/docs/buckets/locations/ for more details)
             options: *location_options
             multiple: true
           - name: allow-object-acl
