@@ -15,7 +15,8 @@
   "files": [
     "dist",
     "postinstall.cjs",
-    "README.md"
+    "README.md",
+    "SKILL.md"
   ],
   "publishConfig": {
     "access": "public"

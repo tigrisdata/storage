@@ -1,5 +1,22 @@
-const { openSync, writeSync, closeSync } = require('fs');
+const { openSync, writeSync, closeSync, mkdirSync, copyFileSync, existsSync } = require('fs');
+const { join } = require('path');
+const { homedir } = require('os');
 
+// --- Install Claude Code SKILL.md ---
+try {
+  const claudeDir = join(homedir(), '.claude');
+  const skillDir = join(claudeDir, 'skills', 'tigris');
+  const source = join(__dirname, 'SKILL.md');
+
+  if (existsSync(claudeDir) && existsSync(source)) {
+    mkdirSync(skillDir, { recursive: true });
+    copyFileSync(source, join(skillDir, 'SKILL.md'));
+  }
+} catch (e) {
+  // Fail silently — permission issues, CI, etc.
+}
+
+// --- Show banner ---
 try {
   const tty = openSync('/dev/tty', 'w');
 

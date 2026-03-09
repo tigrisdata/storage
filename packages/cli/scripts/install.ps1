@@ -68,6 +68,31 @@ function Show-Banner {
 "@
 }
 
+function Install-Skill {
+    $skillDir = Join-Path $HOME ".claude\skills\tigris"
+    # Use the release tag when available, fall back to main
+    if ($version -and $version -ne "local") {
+        $skillUrl = "https://raw.githubusercontent.com/$Repo/$version/SKILL.md"
+    } else {
+        $skillUrl = "https://raw.githubusercontent.com/$Repo/main/SKILL.md"
+    }
+
+    # Only attempt if ~/.claude exists (Claude Code is installed)
+    if (-not (Test-Path (Join-Path $HOME ".claude"))) {
+        return
+    }
+
+    try {
+        if (-not (Test-Path $skillDir)) {
+            New-Item -ItemType Directory -Path $skillDir -Force | Out-Null
+        }
+        Invoke-WebRequest -Uri $skillUrl -OutFile (Join-Path $skillDir "SKILL.md") -ErrorAction Stop
+    }
+    catch {
+        # Fail silently — SKILL.md install is optional
+    }
+}
+
 function Main {
     # Detect architecture
     $arch = if ([Environment]::Is64BitOperatingSystem) { "x64" } else { Write-Err "32-bit Windows is not supported" }
@@ -142,6 +167,9 @@ function Main {
 
         # Show welcome banner
         Show-Banner
+
+        # Install Claude Code skill (if Claude Code is present)
+        Install-Skill
 
         Write-Success "Installation complete!"
     }
