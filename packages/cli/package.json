@@ -64,9 +64,9 @@
   },
   "release": {
     "branches": [
-      "main",
+      "release",
       {
-        "name": "next",
+        "name": "main",
         "prerelease": true
       }
     ],
