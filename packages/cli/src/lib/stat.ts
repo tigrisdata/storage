@@ -8,6 +8,7 @@ import {
   printFailure,
   msg,
 } from '../utils/messages.js';
+import { buildBucketInfo } from '../utils/bucket-info.js';
 
 const context = msg('stat');
 
@@ -70,44 +71,10 @@ export default async function stat(options: {
       process.exit(1);
     }
 
-    const info = [
-      {
-        metric: 'Number of Objects',
-        value: data.sizeInfo.numberOfObjects?.toString() ?? 'N/A',
-      },
-      {
-        metric: 'Total Size',
-        value:
-          data.sizeInfo.size !== undefined
-            ? formatSize(data.sizeInfo.size)
-            : 'N/A',
-      },
-      {
-        metric: 'All Versions Count',
-        value: data.sizeInfo.numberOfObjectsAllVersions?.toString() ?? 'N/A',
-      },
-      {
-        metric: 'Snapshots Enabled',
-        value: data.isSnapshotEnabled ? 'Yes' : 'No',
-      },
-      { metric: 'Default Tier', value: data.settings.defaultTier },
-      {
-        metric: 'Allow Object ACL',
-        value: data.settings.allowObjectAcl ? 'Yes' : 'No',
-      },
-      { metric: 'Has Forks', value: data.forkInfo?.hasChildren ? 'Yes' : 'No' },
-    ];
-
-    if (data.forkInfo?.parents?.length) {
-      info.push({
-        metric: 'Forked From',
-        value: data.forkInfo.parents[0].bucketName,
-      });
-      info.push({
-        metric: 'Fork Snapshot',
-        value: data.forkInfo.parents[0].snapshot,
-      });
-    }
+    const info = buildBucketInfo(data).map(({ label, value }) => ({
+      metric: label,
+      value,
+    }));
 
     const output = formatOutput(info, format, 'bucket-info', 'info', [
       { key: 'metric', header: 'Metric' },

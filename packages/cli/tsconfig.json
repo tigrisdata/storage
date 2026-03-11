@@ -9,7 +9,9 @@
     "allowJs": true,
     "strict": true,
     "noEmit": true,
+    "resolveJsonModule": true,
     "moduleDetection": "force"
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/cli-binary.ts", "src/specs-embedded.ts", "src/command-registry.ts"]
 }

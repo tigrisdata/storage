@@ -218,6 +218,29 @@ show_banner() {
 EOF
 }
 
+install_skill() {
+  SKILL_DIR="$HOME/.claude/skills/tigris"
+  # Use the release tag when available, fall back to main
+  if [ -n "$VERSION" ] && [ "$VERSION" != "local" ]; then
+    SKILL_URL="https://raw.githubusercontent.com/${REPO}/${VERSION}/SKILL.md"
+  else
+    SKILL_URL="https://raw.githubusercontent.com/${REPO}/main/SKILL.md"
+  fi
+
+  # Only attempt if ~/.claude exists (Claude Code is installed)
+  if [ ! -d "$HOME/.claude" ]; then
+    return 0
+  fi
+
+  mkdir -p "$SKILL_DIR" 2>/dev/null || return 0
+
+  if command -v curl > /dev/null 2>&1; then
+    curl -fsSL "$SKILL_URL" -o "$SKILL_DIR/SKILL.md" 2>/dev/null || return 0
+  elif command -v wget > /dev/null 2>&1; then
+    wget -q "$SKILL_URL" -O "$SKILL_DIR/SKILL.md" 2>/dev/null || return 0
+  fi
+}
+
 main() {
   detect_platform
   detect_shell
@@ -328,6 +351,9 @@ main() {
 
   # Show welcome banner
   show_banner
+
+  # Install Claude Code skill (if Claude Code is present)
+  install_skill
 
   # Remind about new shell if PATH was modified (only for custom install dirs)
   if [ "$INSTALL_DIR" != "/usr/local/bin" ] && ! command -v tigris > /dev/null 2>&1; then

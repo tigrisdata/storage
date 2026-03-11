@@ -8,6 +8,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { buildBucketInfo } from '../../utils/bucket-info.js';
 
 const context = msg('buckets', 'get');
 
@@ -15,6 +16,7 @@ export default async function get(options: Record<string, unknown>) {
   printStart(context);
 
   const name = getOption<string>(options, ['name']);
+  const format = getOption<string>(options, ['format']) || 'table';
 
   if (!name) {
     printFailure(context, 'Bucket name is required');
@@ -32,20 +34,13 @@ export default async function get(options: Record<string, unknown>) {
 
   const info = [
     { property: 'Name', value: name },
-    {
-      property: 'Snapshots Enabled',
-      value: data.isSnapshotEnabled ? 'Yes' : 'No',
-    },
-    { property: 'Has Forks', value: data.hasForks ? 'Yes' : 'No' },
-    ...(data.sourceBucketName
-      ? [{ property: 'Source Bucket', value: data.sourceBucketName }]
-      : []),
-    ...(data.sourceBucketSnapshot
-      ? [{ property: 'Source Snapshot', value: data.sourceBucketSnapshot }]
-      : []),
+    ...buildBucketInfo(data).map(({ label, value }) => ({
+      property: label,
+      value,
+    })),
   ];
 
-  const output = formatOutput(info, 'table', 'bucket', 'property', [
+  const output = formatOutput(info, format, 'bucket', 'property', [
     { key: 'property', header: 'Property' },
     { key: 'value', header: 'Value' },
   ]);
