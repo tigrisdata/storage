@@ -19,6 +19,7 @@ module.exports = (packageName) => {
             { scope, type: 'fix', release: 'patch' },
             { scope, type: 'perf', release: 'patch' },
             { scope, type: 'refactor', release: 'patch' },
+            { scope, type: 'chore', release: 'patch' },
             { scope, breaking: true, release: 'major' },
             // Catch-all: prevent OTHER scopes from triggering releases
             // Uses negation pattern !(scope) to exclude this package's scope
@@ -26,6 +27,7 @@ module.exports = (packageName) => {
             { scope: `!(${scope})`, type: 'fix', release: false },
             { scope: `!(${scope})`, type: 'perf', release: false },
             { scope: `!(${scope})`, type: 'refactor', release: false },
+            { scope: `!(${scope})`, type: 'chore', release: false },
           ],
         },
       ],
