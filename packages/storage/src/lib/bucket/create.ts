@@ -73,6 +73,18 @@ export async function createBucket(
     }
   }
 
+  if (
+    options?.sourceBucketSnapshot &&
+    options.sourceBucketSnapshot !== '' &&
+    (!options?.sourceBucketName || options.sourceBucketName === '')
+  ) {
+    return {
+      error: new Error(
+        'sourceBucketName is required when sourceBucketSnapshot is provided'
+      ),
+    };
+  }
+
   const command = new CreateBucketCommand({
     Bucket: bucketName,
   });
@@ -85,20 +97,27 @@ export async function createBucket(
     (next) => async (args) => {
       const req = args.request as HttpRequest;
 
+      // Disable directory listing by default
+      req.headers[TigrisHeaders.ACL_LIST_OBJECTS] = 'false';
+
+      // Set storage class
       if (options?.defaultTier) {
         req.headers[TigrisHeaders.STORAGE_CLASS] = options.defaultTier;
       }
 
+      // Set consistency level
       if (options?.consistency === 'strict') {
         req.headers[TigrisHeaders.CONSISTENT] = 'true';
       }
 
+      // Set regions
       if (options?.region && options?.region !== undefined) {
         req.headers[TigrisHeaders.REGIONS] = Array.isArray(options.region)
           ? options.region.join(',')
           : options.region;
       }
 
+      // Set locations
       if (
         options?.locations &&
         options?.locations !== undefined &&
@@ -111,47 +130,32 @@ export async function createBucket(
           : options.locations.values;
       }
 
-      const result = await next(args);
-      return result;
+      // Set snapshot enabled
+      if (options?.enableSnapshot) {
+        req.headers[TigrisHeaders.SNAPSHOT_ENABLED] = 'true';
+      }
+
+      // Set fork source bucket
+      if (options?.sourceBucketName && options.sourceBucketName !== '') {
+        req.headers[TigrisHeaders.FORK_SOURCE_BUCKET] =
+          options.sourceBucketName;
+      }
+
+      // Set fork source bucket snapshot
+      if (
+        options?.sourceBucketName &&
+        options.sourceBucketName !== '' &&
+        options?.sourceBucketSnapshot &&
+        options.sourceBucketSnapshot !== ''
+      ) {
+        req.headers[TigrisHeaders.FORK_SOURCE_BUCKET_SNAPSHOT] =
+          options.sourceBucketSnapshot;
+      }
+
+      return await next(args);
     },
-    {
-      step: 'build',
-    }
+    { step: 'build' }
   );
-
-  if (options?.enableSnapshot) {
-    command.middlewareStack.add(
-      (next) => async (args) => {
-        (args.request as HttpRequest).headers[TigrisHeaders.SNAPSHOT_ENABLED] =
-          'true';
-        return next(args);
-      },
-      { step: 'build' }
-    );
-  }
-
-  if (options?.sourceBucketName && options.sourceBucketName !== '') {
-    const sourceBucketName = options.sourceBucketName;
-    command.middlewareStack.add(
-      (next) => async (args) => {
-        (args.request as HttpRequest).headers[
-          TigrisHeaders.FORK_SOURCE_BUCKET
-        ] = sourceBucketName;
-
-        if (
-          options?.sourceBucketSnapshot &&
-          options.sourceBucketSnapshot !== ''
-        ) {
-          (args.request as HttpRequest).headers[
-            TigrisHeaders.FORK_SOURCE_BUCKET_SNAPSHOT
-          ] = options.sourceBucketSnapshot;
-        }
-
-        return next(args);
-      },
-      { step: 'build' }
-    );
-  }
 
   try {
     return tigrisClient
