@@ -57,7 +57,7 @@
     "react-dom": ">=18.0.0"
   },
   "dependencies": {
-    "@tigrisdata/storage": "^2.13.0"
+    "@tigrisdata/storage": "^2.15.3"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
