@@ -260,16 +260,18 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       expect(result.error?.message).toBe('No update options provided');
     });
 
-    it('should return error on rename failure', async () => {
+    it('should rename an object', async () => {
       const newKey = `test-renamed-${Date.now()}.txt`;
       const result = await updateObject(updateFileName, {
         key: newKey,
         config,
       });
 
-      // Rename via HTTP client requires CopyObject permission
-      expect(result.error).toBeDefined();
-      expect(result.data).toBeUndefined();
+      expect(result.error).toBeUndefined();
+      expect(result.data?.path).toBe(newKey);
+
+      // Rename back so subsequent tests still find the original file
+      await updateObject(newKey, { key: updateFileName, config });
     });
 
     it('should update access to public', async () => {
@@ -292,18 +294,24 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       expect(result.data?.path).toBe(updateFileName);
     });
 
-    it('should not update access when rename fails', async () => {
+    it('should rename and update access together', async () => {
       const newKey = `test-renamed-public-${Date.now()}.txt`;
 
-      // When rename fails, access update should not run
       const result = await updateObject(updateFileName, {
         key: newKey,
         access: 'public',
         config,
       });
 
-      expect(result.error).toBeDefined();
-      expect(result.data).toBeUndefined();
+      expect(result.error).toBeUndefined();
+      expect(result.data?.path).toBe(newKey);
+
+      // Rename back so subsequent tests still find the original file
+      await updateObject(newKey, {
+        key: updateFileName,
+        access: 'private',
+        config,
+      });
     });
   });
 

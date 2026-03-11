@@ -46,7 +46,7 @@ const cachedHttpClients = new Map<string, TigrisHttpClient>();
 /**
  * Generate AWS Signature V4 headers for a request
  */
-async function generateSignatureHeaders(
+export async function generateSignatureHeaders(
   method: string,
   url: URL,
   headers: Record<string, string>,
@@ -64,12 +64,18 @@ async function generateSignatureHeaders(
     sha256: Sha256,
   });
 
+  const query: Record<string, string> = {};
+  url.searchParams.forEach((value, key) => {
+    query[key] = value;
+  });
+
   const request = {
     method,
     protocol: url.protocol,
     hostname: url.hostname,
     port: url.port ? parseInt(url.port) : undefined,
-    path: url.pathname + url.search,
+    path: url.pathname,
+    ...(Object.keys(query).length > 0 && { query }),
     headers: {
       ...headers,
       host: url.host,
