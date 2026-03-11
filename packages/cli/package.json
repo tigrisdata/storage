@@ -22,8 +22,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup",
-    "dev": "export $(grep -v '^#' .env | xargs) && tsup --watch",
+    "build": "tsc --noEmit && tsup",
+    "dev": "export $(grep -v '^#' .env | xargs) && (tsc --noEmit --watch --preserveWatchOutput & tsup --watch)",
     "cli": "node dist/cli.js",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
@@ -37,8 +37,9 @@
     "updatedocs": "tsx scripts/update-docs.ts",
     "postinstall": "node postinstall.cjs",
     "generate:registry": "tsx scripts/generate-registry.ts",
-    "build:binary": "npm run generate:registry && tsx scripts/build-binaries.ts",
-    "build:binary:current": "npm run generate:registry && bun build src/cli-binary.ts --compile --outfile=bin/tigris",
+    "build:binary": "npm run generate:registry && tsc --noEmit -p tsconfig.binary.json && tsx scripts/build-binaries.ts",
+    "build:binary:current": "npm run generate:registry && tsc --noEmit -p tsconfig.binary.json && bun build src/cli-binary.ts --compile --outfile=bin/tigris",
+    "dev:binary": "npm run generate:registry && tsc --noEmit --watch --preserveWatchOutput -p tsconfig.binary.json & bun build src/cli-binary.ts --compile --watch --outfile=bin/tigris",
     "prepublishOnly": "npm run build",
     "clean": "rm -rf dist",
     "semantic-release": "semantic-release",

@@ -17,5 +17,9 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
-      - run: npm run build
       - run: npm run test
+
+      - run: npm run build
+
+      - uses: oven-sh/setup-bun@v2
+      - run: bun run build:binary

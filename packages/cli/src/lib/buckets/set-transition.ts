@@ -1,7 +1,10 @@
 import { getOption } from '../../utils/options.js';
 import { getStorageConfig } from '../../auth/s3-client.js';
 import { getSelectedOrganization } from '../../auth/storage.js';
-import { setBucketLifecycle } from '@tigrisdata/storage';
+import {
+  setBucketLifecycle,
+  type BucketLifecycleRule,
+} from '@tigrisdata/storage';
 import {
   printStart,
   printSuccess,
@@ -96,10 +99,12 @@ export default async function setTransitions(options: Record<string, unknown>) {
       : {}),
   };
 
-  const rule = {
+  const rule: BucketLifecycleRule = {
     ...(enable ? { enabled: true } : {}),
     ...(disable ? { enabled: false } : {}),
-    ...(storageClass ? { storageClass } : {}),
+    ...(storageClass
+      ? { storageClass: storageClass as BucketLifecycleRule['storageClass'] }
+      : {}),
     ...(days !== undefined ? { days: Number(days) } : {}),
     ...(date !== undefined ? { date } : {}),
   };
