@@ -3,11 +3,7 @@ import enquirer from 'enquirer';
 import { getArgumentSpec, buildPromptChoices } from '../../utils/specs.js';
 import { StorageClass, createBucket } from '@tigrisdata/storage';
 import { getStorageConfig } from '../../auth/s3-client';
-import {
-  parseLocations,
-  multiRegionChoices,
-  singleRegionChoices,
-} from '../../utils/locations.js';
+import { parseLocations, promptLocations } from '../../utils/locations.js';
 import type { BucketLocations } from '@tigrisdata/storage';
 import {
   printStart,
@@ -116,59 +112,11 @@ export default async function create(options: Record<string, unknown>) {
     defaultTier = responses.defaultTier;
     enableSnapshots = responses.enableSnapshots;
 
-    // Location selection: type first, then region(s) based on type
-    const { locationType } = await prompt<{ locationType: string }>({
-      type: 'select',
-      name: 'locationType',
-      message: 'Location type:',
-      choices: [
-        { name: 'global', message: 'Global' },
-        { name: 'multi', message: 'Multi-region (USA or Europe)' },
-        { name: 'dual', message: 'Dual region' },
-        { name: 'single', message: 'Single region' },
-      ],
-    });
-
-    if (locationType === 'global') {
-      parsedLocations = { type: 'global' };
-    } else if (locationType === 'multi') {
-      const { region } = await prompt<{ region: string }>({
-        type: 'select',
-        name: 'region',
-        message: 'Multi-region:',
-        choices: multiRegionChoices.map((c) => ({
-          name: c.value,
-          message: c.name,
-        })),
-      });
-      parsedLocations = parseLocations(region);
-    } else if (locationType === 'single') {
-      const { region } = await prompt<{ region: string }>({
-        type: 'select',
-        name: 'region',
-        message: 'Region:',
-        choices: singleRegionChoices.map((c) => ({
-          name: c.value,
-          message: c.name,
-        })),
-      });
-      parsedLocations = parseLocations(region);
-    } else {
-      const { regions } = await prompt<{ regions: string[] }>({
-        type: 'multiselect',
-        name: 'regions',
-        message:
-          'Press space key to select regions (multiple supported) and enter to confirm:',
-        choices: singleRegionChoices.map((c) => ({
-          name: c.value,
-          message: c.name,
-        })),
-      } as Parameters<typeof prompt>[0]);
-      if (regions.length < 2) {
-        printFailure(context, 'Dual region requires at least two regions');
-        process.exit(1);
-      }
-      parsedLocations = parseLocations(regions);
+    try {
+      parsedLocations = await promptLocations();
+    } catch (err) {
+      printFailure(context, (err as Error).message);
+      process.exit(1);
     }
   }
 

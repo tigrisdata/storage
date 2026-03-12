@@ -13,5 +13,5 @@
     "moduleDetection": "force"
   },
   "include": ["src"],
-  "exclude": ["src/cli-binary.ts", "src/specs-embedded.ts", "src/command-registry.ts"]
+  "exclude": ["src/cli-binary.ts", "src/command-registry.ts"]
 }

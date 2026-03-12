@@ -747,6 +747,29 @@ commands:
           - name: disable
             description: Disable TTL on the bucket
             type: flag
+      # set-locations
+      - name: set-locations
+        description: Set the data locations for a bucket
+        examples:
+          - "tigris buckets set-locations my-bucket --locations iad"
+          - "tigris buckets set-locations my-bucket --locations iad,fra"
+          - "tigris buckets set-locations my-bucket --locations global"
+        messages:
+          onStart: 'Updating bucket locations...'
+          onSuccess: 'Locations updated for bucket {{name}}'
+          onFailure: 'Failed to update bucket locations'
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: positional
+            required: true
+            examples:
+              - my-bucket
+          - name: locations
+            description: Bucket location
+            alias: l
+            options: *location_options
+            multiple: true
       # set-migration
       - name: set-migration
         description: Configure data migration from an external S3-compatible source bucket. Tigris will pull objects on demand from the source
