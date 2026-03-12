@@ -68,7 +68,8 @@
       "release",
       {
         "name": "main",
-        "prerelease": true
+        "prerelease": "beta",
+        "channel": "beta"
       }
     ],
     "plugins": [
