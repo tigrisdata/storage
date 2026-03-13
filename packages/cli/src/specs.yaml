@@ -249,6 +249,9 @@ commands:
           - my-bucket/my-path
           - t3://my-bucket
           - t3://my-bucket/my-path
+      - name: snapshot-version
+        description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
+        alias: snapshot
 
   # mk
   - name: mk
@@ -347,6 +350,9 @@ commands:
         alias: f
         options: [json, table, xml]
         default: table
+      - name: snapshot-version
+        description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
+        alias: snapshot
 
   # presign
   - name: presign
@@ -1086,6 +1092,9 @@ commands:
             alias: f
             options: [json, table, xml]
             default: table
+          - name: snapshot-version
+            description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
+            alias: snapshot
       # get
       - name: get
         description: Download an object by key. Prints to stdout by default, or saves to a file with --output
@@ -1117,6 +1126,9 @@ commands:
             description: 'Response mode: "string" loads into memory, "stream" writes in chunks (auto-detected from extension if not specified)'
             alias: m
             options: [string, stream]
+          - name: snapshot-version
+            description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
+            alias: snapshot
       # put
       - name: put
         description: Upload a local file as an object. Content-type is auto-detected from extension unless overridden

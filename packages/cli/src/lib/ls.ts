@@ -6,6 +6,11 @@ import { list, listBuckets } from '@tigrisdata/storage';
 
 export default async function ls(options: Record<string, unknown>) {
   const pathString = getOption<string>(options, ['path']);
+  const snapshotVersion = getOption<string>(options, [
+    'snapshot-version',
+    'snapshotVersion',
+    'snapshot',
+  ]);
 
   if (!pathString) {
     // No path provided, list all buckets
@@ -45,6 +50,7 @@ export default async function ls(options: Record<string, unknown>) {
 
   const { data, error } = await list({
     prefix,
+    ...(snapshotVersion ? { snapshotVersion } : {}),
     config: {
       ...config,
       bucket,

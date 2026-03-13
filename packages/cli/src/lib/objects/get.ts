@@ -112,6 +112,11 @@ export default async function getObject(options: Record<string, unknown>) {
   const key = getOption<string>(options, ['key']);
   const output = getOption<string>(options, ['output', 'o', 'O']);
   const modeOption = getOption<string>(options, ['mode', 'm', 'M']);
+  const snapshotVersion = getOption<string>(options, [
+    'snapshot-version',
+    'snapshotVersion',
+    'snapshot',
+  ]);
 
   if (!bucket) {
     printFailure(context, 'Bucket name is required');
@@ -130,6 +135,7 @@ export default async function getObject(options: Record<string, unknown>) {
 
   if (mode === 'stream') {
     const { data, error } = await get(key, 'stream', {
+      ...(snapshotVersion ? { snapshotVersion } : {}),
       config: {
         ...config,
         bucket,
@@ -152,6 +158,7 @@ export default async function getObject(options: Record<string, unknown>) {
     }
   } else {
     const { data, error } = await get(key, 'string', {
+      ...(snapshotVersion ? { snapshotVersion } : {}),
       config: {
         ...config,
         bucket,

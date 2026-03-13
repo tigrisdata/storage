@@ -1,4 +1,5 @@
 import { parseAnyPath } from '../utils/path.js';
+import { getOption } from '../utils/options.js';
 import { formatOutput, formatSize } from '../utils/format.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { getStats, getBucketInfo, head } from '@tigrisdata/storage';
@@ -12,15 +13,16 @@ import { buildBucketInfo } from '../utils/bucket-info.js';
 
 const context = msg('stat');
 
-export default async function stat(options: {
-  path?: string;
-  format?: string;
-  _positional?: string[];
-}) {
+export default async function stat(options: Record<string, unknown>) {
   printStart(context);
 
-  const pathString = options.path || options._positional?.[0];
-  const format = options.format || 'table';
+  const pathString = getOption<string>(options, ['path']);
+  const format = getOption<string>(options, ['format'], 'table');
+  const snapshotVersion = getOption<string>(options, [
+    'snapshot-version',
+    'snapshotVersion',
+    'snapshot',
+  ]);
   const config = await getStorageConfig();
 
   // No path: show overall stats
@@ -45,7 +47,7 @@ export default async function stat(options: {
       },
     ];
 
-    const output = formatOutput(stats, format, 'stats', 'stat', [
+    const output = formatOutput(stats, format!, 'stats', 'stat', [
       { key: 'metric', header: 'Metric' },
       { key: 'value', header: 'Value' },
     ]);
@@ -76,7 +78,7 @@ export default async function stat(options: {
       value,
     }));
 
-    const output = formatOutput(info, format, 'bucket-info', 'info', [
+    const output = formatOutput(info, format!, 'bucket-info', 'info', [
       { key: 'metric', header: 'Metric' },
       { key: 'value', header: 'Value' },
     ]);
@@ -88,6 +90,7 @@ export default async function stat(options: {
 
   // Object path: show object metadata
   const { data, error } = await head(path, {
+    ...(snapshotVersion ? { snapshotVersion } : {}),
     config: {
       ...config,
       bucket,
@@ -112,7 +115,7 @@ export default async function stat(options: {
     { metric: 'Modified', value: data.modified.toISOString() },
   ];
 
-  const output = formatOutput(info, format, 'object-info', 'info', [
+  const output = formatOutput(info, format!, 'object-info', 'info', [
     { key: 'metric', header: 'Metric' },
     { key: 'value', header: 'Value' },
   ]);

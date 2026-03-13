@@ -59,8 +59,9 @@ export function formatArgumentHelp(arg: Argument): string {
     optionPart = `  ${arg.name}`;
   } else {
     optionPart = `  --${arg.name}`;
-    if (arg.alias && typeof arg.alias === 'string' && arg.alias.length === 1) {
-      optionPart += `, -${arg.alias}`;
+    if (arg.alias && typeof arg.alias === 'string') {
+      optionPart +=
+        arg.alias.length === 1 ? `, -${arg.alias}` : `, --${arg.alias}`;
     }
   }
 
@@ -222,11 +223,15 @@ export function addArgumentsToCommand(
       const argumentName = arg.required ? `<${arg.name}>` : `[${arg.name}]`;
       cmd.argument(argumentName, arg.description);
     } else {
-      const hasValidShortOption =
+      const isShortAlias =
         arg.alias && typeof arg.alias === 'string' && arg.alias.length === 1;
-      let optionString = hasValidShortOption
+      const isLongAlias =
+        arg.alias && typeof arg.alias === 'string' && arg.alias.length > 1;
+      let optionString = isShortAlias
         ? `-${arg.alias}, --${arg.name}`
-        : `--${arg.name}`;
+        : isLongAlias
+          ? `--${arg.alias}, --${arg.name}`
+          : `--${arg.name}`;
 
       if (arg.type === 'flag') {
         // Flags don't take values
