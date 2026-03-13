@@ -151,6 +151,15 @@ export function printHint(
 }
 
 /**
+ * Print a deprecation warning for a command
+ * Suppressed when output is piped/redirected
+ */
+export function printDeprecated(message: string): void {
+  if (!isTTY()) return;
+  console.warn(`⚠ Deprecated: ${message}`);
+}
+
+/**
  * Helper to create a message context
  */
 export function msg(command: string, operation?: string): MessageContext {

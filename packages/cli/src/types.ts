@@ -19,6 +19,7 @@ export interface Messages {
   onFailure?: string;
   onEmpty?: string;
   onAlreadyDone?: string;
+  onDeprecated?: string;
   hint?: string;
 }
 
@@ -31,6 +32,7 @@ export interface CommandSpec {
   examples?: string[];
   commands?: CommandSpec[]; // recursive - can nest infinitely
   default?: string;
+  deprecated?: boolean;
   message?: string;
   messages?: Messages;
 }

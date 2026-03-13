@@ -31,6 +31,12 @@ export default async function create(options: Record<string, unknown>) {
   ]);
   let defaultTier = getOption<string>(options, ['default-tier', 't', 'T']);
   let locations = getOption<string>(options, ['locations', 'l', 'L']);
+  const forkOf = getOption<string>(options, ['fork-of', 'forkOf', 'fork']);
+  const sourceSnapshot = getOption<string>(options, [
+    'source-snapshot',
+    'sourceSnapshot',
+    'source-snap',
+  ]);
 
   // Handle deprecated --region and --consistency options
   const deprecatedRegion = getOption<string>(options, ['region', 'r', 'R']);
@@ -125,11 +131,18 @@ export default async function create(options: Record<string, unknown>) {
     process.exit(1);
   }
 
+  if (sourceSnapshot && !forkOf) {
+    printFailure(context, '--source-snapshot requires --fork-of');
+    process.exit(1);
+  }
+
   const { error } = await createBucket(name, {
     defaultTier: (defaultTier ?? 'STANDARD') as StorageClass,
     enableSnapshot: enableSnapshots === true,
     access: (access ?? 'private') as 'public' | 'private',
     locations: parsedLocations ?? parseLocations(locations ?? 'global'),
+    ...(forkOf ? { sourceBucketName: forkOf } : {}),
+    ...(sourceSnapshot ? { sourceBucketSnapshot: sourceSnapshot } : {}),
     config: await getStorageConfig(),
   });
 

@@ -40,6 +40,12 @@ export default async function mk(options: Record<string, unknown>) {
       'T',
     ]);
     let locations = getOption<string>(options, ['locations', 'l', 'L']);
+    const forkOf = getOption<string>(options, ['fork-of', 'forkOf', 'fork']);
+    const sourceSnapshot = getOption<string>(options, [
+      'source-snapshot',
+      'sourceSnapshot',
+      'source-snap',
+    ]);
 
     // Handle deprecated --region and --consistency options
     const deprecatedRegion = getOption<string>(options, ['region', 'r', 'R']);
@@ -62,11 +68,18 @@ export default async function mk(options: Record<string, unknown>) {
       );
     }
 
+    if (sourceSnapshot && !forkOf) {
+      console.error('--source-snapshot requires --fork-of');
+      process.exit(1);
+    }
+
     const { error } = await createBucket(bucket, {
       defaultTier: (defaultTier ?? 'STANDARD') as StorageClass,
       enableSnapshot: enableSnapshots === true,
       access: (access ?? 'private') as 'public' | 'private',
       locations: parseLocations(locations ?? 'global'),
+      ...(forkOf ? { sourceBucketName: forkOf } : {}),
+      ...(sourceSnapshot ? { sourceBucketSnapshot: sourceSnapshot } : {}),
       config,
     });
 

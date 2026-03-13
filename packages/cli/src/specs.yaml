@@ -262,6 +262,8 @@ commands:
       - "tigris mk my-bucket --access public --region iad"
       - "tigris mk my-bucket/images/"
       - "tigris mk t3://my-bucket"
+      - "tigris mk my-fork --fork-of my-bucket"
+      - "tigris mk my-fork --fork-of my-bucket --source-snapshot 1765889000501544464"
     messages:
       onFailure: 'Failed to create. Check the name is valid and your credentials have write access'
     arguments:
@@ -307,6 +309,12 @@ commands:
         alias: l
         options: *location_options
         default: 'global'
+      - name: fork-of
+        description: Create this bucket as a fork (copy-on-write clone) of the named source bucket
+        alias: fork
+      - name: source-snapshot
+        description: Fork from a specific snapshot of the source bucket. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Requires --fork-of
+        alias: source-snap
 
   # touch
   - name: touch
@@ -578,6 +586,7 @@ commands:
         examples:
           - "tigris buckets list"
           - "tigris buckets list --format json"
+          - "tigris buckets list --forks-of my-bucket"
         messages:
           onStart: 'Listing buckets...'
           onSuccess: 'Found {{count}} bucket(s)'
@@ -589,6 +598,8 @@ commands:
             alias: f
             options: [json, table, xml]
             default: table
+          - name: forks-of
+            description: Only list buckets that are forks of the named source bucket
       # create
       - name: create
         description: Create a new bucket with optional access, tier, and location settings
@@ -597,6 +608,8 @@ commands:
           - "tigris buckets create my-bucket"
           - "tigris buckets create my-bucket --access public --locations iad"
           - "tigris buckets create my-bucket --enable-snapshots --default-tier STANDARD_IA"
+          - "tigris buckets create my-fork --fork-of my-bucket"
+          - "tigris buckets create my-fork --fork-of my-bucket --source-snapshot 1765889000501544464"
         messages:
           onStart: 'Creating bucket...'
           onSuccess: "Bucket '{{name}}' created successfully"
@@ -641,6 +654,12 @@ commands:
             alias: l
             options: *location_options
             default: 'global'
+          - name: fork-of
+            description: Create this bucket as a fork (copy-on-write clone) of the named source bucket
+            alias: fork
+          - name: source-snapshot
+            description: Fork from a specific snapshot of the source bucket. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Requires --fork-of
+            alias: source-snap
       # get
       - name: get
         description: Show details for a bucket including access level, region, tier, and custom domain
@@ -935,7 +954,7 @@ commands:
   # Manage forks
   #########################
   - name: forks
-    description: List and create forks. A fork is a writable copy-on-write clone of a bucket, useful for testing or branching data
+    description: (Deprecated, use "buckets create --fork-of" and "buckets list --forks-of") List and create forks
     alias: f
     examples:
       - "tigris forks list my-bucket"
@@ -943,7 +962,8 @@ commands:
     commands:
       # list
       - name: list
-        description: List all forks created from the given source bucket
+        description: (Deprecated, use "buckets list --forks-of") List all forks created from the given source bucket
+        deprecated: true
         alias: l
         examples:
           - "tigris forks list my-bucket"
@@ -953,6 +973,7 @@ commands:
           onSuccess: 'Found {{count}} fork(s)'
           onFailure: 'Failed to list forks'
           onEmpty: 'No forks found for this bucket'
+          onDeprecated: 'Use "tigris buckets list --forks-of <bucket>" instead'
         arguments:
           - name: name
             description: Name of the source bucket
@@ -967,15 +988,17 @@ commands:
             default: table
       # create
       - name: create
-        description: Create a new fork (copy-on-write clone) of the source bucket. Optionally fork from a specific snapshot
+        description: (Deprecated, use "buckets create --fork-of") Create a new fork (copy-on-write clone) of the source bucket
+        deprecated: true
         alias: c
         examples:
           - "tigris forks create my-bucket my-fork"
-          - "tigris forks create my-bucket my-fork --snapshot snap-2025-01-01"
+          - "tigris forks create my-bucket my-fork --snapshot 1765889000501544464"
         messages:
           onStart: 'Creating fork...'
           onSuccess: "Fork '{{forkName}}' created from '{{name}}'"
           onFailure: 'Failed to create fork'
+          onDeprecated: 'Use "tigris buckets create <name> --fork-of <bucket>" instead'
         arguments:
           - name: name
             description: Name of the source bucket
@@ -990,7 +1013,7 @@ commands:
             examples:
               - my-fork
           - name: snapshot
-            description: Create fork from a specific snapshot
+            description: Create fork from a specific snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
             alias: s
 
   #########################

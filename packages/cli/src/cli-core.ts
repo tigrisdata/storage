@@ -4,6 +4,7 @@
 
 import { Command as CommanderCommand } from 'commander';
 import type { Argument, CommandSpec, Specs } from './types.js';
+import { printDeprecated } from './utils/messages.js';
 
 export interface ModuleLoader {
   (commandPath: string[]): Promise<{
@@ -448,6 +449,10 @@ export function registerCommands(
               return;
             }
 
+            if (defaultCmd.deprecated && defaultCmd.messages?.onDeprecated) {
+              printDeprecated(defaultCmd.messages.onDeprecated);
+            }
+
             await loadAndExecuteCommand(
               loadModule,
               [...currentPath, defaultCmd.name],
@@ -477,6 +482,10 @@ export function registerCommands(
           )
         ) {
           return;
+        }
+
+        if (spec.deprecated && spec.messages?.onDeprecated) {
+          printDeprecated(spec.messages.onDeprecated);
         }
 
         await loadAndExecuteCommand(
