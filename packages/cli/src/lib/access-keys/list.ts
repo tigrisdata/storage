@@ -1,4 +1,5 @@
 import { formatOutput } from '../../utils/format.js';
+import { getOption } from '../../utils/options.js';
 import { getLoginMethod } from '../../auth/s3-client.js';
 import { getAuthClient } from '../../auth/client.js';
 import { getSelectedOrganization } from '../../auth/storage.js';
@@ -14,8 +15,13 @@ import {
 
 const context = msg('access-keys', 'list');
 
-export default async function list() {
+export default async function list(options: Record<string, unknown>) {
   printStart(context);
+
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
 
   const loginMethod = await getLoginMethod();
 
@@ -64,7 +70,7 @@ export default async function list() {
     created: key.createdAt,
   }));
 
-  const output = formatOutput(keys, 'table', 'keys', 'key', [
+  const output = formatOutput(keys, format!, 'keys', 'key', [
     { key: 'name', header: 'Name' },
     { key: 'id', header: 'ID' },
     { key: 'status', header: 'Status' },

@@ -36,7 +36,10 @@ export default async function presign(options: Record<string, unknown>) {
     getOption<string>(options, ['expires-in', 'expiresIn', 'e']) ?? '3600',
     10
   );
-  const format = getOption<string>(options, ['format', 'f']) ?? 'url';
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : (getOption<string>(options, ['format', 'f']) ?? 'url');
   const accessKeyFlag = getOption<string>(options, ['access-key', 'accessKey']);
 
   const config = await getStorageConfig();

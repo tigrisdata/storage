@@ -1,5 +1,6 @@
 import { getOption } from '../../utils/options';
 import enquirer from 'enquirer';
+import { requireInteractive } from '../../utils/interactive.js';
 import { getArgumentSpec, buildPromptChoices } from '../../utils/specs.js';
 import { StorageClass, createBucket } from '@tigrisdata/storage';
 import { getStorageConfig } from '../../auth/s3-client';
@@ -18,6 +19,11 @@ const context = msg('buckets', 'create');
 
 export default async function create(options: Record<string, unknown>) {
   printStart(context);
+
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
 
   let name = getOption<string>(options, ['name']);
   const isPublic = getOption<boolean>(options, ['public']);
@@ -65,6 +71,8 @@ export default async function create(options: Record<string, unknown>) {
   let parsedLocations: BucketLocations | undefined;
 
   if (interactive) {
+    requireInteractive('Provide --name to skip interactive mode');
+
     const accessSpec = getArgumentSpec('buckets', 'access', 'create');
     const accessChoices = buildPromptChoices(accessSpec!);
     const accessDefault = accessChoices?.findIndex(
@@ -149,6 +157,12 @@ export default async function create(options: Record<string, unknown>) {
   if (error) {
     printFailure(context, error.message);
     process.exit(1);
+  }
+
+  if (format === 'json') {
+    console.log(
+      JSON.stringify({ action: 'created', name, ...(forkOf ? { forkOf } : {}) })
+    );
   }
 
   printSuccess(context, { name });

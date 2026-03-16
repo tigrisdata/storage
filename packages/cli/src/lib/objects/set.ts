@@ -13,6 +13,11 @@ const context = msg('objects', 'set');
 export default async function setObject(options: Record<string, unknown>) {
   printStart(context);
 
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+
   const bucket = getOption<string>(options, ['bucket']);
   const key = getOption<string>(options, ['key']);
   const access = getOption<string>(options, ['access', 'a', 'A']);
@@ -47,6 +52,18 @@ export default async function setObject(options: Record<string, unknown>) {
   if (error) {
     printFailure(context, error.message);
     process.exit(1);
+  }
+
+  if (format === 'json') {
+    console.log(
+      JSON.stringify({
+        action: 'updated',
+        bucket,
+        key,
+        access,
+        ...(newKey ? { newKey } : {}),
+      })
+    );
   }
 
   printSuccess(context, { key, bucket });

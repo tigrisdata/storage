@@ -11,6 +11,10 @@ export default async function ls(options: Record<string, unknown>) {
     'snapshotVersion',
     'snapshot',
   ]);
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
 
   if (!pathString) {
     // No path provided, list all buckets
@@ -27,7 +31,7 @@ export default async function ls(options: Record<string, unknown>) {
       created: bucket.creationDate,
     }));
 
-    const output = formatOutput(buckets, 'table', 'buckets', 'bucket', [
+    const output = formatOutput(buckets, format!, 'buckets', 'bucket', [
       { key: 'name', header: 'Name' },
       { key: 'created', header: 'Created' },
     ]);
@@ -85,7 +89,7 @@ export default async function ls(options: Record<string, unknown>) {
         item.key !== '' && arr.findIndex((i) => i.key === item.key) === index
     );
 
-  const output = formatOutput(objects, 'table', 'objects', 'object', [
+  const output = formatOutput(objects, format!, 'objects', 'object', [
     { key: 'key', header: 'Key' },
     { key: 'size', header: 'Size' },
     { key: 'modified', header: 'Modified' },

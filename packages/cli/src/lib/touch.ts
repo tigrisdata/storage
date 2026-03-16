@@ -23,6 +23,11 @@ export default async function touch(options: Record<string, unknown>) {
     process.exit(1);
   }
 
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+
   const config = await getStorageConfig();
 
   const { error } = await put(path, '', {
@@ -37,6 +42,10 @@ export default async function touch(options: Record<string, unknown>) {
     process.exit(1);
   }
 
-  console.log(`Created '${bucket}/${path}'`);
+  if (format === 'json') {
+    console.log(JSON.stringify({ action: 'created', bucket, path }));
+  } else {
+    console.log(`Created '${bucket}/${path}'`);
+  }
   process.exit(0);
 }

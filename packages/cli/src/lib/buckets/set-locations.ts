@@ -4,6 +4,7 @@ import { getSelectedOrganization } from '../../auth/storage.js';
 import { updateBucket } from '@tigrisdata/storage';
 import type { BucketLocations } from '@tigrisdata/storage';
 import { parseLocations, promptLocations } from '../../utils/locations.js';
+import { requireInteractive } from '../../utils/interactive.js';
 import {
   printStart,
   printSuccess,
@@ -28,6 +29,7 @@ export default async function setLocations(options: Record<string, unknown>) {
   if (locations !== undefined) {
     parsedLocations = parseLocations(locations);
   } else {
+    requireInteractive('Provide --locations flag');
     try {
       parsedLocations = await promptLocations();
     } catch (err) {

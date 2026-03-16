@@ -1,5 +1,6 @@
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
+import { requireInteractive } from '../../utils/interactive.js';
 import { storeCredentials, storeLoginMethod } from '../../auth/storage.js';
 import { DEFAULT_STORAGE_ENDPOINT } from '../../constants.js';
 import {
@@ -60,6 +61,8 @@ export default async function configure(options: Record<string, unknown>) {
         initial: DEFAULT_STORAGE_ENDPOINT,
       });
     }
+
+    requireInteractive('Provide --access-key, --access-secret, and --endpoint');
 
     const responses = await prompt<{
       accessKey?: string;

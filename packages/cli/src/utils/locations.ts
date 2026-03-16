@@ -1,5 +1,6 @@
 import type { BucketLocations } from '@tigrisdata/storage';
 import enquirer from 'enquirer';
+import { requireInteractive } from './interactive.js';
 
 const { prompt } = enquirer;
 
@@ -86,6 +87,8 @@ async function promptRegion(
 }
 
 export async function promptLocations(): Promise<BucketLocations> {
+  requireInteractive('Provide --locations flag');
+
   let locationType: string;
   try {
     ({ locationType } = await prompt<{ locationType: string }>({

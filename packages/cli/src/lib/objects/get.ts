@@ -108,6 +108,11 @@ function detectFormat(key: string, output?: string): 'string' | 'stream' {
 export default async function getObject(options: Record<string, unknown>) {
   printStart(context);
 
+  const json = getOption<boolean>(options, ['json']);
+  const outputFormat = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+
   const bucket = getOption<string>(options, ['bucket']);
   const key = getOption<string>(options, ['key']);
   const output = getOption<string>(options, ['output', 'o', 'O']);
@@ -151,6 +156,11 @@ export default async function getObject(options: Record<string, unknown>) {
       const writeStream = createWriteStream(output);
       await pipeline(Readable.fromWeb(data as ReadableStream), writeStream);
       printSuccess(context, { key, output });
+      if (outputFormat === 'json') {
+        console.log(
+          JSON.stringify({ action: 'downloaded', bucket, key, output })
+        );
+      }
     } else {
       // Stream to stdout for binary data
       await pipeline(Readable.fromWeb(data as ReadableStream), process.stdout);
@@ -173,6 +183,11 @@ export default async function getObject(options: Record<string, unknown>) {
     if (output) {
       writeFileSync(output, data);
       printSuccess(context, { key, output });
+      if (outputFormat === 'json') {
+        console.log(
+          JSON.stringify({ action: 'downloaded', bucket, key, output })
+        );
+      }
     } else {
       console.log(data);
       printSuccess(context);

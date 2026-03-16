@@ -15,6 +15,11 @@ const context = msg('buckets', 'set');
 export default async function set(options: Record<string, unknown>) {
   printStart(context);
 
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format'], 'table');
+
   const name = getOption<string>(options, ['name']);
   const access = getOption<string>(options, ['access']);
   let locations = getOption<string | string[]>(options, ['locations']);
@@ -132,6 +137,10 @@ export default async function set(options: Record<string, unknown>) {
   if (error) {
     printFailure(context, error.message);
     process.exit(1);
+  }
+
+  if (format === 'json') {
+    console.log(JSON.stringify({ action: 'updated', name }));
   }
 
   printSuccess(context, { name });

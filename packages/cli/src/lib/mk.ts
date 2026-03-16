@@ -20,6 +20,10 @@ export default async function mk(options: Record<string, unknown>) {
   }
 
   const config = await getStorageConfig();
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
 
   if (!path) {
     // Create a bucket
@@ -88,7 +92,13 @@ export default async function mk(options: Record<string, unknown>) {
       process.exit(1);
     }
 
-    console.log(`Bucket '${bucket}' created`);
+    if (format === 'json') {
+      console.log(
+        JSON.stringify({ action: 'created', type: 'bucket', name: bucket })
+      );
+    } else {
+      console.log(`Bucket '${bucket}' created`);
+    }
     process.exit(0);
   } else {
     // Create a "folder" (empty object with trailing slash)
@@ -106,7 +116,18 @@ export default async function mk(options: Record<string, unknown>) {
       process.exit(1);
     }
 
-    console.log(`Folder '${bucket}/${folderPath}' created`);
+    if (format === 'json') {
+      console.log(
+        JSON.stringify({
+          action: 'created',
+          type: 'folder',
+          bucket,
+          path: folderPath,
+        })
+      );
+    } else {
+      console.log(`Folder '${bucket}/${folderPath}' created`);
+    }
     process.exit(0);
   }
 }

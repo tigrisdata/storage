@@ -24,7 +24,10 @@ const context = msg('iam users', 'list');
 export default async function list(options: Record<string, unknown>) {
   printStart(context);
 
-  const format = getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
 
   const loginMethod = await getLoginMethod();
 

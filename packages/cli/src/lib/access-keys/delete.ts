@@ -10,13 +10,20 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { requireInteractive, confirm } from '../../utils/interactive.js';
 
 const context = msg('access-keys', 'delete');
 
 export default async function remove(options: Record<string, unknown>) {
   printStart(context);
 
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+
   const id = getOption<string>(options, ['id']);
+  const force = getOption<boolean>(options, ['force', 'yes', 'y']);
 
   if (!id) {
     printFailure(context, 'Access key ID is required');
@@ -41,6 +48,15 @@ export default async function remove(options: Record<string, unknown>) {
     process.exit(1);
   }
 
+  if (!force) {
+    requireInteractive('Use --yes to skip confirmation');
+    const confirmed = await confirm(`Delete access key '${id}'?`);
+    if (!confirmed) {
+      console.log('Aborted');
+      return;
+    }
+  }
+
   const accessToken = await authClient.getAccessToken();
   const selectedOrg = getSelectedOrganization();
   const tigrisConfig = getTigrisConfig();
@@ -56,6 +72,10 @@ export default async function remove(options: Record<string, unknown>) {
   if (error) {
     printFailure(context, error.message);
     process.exit(1);
+  }
+
+  if (format === 'json') {
+    console.log(JSON.stringify({ action: 'deleted', id }));
   }
 
   printSuccess(context);

@@ -1,5 +1,6 @@
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
+import { requireInteractive } from '../../utils/interactive.js';
 import {
   getSavedCredentials,
   storeLoginMethod,
@@ -57,6 +58,8 @@ export default async function credentials(options: Record<string, unknown>) {
         required: true,
       });
     }
+
+    requireInteractive('Provide --access-key and --access-secret');
 
     const responses = await prompt<{
       accessKey?: string;

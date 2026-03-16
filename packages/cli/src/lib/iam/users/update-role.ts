@@ -1,5 +1,6 @@
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
+import { requireInteractive } from '../../../utils/interactive.js';
 import { getOption } from '../../../utils/options.js';
 import { getLoginMethod } from '../../../auth/s3-client.js';
 import { getAuthClient } from '../../../auth/client.js';
@@ -107,6 +108,8 @@ export default async function updateRole(options: Record<string, unknown>) {
       printEmpty(context);
       return;
     }
+
+    requireInteractive('Provide user ID(s) as a positional argument');
 
     const { selected } = await prompt<{ selected: string[] }>({
       type: 'multiselect',

@@ -16,7 +16,10 @@ export default async function list(options: Record<string, unknown>) {
   printStart(context);
 
   try {
-    const format = getOption<string>(options, ['format', 'F'], 'table');
+    const json = getOption<boolean>(options, ['json']);
+    const format = json
+      ? 'json'
+      : getOption<string>(options, ['format', 'f', 'F'], 'table');
     const forksOf = getOption<string>(options, ['forks-of', 'forksOf']);
     const config = await getStorageConfig();
 

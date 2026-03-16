@@ -7,11 +7,18 @@ import {
 } from '../auth/storage.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { printFailure, printAlreadyDone, msg } from '../utils/messages.js';
+import { getOption } from '../utils/options.js';
 
 const context = msg('whoami');
 
-export default async function whoami(): Promise<void> {
+export default async function whoami(
+  options: Record<string, unknown> = {}
+): Promise<void> {
   try {
+    const json = getOption<boolean>(options, ['json']);
+    const format = json
+      ? 'json'
+      : getOption<string>(options, ['format', 'f', 'F'], 'table');
     const loginMethod = getLoginMethod();
     const credentials = getCredentials();
 
@@ -47,9 +54,12 @@ export default async function whoami(): Promise<void> {
     lines.push(`   User ID: ${userId || 'N/A'}`);
 
     // Only fetch organizations for OAuth users (credentials don't have session tokens)
+    let organizations: { id: string; name: string }[] = [];
+    let selectedOrg: string | null | undefined;
+
     if (loginMethod === 'oauth') {
       const config = await getStorageConfig();
-      const selectedOrg = getSelectedOrganization();
+      selectedOrg = getSelectedOrganization();
       const { data, error } = await listOrganizations({ config });
 
       if (error) {
@@ -57,7 +67,7 @@ export default async function whoami(): Promise<void> {
         process.exit(1);
       }
 
-      const organizations = data?.organizations ?? [];
+      organizations = data?.organizations ?? [];
 
       if (organizations.length > 0) {
         lines.push('');
@@ -85,6 +95,22 @@ export default async function whoami(): Promise<void> {
       lines.push(
         '   (Organization listing requires OAuth login: tigris login)'
       );
+    }
+
+    if (format === 'json') {
+      const result: Record<string, unknown> = { email, userId, loginMethod };
+      if (loginMethod === 'oauth') {
+        result.organizations = organizations.map((org) => ({
+          id: org.id,
+          name: org.name,
+        }));
+        if (selectedOrg) {
+          const selected = organizations.find((o) => o.id === selectedOrg);
+          if (selected) result.activeOrganization = selected.name;
+        }
+      }
+      console.log(JSON.stringify(result));
+      return;
     }
 
     lines.push('');

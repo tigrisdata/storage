@@ -24,6 +24,11 @@ function normalizeToArray<T>(value: T | T[] | undefined): T[] {
 export default async function assign(options: Record<string, unknown>) {
   printStart(context);
 
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+
   const id = getOption<string>(options, ['id']);
   const admin = getOption<boolean>(options, ['admin']);
   const revokeRoles = getOption<boolean>(options, [
@@ -81,6 +86,10 @@ export default async function assign(options: Record<string, unknown>) {
     if (error) {
       printFailure(context, error.message);
       process.exit(1);
+    }
+
+    if (format === 'json') {
+      console.log(JSON.stringify({ action: 'revoked', id }));
     }
 
     printSuccess(context);
@@ -147,6 +156,10 @@ export default async function assign(options: Record<string, unknown>) {
   if (error) {
     printFailure(context, error.message);
     process.exit(1);
+  }
+
+  if (format === 'json') {
+    console.log(JSON.stringify({ action: 'assigned', id, assignments }));
   }
 
   printSuccess(context);

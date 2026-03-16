@@ -16,7 +16,10 @@ export default async function get(options: Record<string, unknown>) {
   printStart(context);
 
   const name = getOption<string>(options, ['name']);
-  const format = getOption<string>(options, ['format']) || 'table';
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F']) || 'table';
 
   if (!name) {
     printFailure(context, 'Bucket name is required');

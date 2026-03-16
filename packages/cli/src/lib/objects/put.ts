@@ -27,7 +27,10 @@ export default async function putObject(options: Record<string, unknown>) {
     't',
     'T',
   ]);
-  const format = getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
 
   if (!bucket) {
     printFailure(context, 'Bucket name is required');

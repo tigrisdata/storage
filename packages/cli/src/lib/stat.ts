@@ -17,7 +17,10 @@ export default async function stat(options: Record<string, unknown>) {
   printStart(context);
 
   const pathString = getOption<string>(options, ['path']);
-  const format = getOption<string>(options, ['format'], 'table');
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
   const snapshotVersion = getOption<string>(options, [
     'snapshot-version',
     'snapshotVersion',

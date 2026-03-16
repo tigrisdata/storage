@@ -515,6 +515,7 @@ export function createProgram(config: CLIConfig): CommanderCommand {
 
   const program = new CommanderCommand();
   program.name(specs.name).description(specs.description).version(version);
+  program.option('-y, --yes', 'Skip all confirmation prompts');
 
   registerCommands(config, program, specs.commands);
 

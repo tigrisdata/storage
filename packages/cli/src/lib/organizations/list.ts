@@ -11,6 +11,7 @@ import {
 import { getAuthClient } from '../../auth/client.js';
 import { isFlyUser, fetchOrganizationsFromUserInfo } from '../../auth/fly.js';
 import Enquirer from 'enquirer';
+import { requireInteractive } from '../../utils/interactive.js';
 import {
   printStart,
   printSuccess,
@@ -42,7 +43,10 @@ export default async function list(options: Record<string, unknown>) {
     return;
   }
 
-  const format = getOption<string>(options, ['format', 'f', 'F'], 'select');
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'select');
 
   // For Fly users, fetch organizations from userinfo endpoint
   const authClient = getAuthClient();
@@ -85,6 +89,8 @@ export default async function list(options: Record<string, unknown>) {
       message: `${org.name} (${org.id})`,
       hint: org.id === currentSelection ? 'currently selected' : undefined,
     }));
+
+    requireInteractive('Use --format table or --format json');
 
     const response = await Enquirer.prompt<{ organization: string }>({
       type: 'select',

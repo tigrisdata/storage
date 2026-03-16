@@ -16,6 +16,11 @@ const context = msg('access-keys', 'get');
 export default async function get(options: Record<string, unknown>) {
   printStart(context);
 
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+
   const id = getOption<string>(options, ['id']);
 
   if (!id) {
@@ -58,19 +63,23 @@ export default async function get(options: Record<string, unknown>) {
     process.exit(1);
   }
 
-  console.log(`  Name: ${data.name}`);
-  console.log(`  ID: ${data.id}`);
-  console.log(`  Status: ${data.status}`);
-  console.log(`  Created: ${data.createdAt}`);
-  console.log(`  Organization: ${data.organizationId}`);
-
-  if (data.roles && data.roles.length > 0) {
-    console.log(`  Roles:`);
-    for (const role of data.roles) {
-      console.log(`    - ${role.bucket}: ${role.role}`);
-    }
+  if (format === 'json') {
+    console.log(JSON.stringify(data));
   } else {
-    console.log(`  Roles: None`);
+    console.log(`  Name: ${data.name}`);
+    console.log(`  ID: ${data.id}`);
+    console.log(`  Status: ${data.status}`);
+    console.log(`  Created: ${data.createdAt}`);
+    console.log(`  Organization: ${data.organizationId}`);
+
+    if (data.roles && data.roles.length > 0) {
+      console.log(`  Roles:`);
+      for (const role of data.roles) {
+        console.log(`    - ${role.bucket}: ${role.role}`);
+      }
+    } else {
+      console.log(`  Roles: None`);
+    }
   }
 
   printSuccess(context);

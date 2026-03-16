@@ -17,7 +17,10 @@ export default async function listObjects(options: Record<string, unknown>) {
 
   const bucket = getOption<string>(options, ['bucket']);
   const prefix = getOption<string>(options, ['prefix', 'p', 'P']);
-  const format = getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
   const snapshotVersion = getOption<string>(options, [
     'snapshot-version',
     'snapshotVersion',

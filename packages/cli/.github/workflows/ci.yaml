@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - next
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run test
+      - run: npm run build
+
+      - uses: oven-sh/setup-bun@v2
+      - run: bun run build:binary
+
+  integration:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test:integration
+        env:
+          TIGRIS_STORAGE_ACCESS_KEY_ID: ${{ secrets.TIGRIS_STORAGE_ACCESS_KEY_ID }}
+          TIGRIS_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_STORAGE_SECRET_ACCESS_KEY }}

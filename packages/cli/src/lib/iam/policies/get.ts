@@ -21,7 +21,10 @@ export default async function get(options: Record<string, unknown>) {
   printStart(context);
 
   let resource = getOption<string>(options, ['resource']);
-  const format = getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
 
   const loginMethod = await getLoginMethod();
 

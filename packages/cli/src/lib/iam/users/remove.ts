@@ -1,5 +1,6 @@
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
+import { requireInteractive, confirm } from '../../../utils/interactive.js';
 import { getOption } from '../../../utils/options.js';
 import { getLoginMethod } from '../../../auth/s3-client.js';
 import { getAuthClient } from '../../../auth/client.js';
@@ -21,6 +22,7 @@ export default async function removeUser(options: Record<string, unknown>) {
   printStart(context);
 
   const resourceOption = getOption<string | string[]>(options, ['resource']);
+  const force = getOption<boolean>(options, ['force', 'yes', 'y']);
 
   const loginMethod = await getLoginMethod();
 
@@ -83,6 +85,8 @@ export default async function removeUser(options: Record<string, unknown>) {
       return;
     }
 
+    requireInteractive('Provide user ID(s) as a positional argument');
+
     const { selected } = await prompt<{ selected: string[] }>({
       type: 'multiselect',
       name: 'selected',
@@ -94,6 +98,15 @@ export default async function removeUser(options: Record<string, unknown>) {
     });
 
     resources = selected;
+  }
+
+  if (!force) {
+    requireInteractive('Use --yes to skip confirmation');
+    const confirmed = await confirm(`Remove ${resources.length} user(s)?`);
+    if (!confirmed) {
+      console.log('Aborted');
+      return;
+    }
   }
 
   const { error } = await removeUserFromOrg(resources, {

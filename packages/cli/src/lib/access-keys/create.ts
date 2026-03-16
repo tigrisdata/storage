@@ -16,6 +16,11 @@ const context = msg('access-keys', 'create');
 export default async function create(options: Record<string, unknown>) {
   printStart(context);
 
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+
   const name = getOption<string>(options, ['name']);
 
   if (!name) {
@@ -58,13 +63,24 @@ export default async function create(options: Record<string, unknown>) {
     process.exit(1);
   }
 
-  console.log(`  Name: ${data.name}`);
-  console.log(`  Access Key ID: ${data.id}`);
-  console.log(`  Secret Access Key: ${data.secret}`);
-  console.log('');
-  console.log(
-    '  Save these credentials securely. The secret will not be shown again.'
-  );
+  if (format === 'json') {
+    console.log(
+      JSON.stringify({
+        action: 'created',
+        name: data.name,
+        id: data.id,
+        secret: data.secret,
+      })
+    );
+  } else {
+    console.log(`  Name: ${data.name}`);
+    console.log(`  Access Key ID: ${data.id}`);
+    console.log(`  Secret Access Key: ${data.secret}`);
+    console.log('');
+    console.log(
+      '  Save these credentials securely. The secret will not be shown again.'
+    );
+  }
 
   printSuccess(context);
 }

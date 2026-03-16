@@ -14,6 +14,11 @@ const context = msg('credentials', 'test');
 export default async function test(options: Record<string, unknown>) {
   printStart(context);
 
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+
   const bucket = getOption<string>(options, ['bucket', 'b']);
 
   const config = await getStorageConfig();
@@ -49,10 +54,20 @@ export default async function test(options: Record<string, unknown>) {
       process.exit(1);
     }
 
-    console.log(`  Bucket: ${bucket}`);
-    console.log(`  Access verified.`);
-    if (data.sourceBucketName) {
-      console.log(`  Fork of: ${data.sourceBucketName}`);
+    if (format === 'json') {
+      console.log(
+        JSON.stringify({
+          valid: true,
+          bucket,
+          ...(data.sourceBucketName ? { forkOf: data.sourceBucketName } : {}),
+        })
+      );
+    } else {
+      console.log(`  Bucket: ${bucket}`);
+      console.log(`  Access verified.`);
+      if (data.sourceBucketName) {
+        console.log(`  Fork of: ${data.sourceBucketName}`);
+      }
     }
   } else {
     // Test general access by listing buckets
@@ -63,7 +78,13 @@ export default async function test(options: Record<string, unknown>) {
       process.exit(1);
     }
 
-    console.log(`  Access verified. Found ${data.buckets.length} bucket(s).`);
+    if (format === 'json') {
+      console.log(
+        JSON.stringify({ valid: true, bucketCount: data.buckets.length })
+      );
+    } else {
+      console.log(`  Access verified. Found ${data.buckets.length} bucket(s).`);
+    }
   }
 
   printSuccess(context);

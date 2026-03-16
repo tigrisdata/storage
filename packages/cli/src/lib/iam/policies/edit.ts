@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
+import { requireInteractive } from '../../../utils/interactive.js';
 import { getOption } from '../../../utils/options.js';
 import { getLoginMethod } from '../../../auth/s3-client.js';
 import { getAuthClient } from '../../../auth/client.js';
@@ -82,6 +83,8 @@ export default async function edit(options: Record<string, unknown>) {
       printEmpty(context);
       return;
     }
+
+    requireInteractive('Provide the policy ARN as a positional argument');
 
     const { selected } = await prompt<{ selected: string }>({
       type: 'select',
