@@ -26,6 +26,10 @@ function isTTY(): boolean {
   return process.stdout.isTTY === true;
 }
 
+function isJsonMode(): boolean {
+  return globalThis.__TIGRIS_JSON_MODE === true;
+}
+
 function getMessages(context: MessageContext): Messages | undefined {
   const spec = getCommandSpec(context.command, context.operation);
   if (!spec) return undefined;
@@ -65,7 +69,7 @@ export function printStart(
   context: MessageContext,
   variables?: MessageVariables
 ): void {
-  if (!isTTY()) return;
+  if (!isTTY() || isJsonMode()) return;
   const messages = getMessages(context);
   if (messages?.onStart) {
     console.log(interpolate(messages.onStart, variables));
@@ -80,7 +84,7 @@ export function printSuccess(
   context: MessageContext,
   variables?: MessageVariables
 ): void {
-  if (!isTTY()) return;
+  if (!isTTY() || isJsonMode()) return;
   const messages = getMessages(context);
   if (messages?.onSuccess) {
     console.log(
@@ -118,7 +122,7 @@ export function printEmpty(
   context: MessageContext,
   variables?: MessageVariables
 ): void {
-  if (!isTTY()) return;
+  if (!isTTY() || isJsonMode()) return;
   const messages = getMessages(context);
   if (messages?.onEmpty) {
     console.log(interpolate(messages.onEmpty, variables));
@@ -133,7 +137,7 @@ export function printAlreadyDone(
   context: MessageContext,
   variables?: MessageVariables
 ): void {
-  if (!isTTY()) return;
+  if (!isTTY() || isJsonMode()) return;
   const messages = getMessages(context);
   if (messages?.onAlreadyDone) {
     console.log(interpolate(messages.onAlreadyDone, variables));
@@ -148,7 +152,7 @@ export function printHint(
   context: MessageContext,
   variables?: MessageVariables
 ): void {
-  if (!isTTY()) return;
+  if (!isTTY() || isJsonMode()) return;
   const messages = getMessages(context);
   if (messages?.hint) {
     console.log(`${ICONS.hint} ${interpolate(messages.hint, variables)}`);

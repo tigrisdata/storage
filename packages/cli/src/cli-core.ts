@@ -527,6 +527,13 @@ export function createProgram(config: CLIConfig): CommanderCommand {
       showMainHelp(specs, version, hasImplementation);
     });
 
+  program
+    .command('version')
+    .description('Show the CLI version')
+    .action(() => {
+      console.log(version);
+    });
+
   program.action(() => {
     showMainHelp(specs, version, hasImplementation);
   });
