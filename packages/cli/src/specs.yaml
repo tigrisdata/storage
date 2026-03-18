@@ -101,6 +101,11 @@ commands:
       onStart: 'Saving credentials...'
       onSuccess: 'Credentials saved to ~/.tigris/config.json. You can now use all tigris commands.'
       onFailure: 'Failed to save credentials'
+      nextActions:
+        - command: 'tigris credentials test'
+          description: 'Verify your credentials are working'
+        - command: 'tigris ls'
+          description: 'List your buckets'
     arguments:
       - name: access-key
         description: Your Tigris access key ID
@@ -156,6 +161,11 @@ commands:
           onFailure: 'Authentication failed'
           onAlreadyDone: "Already logged in.\nRun \"tigris logout\" first to switch accounts."
           hint: "You have {{count}} organizations.\nRun \"tigris orgs list\" to switch."
+          nextActions:
+            - command: 'tigris orgs list'
+              description: 'List and switch organizations'
+            - command: 'tigris ls'
+              description: 'List your buckets'
       # credentials
       - name: credentials
         description: Login with an access key and secret. Creates a temporary session that is cleared on logout
@@ -167,6 +177,9 @@ commands:
           onStart: 'Authenticating...'
           onSuccess: 'Logged in with credentials'
           onFailure: 'Authentication failed'
+          nextActions:
+            - command: 'tigris ls'
+              description: 'List your buckets'
         arguments:
           - name: access-key
             description: Your access key ID (will prompt if not provided)
@@ -189,6 +202,15 @@ commands:
       onSuccess: ''
       onFailure: 'Failed to get user information'
       onAlreadyDone: "Not authenticated\nRun \"tigris login\" to authenticate"
+    arguments:
+      - name: format
+        description: Output format
+        alias: f
+        options: [json, table]
+        default: table
+      - name: json
+        description: Output as JSON
+        type: flag
 
   # logout
   - name: logout
@@ -223,6 +245,14 @@ commands:
             description: Bucket name to test access against (optional)
             alias: b
             required: false
+          - name: format
+            description: Output format
+            alias: f
+            options: [json, table]
+            default: table
+          - name: json
+            description: Output as JSON
+            type: flag
 
 
   #########################
@@ -249,6 +279,17 @@ commands:
           - my-bucket/my-path
           - t3://my-bucket
           - t3://my-bucket/my-path
+      - name: snapshot-version
+        description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
+        alias: snapshot
+      - name: format
+        description: Output format
+        alias: f
+        options: [json, table, xml]
+        default: table
+      - name: json
+        description: Output as JSON
+        type: flag
 
   # mk
   - name: mk
@@ -259,6 +300,8 @@ commands:
       - "tigris mk my-bucket --access public --region iad"
       - "tigris mk my-bucket/images/"
       - "tigris mk t3://my-bucket"
+      - "tigris mk my-fork --fork-of my-bucket"
+      - "tigris mk my-fork --fork-of my-bucket --source-snapshot 1765889000501544464"
     messages:
       onFailure: 'Failed to create. Check the name is valid and your credentials have write access'
     arguments:
@@ -304,6 +347,20 @@ commands:
         alias: l
         options: *location_options
         default: 'global'
+      - name: fork-of
+        description: Create this bucket as a fork (copy-on-write clone) of the named source bucket
+        alias: fork
+      - name: source-snapshot
+        description: Fork from a specific snapshot of the source bucket. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Requires --fork-of
+        alias: source-snap
+      - name: format
+        description: Output format
+        alias: f
+        options: [json, table]
+        default: table
+      - name: json
+        description: Output as JSON
+        type: flag
 
   # touch
   - name: touch
@@ -321,6 +378,14 @@ commands:
         examples:
           - my-bucket/my-file.txt
           - t3://my-bucket/my-file.txt
+      - name: format
+        description: Output format
+        alias: f
+        options: [json, table]
+        default: table
+      - name: json
+        description: Output as JSON
+        type: flag
 
   # stat
   - name: stat
@@ -347,6 +412,12 @@ commands:
         alias: f
         options: [json, table, xml]
         default: table
+      - name: json
+        description: Output as JSON
+        type: flag
+      - name: snapshot-version
+        description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
+        alias: snapshot
 
   # presign
   - name: presign
@@ -384,6 +455,9 @@ commands:
         alias: f
         options: [url, json]
         default: url
+      - name: json
+        description: Output as JSON
+        type: flag
 
   # cp
   - name: cp
@@ -420,6 +494,14 @@ commands:
         type: flag
         alias: r
         description: Copy directories recursively
+      - name: format
+        description: Output format
+        alias: f
+        options: [json, table]
+        default: table
+      - name: json
+        description: Output as JSON
+        type: flag
 
   # mv
   - name: mv
@@ -455,6 +537,13 @@ commands:
         type: flag
         alias: f
         description: Skip confirmation prompt
+      - name: format
+        description: Output format
+        options: [json, table]
+        default: table
+      - name: json
+        description: Output as JSON
+        type: flag
 
   # rm
   - name: rm
@@ -485,6 +574,13 @@ commands:
         type: flag
         alias: f
         description: Skip confirmation prompt
+      - name: format
+        description: Output format
+        options: [json, table]
+        default: table
+      - name: json
+        description: Output as JSON
+        type: flag
 
   #########################
   # Manage organizations
@@ -515,6 +611,9 @@ commands:
             alias: f
             options: [json, table, xml, select]
             default: select
+          - name: json
+            description: Output as JSON
+            type: flag
           - name: select
             description: Interactive selection mode
             alias: i
@@ -529,6 +628,9 @@ commands:
           onSuccess: "Organization '{{name}}' created successfully\nOrganization ID: {{id}}"
           onFailure: 'Failed to create organization'
           hint: "Next steps:\n   - Select this organization: tigris orgs select {{name}}"
+          nextActions:
+            - command: 'tigris orgs select {{name}}'
+              description: 'Select this organization as active'
         arguments:
           - name: name
             type: positional
@@ -545,6 +647,11 @@ commands:
           onStart: ''
           onSuccess: "Organization '{{name}}' selected"
           onFailure: 'Failed to select organization'
+          nextActions:
+            - command: 'tigris ls'
+              description: 'List your buckets'
+            - command: 'tigris buckets create <name>'
+              description: 'Create a new bucket'
         arguments:
           - name: name
             type: positional
@@ -572,6 +679,7 @@ commands:
         examples:
           - "tigris buckets list"
           - "tigris buckets list --format json"
+          - "tigris buckets list --forks-of my-bucket"
         messages:
           onStart: 'Listing buckets...'
           onSuccess: 'Found {{count}} bucket(s)'
@@ -583,6 +691,11 @@ commands:
             alias: f
             options: [json, table, xml]
             default: table
+          - name: json
+            description: Output as JSON
+            type: flag
+          - name: forks-of
+            description: Only list buckets that are forks of the named source bucket
       # create
       - name: create
         description: Create a new bucket with optional access, tier, and location settings
@@ -591,10 +704,17 @@ commands:
           - "tigris buckets create my-bucket"
           - "tigris buckets create my-bucket --access public --locations iad"
           - "tigris buckets create my-bucket --enable-snapshots --default-tier STANDARD_IA"
+          - "tigris buckets create my-fork --fork-of my-bucket"
+          - "tigris buckets create my-fork --fork-of my-bucket --source-snapshot 1765889000501544464"
         messages:
           onStart: 'Creating bucket...'
           onSuccess: "Bucket '{{name}}' created successfully"
           onFailure: 'Failed to create bucket'
+          nextActions:
+            - command: 'tigris access-keys create <name>'
+              description: 'Create an access key for programmatic access'
+            - command: 'tigris cp ./file t3://{{name}}/'
+              description: 'Upload files to the new bucket'
         arguments:
           - name: name
             description: Name of the bucket
@@ -635,6 +755,20 @@ commands:
             alias: l
             options: *location_options
             default: 'global'
+          - name: fork-of
+            description: Create this bucket as a fork (copy-on-write clone) of the named source bucket
+            alias: fork
+          - name: source-snapshot
+            description: Fork from a specific snapshot of the source bucket. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Requires --fork-of
+            alias: source-snap
+          - name: format
+            description: Output format
+            alias: f
+            options: [json, table]
+            default: table
+          - name: json
+            description: Output as JSON
+            type: flag
       # get
       - name: get
         description: Show details for a bucket including access level, region, tier, and custom domain
@@ -652,17 +786,28 @@ commands:
             required: true
             examples:
               - my-bucket
+          - name: format
+            description: Output format
+            alias: f
+            options: [json, table, xml]
+            default: table
+          - name: json
+            description: Output as JSON
+            type: flag
       # delete
       - name: delete
         description: Delete one or more buckets by name. The bucket must be empty or delete-protection must be off
         alias: d
         examples:
-          - "tigris buckets delete my-bucket"
-          - "tigris buckets delete bucket-a,bucket-b"
+          - "tigris buckets delete my-bucket --force"
+          - "tigris buckets delete bucket-a,bucket-b --force"
         messages:
           onStart: 'Deleting bucket...'
           onSuccess: "Bucket '{{name}}' deleted successfully"
           onFailure: "Failed to delete bucket '{{name}}'"
+          nextActions:
+            - command: 'tigris ls'
+              description: 'List remaining buckets'
         arguments:
           - name: name
             description: Name of the bucket or comma separated list of buckets
@@ -671,6 +816,17 @@ commands:
             multiple: true
             examples:
               - my-bucket
+          - name: force
+            type: flag
+            description: Skip confirmation prompt
+          - name: format
+            description: Output format
+            alias: f
+            options: [json, table]
+            default: table
+          - name: json
+            description: Output as JSON
+            type: flag
       # set
       - name: set
         description: Update settings on an existing bucket such as access level, location, caching, or custom domain
@@ -718,6 +874,13 @@ commands:
           - name: enable-additional-headers
             description: Enable additional HTTP headers (X-Content-Type-Options nosniff)
             type: boolean
+          - name: format
+            description: Output format
+            options: [json, table]
+            default: table
+          - name: json
+            description: Output as JSON
+            type: flag
       # set-ttl
       - name: set-ttl
         description: Configure object expiration (TTL) on a bucket. Objects expire after a number of days or on a specific date
@@ -747,6 +910,29 @@ commands:
           - name: disable
             description: Disable TTL on the bucket
             type: flag
+      # set-locations
+      - name: set-locations
+        description: Set the data locations for a bucket
+        examples:
+          - "tigris buckets set-locations my-bucket --locations iad"
+          - "tigris buckets set-locations my-bucket --locations iad,fra"
+          - "tigris buckets set-locations my-bucket --locations global"
+        messages:
+          onStart: 'Updating bucket locations...'
+          onSuccess: 'Locations updated for bucket {{name}}'
+          onFailure: 'Failed to update bucket locations'
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: positional
+            required: true
+            examples:
+              - my-bucket
+          - name: locations
+            description: Bucket location
+            alias: l
+            options: *location_options
+            multiple: true
       # set-migration
       - name: set-migration
         description: Configure data migration from an external S3-compatible source bucket. Tigris will pull objects on demand from the source
@@ -906,7 +1092,7 @@ commands:
   # Manage forks
   #########################
   - name: forks
-    description: List and create forks. A fork is a writable copy-on-write clone of a bucket, useful for testing or branching data
+    description: (Deprecated, use "buckets create --fork-of" and "buckets list --forks-of") List and create forks
     alias: f
     examples:
       - "tigris forks list my-bucket"
@@ -914,7 +1100,8 @@ commands:
     commands:
       # list
       - name: list
-        description: List all forks created from the given source bucket
+        description: (Deprecated, use "buckets list --forks-of") List all forks created from the given source bucket
+        deprecated: true
         alias: l
         examples:
           - "tigris forks list my-bucket"
@@ -924,6 +1111,7 @@ commands:
           onSuccess: 'Found {{count}} fork(s)'
           onFailure: 'Failed to list forks'
           onEmpty: 'No forks found for this bucket'
+          onDeprecated: 'Use "tigris buckets list --forks-of <bucket>" instead'
         arguments:
           - name: name
             description: Name of the source bucket
@@ -936,17 +1124,22 @@ commands:
             alias: f
             options: [json, table, xml]
             default: table
+          - name: json
+            description: Output as JSON
+            type: flag
       # create
       - name: create
-        description: Create a new fork (copy-on-write clone) of the source bucket. Optionally fork from a specific snapshot
+        description: (Deprecated, use "buckets create --fork-of") Create a new fork (copy-on-write clone) of the source bucket
+        deprecated: true
         alias: c
         examples:
           - "tigris forks create my-bucket my-fork"
-          - "tigris forks create my-bucket my-fork --snapshot snap-2025-01-01"
+          - "tigris forks create my-bucket my-fork --snapshot 1765889000501544464"
         messages:
           onStart: 'Creating fork...'
           onSuccess: "Fork '{{forkName}}' created from '{{name}}'"
           onFailure: 'Failed to create fork'
+          onDeprecated: 'Use "tigris buckets create <name> --fork-of <bucket>" instead'
         arguments:
           - name: name
             description: Name of the source bucket
@@ -961,7 +1154,7 @@ commands:
             examples:
               - my-fork
           - name: snapshot
-            description: Create fork from a specific snapshot
+            description: Create fork from a specific snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
             alias: s
 
   #########################
@@ -998,6 +1191,9 @@ commands:
             alias: f
             options: [json, table, xml]
             default: table
+          - name: json
+            description: Output as JSON
+            type: flag
       # take
       - name: take
         description: Take a new snapshot of the bucket's current state. Optionally provide a name for the snapshot
@@ -1063,6 +1259,12 @@ commands:
             alias: f
             options: [json, table, xml]
             default: table
+          - name: json
+            description: Output as JSON
+            type: flag
+          - name: snapshot-version
+            description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
+            alias: snapshot
       # get
       - name: get
         description: Download an object by key. Prints to stdout by default, or saves to a file with --output
@@ -1094,6 +1296,17 @@ commands:
             description: 'Response mode: "string" loads into memory, "stream" writes in chunks (auto-detected from extension if not specified)'
             alias: m
             options: [string, stream]
+          - name: snapshot-version
+            description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
+            alias: snapshot
+          - name: format
+            description: Output format
+            alias: f
+            options: [json, table]
+            default: table
+          - name: json
+            description: Output as JSON
+            type: flag
       # put
       - name: put
         description: Upload a local file as an object. Content-type is auto-detected from extension unless overridden
@@ -1105,6 +1318,9 @@ commands:
           onStart: 'Uploading object...'
           onSuccess: "Object '{{key}}' uploaded successfully"
           onFailure: 'Failed to upload object'
+          nextActions:
+            - command: 'tigris presign {{bucket}}/{{key}}'
+              description: 'Generate a presigned URL for the uploaded object'
         arguments:
           - name: bucket
             description: Name of the bucket
@@ -1136,17 +1352,23 @@ commands:
             alias: f
             options: [json, table, xml]
             default: table
+          - name: json
+            description: Output as JSON
+            type: flag
       # delete
       - name: delete
         description: Delete one or more objects by key from the given bucket
         alias: d
         examples:
-          - "tigris objects delete my-bucket old-file.txt"
-          - "tigris objects delete my-bucket file-a.txt,file-b.txt"
+          - "tigris objects delete my-bucket old-file.txt --force"
+          - "tigris objects delete my-bucket file-a.txt,file-b.txt --force"
         messages:
           onStart: 'Deleting object...'
           onSuccess: "Object '{{key}}' deleted successfully"
           onFailure: 'Failed to delete object'
+          nextActions:
+            - command: 'tigris ls {{bucket}}'
+              description: 'List remaining objects in the bucket'
         arguments:
           - name: bucket
             description: Name of the bucket
@@ -1161,6 +1383,17 @@ commands:
             multiple: true
             examples:
               - my-file.txt
+          - name: force
+            type: flag
+            description: Skip confirmation prompt
+          - name: format
+            description: Output format
+            alias: f
+            options: [json, table]
+            default: table
+          - name: json
+            description: Output as JSON
+            type: flag
       # set
       - name: set
         description: Update settings on an existing object such as access level
@@ -1189,6 +1422,14 @@ commands:
           - name: new-key
             description: Rename the object to a new key
             alias: n
+          - name: format
+            description: Output format
+            alias: f
+            options: [json, table]
+            default: table
+          - name: json
+            description: Output as JSON
+            type: flag
 
   #########################
   # Manage access keys
@@ -1211,6 +1452,15 @@ commands:
           onSuccess: ''
           onFailure: 'Failed to list access keys'
           onEmpty: 'No access keys found'
+        arguments:
+          - name: format
+            description: Output format
+            alias: f
+            options: [json, table, xml]
+            default: table
+          - name: json
+            description: Output as JSON
+            type: flag
       - name: create
         description: Create a new access key with the given name. Returns the key ID and secret (shown only once)
         alias: c
@@ -1220,6 +1470,9 @@ commands:
           onStart: 'Creating access key...'
           onSuccess: 'Access key created'
           onFailure: 'Failed to create access key'
+          nextActions:
+            - command: 'tigris access-keys assign {{id}} --bucket <bucket> --role Editor'
+              description: 'Assign bucket roles to the new access key'
         arguments:
           - name: name
             description: Name for the access key
@@ -1227,11 +1480,19 @@ commands:
             required: true
             examples:
               - my-key
+          - name: format
+            description: Output format
+            alias: f
+            options: [json, table]
+            default: table
+          - name: json
+            description: Output as JSON
+            type: flag
       - name: delete
         description: Permanently delete an access key by its ID. This revokes all access immediately
         alias: d
         examples:
-          - "tigris access-keys delete tid_AaBbCcDdEeFf"
+          - "tigris access-keys delete tid_AaBbCcDdEeFf --force"
         messages:
           onStart: 'Deleting access key...'
           onSuccess: 'Access key deleted'
@@ -1243,6 +1504,17 @@ commands:
             required: true
             examples:
               - tid_AaBbCcDdEeFf
+          - name: force
+            type: flag
+            description: Skip confirmation prompt
+          - name: format
+            description: Output format
+            alias: f
+            options: [json, table]
+            default: table
+          - name: json
+            description: Output as JSON
+            type: flag
       - name: get
         description: Show details for an access key including its name, creation date, and assigned bucket roles
         alias: g
@@ -1259,6 +1531,14 @@ commands:
             required: true
             examples:
               - tid_AaBbCcDdEeFf
+          - name: format
+            description: Output format
+            alias: f
+            options: [json, table]
+            default: table
+          - name: json
+            description: Output as JSON
+            type: flag
       - name: assign
         description: Assign per-bucket roles to an access key. Pair each --bucket with a --role (Editor or ReadOnly), or use --admin for org-wide access
         alias: a
@@ -1271,6 +1551,9 @@ commands:
           onStart: 'Assigning bucket roles...'
           onSuccess: 'Bucket roles assigned'
           onFailure: 'Failed to assign bucket roles'
+          nextActions:
+            - command: 'tigris cp ./file t3://<bucket>/'
+              description: 'Upload files using the assigned access key'
         arguments:
           - name: id
             description: Access key ID
@@ -1294,6 +1577,14 @@ commands:
             type: flag
           - name: revoke-roles
             description: Revoke all bucket roles from the access key
+            type: flag
+          - name: format
+            description: Output format
+            alias: f
+            options: [json, table]
+            default: table
+          - name: json
+            description: Output as JSON
             type: flag
 
   #########################
@@ -1330,6 +1621,9 @@ commands:
                 alias: f
                 options: [json, table, xml]
                 default: table
+              - name: json
+                description: Output as JSON
+                type: flag
           - name: get
             description: Show details for a policy including its document and attached users. If no ARN provided, shows interactive selection
             alias: g
@@ -1353,6 +1647,9 @@ commands:
                 alias: f
                 options: [json, table, xml]
                 default: table
+              - name: json
+                description: Output as JSON
+                type: flag
           - name: create
             description: Create a new policy with the given name and policy document. Document can be provided via file, inline JSON, or stdin
             alias: c
@@ -1408,7 +1705,7 @@ commands:
             alias: d
             examples:
               - "tigris iam policies delete"
-              - "tigris iam policies delete arn:aws:iam::org_id:policy/my-policy"
+              - "tigris iam policies delete arn:aws:iam::org_id:policy/my-policy --force"
             messages:
               onStart: 'Deleting policy...'
               onSuccess: "Policy '{{resource}}' deleted"
@@ -1421,6 +1718,9 @@ commands:
                 required: false
                 examples:
                   - arn:aws:iam::org_id:policy/my-policy
+              - name: force
+                type: flag
+                description: Skip confirmation prompt
 
       - name: users
         description: Manage organization users and invitations
@@ -1447,6 +1747,9 @@ commands:
                 alias: f
                 options: [json, table, xml]
                 default: table
+              - name: json
+                description: Output as JSON
+                type: flag
           - name: invite
             description: Invite users to the organization by email
             alias: i
@@ -1477,8 +1780,8 @@ commands:
             alias: ri
             examples:
               - "tigris iam users revoke-invitation"
-              - "tigris iam users revoke-invitation invitation_id"
-              - "tigris iam users revoke-invitation id1,id2,id3"
+              - "tigris iam users revoke-invitation invitation_id --force"
+              - "tigris iam users revoke-invitation id1,id2,id3 --force"
             messages:
               onStart: 'Revoking invitation...'
               onSuccess: "Invitation(s) revoked"
@@ -1490,6 +1793,9 @@ commands:
                 type: positional
                 required: false
                 multiple: true
+              - name: force
+                type: flag
+                description: Skip confirmation prompt
           - name: update-role
             description: Update user roles in the organization. If no user ID provided, shows interactive selection
             alias: ur
@@ -1520,8 +1826,8 @@ commands:
             alias: rm
             examples:
               - "tigris iam users remove"
-              - "tigris iam users remove user@example.com"
-              - "tigris iam users remove user@example.com,user@example.net"
+              - "tigris iam users remove user@example.com --force"
+              - "tigris iam users remove user@example.com,user@example.net --force"
             messages:
               onStart: 'Removing user...'
               onSuccess: "User(s) removed"
@@ -1533,3 +1839,6 @@ commands:
                 type: positional
                 required: false
                 multiple: true
+              - name: force
+                type: flag
+                description: Skip confirmation prompt

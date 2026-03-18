@@ -8,6 +8,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('buckets', 'set-migration');
 
@@ -28,7 +29,7 @@ export default async function setMigration(options: Record<string, unknown>) {
 
   if (!name) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   if (
@@ -41,7 +42,7 @@ export default async function setMigration(options: Record<string, unknown>) {
       writeThrough !== undefined)
   ) {
     printFailure(context, 'Cannot use --disable with other migration options');
-    process.exit(1);
+    exitWithError('Cannot use --disable with other migration options', context);
   }
 
   const config = await getStorageConfig();
@@ -61,7 +62,7 @@ export default async function setMigration(options: Record<string, unknown>) {
 
     if (error) {
       printFailure(context, error.message);
-      process.exit(1);
+      exitWithError(error, context);
     }
 
     printSuccess(context, { name });
@@ -73,7 +74,10 @@ export default async function setMigration(options: Record<string, unknown>) {
       context,
       'Required: --bucket, --endpoint, --region, --access-key, --secret-key'
     );
-    process.exit(1);
+    exitWithError(
+      'Required: --bucket, --endpoint, --region, --access-key, --secret-key',
+      context
+    );
   }
 
   const { error } = await setBucketMigration(name, {
@@ -91,7 +95,7 @@ export default async function setMigration(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   printSuccess(context, { name });

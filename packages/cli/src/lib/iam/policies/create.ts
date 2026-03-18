@@ -11,6 +11,7 @@ import {
   printFailure,
   msg,
 } from '../../../utils/messages.js';
+import { exitWithError } from '../../../utils/exit.js';
 import { readStdin, parseDocument } from './utils.js';
 
 const context = msg('iam policies', 'create');
@@ -24,7 +25,7 @@ export default async function create(options: Record<string, unknown>) {
 
   if (!name) {
     printFailure(context, 'Policy name is required');
-    process.exit(1);
+    exitWithError('Policy name is required', context);
   }
 
   // Validate policy name: only alphanumeric and =,.@_- allowed
@@ -34,7 +35,10 @@ export default async function create(options: Record<string, unknown>) {
       context,
       'Invalid policy name. Only alphanumeric characters and =,.@_- are allowed.'
     );
-    process.exit(1);
+    exitWithError(
+      'Invalid policy name. Only alphanumeric characters and =,.@_- are allowed.',
+      context
+    );
   }
 
   const loginMethod = await getLoginMethod();
@@ -44,7 +48,10 @@ export default async function create(options: Record<string, unknown>) {
       context,
       'Policies can only be created when logged in via OAuth.\nRun "tigris login oauth" first.'
     );
-    process.exit(1);
+    exitWithError(
+      'Policies can only be created when logged in via OAuth.\nRun "tigris login oauth" first.',
+      context
+    );
   }
 
   const authClient = getAuthClient();
@@ -52,7 +59,10 @@ export default async function create(options: Record<string, unknown>) {
 
   if (!isAuthenticated) {
     printFailure(context, 'Not authenticated. Run "tigris login oauth" first.');
-    process.exit(1);
+    exitWithError(
+      'Not authenticated. Run "tigris login oauth" first.',
+      context
+    );
   }
 
   const accessToken = await authClient.getAccessToken();
@@ -84,7 +94,10 @@ export default async function create(options: Record<string, unknown>) {
       context,
       'Policy document is required. Provide via --document or pipe to stdin.'
     );
-    process.exit(1);
+    exitWithError(
+      'Policy document is required. Provide via --document or pipe to stdin.',
+      context
+    );
   }
 
   // Parse and convert document
@@ -93,7 +106,7 @@ export default async function create(options: Record<string, unknown>) {
     document = parseDocument(documentJson);
   } catch {
     printFailure(context, 'Invalid JSON in policy document');
-    process.exit(1);
+    exitWithError('Invalid JSON in policy document', context);
   }
 
   const { data, error } = await addPolicy(name, {
@@ -104,7 +117,7 @@ export default async function create(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   printSuccess(context, { name: data.name });

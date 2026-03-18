@@ -4,6 +4,8 @@
 
 import { Command as CommanderCommand } from 'commander';
 import type { Argument, CommandSpec, Specs } from './types.js';
+import { printDeprecated } from './utils/messages.js';
+import { exitWithError } from './utils/exit.js';
 
 export interface ModuleLoader {
   (commandPath: string[]): Promise<{
@@ -32,16 +34,11 @@ export function setupErrorHandlers() {
       console.error('\nOperation cancelled');
       process.exit(1);
     }
-    console.error(
-      '\nError:',
-      reason instanceof Error ? reason.message : reason
-    );
-    process.exit(1);
+    exitWithError(reason);
   });
 
   process.on('uncaughtException', (error) => {
-    console.error('\nError:', error.message);
-    process.exit(1);
+    exitWithError(error);
   });
 }
 
@@ -59,8 +56,9 @@ export function formatArgumentHelp(arg: Argument): string {
     optionPart = `  ${arg.name}`;
   } else {
     optionPart = `  --${arg.name}`;
-    if (arg.alias && typeof arg.alias === 'string' && arg.alias.length === 1) {
-      optionPart += `, -${arg.alias}`;
+    if (arg.alias && typeof arg.alias === 'string') {
+      optionPart +=
+        arg.alias.length === 1 ? `, -${arg.alias}` : `, --${arg.alias}`;
     }
   }
 
@@ -222,11 +220,15 @@ export function addArgumentsToCommand(
       const argumentName = arg.required ? `<${arg.name}>` : `[${arg.name}]`;
       cmd.argument(argumentName, arg.description);
     } else {
-      const hasValidShortOption =
+      const isShortAlias =
         arg.alias && typeof arg.alias === 'string' && arg.alias.length === 1;
-      let optionString = hasValidShortOption
+      const isLongAlias =
+        arg.alias && typeof arg.alias === 'string' && arg.alias.length > 1;
+      let optionString = isShortAlias
         ? `-${arg.alias}, --${arg.name}`
-        : `--${arg.name}`;
+        : isLongAlias
+          ? `--${arg.alias}, --${arg.name}`
+          : `--${arg.name}`;
 
       if (arg.type === 'flag') {
         // Flags don't take values
@@ -363,6 +365,11 @@ async function loadAndExecuteCommand(
   positionalArgs: string[] = [],
   options: Record<string, unknown> = {}
 ) {
+  // Set JSON mode globally for error handlers
+  if (options.json || options.format === 'json') {
+    globalThis.__TIGRIS_JSON_MODE = true;
+  }
+
   const { module, error: loadError } = await loadModule(pathParts);
 
   if (loadError || !module) {
@@ -443,6 +450,10 @@ export function registerCommands(
               return;
             }
 
+            if (defaultCmd.deprecated && defaultCmd.messages?.onDeprecated) {
+              printDeprecated(defaultCmd.messages.onDeprecated);
+            }
+
             await loadAndExecuteCommand(
               loadModule,
               [...currentPath, defaultCmd.name],
@@ -474,6 +485,10 @@ export function registerCommands(
           return;
         }
 
+        if (spec.deprecated && spec.messages?.onDeprecated) {
+          printDeprecated(spec.messages.onDeprecated);
+        }
+
         await loadAndExecuteCommand(
           loadModule,
           currentPath,
@@ -501,6 +516,7 @@ export function createProgram(config: CLIConfig): CommanderCommand {
 
   const program = new CommanderCommand();
   program.name(specs.name).description(specs.description).version(version);
+  program.option('-y, --yes', 'Skip all confirmation prompts');
 
   registerCommands(config, program, specs.commands);
 
@@ -509,6 +525,13 @@ export function createProgram(config: CLIConfig): CommanderCommand {
     .description('Show general help')
     .action(() => {
       showMainHelp(specs, version, hasImplementation);
+    });
+
+  program
+    .command('version')
+    .description('Show the CLI version')
+    .action(() => {
+      console.log(version);
     });
 
   program.action(() => {

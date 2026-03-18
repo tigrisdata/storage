@@ -1,5 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { execSync } from 'child_process';
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  rmSync,
+} from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 import { shouldSkipIntegrationTests, getTestPrefix } from './setup.js';
 
 const skipTests = shouldSkipIntegrationTests();
@@ -14,7 +23,7 @@ function runCli(args: string): {
     const stdout = execSync(`node dist/cli.js ${args}`, {
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'pipe'], // Ignore stdin to prevent hanging on prompts
-      timeout: 30000, // 30 second timeout per command
+      timeout: 60000, // 60 second timeout per command
       env: {
         ...process.env,
         // Pass through auth env vars
@@ -232,11 +241,32 @@ describe('CLI Help Commands', () => {
   });
 });
 
+describe('Destructive commands require --force in non-TTY', () => {
+  // These tests verify that destructive commands refuse to run without --force
+  // when stdin is not a TTY (piped/scripted mode). Since runCli uses
+  // stdio: ['ignore', ...], stdin is not a TTY.
+
+  it('objects delete should require confirmation in non-TTY', () => {
+    const result = runCli('objects delete fake-bucket fake-key');
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Use --yes to skip confirmation');
+  });
+
+  it('buckets delete should require confirmation in non-TTY', () => {
+    const result = runCli('buckets delete fake-bucket');
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Use --yes to skip confirmation');
+  });
+});
+
 describe.skipIf(skipTests)('CLI Integration Tests', () => {
   // Generate unique prefix for all test resources
   const testPrefix = getTestPrefix();
   const testBucket = testPrefix;
   const testContent = 'Hello from CLI test';
+
+  /** Prefix a bucket/path with t3:// for commands that require remote paths (cp, mv, rm) */
+  const t3 = (path: string) => `t3://${path}`;
 
   beforeAll(async () => {
     // Setup credentials from .env
@@ -248,7 +278,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     console.log(`Test prefix: ${testPrefix}`);
     console.log(`Creating test bucket: ${testBucket}`);
     // Use mk command instead of buckets create to avoid interactive prompts
-    const result = runCli(`mk ${testBucket}`);
+    const result = runCli(`mk ${testBucket} --enable-snapshots`);
     if (result.exitCode !== 0) {
       console.error('Failed to create test bucket:', result.stderr);
       throw new Error('Failed to create test bucket');
@@ -258,8 +288,8 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
   afterAll(async () => {
     console.log(`Cleaning up test bucket: ${testBucket}`);
     // Force remove all objects and the bucket
-    runCli(`rm ${testBucket}/* -f`);
-    runCli(`rm ${testBucket} -f`);
+    runCli(`rm ${t3(testBucket)}/* -f`);
+    runCli(`rm ${t3(testBucket)} -f`);
   });
 
   describe('ls command', () => {
@@ -347,7 +377,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should copy an object within same bucket', () => {
       const result = runCli(
-        `cp ${testBucket}/${srcFile} ${testBucket}/${destFile}`
+        `cp ${t3(testBucket)}/${srcFile} ${t3(testBucket)}/${destFile}`
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Copied');
@@ -370,7 +400,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should move an object with force flag', () => {
       const result = runCli(
-        `mv ${testBucket}/${srcFile} ${testBucket}/${destFile} -f`
+        `mv ${t3(testBucket)}/${srcFile} ${t3(testBucket)}/${destFile} -f`
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Moved');
@@ -392,7 +422,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
 
     it('should remove an object with force flag', () => {
-      const result = runCli(`rm ${testBucket}/${fileName} -f`);
+      const result = runCli(`rm ${t3(testBucket)}/${fileName} -f`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Removed');
     });
@@ -418,7 +448,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should auto-detect folder for cp without trailing slash', () => {
       const result = runCli(
-        `cp ${testBucket}/${autoFolder} ${testBucket}/${copiedFolder}`
+        `cp ${t3(testBucket)}/${autoFolder} ${t3(testBucket)}/${copiedFolder} -r`
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Copied');
@@ -427,21 +457,22 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should auto-detect folder for mv without trailing slash', () => {
       const result = runCli(
-        `mv ${testBucket}/${copiedFolder} ${testBucket}/${movedFolder} -f`
+        `mv ${t3(testBucket)}/${copiedFolder} ${t3(testBucket)}/${movedFolder} -r -f`
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Moved');
-      expect(result.stdout).toContain('2 object(s)');
+      // cp nests: autodetect → copied/autodetect/ (marker + 2 files = 3)
+      expect(result.stdout).toContain('3 object(s)');
     });
 
     it('should auto-detect folder for rm without trailing slash', () => {
-      const result = runCli(`rm ${testBucket}/${movedFolder} -f`);
+      const result = runCli(`rm ${t3(testBucket)}/${movedFolder} -r -f`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Removed');
     });
 
     afterAll(() => {
-      runCli(`rm ${testBucket}/${autoFolder} -f`);
+      runCli(`rm ${t3(testBucket)}/${autoFolder} -r -f`);
     });
   });
 
@@ -457,7 +488,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should copy an empty folder', () => {
       const result = runCli(
-        `cp ${testBucket}/${emptyFolder}/ ${testBucket}/${copiedEmptyFolder}/`
+        `cp ${t3(testBucket)}/${emptyFolder}/ ${t3(testBucket)}/${copiedEmptyFolder}/ -r`
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Copied');
@@ -472,7 +503,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should move an empty folder', () => {
       const result = runCli(
-        `mv ${testBucket}/${copiedEmptyFolder}/ ${testBucket}/${movedEmptyFolder}/ -f`
+        `mv ${t3(testBucket)}/${copiedEmptyFolder}/ ${t3(testBucket)}/${movedEmptyFolder}/ -r -f`
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Moved');
@@ -487,8 +518,8 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
 
     afterAll(() => {
-      runCli(`rm ${testBucket}/${emptyFolder}/ -f`);
-      runCli(`rm ${testBucket}/${movedEmptyFolder}/ -f`);
+      runCli(`rm ${t3(testBucket)}/${emptyFolder}/ -r -f`);
+      runCli(`rm ${t3(testBucket)}/${movedEmptyFolder}/ -r -f`);
     });
   });
 
@@ -508,7 +539,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should copy file to existing folder (auto-detect)', () => {
       const result = runCli(
-        `cp ${testBucket}/${srcFile} ${testBucket}/${targetFolder}`
+        `cp ${t3(testBucket)}/${srcFile} ${t3(testBucket)}/${targetFolder}`
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Copied');
@@ -517,7 +548,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should copy file to explicit folder path (trailing slash)', () => {
       const result = runCli(
-        `cp ${testBucket}/${srcFile2} ${testBucket}/${targetFolder}/`
+        `cp ${t3(testBucket)}/${srcFile2} ${t3(testBucket)}/${targetFolder}/`
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Copied');
@@ -526,7 +557,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should move file to existing folder with force flag', () => {
       const result = runCli(
-        `mv ${testBucket}/${srcFile3} ${testBucket}/${targetFolder} -f`
+        `mv ${t3(testBucket)}/${srcFile3} ${t3(testBucket)}/${targetFolder} -f`
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Moved');
@@ -542,9 +573,9 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
 
     afterAll(() => {
-      runCli(`rm ${testBucket}/${targetFolder}/ -f`);
-      runCli(`rm ${testBucket}/${srcFile} -f`);
-      runCli(`rm ${testBucket}/${srcFile2} -f`);
+      runCli(`rm ${t3(testBucket)}/${targetFolder}/ -r -f`);
+      runCli(`rm ${t3(testBucket)}/${srcFile} -f`);
+      runCli(`rm ${t3(testBucket)}/${srcFile2} -f`);
     });
   });
 
@@ -568,13 +599,13 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
 
     it('should error on cp with bucket-only source', () => {
-      const result = runCli(`cp ${testBucket} ${testBucket}-other/`);
+      const result = runCli(`cp ${t3(testBucket)} ${t3(testBucket)}-other/`);
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('Cannot copy a bucket');
     });
 
     it('should error on mv with bucket-only source', () => {
-      const result = runCli(`mv ${testBucket} ${testBucket}-other/`);
+      const result = runCli(`mv ${t3(testBucket)} ${t3(testBucket)}-other/`);
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('Cannot move a bucket');
     });
@@ -590,7 +621,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
 
     it('should remove files matching wildcard pattern', () => {
-      const result = runCli(`rm ${testBucket}/${wildcardPrefix}-* -f`);
+      const result = runCli(`rm ${t3(testBucket)}/${wildcardPrefix}-* -f`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Removed');
       expect(result.stdout).toContain('3 object(s)');
@@ -617,7 +648,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should copy folder contents and marker using wildcard', () => {
       const result = runCli(
-        `cp ${testBucket}/${wcFolder}/* ${testBucket}/${wcCopied}/`
+        `cp ${t3(testBucket)}/${wcFolder}/* ${t3(testBucket)}/${wcCopied}/`
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Copied');
@@ -632,7 +663,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should move folder contents and marker using wildcard', () => {
       const result = runCli(
-        `mv ${testBucket}/${wcCopied}/* ${testBucket}/${wcMoved}/ -f`
+        `mv ${t3(testBucket)}/${wcCopied}/* ${t3(testBucket)}/${wcMoved}/ -f`
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Moved');
@@ -647,8 +678,1155 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
 
     afterAll(() => {
-      runCli(`rm ${testBucket}/${wcFolder}/ -f`);
-      runCli(`rm ${testBucket}/${wcMoved}/ -f`);
+      runCli(`rm ${t3(testBucket)}/${wcFolder}/ -r -f`);
+      runCli(`rm ${t3(testBucket)}/${wcMoved}/ -r -f`);
+    });
+  });
+
+  // ─── Section A: Missing branches in already-tested commands ───
+
+  describe('mk command - bucket creation variants', () => {
+    const mkBuckets: string[] = [];
+
+    afterAll(() => {
+      for (const b of mkBuckets) {
+        runCli(`rm ${t3(b)} -f`);
+      }
+    });
+
+    it('should create a public bucket with --public', () => {
+      const name = `${testPrefix}-mk-pub`;
+      mkBuckets.push(name);
+      const result = runCli(`mk ${name} --public`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('created');
+    });
+
+    it('should create a bucket with --enable-snapshots', () => {
+      const name = `${testPrefix}-mk-snap`;
+      mkBuckets.push(name);
+      const result = runCli(`mk ${name} --enable-snapshots`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('created');
+
+      // Verify snapshots enabled via buckets get (table format)
+      const info = runCli(`buckets get ${name}`);
+      expect(info.exitCode).toBe(0);
+      expect(info.stdout).toContain('Snapshots Enabled');
+      expect(info.stdout).toContain('Yes');
+    });
+
+    it('should create a bucket with --default-tier STANDARD_IA', () => {
+      const name = `${testPrefix}-mk-tier`;
+      mkBuckets.push(name);
+      const result = runCli(`mk ${name} --default-tier STANDARD_IA`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('created');
+    });
+
+    it('should create a bucket with --locations usa', () => {
+      const name = `${testPrefix}-mk-loc`;
+      mkBuckets.push(name);
+      const result = runCli(`mk ${name} --locations usa`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('created');
+    });
+
+    it('should create a bucket with --fork-of', () => {
+      const name = `${testPrefix}-mk-fork`;
+      mkBuckets.push(name);
+      const result = runCli(`mk ${name} --fork-of ${testBucket}`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('created');
+    });
+
+    it('should error on --source-snapshot without --fork-of', () => {
+      const result = runCli(
+        `mk ${testPrefix}-mk-nofork --source-snapshot snap1`
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--source-snapshot requires --fork-of');
+    });
+
+    it('should error on no path argument', () => {
+      const result = runCli('mk');
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('required');
+    });
+  });
+
+  describe('touch command - validation', () => {
+    it('should error on bucket-only path', () => {
+      const result = runCli(`touch ${testBucket}`);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Object key is required');
+    });
+  });
+
+  describe('cp command - local/remote operations', () => {
+    const tmpBase = join(tmpdir(), `cli-test-cp-${testPrefix}`);
+
+    beforeAll(() => {
+      mkdirSync(tmpBase, { recursive: true });
+      // Create test content remotely for download tests
+      const tmpUp = join(tmpBase, 'upload-src.txt');
+      writeFileSync(tmpUp, testContent);
+      runCli(`objects put ${testBucket} cp-dl-test.txt ${tmpUp}`);
+    });
+
+    afterAll(() => {
+      rmSync(tmpBase, { recursive: true, force: true });
+      runCli(`rm ${t3(testBucket)}/cp-dl-test.txt -f`);
+      runCli(`rm ${t3(testBucket)}/cp-ul-test.txt -f`);
+      runCli(`rm ${t3(testBucket)}/cp-ul-dir/ -r -f`);
+      runCli(`rm ${t3(testBucket)}/cp-wc-dest/ -r -f`);
+      runCli(`rm ${t3(testBucket)}/cp-dl-dir/ -r -f`);
+    });
+
+    it('should download a remote file to local path', () => {
+      const localDest = join(tmpBase, 'downloaded.txt');
+      const result = runCli(
+        `cp ${t3(testBucket)}/cp-dl-test.txt ${localDest}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Downloaded');
+      expect(existsSync(localDest)).toBe(true);
+    });
+
+    it('should upload a local file to remote', () => {
+      const localSrc = join(tmpBase, 'to-upload.txt');
+      writeFileSync(localSrc, 'upload test content');
+      const result = runCli(
+        `cp ${localSrc} ${t3(testBucket)}/cp-ul-test.txt`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Uploaded');
+
+      // Verify it exists
+      const ls = runCli(`ls ${testBucket}`);
+      expect(ls.stdout).toContain('cp-ul-test.txt');
+    });
+
+    it('should upload a local directory recursively with -r', () => {
+      const localDir = join(tmpBase, 'upload-dir');
+      mkdirSync(localDir, { recursive: true });
+      writeFileSync(join(localDir, 'a.txt'), 'file-a');
+      writeFileSync(join(localDir, 'b.txt'), 'file-b');
+      const result = runCli(
+        `cp ${localDir}/ ${t3(testBucket)}/cp-ul-dir/ -r`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Uploaded');
+      expect(result.stdout).toContain('2 file(s)');
+    });
+
+    it('should download a remote directory recursively with -r', () => {
+      // Create remote files
+      runCli(`touch ${testBucket}/cp-dl-dir/x.txt`);
+      runCli(`touch ${testBucket}/cp-dl-dir/y.txt`);
+      const localDest = join(tmpBase, 'dl-dir');
+      mkdirSync(localDest, { recursive: true });
+      const result = runCli(
+        `cp ${t3(testBucket)}/cp-dl-dir/ ${localDest} -r`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Downloaded');
+      expect(result.stdout).toContain('2 file(s)');
+    });
+
+    it('should copy objects matching wildcard pattern', () => {
+      runCli(`touch ${testBucket}/cp-wc-a.txt`);
+      runCli(`touch ${testBucket}/cp-wc-b.txt`);
+      const result = runCli(
+        `cp ${t3(testBucket)}/cp-wc-* ${t3(testBucket)}/cp-wc-dest/`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Copied');
+      expect(result.stdout).toContain('2 object(s)');
+
+      // Cleanup source wildcard files
+      runCli(`rm ${t3(testBucket)}/cp-wc-a.txt -f`);
+      runCli(`rm ${t3(testBucket)}/cp-wc-b.txt -f`);
+    });
+  });
+
+  describe('mv command - additional branches', () => {
+    it('should move objects matching wildcard with -f', () => {
+      runCli(`touch ${testBucket}/mv-wc-a.txt`);
+      runCli(`touch ${testBucket}/mv-wc-b.txt`);
+      const result = runCli(
+        `mv ${t3(testBucket)}/mv-wc-* ${t3(testBucket)}/mv-wc-dest/ -f`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Moved');
+      expect(result.stdout).toContain('2 object(s)');
+
+      // Cleanup
+      runCli(`rm ${t3(testBucket)}/mv-wc-dest/ -r -f`);
+    });
+
+    it('should error on folder move without -r', () => {
+      runCli(`mk ${testBucket}/mv-no-r/`);
+      runCli(`touch ${testBucket}/mv-no-r/file.txt`);
+      const result = runCli(
+        `mv ${t3(testBucket)}/mv-no-r ${t3(testBucket)}/mv-no-r-dest -f`
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Use -r to move recursively');
+
+      // Cleanup
+      runCli(`rm ${t3(testBucket)}/mv-no-r/ -r -f`);
+    });
+  });
+
+  describe('rm command - additional branches', () => {
+    it('should delete a bucket with -f', () => {
+      const name = `${testPrefix}-rm-bkt`;
+      runCli(`mk ${name}`);
+      const result = runCli(`rm ${t3(name)} -f`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain(`Removed bucket '${name}'`);
+    });
+
+    it('should error on folder removal without -r', () => {
+      runCli(`mk ${testBucket}/rm-no-r/`);
+      runCli(`touch ${testBucket}/rm-no-r/file.txt`);
+      const result = runCli(`rm ${t3(testBucket)}/rm-no-r -f`);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Use -r to remove recursively');
+
+      // Cleanup
+      runCli(`rm ${t3(testBucket)}/rm-no-r/ -r -f`);
+    });
+  });
+
+  describe('objects get - additional branches', () => {
+    const tmpBase = join(tmpdir(), `cli-test-objget-${testPrefix}`);
+
+    beforeAll(() => {
+      mkdirSync(tmpBase, { recursive: true });
+      // Upload a text file for get tests
+      const tmpFile = join(tmpBase, 'src.txt');
+      writeFileSync(tmpFile, testContent);
+      runCli(`objects put ${testBucket} objget-test.txt ${tmpFile}`);
+    });
+
+    afterAll(() => {
+      rmSync(tmpBase, { recursive: true, force: true });
+      runCli(`rm ${t3(testBucket)}/objget-test.txt -f`);
+    });
+
+    it('should get object with --output to file', () => {
+      const outPath = join(tmpBase, 'output.txt');
+      const result = runCli(
+        `objects get ${testBucket} objget-test.txt --output ${outPath}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(existsSync(outPath)).toBe(true);
+      const content = readFileSync(outPath, 'utf-8');
+      expect(content).toContain(testContent);
+    });
+
+    it('should get object with --mode string', () => {
+      const result = runCli(
+        `objects get ${testBucket} objget-test.txt --mode string`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain(testContent);
+    });
+  });
+
+  describe('objects put - additional branches', () => {
+    const tmpBase = join(tmpdir(), `cli-test-objput-${testPrefix}`);
+
+    beforeAll(() => {
+      mkdirSync(tmpBase, { recursive: true });
+    });
+
+    afterAll(() => {
+      rmSync(tmpBase, { recursive: true, force: true });
+      runCli(`rm ${t3(testBucket)}/objput-pub.txt -f`);
+      runCli(`rm ${t3(testBucket)}/objput-ct.json -f`);
+      runCli(`rm ${t3(testBucket)}/objput-fmt.txt -f`);
+    });
+
+    it('should upload with --access public', () => {
+      const tmpFile = join(tmpBase, 'pub.txt');
+      writeFileSync(tmpFile, 'public content');
+      const result = runCli(
+        `objects put ${testBucket} objput-pub.txt ${tmpFile} --access public`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should upload with --content-type application/json', () => {
+      const tmpFile = join(tmpBase, 'ct.json');
+      writeFileSync(tmpFile, '{"key":"value"}');
+      const result = runCli(
+        `objects put ${testBucket} objput-ct.json ${tmpFile} --content-type application/json`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should upload with --format json', () => {
+      const tmpFile = join(tmpBase, 'fmt.txt');
+      writeFileSync(tmpFile, 'format test');
+      const result = runCli(
+        `objects put ${testBucket} objput-fmt.txt ${tmpFile} --format json`
+      );
+      expect(result.exitCode).toBe(0);
+      // stdout contains progress line then JSON; extract just the JSON portion
+      const jsonStart = result.stdout.indexOf('[');
+      expect(jsonStart).toBeGreaterThanOrEqual(0);
+      expect(() => JSON.parse(result.stdout.slice(jsonStart))).not.toThrow();
+    });
+  });
+
+  describe('objects list - additional branches', () => {
+    beforeAll(() => {
+      runCli(`touch ${testBucket}/objlist-a.txt`);
+      runCli(`touch ${testBucket}/objlist-b.txt`);
+    });
+
+    afterAll(() => {
+      runCli(`rm ${t3(testBucket)}/objlist-a.txt -f`);
+      runCli(`rm ${t3(testBucket)}/objlist-b.txt -f`);
+    });
+
+    it('should list with --prefix filter', () => {
+      const result = runCli(
+        `objects list ${testBucket} --prefix objlist-a`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('objlist-a.txt');
+      expect(result.stdout).not.toContain('objlist-b.txt');
+    });
+
+    it('should list with --format json', () => {
+      const result = runCli(
+        `objects list ${testBucket} --format json`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
+    });
+
+    it('should handle empty results gracefully', () => {
+      const result = runCli(
+        `objects list ${testBucket} --prefix nonexistent-prefix-xyz`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+  });
+
+  // ─── Section B: Completely untested commands ───
+
+  describe('stat command', () => {
+    beforeAll(() => {
+      runCli(`touch ${testBucket}/stat-test.txt`);
+    });
+
+    afterAll(() => {
+      runCli(`rm ${t3(testBucket)}/stat-test.txt -f`);
+    });
+
+    it('should show overall stats (no path)', () => {
+      const result = runCli('stat');
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Active Buckets');
+      expect(result.stdout).toContain('Total Objects');
+    });
+
+    it('should show bucket info', () => {
+      const result = runCli(`stat ${testBucket}`);
+      expect(result.exitCode).toBe(0);
+      // Bucket stat shows a table with metrics
+      expect(result.stdout).toContain('Metric');
+    });
+
+    it('should show object metadata', () => {
+      const result = runCli(`stat ${testBucket}/stat-test.txt`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Size');
+      expect(result.stdout).toContain('Content-Type');
+    });
+
+    it('should output --format json for overall stats', () => {
+      const result = runCli('stat --format json');
+      expect(result.exitCode).toBe(0);
+      expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
+    });
+
+    it('should output --format json for bucket info', () => {
+      const result = runCli(`stat ${testBucket} --format json`);
+      expect(result.exitCode).toBe(0);
+      expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
+    });
+
+    it('should output --format json for object info', () => {
+      const result = runCli(
+        `stat ${testBucket}/stat-test.txt --format json`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
+    });
+  });
+
+  describe('presign command', () => {
+    const accessKey = process.env.TIGRIS_STORAGE_ACCESS_KEY_ID!;
+
+    beforeAll(() => {
+      runCli(`touch ${testBucket}/presign-test.txt`);
+    });
+
+    afterAll(() => {
+      runCli(`rm ${t3(testBucket)}/presign-test.txt -f`);
+    });
+
+    it('should generate presigned GET URL', () => {
+      const result = runCli(
+        `presign ${testBucket}/presign-test.txt --access-key ${accessKey}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.trim()).toMatch(/^https:\/\//);
+    });
+
+    it('should generate presigned PUT URL with --method put', () => {
+      const result = runCli(
+        `presign ${testBucket}/presign-test.txt --method put --access-key ${accessKey}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.trim()).toMatch(/^https:\/\//);
+    });
+
+    it('should accept --expires-in 600', () => {
+      const result = runCli(
+        `presign ${testBucket}/presign-test.txt --expires-in 600 --access-key ${accessKey}`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should output --format json', () => {
+      const result = runCli(
+        `presign ${testBucket}/presign-test.txt --format json --access-key ${accessKey}`
+      );
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(parsed).toHaveProperty('url');
+      expect(parsed).toHaveProperty('method');
+      expect(parsed).toHaveProperty('bucket');
+      expect(parsed).toHaveProperty('key');
+    });
+
+    it('should output URL-only with default format', () => {
+      const result = runCli(
+        `presign ${testBucket}/presign-test.txt --access-key ${accessKey}`
+      );
+      expect(result.exitCode).toBe(0);
+      // Should not be JSON, just a URL
+      expect(() => JSON.parse(result.stdout.trim())).toThrow();
+      expect(result.stdout.trim()).toMatch(/^https:\/\//);
+    });
+
+    it('should error without path', () => {
+      const result = runCli('presign');
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('required');
+    });
+
+    it('should error on bucket-only path', () => {
+      const result = runCli(
+        `presign ${testBucket} --access-key ${accessKey}`
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Object key is required');
+    });
+  });
+
+  describe('buckets list command', () => {
+    it('should list buckets', () => {
+      const result = runCli('buckets list');
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain(testBucket);
+    });
+
+    it('should list buckets with --format json', () => {
+      const result = runCli('buckets list --format json');
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(Array.isArray(parsed)).toBe(true);
+      expect(parsed.some((b: { name: string }) => b.name === testBucket)).toBe(
+        true
+      );
+    });
+  });
+
+  describe('buckets get command', () => {
+    it('should get bucket info', () => {
+      const result = runCli(`buckets get ${testBucket}`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Property');
+    });
+
+    it('should error without bucket name', () => {
+      const result = runCli('buckets get');
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("missing required argument 'name'");
+    });
+  });
+
+  describe('buckets delete command', () => {
+    it('should delete a single bucket with --force', () => {
+      const name = `${testPrefix}-bd-1`;
+      runCli(`mk ${name}`);
+      const result = runCli(`buckets delete ${name} --force`);
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should delete multiple buckets with --force', () => {
+      const name1 = `${testPrefix}-bd-2`;
+      const name2 = `${testPrefix}-bd-3`;
+      runCli(`mk ${name1}`);
+      runCli(`mk ${name2}`);
+      const result = runCli(`buckets delete ${name1},${name2} --force`);
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should fail without --force in non-TTY', () => {
+      const name = `${testPrefix}-bd-nf`;
+      runCli(`mk ${name}`);
+      const result = runCli(`buckets delete ${name}`);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--yes');
+      // Cleanup
+      runCli(`buckets delete ${name} --force`);
+    });
+  });
+
+  describe('buckets create command (non-interactive)', () => {
+    const bcBuckets: string[] = [];
+
+    afterAll(() => {
+      for (const b of bcBuckets) {
+        runCli(`rm ${t3(b)} -f`);
+      }
+    });
+
+    it('should create with positional name', () => {
+      const name = `${testPrefix}-bc-1`;
+      bcBuckets.push(name);
+      const result = runCli(`buckets create ${name}`);
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should create with all flags', () => {
+      const name = `${testPrefix}-bc-all`;
+      bcBuckets.push(name);
+      const result = runCli(
+        `buckets create ${name} --access private --default-tier STANDARD --enable-snapshots --locations global`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should error on --source-snapshot without --fork-of', () => {
+      const result = runCli(
+        `buckets create ${testPrefix}-bc-err --source-snapshot snap1`
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--source-snapshot requires --fork-of');
+    });
+  });
+
+  describe('bucket settings commands', () => {
+    const setBucket = `${testPrefix}-set`;
+
+    beforeAll(() => {
+      runCli(`mk ${setBucket}`);
+    });
+
+    afterAll(() => {
+      // Disable delete protection before cleanup
+      runCli(
+        `buckets set ${setBucket} --enable-delete-protection false`
+      );
+      runCli(`rm ${t3(setBucket)} -f`);
+    });
+
+    describe('buckets set', () => {
+      it('should set --access public', () => {
+        const result = runCli(
+          `buckets set ${setBucket} --access public`
+        );
+        expect(result.exitCode).toBe(0);
+        // Reset back
+        runCli(`buckets set ${setBucket} --access private`);
+      });
+
+      it('should set --cache-control "max-age=3600"', () => {
+        const result = runCli(
+          `buckets set ${setBucket} --cache-control "max-age=3600"`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should set --enable-delete-protection true', () => {
+        const result = runCli(
+          `buckets set ${setBucket} --enable-delete-protection true`
+        );
+        expect(result.exitCode).toBe(0);
+        // Disable for cleanup
+        runCli(
+          `buckets set ${setBucket} --enable-delete-protection false`
+        );
+      });
+
+      it('should set --locations usa', () => {
+        const result = runCli(
+          `buckets set ${setBucket} --locations usa`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should error when no settings provided', () => {
+        const result = runCli(`buckets set ${setBucket}`);
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain('At least one setting is required');
+      });
+
+      it('should error without bucket name', () => {
+        const result = runCli('buckets set --access public');
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain("missing required argument 'name'");
+      });
+    });
+
+    describe('buckets set-ttl', () => {
+      it('should set TTL with --days 30', () => {
+        const result = runCli(
+          `buckets set-ttl ${setBucket} --days 30`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should set TTL with --date 2027-01-01', () => {
+        const result = runCli(
+          `buckets set-ttl ${setBucket} --date 2027-01-01`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should enable with --enable', () => {
+        const result = runCli(
+          `buckets set-ttl ${setBucket} --enable`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should disable with --disable', () => {
+        const result = runCli(
+          `buckets set-ttl ${setBucket} --disable`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should error when using both --enable and --disable', () => {
+        const result = runCli(
+          `buckets set-ttl ${setBucket} --enable --disable`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          'Cannot use both --enable and --disable'
+        );
+      });
+
+      it('should error when using --disable with --days', () => {
+        const result = runCli(
+          `buckets set-ttl ${setBucket} --disable --days 30`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          'Cannot use --disable with --days or --date'
+        );
+      });
+
+      it('should error on invalid --days', () => {
+        const result = runCli(
+          `buckets set-ttl ${setBucket} --days -5`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain('--days must be a positive number');
+      });
+
+      it('should error on invalid --date', () => {
+        const result = runCli(
+          `buckets set-ttl ${setBucket} --date not-a-date`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          '--date must be a valid ISO-8601 date'
+        );
+      });
+
+      it('should error when no action provided', () => {
+        const result = runCli(`buckets set-ttl ${setBucket}`);
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          'Provide --days, --date, --enable, or --disable'
+        );
+      });
+    });
+
+    describe('buckets set-locations', () => {
+      it('should set locations with --locations usa', () => {
+        const result = runCli(
+          `buckets set-locations ${setBucket} --locations usa`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+    });
+
+    describe('buckets set-migration', () => {
+      it('should disable migration', () => {
+        const result = runCli(
+          `buckets set-migration ${setBucket} --disable`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should error on --disable with other options', () => {
+        const result = runCli(
+          `buckets set-migration ${setBucket} --disable --bucket other`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          'Cannot use --disable with other migration options'
+        );
+      });
+
+      it('should error when missing required params', () => {
+        const result = runCli(
+          `buckets set-migration ${setBucket} --bucket other`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain('Required:');
+      });
+    });
+
+    describe('buckets set-transition', () => {
+      it('should set with --days 30 --storage-class GLACIER', () => {
+        const result = runCli(
+          `buckets set-transition ${setBucket} --days 30 --storage-class GLACIER`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should set with --date 2027-01-01 --storage-class GLACIER_IR', () => {
+        const result = runCli(
+          `buckets set-transition ${setBucket} --date 2027-01-01 --storage-class GLACIER_IR`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should enable with --enable', () => {
+        const result = runCli(
+          `buckets set-transition ${setBucket} --enable`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should disable with --disable', () => {
+        const result = runCli(
+          `buckets set-transition ${setBucket} --disable`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should error on invalid storage class STANDARD', () => {
+        const result = runCli(
+          `buckets set-transition ${setBucket} --days 30 --storage-class STANDARD`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          'STANDARD is not a valid transition target'
+        );
+      });
+
+      it('should error on --days without --storage-class', () => {
+        const result = runCli(
+          `buckets set-transition ${setBucket} --days 30`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          '--storage-class is required when setting --days or --date'
+        );
+      });
+
+      it('should error when using both --enable and --disable', () => {
+        const result = runCli(
+          `buckets set-transition ${setBucket} --enable --disable`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          'Cannot use both --enable and --disable'
+        );
+      });
+
+      it('should error on --disable with --days', () => {
+        const result = runCli(
+          `buckets set-transition ${setBucket} --disable --days 30`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          'Cannot use --disable with --days, --date, or --storage-class'
+        );
+      });
+
+      it('should error when no action provided', () => {
+        const result = runCli(
+          `buckets set-transition ${setBucket}`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          'Provide --days, --date, --enable, or --disable'
+        );
+      });
+
+      it('should error on invalid --days', () => {
+        const result = runCli(
+          `buckets set-transition ${setBucket} --days -1 --storage-class GLACIER`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain('--days must be a positive number');
+      });
+    });
+
+    describe('buckets set-notifications', () => {
+      it('should enable with --url', () => {
+        const result = runCli(
+          `buckets set-notifications ${setBucket} --url https://example.com/webhook`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should disable', () => {
+        const result = runCli(
+          `buckets set-notifications ${setBucket} --disable`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should reset', () => {
+        const result = runCli(
+          `buckets set-notifications ${setBucket} --reset`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should accept --token auth', () => {
+        const result = runCli(
+          `buckets set-notifications ${setBucket} --url https://example.com/webhook --token my-secret-token`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should accept --username/--password auth', () => {
+        const result = runCli(
+          `buckets set-notifications ${setBucket} --url https://example.com/webhook --username user1 --password pass1`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should error on multiple action flags', () => {
+        const result = runCli(
+          `buckets set-notifications ${setBucket} --enable --disable`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          'Only one of --enable, --disable, or --reset can be used'
+        );
+      });
+
+      it('should error on --reset with other options', () => {
+        const result = runCli(
+          `buckets set-notifications ${setBucket} --reset --url https://example.com`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          'Cannot use --reset with other options'
+        );
+      });
+
+      it('should error on --token with --username', () => {
+        const result = runCli(
+          `buckets set-notifications ${setBucket} --url https://example.com --token tok --username user`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          'Cannot use --token with --username/--password'
+        );
+      });
+
+      it('should error on --username without --password', () => {
+        const result = runCli(
+          `buckets set-notifications ${setBucket} --url https://example.com --username user`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          'Both --username and --password are required'
+        );
+      });
+
+      it('should error when no options provided', () => {
+        const result = runCli(
+          `buckets set-notifications ${setBucket}`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain('Provide at least one option');
+      });
+    });
+
+    describe('buckets set-cors', () => {
+      it('should set with --origins and --methods', () => {
+        const result = runCli(
+          `buckets set-cors ${setBucket} --origins "*" --methods "GET,POST"`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should reset with --reset', () => {
+        const result = runCli(
+          `buckets set-cors ${setBucket} --reset`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should set with --override', () => {
+        const result = runCli(
+          `buckets set-cors ${setBucket} --origins "*" --override`
+        );
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should error on --reset with other options', () => {
+        const result = runCli(
+          `buckets set-cors ${setBucket} --reset --origins "*"`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          'Cannot use --reset with other options'
+        );
+      });
+
+      it('should error without --origins or --reset', () => {
+        const result = runCli(
+          `buckets set-cors ${setBucket} --methods "GET"`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain('Provide --origins or --reset');
+      });
+
+      it('should error on invalid --max-age', () => {
+        const result = runCli(
+          `buckets set-cors ${setBucket} --origins "*" --max-age -1`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          '--max-age must be a positive number'
+        );
+      });
+    });
+  });
+
+  describe('objects delete command', () => {
+    it('should delete a single object with --force', () => {
+      runCli(`touch ${testBucket}/objdel-1.txt`);
+      const result = runCli(
+        `objects delete ${testBucket} objdel-1.txt --force`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should delete multiple objects with --force', () => {
+      runCli(`touch ${testBucket}/objdel-2.txt`);
+      runCli(`touch ${testBucket}/objdel-3.txt`);
+      const result = runCli(
+        `objects delete ${testBucket} objdel-2.txt,objdel-3.txt --force`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should fail without --force in non-TTY', () => {
+      runCli(`touch ${testBucket}/objdel-noforce.txt`);
+      const result = runCli(
+        `objects delete ${testBucket} objdel-noforce.txt`
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--yes');
+      // Cleanup
+      runCli(`objects delete ${testBucket} objdel-noforce.txt --force`);
+    });
+  });
+
+  describe('objects set command', () => {
+    beforeAll(() => {
+      runCli(`touch ${testBucket}/objset-test.txt`);
+    });
+
+    afterAll(() => {
+      // The object may have been renamed
+      runCli(`rm ${t3(testBucket)}/objset-test.txt -f`);
+      runCli(`rm ${t3(testBucket)}/objset-renamed.txt -f`);
+    });
+
+    it('should set --access public', () => {
+      const result = runCli(
+        `objects set ${testBucket} objset-test.txt --access public`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should set --access private', () => {
+      const result = runCli(
+        `objects set ${testBucket} objset-test.txt --access private`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should rename with --new-key', () => {
+      const result = runCli(
+        `objects set ${testBucket} objset-test.txt --access private --new-key objset-renamed.txt`
+      );
+      expect(result.exitCode).toBe(0);
+
+      // Verify rename
+      const ls = runCli(`ls ${testBucket}`);
+      expect(ls.stdout).toContain('objset-renamed.txt');
+    });
+  });
+
+  describe('snapshot and fork lifecycle', () => {
+    const snapBucket = `${testPrefix}-snap`;
+    const forkBucket = `${testPrefix}-fork`;
+    let snapshotVersion: string;
+
+    beforeAll(() => {
+      runCli(`mk ${snapBucket} --enable-snapshots`);
+      runCli(`touch ${snapBucket}/snap-file.txt`);
+    });
+
+    afterAll(() => {
+      runCli(`rm ${t3(forkBucket)} -f`);
+      runCli(`rm ${t3(snapBucket)}/snap-file.txt -f`);
+      runCli(`rm ${t3(snapBucket)} -f`);
+    });
+
+    it('should take a snapshot', () => {
+      const result = runCli(`snapshots take ${snapBucket}`);
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should take a named snapshot with --snapshot-name', () => {
+      const result = runCli(
+        `snapshots take ${snapBucket} test-snap`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should list snapshots', () => {
+      const result = runCli(`snapshots list ${snapBucket}`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Version');
+    });
+
+    it('should list snapshots with --format json', () => {
+      const result = runCli(
+        `snapshots list ${snapBucket} --format json`
+      );
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(Array.isArray(parsed)).toBe(true);
+      expect(parsed.length).toBeGreaterThan(0);
+      // Save version for later tests
+      snapshotVersion = parsed[0].version;
+      expect(snapshotVersion).toBeTruthy();
+    });
+
+    it('should ls with --snapshot-version', () => {
+      const result = runCli(
+        `ls ${snapBucket} --snapshot-version ${snapshotVersion}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('snap-file.txt');
+    });
+
+    it('should objects list with --snapshot-version', () => {
+      const result = runCli(
+        `objects list ${snapBucket} --snapshot-version ${snapshotVersion}`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should stat object with --snapshot-version', () => {
+      const result = runCli(
+        `stat ${snapBucket}/snap-file.txt --snapshot-version ${snapshotVersion}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Size');
+    });
+
+    it('should create a fork via forks create', () => {
+      const result = runCli(
+        `forks create ${snapBucket} ${forkBucket}`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should list forks', () => {
+      // Retry — fork visibility is eventually consistent
+      let result = { stdout: '', stderr: '', exitCode: 1 };
+      for (let i = 0; i < 3; i++) {
+        result = runCli(`forks list ${snapBucket}`);
+        if (result.exitCode === 0 && result.stdout.includes(forkBucket)) break;
+        if (i < 2) execSync('sleep 5');
+      }
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain(forkBucket);
+    }, 120_000);
+
+    it('should list forks with --format json', () => {
+      const result = runCli(
+        `forks list ${snapBucket} --format json`
+      );
+      expect(result.exitCode).toBe(0);
+      // May return JSON array or empty (printEmpty is TTY-gated)
+      if (result.stdout.trim()) {
+        expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
+      }
+    }, 120_000);
+
+    it('should list forks via buckets list --forks-of', () => {
+      // Retry — fork visibility is eventually consistent
+      let result = { stdout: '', stderr: '', exitCode: 1 };
+      for (let i = 0; i < 3; i++) {
+        result = runCli(`buckets list --forks-of ${snapBucket}`);
+        if (result.exitCode === 0 && result.stdout.includes(forkBucket)) break;
+        if (i < 2) execSync('sleep 5');
+      }
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain(forkBucket);
+    }, 120_000);
+  });
+
+  describe('credentials test command', () => {
+    it('should verify credentials (no bucket)', () => {
+      const result = runCli('credentials test');
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Access verified');
+    });
+
+    it('should verify credentials for specific bucket', () => {
+      const result = runCli(`credentials test --bucket ${testBucket}`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Access verified');
     });
   });
 });

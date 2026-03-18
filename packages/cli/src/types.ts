@@ -13,13 +13,20 @@ export interface Argument {
   examples?: string[];
 }
 
+export interface NextAction {
+  command: string;
+  description: string;
+}
+
 export interface Messages {
   onStart?: string;
   onSuccess?: string;
   onFailure?: string;
   onEmpty?: string;
   onAlreadyDone?: string;
+  onDeprecated?: string;
   hint?: string;
+  nextActions?: NextAction[];
 }
 
 // Recursive command structure - supports nth level nesting
@@ -31,6 +38,7 @@ export interface CommandSpec {
   examples?: string[];
   commands?: CommandSpec[]; // recursive - can nest infinitely
   default?: string;
+  deprecated?: boolean;
   message?: string;
   messages?: Messages;
 }

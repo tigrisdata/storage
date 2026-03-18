@@ -1,4 +1,5 @@
 import { parseAnyPath } from '../utils/path.js';
+import { getOption } from '../utils/options.js';
 import { formatOutput, formatSize } from '../utils/format.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { getStats, getBucketInfo, head } from '@tigrisdata/storage';
@@ -9,18 +10,23 @@ import {
   msg,
 } from '../utils/messages.js';
 import { buildBucketInfo } from '../utils/bucket-info.js';
+import { exitWithError } from '../utils/exit.js';
 
 const context = msg('stat');
 
-export default async function stat(options: {
-  path?: string;
-  format?: string;
-  _positional?: string[];
-}) {
+export default async function stat(options: Record<string, unknown>) {
   printStart(context);
 
-  const pathString = options.path || options._positional?.[0];
-  const format = options.format || 'table';
+  const pathString = getOption<string>(options, ['path']);
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const snapshotVersion = getOption<string>(options, [
+    'snapshot-version',
+    'snapshotVersion',
+    'snapshot',
+  ]);
   const config = await getStorageConfig();
 
   // No path: show overall stats
@@ -29,7 +35,7 @@ export default async function stat(options: {
 
     if (error) {
       printFailure(context, error.message);
-      process.exit(1);
+      exitWithError(error, context);
     }
 
     const stats = [
@@ -45,7 +51,7 @@ export default async function stat(options: {
       },
     ];
 
-    const output = formatOutput(stats, format, 'stats', 'stat', [
+    const output = formatOutput(stats, format!, 'stats', 'stat', [
       { key: 'metric', header: 'Metric' },
       { key: 'value', header: 'Value' },
     ]);
@@ -59,7 +65,7 @@ export default async function stat(options: {
 
   if (!bucket) {
     printFailure(context, 'Invalid path');
-    process.exit(1);
+    exitWithError('Invalid path', context);
   }
 
   // Bucket only (no path or just trailing slash): show bucket info
@@ -68,7 +74,7 @@ export default async function stat(options: {
 
     if (error) {
       printFailure(context, error.message);
-      process.exit(1);
+      exitWithError(error, context);
     }
 
     const info = buildBucketInfo(data).map(({ label, value }) => ({
@@ -76,7 +82,7 @@ export default async function stat(options: {
       value,
     }));
 
-    const output = formatOutput(info, format, 'bucket-info', 'info', [
+    const output = formatOutput(info, format!, 'bucket-info', 'info', [
       { key: 'metric', header: 'Metric' },
       { key: 'value', header: 'Value' },
     ]);
@@ -88,6 +94,7 @@ export default async function stat(options: {
 
   // Object path: show object metadata
   const { data, error } = await head(path, {
+    ...(snapshotVersion ? { snapshotVersion } : {}),
     config: {
       ...config,
       bucket,
@@ -96,12 +103,12 @@ export default async function stat(options: {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   if (!data) {
     printFailure(context, 'Object not found');
-    process.exit(1);
+    exitWithError('Object not found', context);
   }
 
   const info = [
@@ -112,7 +119,7 @@ export default async function stat(options: {
     { metric: 'Modified', value: data.modified.toISOString() },
   ];
 
-  const output = formatOutput(info, format, 'object-info', 'info', [
+  const output = formatOutput(info, format!, 'object-info', 'info', [
     { key: 'metric', header: 'Metric' },
     { key: 'value', header: 'Value' },
   ]);

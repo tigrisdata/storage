@@ -1,5 +1,6 @@
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
+import { requireInteractive } from '../../../utils/interactive.js';
 import { getOption } from '../../../utils/options.js';
 import { getLoginMethod } from '../../../auth/s3-client.js';
 import { getAuthClient } from '../../../auth/client.js';
@@ -14,6 +15,7 @@ import {
   printEmpty,
   msg,
 } from '../../../utils/messages.js';
+import { exitWithError } from '../../../utils/exit.js';
 
 const context = msg('iam users', 'update-role');
 
@@ -27,7 +29,10 @@ export default async function updateRole(options: Record<string, unknown>) {
       context,
       'User roles can only be updated when logged in via OAuth.\nRun "tigris login oauth" first.'
     );
-    process.exit(1);
+    exitWithError(
+      'User roles can only be updated when logged in via OAuth.\nRun "tigris login oauth" first.',
+      context
+    );
   }
 
   const selectedOrg = getSelectedOrganization();
@@ -51,7 +56,10 @@ export default async function updateRole(options: Record<string, unknown>) {
       context,
       'Role is required. Use --role admin or --role member'
     );
-    process.exit(1);
+    exitWithError(
+      'Role is required. Use --role admin or --role member',
+      context
+    );
   }
 
   const roles = Array.isArray(roleOption) ? roleOption : [roleOption];
@@ -62,7 +70,10 @@ export default async function updateRole(options: Record<string, unknown>) {
         context,
         `Invalid role "${r}". Must be one of: ${validRoles.join(', ')}`
       );
-      process.exit(1);
+      exitWithError(
+        `Invalid role "${r}". Must be one of: ${validRoles.join(', ')}`,
+        context
+      );
     }
   }
 
@@ -79,7 +90,10 @@ export default async function updateRole(options: Record<string, unknown>) {
 
   if (!isAuthenticated) {
     printFailure(context, 'Not authenticated. Run "tigris login oauth" first.');
-    process.exit(1);
+    exitWithError(
+      'Not authenticated. Run "tigris login oauth" first.',
+      context
+    );
   }
 
   const accessToken = await authClient.getAccessToken();
@@ -100,13 +114,15 @@ export default async function updateRole(options: Record<string, unknown>) {
 
     if (listError) {
       printFailure(context, listError.message);
-      process.exit(1);
+      exitWithError(listError, context);
     }
 
     if (listData.users.length === 0) {
       printEmpty(context);
       return;
     }
+
+    requireInteractive('Provide user ID(s) as a positional argument');
 
     const { selected } = await prompt<{ selected: string[] }>({
       type: 'multiselect',
@@ -127,7 +143,10 @@ export default async function updateRole(options: Record<string, unknown>) {
       context,
       `Number of roles (${roles.length}) must match number of users (${resources.length}), or provide a single role for all users`
     );
-    process.exit(1);
+    exitWithError(
+      `Number of roles (${roles.length}) must match number of users (${resources.length}), or provide a single role for all users`,
+      context
+    );
   }
 
   const roleUpdates = resources.map((userId, i) => ({
@@ -141,7 +160,7 @@ export default async function updateRole(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   printSuccess(context);

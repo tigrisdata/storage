@@ -9,11 +9,17 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('buckets', 'set');
 
 export default async function set(options: Record<string, unknown>) {
   printStart(context);
+
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format'], 'table');
 
   const name = getOption<string>(options, ['name']);
   const access = getOption<string>(options, ['access']);
@@ -56,7 +62,7 @@ export default async function set(options: Record<string, unknown>) {
 
   if (!name) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   // Check if at least one setting is provided
@@ -71,7 +77,7 @@ export default async function set(options: Record<string, unknown>) {
     enableAdditionalHeaders === undefined
   ) {
     printFailure(context, 'At least one setting is required');
-    process.exit(1);
+    exitWithError('At least one setting is required', context);
   }
 
   const config = await getStorageConfig();
@@ -131,7 +137,11 @@ export default async function set(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
+  }
+
+  if (format === 'json') {
+    console.log(JSON.stringify({ action: 'updated', name }));
   }
 
   printSuccess(context, { name });

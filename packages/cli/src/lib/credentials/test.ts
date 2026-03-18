@@ -8,11 +8,17 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('credentials', 'test');
 
 export default async function test(options: Record<string, unknown>) {
   printStart(context);
+
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
 
   const bucket = getOption<string>(options, ['bucket', 'b']);
 
@@ -23,7 +29,10 @@ export default async function test(options: Record<string, unknown>) {
       context,
       'No credentials found. Run "tigris configure" or "tigris login" first.'
     );
-    process.exit(1);
+    exitWithError(
+      'No credentials found. Run "tigris configure" or "tigris login" first.',
+      context
+    );
   }
 
   // Include organization ID if available
@@ -46,13 +55,23 @@ export default async function test(options: Record<string, unknown>) {
         context,
         `Current credentials don't have access to bucket "${bucket}"`
       );
-      process.exit(1);
+      exitWithError(error, context);
     }
 
-    console.log(`  Bucket: ${bucket}`);
-    console.log(`  Access verified.`);
-    if (data.sourceBucketName) {
-      console.log(`  Fork of: ${data.sourceBucketName}`);
+    if (format === 'json') {
+      console.log(
+        JSON.stringify({
+          valid: true,
+          bucket,
+          ...(data.sourceBucketName ? { forkOf: data.sourceBucketName } : {}),
+        })
+      );
+    } else {
+      console.log(`  Bucket: ${bucket}`);
+      console.log(`  Access verified.`);
+      if (data.sourceBucketName) {
+        console.log(`  Fork of: ${data.sourceBucketName}`);
+      }
     }
   } else {
     // Test general access by listing buckets
@@ -60,10 +79,16 @@ export default async function test(options: Record<string, unknown>) {
 
     if (error) {
       printFailure(context, "Current credentials don't have sufficient access");
-      process.exit(1);
+      exitWithError(error, context);
     }
 
-    console.log(`  Access verified. Found ${data.buckets.length} bucket(s).`);
+    if (format === 'json') {
+      console.log(
+        JSON.stringify({ valid: true, bucketCount: data.buckets.length })
+      );
+    } else {
+      console.log(`  Access verified. Found ${data.buckets.length} bucket(s).`);
+    }
   }
 
   printSuccess(context);

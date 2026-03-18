@@ -1,5 +1,6 @@
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
+import { requireInteractive } from '../../utils/interactive.js';
 import { oauth } from './oauth.js';
 import credentials from './credentials.js';
 
@@ -30,6 +31,10 @@ export default async function select(options: Record<string, unknown>) {
   }
 
   // Prompt user to choose login method
+  requireInteractive(
+    'Use "tigris login oauth" or "tigris login credentials --access-key ... --access-secret ..."'
+  );
+
   const { method } = await prompt<{ method: string }>({
     type: 'select',
     name: 'method',

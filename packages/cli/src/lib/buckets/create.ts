@@ -1,13 +1,10 @@
 import { getOption } from '../../utils/options';
 import enquirer from 'enquirer';
+import { requireInteractive } from '../../utils/interactive.js';
 import { getArgumentSpec, buildPromptChoices } from '../../utils/specs.js';
 import { StorageClass, createBucket } from '@tigrisdata/storage';
 import { getStorageConfig } from '../../auth/s3-client';
-import {
-  parseLocations,
-  multiRegionChoices,
-  singleRegionChoices,
-} from '../../utils/locations.js';
+import { parseLocations, promptLocations } from '../../utils/locations.js';
 import type { BucketLocations } from '@tigrisdata/storage';
 import {
   printStart,
@@ -15,6 +12,11 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import {
+  exitWithError,
+  getSuccessNextActions,
+  printNextActions,
+} from '../../utils/exit.js';
 
 const { prompt } = enquirer;
 
@@ -22,6 +24,11 @@ const context = msg('buckets', 'create');
 
 export default async function create(options: Record<string, unknown>) {
   printStart(context);
+
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
 
   let name = getOption<string>(options, ['name']);
   const isPublic = getOption<boolean>(options, ['public']);
@@ -35,6 +42,12 @@ export default async function create(options: Record<string, unknown>) {
   ]);
   let defaultTier = getOption<string>(options, ['default-tier', 't', 'T']);
   let locations = getOption<string>(options, ['locations', 'l', 'L']);
+  const forkOf = getOption<string>(options, ['fork-of', 'forkOf', 'fork']);
+  const sourceSnapshot = getOption<string>(options, [
+    'source-snapshot',
+    'sourceSnapshot',
+    'source-snap',
+  ]);
 
   // Handle deprecated --region and --consistency options
   const deprecatedRegion = getOption<string>(options, ['region', 'r', 'R']);
@@ -63,6 +76,8 @@ export default async function create(options: Record<string, unknown>) {
   let parsedLocations: BucketLocations | undefined;
 
   if (interactive) {
+    requireInteractive('Provide --name to skip interactive mode');
+
     const accessSpec = getArgumentSpec('buckets', 'access', 'create');
     const accessChoices = buildPromptChoices(accessSpec!);
     const accessDefault = accessChoices?.findIndex(
@@ -116,65 +131,22 @@ export default async function create(options: Record<string, unknown>) {
     defaultTier = responses.defaultTier;
     enableSnapshots = responses.enableSnapshots;
 
-    // Location selection: type first, then region(s) based on type
-    const { locationType } = await prompt<{ locationType: string }>({
-      type: 'select',
-      name: 'locationType',
-      message: 'Location type:',
-      choices: [
-        { name: 'global', message: 'Global' },
-        { name: 'multi', message: 'Multi-region (USA or Europe)' },
-        { name: 'dual', message: 'Dual region' },
-        { name: 'single', message: 'Single region' },
-      ],
-    });
-
-    if (locationType === 'global') {
-      parsedLocations = { type: 'global' };
-    } else if (locationType === 'multi') {
-      const { region } = await prompt<{ region: string }>({
-        type: 'select',
-        name: 'region',
-        message: 'Multi-region:',
-        choices: multiRegionChoices.map((c) => ({
-          name: c.value,
-          message: c.name,
-        })),
-      });
-      parsedLocations = parseLocations(region);
-    } else if (locationType === 'single') {
-      const { region } = await prompt<{ region: string }>({
-        type: 'select',
-        name: 'region',
-        message: 'Region:',
-        choices: singleRegionChoices.map((c) => ({
-          name: c.value,
-          message: c.name,
-        })),
-      });
-      parsedLocations = parseLocations(region);
-    } else {
-      const { regions } = await prompt<{ regions: string[] }>({
-        type: 'multiselect',
-        name: 'regions',
-        message:
-          'Press space key to select regions (multiple supported) and enter to confirm:',
-        choices: singleRegionChoices.map((c) => ({
-          name: c.value,
-          message: c.name,
-        })),
-      } as Parameters<typeof prompt>[0]);
-      if (regions.length < 2) {
-        printFailure(context, 'Dual region requires at least two regions');
-        process.exit(1);
-      }
-      parsedLocations = parseLocations(regions);
+    try {
+      parsedLocations = await promptLocations();
+    } catch (err) {
+      printFailure(context, (err as Error).message);
+      exitWithError(err, context);
     }
   }
 
   if (!name) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
+  }
+
+  if (sourceSnapshot && !forkOf) {
+    printFailure(context, '--source-snapshot requires --fork-of');
+    exitWithError('--source-snapshot requires --fork-of', context);
   }
 
   const { error } = await createBucket(name, {
@@ -182,13 +154,27 @@ export default async function create(options: Record<string, unknown>) {
     enableSnapshot: enableSnapshots === true,
     access: (access ?? 'private') as 'public' | 'private',
     locations: parsedLocations ?? parseLocations(locations ?? 'global'),
+    ...(forkOf ? { sourceBucketName: forkOf } : {}),
+    ...(sourceSnapshot ? { sourceBucketSnapshot: sourceSnapshot } : {}),
     config: await getStorageConfig(),
   });
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
+  }
+
+  if (format === 'json') {
+    const nextActions = getSuccessNextActions(context, { name });
+    const output: Record<string, unknown> = {
+      action: 'created',
+      name,
+      ...(forkOf ? { forkOf } : {}),
+    };
+    if (nextActions.length > 0) output.nextActions = nextActions;
+    console.log(JSON.stringify(output));
   }
 
   printSuccess(context, { name });
+  printNextActions(context, { name });
 }

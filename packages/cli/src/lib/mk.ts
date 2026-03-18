@@ -3,23 +3,26 @@ import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { createBucket, put, type StorageClass } from '@tigrisdata/storage';
 import { parseLocations } from '../utils/locations.js';
+import { exitWithError } from '../utils/exit.js';
 
 export default async function mk(options: Record<string, unknown>) {
   const pathString = getOption<string>(options, ['path']);
 
   if (!pathString) {
-    console.error('path argument is required');
-    process.exit(1);
+    exitWithError('path argument is required');
   }
 
   const { bucket, path } = parseAnyPath(pathString);
 
   if (!bucket) {
-    console.error('Invalid path');
-    process.exit(1);
+    exitWithError('Invalid path');
   }
 
   const config = await getStorageConfig();
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
 
   if (!path) {
     // Create a bucket
@@ -40,6 +43,12 @@ export default async function mk(options: Record<string, unknown>) {
       'T',
     ]);
     let locations = getOption<string>(options, ['locations', 'l', 'L']);
+    const forkOf = getOption<string>(options, ['fork-of', 'forkOf', 'fork']);
+    const sourceSnapshot = getOption<string>(options, [
+      'source-snapshot',
+      'sourceSnapshot',
+      'source-snap',
+    ]);
 
     // Handle deprecated --region and --consistency options
     const deprecatedRegion = getOption<string>(options, ['region', 'r', 'R']);
@@ -62,20 +71,31 @@ export default async function mk(options: Record<string, unknown>) {
       );
     }
 
+    if (sourceSnapshot && !forkOf) {
+      exitWithError('--source-snapshot requires --fork-of');
+    }
+
     const { error } = await createBucket(bucket, {
       defaultTier: (defaultTier ?? 'STANDARD') as StorageClass,
       enableSnapshot: enableSnapshots === true,
       access: (access ?? 'private') as 'public' | 'private',
       locations: parseLocations(locations ?? 'global'),
+      ...(forkOf ? { sourceBucketName: forkOf } : {}),
+      ...(sourceSnapshot ? { sourceBucketSnapshot: sourceSnapshot } : {}),
       config,
     });
 
     if (error) {
-      console.error(error.message);
-      process.exit(1);
+      exitWithError(error);
     }
 
-    console.log(`Bucket '${bucket}' created`);
+    if (format === 'json') {
+      console.log(
+        JSON.stringify({ action: 'created', type: 'bucket', name: bucket })
+      );
+    } else {
+      console.log(`Bucket '${bucket}' created`);
+    }
     process.exit(0);
   } else {
     // Create a "folder" (empty object with trailing slash)
@@ -89,11 +109,21 @@ export default async function mk(options: Record<string, unknown>) {
     });
 
     if (error) {
-      console.error(error.message);
-      process.exit(1);
+      exitWithError(error);
     }
 
-    console.log(`Folder '${bucket}/${folderPath}' created`);
+    if (format === 'json') {
+      console.log(
+        JSON.stringify({
+          action: 'created',
+          type: 'folder',
+          bucket,
+          path: folderPath,
+        })
+      );
+    } else {
+      console.log(`Folder '${bucket}/${folderPath}' created`);
+    }
     process.exit(0);
   }
 }

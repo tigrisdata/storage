@@ -1,5 +1,6 @@
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
+import { requireInteractive, confirm } from '../../../utils/interactive.js';
 import { getOption } from '../../../utils/options.js';
 import { getLoginMethod } from '../../../auth/s3-client.js';
 import { getAuthClient } from '../../../auth/client.js';
@@ -14,6 +15,7 @@ import {
   printEmpty,
   msg,
 } from '../../../utils/messages.js';
+import { exitWithError } from '../../../utils/exit.js';
 
 const context = msg('iam users', 'remove');
 
@@ -21,6 +23,7 @@ export default async function removeUser(options: Record<string, unknown>) {
   printStart(context);
 
   const resourceOption = getOption<string | string[]>(options, ['resource']);
+  const force = getOption<boolean>(options, ['force', 'yes', 'y']);
 
   const loginMethod = await getLoginMethod();
 
@@ -29,7 +32,10 @@ export default async function removeUser(options: Record<string, unknown>) {
       context,
       'Users can only be removed when logged in via OAuth.\nRun "tigris login oauth" first.'
     );
-    process.exit(1);
+    exitWithError(
+      'Users can only be removed when logged in via OAuth.\nRun "tigris login oauth" first.',
+      context
+    );
   }
 
   const selectedOrg = getSelectedOrganization();
@@ -48,7 +54,10 @@ export default async function removeUser(options: Record<string, unknown>) {
 
   if (!isAuthenticated) {
     printFailure(context, 'Not authenticated. Run "tigris login oauth" first.');
-    process.exit(1);
+    exitWithError(
+      'Not authenticated. Run "tigris login oauth" first.',
+      context
+    );
   }
 
   const accessToken = await authClient.getAccessToken();
@@ -75,13 +84,15 @@ export default async function removeUser(options: Record<string, unknown>) {
 
     if (listError) {
       printFailure(context, listError.message);
-      process.exit(1);
+      exitWithError(listError, context);
     }
 
     if (listData.users.length === 0) {
       printEmpty(context);
       return;
     }
+
+    requireInteractive('Provide user ID(s) as a positional argument');
 
     const { selected } = await prompt<{ selected: string[] }>({
       type: 'multiselect',
@@ -96,13 +107,22 @@ export default async function removeUser(options: Record<string, unknown>) {
     resources = selected;
   }
 
+  if (!force) {
+    requireInteractive('Use --yes to skip confirmation');
+    const confirmed = await confirm(`Remove ${resources.length} user(s)?`);
+    if (!confirmed) {
+      console.log('Aborted');
+      return;
+    }
+  }
+
   const { error } = await removeUserFromOrg(resources, {
     config: iamConfig,
   });
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   printSuccess(context);

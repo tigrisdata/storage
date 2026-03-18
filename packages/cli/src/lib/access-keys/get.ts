@@ -10,17 +10,23 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('access-keys', 'get');
 
 export default async function get(options: Record<string, unknown>) {
   printStart(context);
 
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+
   const id = getOption<string>(options, ['id']);
 
   if (!id) {
     printFailure(context, 'Access key ID is required');
-    process.exit(1);
+    exitWithError('Access key ID is required', context);
   }
 
   const loginMethod = await getLoginMethod();
@@ -30,7 +36,10 @@ export default async function get(options: Record<string, unknown>) {
       context,
       'Access keys can only be retrieved when logged in via OAuth.\nRun "tigris login oauth" first.'
     );
-    process.exit(1);
+    exitWithError(
+      'Access keys can only be retrieved when logged in via OAuth.\nRun "tigris login oauth" first.',
+      context
+    );
   }
 
   const authClient = getAuthClient();
@@ -38,7 +47,10 @@ export default async function get(options: Record<string, unknown>) {
 
   if (!isAuthenticated) {
     printFailure(context, 'Not authenticated. Run "tigris login oauth" first.');
-    process.exit(1);
+    exitWithError(
+      'Not authenticated. Run "tigris login oauth" first.',
+      context
+    );
   }
 
   const accessToken = await authClient.getAccessToken();
@@ -55,22 +67,26 @@ export default async function get(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
-  console.log(`  Name: ${data.name}`);
-  console.log(`  ID: ${data.id}`);
-  console.log(`  Status: ${data.status}`);
-  console.log(`  Created: ${data.createdAt}`);
-  console.log(`  Organization: ${data.organizationId}`);
-
-  if (data.roles && data.roles.length > 0) {
-    console.log(`  Roles:`);
-    for (const role of data.roles) {
-      console.log(`    - ${role.bucket}: ${role.role}`);
-    }
+  if (format === 'json') {
+    console.log(JSON.stringify(data));
   } else {
-    console.log(`  Roles: None`);
+    console.log(`  Name: ${data.name}`);
+    console.log(`  ID: ${data.id}`);
+    console.log(`  Status: ${data.status}`);
+    console.log(`  Created: ${data.createdAt}`);
+    console.log(`  Organization: ${data.organizationId}`);
+
+    if (data.roles && data.roles.length > 0) {
+      console.log(`  Roles:`);
+      for (const role of data.roles) {
+        console.log(`    - ${role.bucket}: ${role.role}`);
+      }
+    } else {
+      console.log(`  Roles: None`);
+    }
   }
 
   printSuccess(context);

@@ -11,6 +11,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('objects', 'get');
 
@@ -108,19 +109,29 @@ function detectFormat(key: string, output?: string): 'string' | 'stream' {
 export default async function getObject(options: Record<string, unknown>) {
   printStart(context);
 
+  const json = getOption<boolean>(options, ['json']);
+  const outputFormat = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+
   const bucket = getOption<string>(options, ['bucket']);
   const key = getOption<string>(options, ['key']);
   const output = getOption<string>(options, ['output', 'o', 'O']);
   const modeOption = getOption<string>(options, ['mode', 'm', 'M']);
+  const snapshotVersion = getOption<string>(options, [
+    'snapshot-version',
+    'snapshotVersion',
+    'snapshot',
+  ]);
 
   if (!bucket) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   if (!key) {
     printFailure(context, 'Object key is required');
-    process.exit(1);
+    exitWithError('Object key is required', context);
   }
 
   const config = await getStorageConfig();
@@ -130,6 +141,7 @@ export default async function getObject(options: Record<string, unknown>) {
 
   if (mode === 'stream') {
     const { data, error } = await get(key, 'stream', {
+      ...(snapshotVersion ? { snapshotVersion } : {}),
       config: {
         ...config,
         bucket,
@@ -138,13 +150,18 @@ export default async function getObject(options: Record<string, unknown>) {
 
     if (error) {
       printFailure(context, error.message);
-      process.exit(1);
+      exitWithError(error, context);
     }
 
     if (output) {
       const writeStream = createWriteStream(output);
       await pipeline(Readable.fromWeb(data as ReadableStream), writeStream);
       printSuccess(context, { key, output });
+      if (outputFormat === 'json') {
+        console.log(
+          JSON.stringify({ action: 'downloaded', bucket, key, output })
+        );
+      }
     } else {
       // Stream to stdout for binary data
       await pipeline(Readable.fromWeb(data as ReadableStream), process.stdout);
@@ -152,6 +169,7 @@ export default async function getObject(options: Record<string, unknown>) {
     }
   } else {
     const { data, error } = await get(key, 'string', {
+      ...(snapshotVersion ? { snapshotVersion } : {}),
       config: {
         ...config,
         bucket,
@@ -160,12 +178,17 @@ export default async function getObject(options: Record<string, unknown>) {
 
     if (error) {
       printFailure(context, error.message);
-      process.exit(1);
+      exitWithError(error, context);
     }
 
     if (output) {
       writeFileSync(output, data);
       printSuccess(context, { key, output });
+      if (outputFormat === 'json') {
+        console.log(
+          JSON.stringify({ action: 'downloaded', bucket, key, output })
+        );
+      }
     } else {
       console.log(data);
       printSuccess(context);

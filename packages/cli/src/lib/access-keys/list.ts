@@ -1,4 +1,5 @@
 import { formatOutput } from '../../utils/format.js';
+import { getOption } from '../../utils/options.js';
 import { getLoginMethod } from '../../auth/s3-client.js';
 import { getAuthClient } from '../../auth/client.js';
 import { getSelectedOrganization } from '../../auth/storage.js';
@@ -11,11 +12,17 @@ import {
   printEmpty,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('access-keys', 'list');
 
-export default async function list() {
+export default async function list(options: Record<string, unknown>) {
   printStart(context);
+
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
 
   const loginMethod = await getLoginMethod();
 
@@ -24,7 +31,10 @@ export default async function list() {
       context,
       'Access keys can only be listed when logged in via OAuth.\nRun "tigris login oauth" first.'
     );
-    process.exit(1);
+    exitWithError(
+      'Access keys can only be listed when logged in via OAuth.\nRun "tigris login oauth" first.',
+      context
+    );
   }
 
   const authClient = getAuthClient();
@@ -32,7 +42,10 @@ export default async function list() {
 
   if (!isAuthenticated) {
     printFailure(context, 'Not authenticated. Run "tigris login oauth" first.');
-    process.exit(1);
+    exitWithError(
+      'Not authenticated. Run "tigris login oauth" first.',
+      context
+    );
   }
 
   const accessToken = await authClient.getAccessToken();
@@ -49,7 +62,7 @@ export default async function list() {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   if (!data.accessKeys || data.accessKeys.length === 0) {
@@ -64,7 +77,7 @@ export default async function list() {
     created: key.createdAt,
   }));
 
-  const output = formatOutput(keys, 'table', 'keys', 'key', [
+  const output = formatOutput(keys, format!, 'keys', 'key', [
     { key: 'name', header: 'Name' },
     { key: 'id', header: 'ID' },
     { key: 'status', header: 'Status' },

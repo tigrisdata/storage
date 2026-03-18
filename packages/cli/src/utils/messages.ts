@@ -26,6 +26,10 @@ function isTTY(): boolean {
   return process.stdout.isTTY === true;
 }
 
+function isJsonMode(): boolean {
+  return globalThis.__TIGRIS_JSON_MODE === true;
+}
+
 function getMessages(context: MessageContext): Messages | undefined {
   const spec = getCommandSpec(context.command, context.operation);
   if (!spec) return undefined;
@@ -37,7 +41,10 @@ function getMessages(context: MessageContext): Messages | undefined {
  * Supports {{variableName}} syntax
  * Also processes \n for multiline support
  */
-function interpolate(template: string, variables?: MessageVariables): string {
+export function interpolate(
+  template: string,
+  variables?: MessageVariables
+): string {
   let result = template;
 
   // Process escaped newlines for multiline support
@@ -62,7 +69,7 @@ export function printStart(
   context: MessageContext,
   variables?: MessageVariables
 ): void {
-  if (!isTTY()) return;
+  if (!isTTY() || isJsonMode()) return;
   const messages = getMessages(context);
   if (messages?.onStart) {
     console.log(interpolate(messages.onStart, variables));
@@ -77,7 +84,7 @@ export function printSuccess(
   context: MessageContext,
   variables?: MessageVariables
 ): void {
-  if (!isTTY()) return;
+  if (!isTTY() || isJsonMode()) return;
   const messages = getMessages(context);
   if (messages?.onSuccess) {
     console.log(
@@ -88,12 +95,14 @@ export function printSuccess(
 
 /**
  * Print the onFailure message for a command/operation
+ * Suppressed in JSON mode to avoid mixing human-readable text with structured JSON on stderr
  */
 export function printFailure(
   context: MessageContext,
   error?: string,
   variables?: MessageVariables
 ): void {
+  if (globalThis.__TIGRIS_JSON_MODE === true) return;
   const messages = getMessages(context);
   if (messages?.onFailure) {
     console.error(
@@ -113,7 +122,7 @@ export function printEmpty(
   context: MessageContext,
   variables?: MessageVariables
 ): void {
-  if (!isTTY()) return;
+  if (!isTTY() || isJsonMode()) return;
   const messages = getMessages(context);
   if (messages?.onEmpty) {
     console.log(interpolate(messages.onEmpty, variables));
@@ -128,7 +137,7 @@ export function printAlreadyDone(
   context: MessageContext,
   variables?: MessageVariables
 ): void {
-  if (!isTTY()) return;
+  if (!isTTY() || isJsonMode()) return;
   const messages = getMessages(context);
   if (messages?.onAlreadyDone) {
     console.log(interpolate(messages.onAlreadyDone, variables));
@@ -143,11 +152,20 @@ export function printHint(
   context: MessageContext,
   variables?: MessageVariables
 ): void {
-  if (!isTTY()) return;
+  if (!isTTY() || isJsonMode()) return;
   const messages = getMessages(context);
   if (messages?.hint) {
     console.log(`${ICONS.hint} ${interpolate(messages.hint, variables)}`);
   }
+}
+
+/**
+ * Print a deprecation warning for a command
+ * Suppressed when output is piped/redirected
+ */
+export function printDeprecated(message: string): void {
+  if (!isTTY()) return;
+  console.warn(`⚠ Deprecated: ${message}`);
 }
 
 /**

@@ -10,6 +10,11 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import {
+  exitWithError,
+  getSuccessNextActions,
+  printNextActions,
+} from '../../utils/exit.js';
 
 const context = msg('access-keys', 'assign');
 
@@ -23,6 +28,11 @@ function normalizeToArray<T>(value: T | T[] | undefined): T[] {
 
 export default async function assign(options: Record<string, unknown>) {
   printStart(context);
+
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
 
   const id = getOption<string>(options, ['id']);
   const admin = getOption<boolean>(options, ['admin']);
@@ -39,12 +49,12 @@ export default async function assign(options: Record<string, unknown>) {
 
   if (!id) {
     printFailure(context, 'Access key ID is required');
-    process.exit(1);
+    exitWithError('Access key ID is required', context);
   }
 
   if (admin && revokeRoles) {
     printFailure(context, 'Cannot use --admin and --revoke-roles together');
-    process.exit(1);
+    exitWithError('Cannot use --admin and --revoke-roles together', context);
   }
 
   const loginMethod = await getLoginMethod();
@@ -54,7 +64,10 @@ export default async function assign(options: Record<string, unknown>) {
       context,
       'Bucket roles can only be managed when logged in via OAuth.\nRun "tigris login oauth" first.'
     );
-    process.exit(1);
+    exitWithError(
+      'Bucket roles can only be managed when logged in via OAuth.\nRun "tigris login oauth" first.',
+      context
+    );
   }
 
   const authClient = getAuthClient();
@@ -62,7 +75,10 @@ export default async function assign(options: Record<string, unknown>) {
 
   if (!isAuthenticated) {
     printFailure(context, 'Not authenticated. Run "tigris login oauth" first.');
-    process.exit(1);
+    exitWithError(
+      'Not authenticated. Run "tigris login oauth" first.',
+      context
+    );
   }
 
   const accessToken = await authClient.getAccessToken();
@@ -80,7 +96,11 @@ export default async function assign(options: Record<string, unknown>) {
 
     if (error) {
       printFailure(context, error.message);
-      process.exit(1);
+      exitWithError(error, context);
+    }
+
+    if (format === 'json') {
+      console.log(JSON.stringify({ action: 'revoked', id }));
     }
 
     printSuccess(context);
@@ -98,7 +118,10 @@ export default async function assign(options: Record<string, unknown>) {
         context,
         'At least one bucket name is required (or use --admin or --revoke-roles)'
       );
-      process.exit(1);
+      exitWithError(
+        'At least one bucket name is required (or use --admin or --revoke-roles)',
+        context
+      );
     }
 
     if (roles.length === 0) {
@@ -106,7 +129,10 @@ export default async function assign(options: Record<string, unknown>) {
         context,
         'At least one role is required (or use --admin or --revoke-roles)'
       );
-      process.exit(1);
+      exitWithError(
+        'At least one role is required (or use --admin or --revoke-roles)',
+        context
+      );
     }
 
     // Validate all roles
@@ -116,7 +142,10 @@ export default async function assign(options: Record<string, unknown>) {
           context,
           `Invalid role "${role}". Valid roles are: ${validRoles.join(', ')}`
         );
-        process.exit(1);
+        exitWithError(
+          `Invalid role "${role}". Valid roles are: ${validRoles.join(', ')}`,
+          context
+        );
       }
     }
 
@@ -138,7 +167,10 @@ export default async function assign(options: Record<string, unknown>) {
         context,
         `Number of roles (${roles.length}) must be 1 or match number of buckets (${buckets.length})`
       );
-      process.exit(1);
+      exitWithError(
+        `Number of roles (${roles.length}) must be 1 or match number of buckets (${buckets.length})`,
+        context
+      );
     }
   }
 
@@ -146,8 +178,20 @@ export default async function assign(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
+  }
+
+  if (format === 'json') {
+    const nextActions = getSuccessNextActions(context);
+    const output: Record<string, unknown> = {
+      action: 'assigned',
+      id,
+      assignments,
+    };
+    if (nextActions.length > 0) output.nextActions = nextActions;
+    console.log(JSON.stringify(output));
   }
 
   printSuccess(context);
+  printNextActions(context);
 }

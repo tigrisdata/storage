@@ -25,6 +25,9 @@ import { get, put, list, head } from '@tigrisdata/storage';
 import { executeWithConcurrency } from '../utils/concurrency.js';
 import { calculateUploadParams } from '../utils/upload.js';
 import type { ParsedPath } from '../types.js';
+import { exitWithError } from '../utils/exit.js';
+
+let _jsonMode = false;
 
 type CopyDirection = 'local-to-remote' | 'remote-to-local' | 'remote-to-remote';
 
@@ -33,10 +36,9 @@ function detectDirection(src: string, dest: string): CopyDirection {
   const destRemote = isRemotePath(dest);
 
   if (!srcRemote && !destRemote) {
-    console.error(
+    exitWithError(
       'At least one path must be a remote Tigris path (t3:// or tigris://)'
     );
-    process.exit(1);
   }
 
   if (srcRemote && destRemote) return 'remote-to-remote';
@@ -287,7 +289,17 @@ async function copyLocalToRemote(
   if (isWildcard) {
     const files = listLocalFilesWithWildcard(localPath, recursive);
     if (files.length === 0) {
-      console.log('No files matching pattern');
+      if (_jsonMode) {
+        console.log(
+          JSON.stringify({
+            action: 'copied',
+            direction: 'local-to-remote',
+            count: 0,
+          })
+        );
+      } else {
+        console.log('No files matching pattern');
+      }
       return;
     }
 
@@ -303,13 +315,26 @@ async function copyLocalToRemote(
         console.error(`Failed to upload ${file}: ${result.error}`);
         return false;
       } else {
-        console.log(`Uploaded ${file} -> t3://${destParsed.bucket}/${destKey}`);
+        if (!_jsonMode)
+          console.log(
+            `Uploaded ${file} -> t3://${destParsed.bucket}/${destKey}`
+          );
         return true;
       }
     });
     const results = await executeWithConcurrency(tasks, 8);
     const copied = results.filter(Boolean).length;
-    console.log(`Uploaded ${copied} file(s)`);
+    if (_jsonMode) {
+      console.log(
+        JSON.stringify({
+          action: 'copied',
+          direction: 'local-to-remote',
+          count: copied,
+        })
+      );
+    } else {
+      console.log(`Uploaded ${copied} file(s)`);
+    }
     return;
   }
 
@@ -317,21 +342,29 @@ async function copyLocalToRemote(
   try {
     stats = statSync(localPath);
   } catch {
-    console.error(`Source not found: ${src}`);
-    process.exit(1);
+    exitWithError(`Source not found: ${src}`);
   }
 
   if (stats.isDirectory()) {
     if (!recursive) {
-      console.error(
+      exitWithError(
         `${src} is a directory (not copied). Use -r to copy recursively.`
       );
-      process.exit(1);
     }
 
     const files = listLocalFiles(localPath);
     if (files.length === 0) {
-      console.log('No files to upload');
+      if (_jsonMode) {
+        console.log(
+          JSON.stringify({
+            action: 'copied',
+            direction: 'local-to-remote',
+            count: 0,
+          })
+        );
+      } else {
+        console.log('No files to upload');
+      }
       return;
     }
 
@@ -352,13 +385,26 @@ async function copyLocalToRemote(
         console.error(`Failed to upload ${file}: ${result.error}`);
         return false;
       } else {
-        console.log(`Uploaded ${file} -> t3://${destParsed.bucket}/${destKey}`);
+        if (!_jsonMode)
+          console.log(
+            `Uploaded ${file} -> t3://${destParsed.bucket}/${destKey}`
+          );
         return true;
       }
     });
     const dirResults = await executeWithConcurrency(dirTasks, 8);
     const copied = dirResults.filter(Boolean).length;
-    console.log(`Uploaded ${copied} file(s)`);
+    if (_jsonMode) {
+      console.log(
+        JSON.stringify({
+          action: 'copied',
+          direction: 'local-to-remote',
+          count: copied,
+        })
+      );
+    } else {
+      console.log(`Uploaded ${copied} file(s)`);
+    }
   } else {
     // Single file
     const fileName = basename(localPath);
@@ -387,13 +433,24 @@ async function copyLocalToRemote(
       destParsed.bucket,
       destKey,
       config,
-      true
+      !_jsonMode
     );
     if (result.error) {
-      console.error(result.error);
-      process.exit(1);
+      exitWithError(result.error);
     }
-    console.log(`Uploaded ${src} -> t3://${destParsed.bucket}/${destKey}`);
+    if (_jsonMode) {
+      console.log(
+        JSON.stringify({
+          action: 'copied',
+          direction: 'local-to-remote',
+          count: 1,
+          src,
+          dest: `t3://${destParsed.bucket}/${destKey}`,
+        })
+      );
+    } else {
+      console.log(`Uploaded ${src} -> t3://${destParsed.bucket}/${destKey}`);
+    }
   }
 }
 
@@ -409,8 +466,7 @@ async function copyRemoteToLocal(
   // t3://bucket/ (no path, trailing slash) = copy all contents from bucket root
   const rawEndsWithSlash = src.endsWith('/');
   if (!srcParsed.path && !rawEndsWithSlash) {
-    console.error('Cannot copy a bucket. Provide a path within the bucket.');
-    process.exit(1);
+    exitWithError('Cannot copy a bucket. Provide a path within the bucket.');
   }
 
   const localDest = resolveLocalPath(dest);
@@ -423,10 +479,9 @@ async function copyRemoteToLocal(
   }
 
   if (isFolder && !isWildcard && !recursive) {
-    console.error(
-      `Source is a remote folder (not copied). Use -r to copy recursively.`
+    exitWithError(
+      'Source is a remote folder (not copied). Use -r to copy recursively.'
     );
-    process.exit(1);
   }
 
   if (isWildcard || isFolder) {
@@ -451,8 +506,7 @@ async function copyRemoteToLocal(
     );
 
     if (error) {
-      console.error(error.message);
-      process.exit(1);
+      exitWithError(error);
     }
 
     let filesToDownload = items.filter((item) => !item.name.endsWith('/'));
@@ -468,7 +522,17 @@ async function copyRemoteToLocal(
     }
 
     if (filesToDownload.length === 0) {
-      console.log('No objects to download');
+      if (_jsonMode) {
+        console.log(
+          JSON.stringify({
+            action: 'copied',
+            direction: 'remote-to-local',
+            count: 0,
+          })
+        );
+      } else {
+        console.log('No objects to download');
+      }
       return;
     }
 
@@ -488,15 +552,26 @@ async function copyRemoteToLocal(
         console.error(`Failed to download ${item.name}: ${result.error}`);
         return false;
       } else {
-        console.log(
-          `Downloaded t3://${srcParsed.bucket}/${item.name} -> ${localFilePath}`
-        );
+        if (!_jsonMode)
+          console.log(
+            `Downloaded t3://${srcParsed.bucket}/${item.name} -> ${localFilePath}`
+          );
         return true;
       }
     });
     const downloadResults = await executeWithConcurrency(downloadTasks, 8);
     const downloaded = downloadResults.filter(Boolean).length;
-    console.log(`Downloaded ${downloaded} file(s)`);
+    if (_jsonMode) {
+      console.log(
+        JSON.stringify({
+          action: 'copied',
+          direction: 'remote-to-local',
+          count: downloaded,
+        })
+      );
+    } else {
+      console.log(`Downloaded ${downloaded} file(s)`);
+    }
   } else {
     // Single object
     const srcFileName = srcParsed.path.split('/').pop()!;
@@ -521,15 +596,26 @@ async function copyRemoteToLocal(
       srcParsed.path,
       localFilePath,
       config,
-      true
+      !_jsonMode
     );
     if (result.error) {
-      console.error(result.error);
-      process.exit(1);
+      exitWithError(result.error);
     }
-    console.log(
-      `Downloaded t3://${srcParsed.bucket}/${srcParsed.path} -> ${localFilePath}`
-    );
+    if (_jsonMode) {
+      console.log(
+        JSON.stringify({
+          action: 'copied',
+          direction: 'remote-to-local',
+          count: 1,
+          src: `t3://${srcParsed.bucket}/${srcParsed.path}`,
+          dest: localFilePath,
+        })
+      );
+    } else {
+      console.log(
+        `Downloaded t3://${srcParsed.bucket}/${srcParsed.path} -> ${localFilePath}`
+      );
+    }
   }
 }
 
@@ -545,8 +631,7 @@ async function copyRemoteToRemote(
   // t3://bucket/ (no path, trailing slash) = copy all contents from bucket root
   const rawEndsWithSlash = src.endsWith('/');
   if (!srcParsed.path && !rawEndsWithSlash) {
-    console.error('Cannot copy a bucket. Provide a path within the bucket.');
-    process.exit(1);
+    exitWithError('Cannot copy a bucket. Provide a path within the bucket.');
   }
 
   const isWildcard = src.includes('*');
@@ -558,10 +643,9 @@ async function copyRemoteToRemote(
   }
 
   if (isFolder && !isWildcard && !recursive) {
-    console.error(
-      `Source is a remote folder (not copied). Use -r to copy recursively.`
+    exitWithError(
+      'Source is a remote folder (not copied). Use -r to copy recursively.'
     );
-    process.exit(1);
   }
 
   if (isWildcard || isFolder) {
@@ -591,8 +675,7 @@ async function copyRemoteToRemote(
       srcParsed.bucket === destParsed.bucket &&
       prefix === effectiveDestPrefixWithSlash
     ) {
-      console.error('Source and destination are the same');
-      process.exit(1);
+      exitWithError('Source and destination are the same');
     }
 
     const { items, error } = await listAllItems(
@@ -602,8 +685,7 @@ async function copyRemoteToRemote(
     );
 
     if (error) {
-      console.error(error.message);
-      process.exit(1);
+      exitWithError(error);
     }
 
     let itemsToCopy = items.filter((item) => item.name !== prefix);
@@ -636,9 +718,10 @@ async function copyRemoteToRemote(
         console.error(`Failed to copy ${item.name}: ${copyResult.error}`);
         return false;
       } else {
-        console.log(
-          `Copied t3://${srcParsed.bucket}/${item.name} -> t3://${destParsed.bucket}/${destKey}`
-        );
+        if (!_jsonMode)
+          console.log(
+            `Copied t3://${srcParsed.bucket}/${item.name} -> t3://${destParsed.bucket}/${destKey}`
+          );
         return true;
       }
     });
@@ -679,11 +762,31 @@ async function copyRemoteToRemote(
     }
 
     if (copied === 0) {
-      console.log('No objects to copy');
+      if (_jsonMode) {
+        console.log(
+          JSON.stringify({
+            action: 'copied',
+            direction: 'remote-to-remote',
+            count: 0,
+          })
+        );
+      } else {
+        console.log('No objects to copy');
+      }
       return;
     }
 
-    console.log(`Copied ${copied} object(s)`);
+    if (_jsonMode) {
+      console.log(
+        JSON.stringify({
+          action: 'copied',
+          direction: 'remote-to-remote',
+          count: copied,
+        })
+      );
+    } else {
+      console.log(`Copied ${copied} object(s)`);
+    }
   } else {
     // Single object
     const srcFileName = srcParsed.path.split('/').pop()!;
@@ -707,8 +810,7 @@ async function copyRemoteToRemote(
     }
 
     if (srcParsed.bucket === destParsed.bucket && srcParsed.path === destKey) {
-      console.error('Source and destination are the same');
-      process.exit(1);
+      exitWithError('Source and destination are the same');
     }
 
     const result = await copyObject(
@@ -717,17 +819,28 @@ async function copyRemoteToRemote(
       srcParsed.path,
       destParsed.bucket,
       destKey,
-      true
+      !_jsonMode
     );
 
     if (result.error) {
-      console.error(result.error);
-      process.exit(1);
+      exitWithError(result.error);
     }
 
-    console.log(
-      `Copied t3://${srcParsed.bucket}/${srcParsed.path} -> t3://${destParsed.bucket}/${destKey}`
-    );
+    if (_jsonMode) {
+      console.log(
+        JSON.stringify({
+          action: 'copied',
+          direction: 'remote-to-remote',
+          count: 1,
+          src: `t3://${srcParsed.bucket}/${srcParsed.path}`,
+          dest: `t3://${destParsed.bucket}/${destKey}`,
+        })
+      );
+    } else {
+      console.log(
+        `Copied t3://${srcParsed.bucket}/${srcParsed.path} -> t3://${destParsed.bucket}/${destKey}`
+      );
+    }
   }
 }
 
@@ -736,11 +849,16 @@ export default async function cp(options: Record<string, unknown>) {
   const dest = getOption<string>(options, ['dest']);
 
   if (!src || !dest) {
-    console.error('Both src and dest arguments are required');
-    process.exit(1);
+    exitWithError('Both src and dest arguments are required');
   }
 
   const recursive = !!getOption<boolean>(options, ['recursive', 'r']);
+  const jsonFlag = getOption<boolean>(options, ['json']);
+  const format = jsonFlag
+    ? 'json'
+    : getOption<string>(options, ['format'], 'table');
+  _jsonMode = format === 'json';
+
   const direction = detectDirection(src, dest);
   const config = await getStorageConfig({ withCredentialProvider: true });
 
@@ -748,8 +866,7 @@ export default async function cp(options: Record<string, unknown>) {
     case 'local-to-remote': {
       const destParsed = parseRemotePath(dest);
       if (!destParsed.bucket) {
-        console.error('Invalid destination path');
-        process.exit(1);
+        exitWithError('Invalid destination path');
       }
       await copyLocalToRemote(src, destParsed, config, recursive);
       break;
@@ -757,8 +874,7 @@ export default async function cp(options: Record<string, unknown>) {
     case 'remote-to-local': {
       const srcParsed = parseRemotePath(src);
       if (!srcParsed.bucket) {
-        console.error('Invalid source path');
-        process.exit(1);
+        exitWithError('Invalid source path');
       }
       await copyRemoteToLocal(src, srcParsed, dest, config, recursive);
       break;
@@ -767,12 +883,10 @@ export default async function cp(options: Record<string, unknown>) {
       const srcParsed = parseRemotePath(src);
       const destParsed = parseRemotePath(dest);
       if (!srcParsed.bucket) {
-        console.error('Invalid source path');
-        process.exit(1);
+        exitWithError('Invalid source path');
       }
       if (!destParsed.bucket) {
-        console.error('Invalid destination path');
-        process.exit(1);
+        exitWithError('Invalid destination path');
       }
       await copyRemoteToRemote(src, srcParsed, destParsed, config, recursive);
       break;

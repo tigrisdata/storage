@@ -8,6 +8,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('buckets', 'set-ttl');
 
@@ -22,27 +23,27 @@ export default async function setTtl(options: Record<string, unknown>) {
 
   if (!name) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   if (enable && disable) {
     printFailure(context, 'Cannot use both --enable and --disable');
-    process.exit(1);
+    exitWithError('Cannot use both --enable and --disable', context);
   }
 
   if (disable && (days !== undefined || date !== undefined)) {
     printFailure(context, 'Cannot use --disable with --days or --date');
-    process.exit(1);
+    exitWithError('Cannot use --disable with --days or --date', context);
   }
 
   if (!enable && !disable && days === undefined && date === undefined) {
     printFailure(context, 'Provide --days, --date, --enable, or --disable');
-    process.exit(1);
+    exitWithError('Provide --days, --date, --enable, or --disable', context);
   }
 
   if (days !== undefined && (isNaN(Number(days)) || Number(days) <= 0)) {
     printFailure(context, '--days must be a positive number');
-    process.exit(1);
+    exitWithError('--days must be a positive number', context);
   }
 
   if (date !== undefined) {
@@ -55,7 +56,10 @@ export default async function setTtl(options: Record<string, unknown>) {
         context,
         '--date must be a valid ISO-8601 date (e.g. 2026-06-01)'
       );
-      process.exit(1);
+      exitWithError(
+        '--date must be a valid ISO-8601 date (e.g. 2026-06-01)',
+        context
+      );
     }
   }
 
@@ -82,7 +86,7 @@ export default async function setTtl(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   printSuccess(context, { name });

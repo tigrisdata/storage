@@ -1,4 +1,3 @@
-import * as readline from 'readline';
 import {
   isRemotePath,
   parseRemotePath,
@@ -10,52 +9,43 @@ import {
 import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { formatSize } from '../utils/format.js';
+import { requireInteractive, confirm } from '../utils/interactive.js';
 import { get, put, remove, list, head } from '@tigrisdata/storage';
 import { calculateUploadParams } from '../utils/upload.js';
+import { exitWithError } from '../utils/exit.js';
 
-async function confirm(message: string): Promise<boolean> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  return new Promise((resolve) => {
-    rl.question(`${message} (y/N): `, (answer) => {
-      rl.close();
-      resolve(answer.toLowerCase() === 'y');
-    });
-  });
-}
+let _jsonMode = false;
 
 export default async function mv(options: Record<string, unknown>) {
   const src = getOption<string>(options, ['src']);
   const dest = getOption<string>(options, ['dest']);
-  const force = getOption<boolean>(options, ['force', 'f', 'F']);
+  const force = getOption<boolean>(options, ['force', 'f', 'F', 'yes', 'y']);
   const recursive = !!getOption<boolean>(options, ['recursive', 'r']);
+  const jsonFlag = getOption<boolean>(options, ['json']);
+  const format = jsonFlag
+    ? 'json'
+    : getOption<string>(options, ['format'], 'table');
+  _jsonMode = format === 'json';
 
   if (!src || !dest) {
-    console.error('both src and dest arguments are required');
-    process.exit(1);
+    exitWithError('both src and dest arguments are required');
   }
 
   if (!isRemotePath(src) || !isRemotePath(dest)) {
-    console.error(
+    exitWithError(
       'Both src and dest must be remote Tigris paths (t3:// or tigris://)'
     );
-    process.exit(1);
   }
 
   const srcPath = parseRemotePath(src);
   const destPath = parseRemotePath(dest);
 
   if (!srcPath.bucket) {
-    console.error('Invalid source path');
-    process.exit(1);
+    exitWithError('Invalid source path');
   }
 
   if (!destPath.bucket) {
-    console.error('Invalid destination path');
-    process.exit(1);
+    exitWithError('Invalid destination path');
   }
 
   // Cannot move a bucket itself
@@ -63,8 +53,7 @@ export default async function mv(options: Record<string, unknown>) {
   // t3://bucket/ (no path, trailing slash) = move all contents from bucket root
   const rawEndsWithSlash = src.endsWith('/');
   if (!srcPath.path && !rawEndsWithSlash) {
-    console.error('Cannot move a bucket. Provide a path within the bucket.');
-    process.exit(1);
+    exitWithError('Cannot move a bucket. Provide a path within the bucket.');
   }
 
   const config = await getStorageConfig({ withCredentialProvider: true });
@@ -80,10 +69,9 @@ export default async function mv(options: Record<string, unknown>) {
   }
 
   if (isFolder && !isWildcard && !recursive) {
-    console.error(
-      `Source is a remote folder (not moved). Use -r to move recursively.`
+    exitWithError(
+      'Source is a remote folder (not moved). Use -r to move recursively.'
     );
-    process.exit(1);
   }
 
   if (isWildcard || isFolder) {
@@ -114,8 +102,7 @@ export default async function mv(options: Record<string, unknown>) {
       srcPath.bucket === destPath.bucket &&
       prefix === effectiveDestPrefixWithSlash
     ) {
-      console.error('Source and destination are the same');
-      process.exit(1);
+      exitWithError('Source and destination are the same');
     }
 
     const { items, error } = await listAllItems(
@@ -125,8 +112,7 @@ export default async function mv(options: Record<string, unknown>) {
     );
 
     if (error) {
-      console.error(error.message);
-      process.exit(1);
+      exitWithError(error);
     }
 
     // Filter out folder markers - they're handled separately below
@@ -156,17 +142,22 @@ export default async function mv(options: Record<string, unknown>) {
       : false;
 
     if (itemsToMove.length === 0 && !hasFolderMarker) {
-      console.log('No objects to move');
+      if (_jsonMode) {
+        console.log(JSON.stringify({ action: 'moved', count: 0 }));
+      } else {
+        console.log('No objects to move');
+      }
       return;
     }
 
     const totalToMove = itemsToMove.length + (hasFolderMarker ? 1 : 0);
     if (!force) {
+      requireInteractive('Use --yes to skip confirmation');
       const confirmed = await confirm(
         `Are you sure you want to move ${totalToMove} object(s)?`
       );
       if (!confirmed) {
-        console.log('Aborted');
+        if (!_jsonMode) console.log('Aborted');
         return;
       }
     }
@@ -189,9 +180,10 @@ export default async function mv(options: Record<string, unknown>) {
       if (moveResult.error) {
         console.error(`Failed to move ${item.name}: ${moveResult.error}`);
       } else {
-        console.log(
-          `Moved t3://${srcPath.bucket}/${item.name} -> t3://${destPath.bucket}/${destKey}`
-        );
+        if (!_jsonMode)
+          console.log(
+            `Moved t3://${srcPath.bucket}/${item.name} -> t3://${destPath.bucket}/${destKey}`
+          );
         moved++;
       }
     }
@@ -237,7 +229,11 @@ export default async function mv(options: Record<string, unknown>) {
       moved = 1;
     }
 
-    console.log(`Moved ${moved} object(s)`);
+    if (_jsonMode) {
+      console.log(JSON.stringify({ action: 'moved', count: moved }));
+    } else {
+      console.log(`Moved ${moved} object(s)`);
+    }
   } else {
     // Move single object
     const srcFileName = srcPath.path.split('/').pop()!;
@@ -265,16 +261,16 @@ export default async function mv(options: Record<string, unknown>) {
 
     // Check for same location
     if (srcPath.bucket === destPath.bucket && srcPath.path === destKey) {
-      console.error('Source and destination are the same');
-      process.exit(1);
+      exitWithError('Source and destination are the same');
     }
 
     if (!force) {
+      requireInteractive('Use --yes to skip confirmation');
       const confirmed = await confirm(
         `Are you sure you want to move 't3://${srcPath.bucket}/${srcPath.path}'?`
       );
       if (!confirmed) {
-        console.log('Aborted');
+        if (!_jsonMode) console.log('Aborted');
         return;
       }
     }
@@ -285,17 +281,27 @@ export default async function mv(options: Record<string, unknown>) {
       srcPath.path,
       destPath.bucket,
       destKey,
-      true // show progress for single file
+      !_jsonMode // show progress for single file (not in JSON mode)
     );
 
     if (result.error) {
-      console.error(result.error);
-      process.exit(1);
+      exitWithError(result.error);
     }
 
-    console.log(
-      `Moved t3://${srcPath.bucket}/${srcPath.path} -> t3://${destPath.bucket}/${destKey}`
-    );
+    if (_jsonMode) {
+      console.log(
+        JSON.stringify({
+          action: 'moved',
+          count: 1,
+          src: `t3://${srcPath.bucket}/${srcPath.path}`,
+          dest: `t3://${destPath.bucket}/${destKey}`,
+        })
+      );
+    } else {
+      console.log(
+        `Moved t3://${srcPath.bucket}/${srcPath.path} -> t3://${destPath.bucket}/${destKey}`
+      );
+    }
   }
   process.exit(0);
 }

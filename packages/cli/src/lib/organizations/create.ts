@@ -14,6 +14,7 @@ import {
   printHint,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError, printNextActions } from '../../utils/exit.js';
 
 const context = msg('organizations', 'create');
 
@@ -53,7 +54,7 @@ export default async function create(options: Record<string, unknown>) {
 
   if (!name) {
     printFailure(context, 'Organization name is required');
-    process.exit(1);
+    exitWithError('Organization name is required', context);
   }
 
   const config = await getStorageConfig();
@@ -62,11 +63,12 @@ export default async function create(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   const id = data.id;
 
   printSuccess(context, { name, id });
   printHint(context, { name });
+  printNextActions(context, { name });
 }

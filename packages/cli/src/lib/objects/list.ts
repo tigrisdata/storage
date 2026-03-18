@@ -9,6 +9,7 @@ import {
   printEmpty,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('objects', 'list');
 
@@ -17,17 +18,26 @@ export default async function listObjects(options: Record<string, unknown>) {
 
   const bucket = getOption<string>(options, ['bucket']);
   const prefix = getOption<string>(options, ['prefix', 'p', 'P']);
-  const format = getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const snapshotVersion = getOption<string>(options, [
+    'snapshot-version',
+    'snapshotVersion',
+    'snapshot',
+  ]);
 
   if (!bucket) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   const config = await getStorageConfig();
 
   const { data, error } = await list({
     prefix: prefix || undefined,
+    ...(snapshotVersion ? { snapshotVersion } : {}),
     config: {
       ...config,
       bucket,
@@ -36,7 +46,7 @@ export default async function listObjects(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   if (!data.items || data.items.length === 0) {

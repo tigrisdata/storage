@@ -1,5 +1,6 @@
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
+import { requireInteractive } from '../../utils/interactive.js';
 import { storeCredentials, storeLoginMethod } from '../../auth/storage.js';
 import { DEFAULT_STORAGE_ENDPOINT } from '../../constants.js';
 import {
@@ -8,6 +9,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError, printNextActions } from '../../utils/exit.js';
 
 const context = msg('configure');
 
@@ -61,6 +63,8 @@ export default async function configure(options: Record<string, unknown>) {
       });
     }
 
+    requireInteractive('Provide --access-key, --access-secret, and --endpoint');
+
     const responses = await prompt<{
       accessKey?: string;
       accessSecret?: string;
@@ -75,7 +79,7 @@ export default async function configure(options: Record<string, unknown>) {
   // Validate that all required fields are present
   if (!accessKey || !accessSecret || !endpoint) {
     printFailure(context, 'All credentials are required');
-    process.exit(1);
+    exitWithError('All credentials are required', context);
   }
 
   // Store credentials
@@ -90,8 +94,9 @@ export default async function configure(options: Record<string, unknown>) {
     await storeLoginMethod('credentials');
 
     printSuccess(context);
-  } catch {
+    printNextActions(context);
+  } catch (error) {
     printFailure(context, 'Failed to save credentials');
-    process.exit(1);
+    exitWithError(error, context);
   }
 }

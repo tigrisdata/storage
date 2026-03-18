@@ -1,4 +1,3 @@
-import * as readline from 'readline';
 import {
   isRemotePath,
   parseRemotePath,
@@ -10,41 +9,33 @@ import {
 import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { remove, removeBucket, list } from '@tigrisdata/storage';
+import { requireInteractive, confirm } from '../utils/interactive.js';
+import { exitWithError } from '../utils/exit.js';
 
-async function confirm(message: string): Promise<boolean> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  return new Promise((resolve) => {
-    rl.question(`${message} (y/N): `, (answer) => {
-      rl.close();
-      resolve(answer.toLowerCase() === 'y');
-    });
-  });
-}
+let _jsonMode = false;
 
 export default async function rm(options: Record<string, unknown>) {
   const pathString = getOption<string>(options, ['path']);
-  const force = getOption<boolean>(options, ['force', 'f', 'F']);
+  const force = getOption<boolean>(options, ['force', 'f', 'F', 'yes', 'y']);
   const recursive = !!getOption<boolean>(options, ['recursive', 'r']);
+  const jsonFlag = getOption<boolean>(options, ['json']);
+  const format = jsonFlag
+    ? 'json'
+    : getOption<string>(options, ['format'], 'table');
+  _jsonMode = format === 'json';
 
   if (!pathString) {
-    console.error('path argument is required');
-    process.exit(1);
+    exitWithError('path argument is required');
   }
 
   if (!isRemotePath(pathString)) {
-    console.error('Path must be a remote Tigris path (t3:// or tigris://)');
-    process.exit(1);
+    exitWithError('Path must be a remote Tigris path (t3:// or tigris://)');
   }
 
   const { bucket, path } = parseRemotePath(pathString);
 
   if (!bucket) {
-    console.error('Invalid path');
-    process.exit(1);
+    exitWithError('Invalid path');
   }
 
   const config = await getStorageConfig();
@@ -53,11 +44,12 @@ export default async function rm(options: Record<string, unknown>) {
   const rawEndsWithSlash = pathString.endsWith('/');
   if (!path && !rawEndsWithSlash) {
     if (!force) {
+      requireInteractive('Use --yes to skip confirmation');
       const confirmed = await confirm(
         `Are you sure you want to delete bucket '${bucket}'?`
       );
       if (!confirmed) {
-        console.log('Aborted');
+        if (!_jsonMode) console.log('Aborted');
         return;
       }
     }
@@ -65,11 +57,14 @@ export default async function rm(options: Record<string, unknown>) {
     const { error } = await removeBucket(bucket, { config });
 
     if (error) {
-      console.error(error.message);
-      process.exit(1);
+      exitWithError(error);
     }
 
-    console.log(`Removed bucket '${bucket}'`);
+    if (_jsonMode) {
+      console.log(JSON.stringify({ action: 'removed', bucket }));
+    } else {
+      console.log(`Removed bucket '${bucket}'`);
+    }
     return;
   }
 
@@ -83,10 +78,9 @@ export default async function rm(options: Record<string, unknown>) {
   }
 
   if (isFolder && !isWildcard && !recursive) {
-    console.error(
-      `Source is a remote folder (not removed). Use -r to remove recursively.`
+    exitWithError(
+      'Source is a remote folder (not removed). Use -r to remove recursively.'
     );
-    process.exit(1);
   }
 
   if (isWildcard || isFolder) {
@@ -106,8 +100,7 @@ export default async function rm(options: Record<string, unknown>) {
     );
 
     if (error) {
-      console.error(error.message);
-      process.exit(1);
+      exitWithError(error);
     }
 
     let itemsToRemove = items;
@@ -146,16 +139,21 @@ export default async function rm(options: Record<string, unknown>) {
     const totalItems = itemsToRemove.length + (hasSeparateFolderMarker ? 1 : 0);
 
     if (totalItems === 0) {
-      console.log('No objects to remove');
+      if (_jsonMode) {
+        console.log(JSON.stringify({ action: 'removed', count: 0 }));
+      } else {
+        console.log('No objects to remove');
+      }
       return;
     }
 
     if (!force) {
+      requireInteractive('Use --yes to skip confirmation');
       const confirmed = await confirm(
         `Are you sure you want to delete ${totalItems} object(s)?`
       );
       if (!confirmed) {
-        console.log('Aborted');
+        if (!_jsonMode) console.log('Aborted');
         return;
       }
     }
@@ -174,7 +172,7 @@ export default async function rm(options: Record<string, unknown>) {
       if (removeError) {
         console.error(`Failed to remove ${item.name}: ${removeError.message}`);
       } else {
-        console.log(`Removed t3://${bucket}/${item.name}`);
+        if (!_jsonMode) console.log(`Removed t3://${bucket}/${item.name}`);
         removed++;
       }
     }
@@ -193,20 +191,25 @@ export default async function rm(options: Record<string, unknown>) {
           `Failed to remove ${folderMarker}: ${removeError.message}`
         );
       } else {
-        console.log(`Removed t3://${bucket}/${folderMarker}`);
+        if (!_jsonMode) console.log(`Removed t3://${bucket}/${folderMarker}`);
         removed++;
       }
     }
 
-    console.log(`Removed ${removed} object(s)`);
+    if (_jsonMode) {
+      console.log(JSON.stringify({ action: 'removed', count: removed }));
+    } else {
+      console.log(`Removed ${removed} object(s)`);
+    }
   } else {
     // Remove single object
     if (!force) {
+      requireInteractive('Use --yes to skip confirmation');
       const confirmed = await confirm(
         `Are you sure you want to delete 't3://${bucket}/${path}'?`
       );
       if (!confirmed) {
-        console.log('Aborted');
+        if (!_jsonMode) console.log('Aborted');
         return;
       }
     }
@@ -219,11 +222,20 @@ export default async function rm(options: Record<string, unknown>) {
     });
 
     if (error) {
-      console.error(error.message);
-      process.exit(1);
+      exitWithError(error);
     }
 
-    console.log(`Removed t3://${bucket}/${path}`);
+    if (_jsonMode) {
+      console.log(
+        JSON.stringify({
+          action: 'removed',
+          count: 1,
+          path: `t3://${bucket}/${path}`,
+        })
+      );
+    } else {
+      console.log(`Removed t3://${bucket}/${path}`);
+    }
   }
   process.exit(0);
 }

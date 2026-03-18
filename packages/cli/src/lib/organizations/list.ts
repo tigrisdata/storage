@@ -11,6 +11,7 @@ import {
 import { getAuthClient } from '../../auth/client.js';
 import { isFlyUser, fetchOrganizationsFromUserInfo } from '../../auth/fly.js';
 import Enquirer from 'enquirer';
+import { requireInteractive } from '../../utils/interactive.js';
 import {
   printStart,
   printSuccess,
@@ -18,6 +19,7 @@ import {
   printEmpty,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('organizations', 'list');
 
@@ -42,7 +44,10 @@ export default async function list(options: Record<string, unknown>) {
     return;
   }
 
-  const format = getOption<string>(options, ['format', 'f', 'F'], 'select');
+  const json = getOption<boolean>(options, ['json']);
+  const format = json
+    ? 'json'
+    : getOption<string>(options, ['format', 'f', 'F'], 'select');
 
   // For Fly users, fetch organizations from userinfo endpoint
   const authClient = getAuthClient();
@@ -64,7 +69,7 @@ export default async function list(options: Record<string, unknown>) {
 
     if (error) {
       printFailure(context, error.message);
-      process.exit(1);
+      exitWithError(error, context);
     }
 
     orgs = data?.organizations ?? [];
@@ -85,6 +90,8 @@ export default async function list(options: Record<string, unknown>) {
       message: `${org.name} (${org.id})`,
       hint: org.id === currentSelection ? 'currently selected' : undefined,
     }));
+
+    requireInteractive('Use --format table or --format json');
 
     const response = await Enquirer.prompt<{ organization: string }>({
       type: 'select',

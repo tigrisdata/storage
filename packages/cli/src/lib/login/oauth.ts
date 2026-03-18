@@ -8,6 +8,7 @@ import {
   printHint,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError, printNextActions } from '../../utils/exit.js';
 
 const context = msg('login', 'oauth');
 
@@ -38,16 +39,18 @@ export async function oauth(): Promise<void> {
       const firstOrg = orgs[0];
       await storeSelectedOrganization(firstOrg.id);
       printSuccess(context, { org: firstOrg.displayName || firstOrg.name });
+      printNextActions(context);
 
       if (orgs.length > 1) {
         printHint(context, { count: orgs.length });
       }
     } else {
       printSuccess(context, { org: 'none' });
+      printNextActions(context);
     }
-  } catch {
+  } catch (error) {
     printFailure(context);
-    process.exit(1);
+    exitWithError(error, context);
   }
 }
 
