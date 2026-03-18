@@ -141,6 +141,38 @@ describe('specs completeness', () => {
     }
   });
 
+  describe('nextActions entries have command and description', () => {
+    const withNextActions = allCommands.filter(
+      ({ spec }) =>
+        spec.messages &&
+        (spec.messages as Record<string, unknown>).nextActions
+    );
+
+    if (withNextActions.length === 0) {
+      it('no commands with nextActions found (skip)', () => {
+        expect(true).toBe(true);
+      });
+    }
+
+    for (const { spec, path } of withNextActions) {
+      const label = path.join(' ');
+      it(`${label}`, () => {
+        const nextActions = (spec.messages as Record<string, unknown>)
+          .nextActions as Array<Record<string, unknown>>;
+        expect(Array.isArray(nextActions)).toBe(true);
+        expect(nextActions.length).toBeGreaterThan(0);
+        for (const action of nextActions) {
+          expect(action).toHaveProperty('command');
+          expect(action).toHaveProperty('description');
+          expect(typeof action.command).toBe('string');
+          expect(typeof action.description).toBe('string');
+          expect((action.command as string).length).toBeGreaterThan(0);
+          expect((action.description as string).length).toBeGreaterThan(0);
+        }
+      });
+    }
+  });
+
   describe('deprecated commands have onDeprecated message', () => {
     const deprecated = allCommands.filter(({ spec }) => spec.deprecated);
 

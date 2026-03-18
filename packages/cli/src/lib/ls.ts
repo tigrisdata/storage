@@ -3,6 +3,7 @@ import { getOption } from '../utils/options.js';
 import { formatOutput, formatSize } from '../utils/format.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { list, listBuckets } from '@tigrisdata/storage';
+import { exitWithError } from '../utils/exit.js';
 
 export default async function ls(options: Record<string, unknown>) {
   const pathString = getOption<string>(options, ['path']);
@@ -22,8 +23,7 @@ export default async function ls(options: Record<string, unknown>) {
     const { data, error } = await listBuckets({ config });
 
     if (error) {
-      console.error(error.message);
-      process.exit(1);
+      exitWithError(error);
     }
 
     const buckets = (data.buckets || []).map((bucket) => ({
@@ -43,8 +43,7 @@ export default async function ls(options: Record<string, unknown>) {
   const { bucket, path } = parseAnyPath(pathString);
 
   if (!bucket) {
-    console.error('Invalid path');
-    process.exit(1);
+    exitWithError('Invalid path');
   }
 
   const config = await getStorageConfig();
@@ -62,8 +61,7 @@ export default async function ls(options: Record<string, unknown>) {
   });
 
   if (error) {
-    console.error(error.message);
-    process.exit(1);
+    exitWithError(error);
   }
 
   const objects = (data.items || [])

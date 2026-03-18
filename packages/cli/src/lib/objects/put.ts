@@ -10,6 +10,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError, printNextActions } from '../../utils/exit.js';
 import { calculateUploadParams } from '../../utils/upload.js';
 
 const context = msg('objects', 'put');
@@ -34,12 +35,12 @@ export default async function putObject(options: Record<string, unknown>) {
 
   if (!bucket) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   if (!key) {
     printFailure(context, 'Object key is required');
-    process.exit(1);
+    exitWithError('Object key is required', context);
   }
 
   // Check for stdin or file input
@@ -47,7 +48,7 @@ export default async function putObject(options: Record<string, unknown>) {
 
   if (!file && !hasStdin) {
     printFailure(context, 'File path is required (or pipe data via stdin)');
-    process.exit(1);
+    exitWithError('File path is required (or pipe data via stdin)', context);
   }
 
   let body: ReadableStream;
@@ -60,7 +61,7 @@ export default async function putObject(options: Record<string, unknown>) {
       fileSize = stats.size;
     } catch {
       printFailure(context, `File not found: ${file}`);
-      process.exit(1);
+      exitWithError(`File not found: ${file}`, context);
     }
     const fileStream = createReadStream(file);
     body = Readable.toWeb(fileStream) as ReadableStream;
@@ -100,7 +101,7 @@ export default async function putObject(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   const result = [
@@ -121,4 +122,5 @@ export default async function putObject(options: Record<string, unknown>) {
 
   console.log(output);
   printSuccess(context, { key, bucket });
+  printNextActions(context, { key, bucket });
 }

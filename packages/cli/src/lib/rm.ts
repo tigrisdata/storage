@@ -10,6 +10,7 @@ import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { remove, removeBucket, list } from '@tigrisdata/storage';
 import { requireInteractive, confirm } from '../utils/interactive.js';
+import { exitWithError } from '../utils/exit.js';
 
 let _jsonMode = false;
 
@@ -24,20 +25,17 @@ export default async function rm(options: Record<string, unknown>) {
   _jsonMode = format === 'json';
 
   if (!pathString) {
-    console.error('path argument is required');
-    process.exit(1);
+    exitWithError('path argument is required');
   }
 
   if (!isRemotePath(pathString)) {
-    console.error('Path must be a remote Tigris path (t3:// or tigris://)');
-    process.exit(1);
+    exitWithError('Path must be a remote Tigris path (t3:// or tigris://)');
   }
 
   const { bucket, path } = parseRemotePath(pathString);
 
   if (!bucket) {
-    console.error('Invalid path');
-    process.exit(1);
+    exitWithError('Invalid path');
   }
 
   const config = await getStorageConfig();
@@ -59,8 +57,7 @@ export default async function rm(options: Record<string, unknown>) {
     const { error } = await removeBucket(bucket, { config });
 
     if (error) {
-      console.error(error.message);
-      process.exit(1);
+      exitWithError(error);
     }
 
     if (_jsonMode) {
@@ -81,10 +78,9 @@ export default async function rm(options: Record<string, unknown>) {
   }
 
   if (isFolder && !isWildcard && !recursive) {
-    console.error(
-      `Source is a remote folder (not removed). Use -r to remove recursively.`
+    exitWithError(
+      'Source is a remote folder (not removed). Use -r to remove recursively.'
     );
-    process.exit(1);
   }
 
   if (isWildcard || isFolder) {
@@ -104,8 +100,7 @@ export default async function rm(options: Record<string, unknown>) {
     );
 
     if (error) {
-      console.error(error.message);
-      process.exit(1);
+      exitWithError(error);
     }
 
     let itemsToRemove = items;
@@ -227,8 +222,7 @@ export default async function rm(options: Record<string, unknown>) {
     });
 
     if (error) {
-      console.error(error.message);
-      process.exit(1);
+      exitWithError(error);
     }
 
     if (_jsonMode) {

@@ -9,6 +9,7 @@ import {
   printEmpty,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('snapshots', 'list');
 
@@ -23,7 +24,7 @@ export default async function list(options: Record<string, unknown>) {
 
   if (!name) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   const config = await getStorageConfig();
@@ -32,7 +33,7 @@ export default async function list(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   if (!data || data.length === 0) {

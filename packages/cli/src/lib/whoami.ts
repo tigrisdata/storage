@@ -7,6 +7,7 @@ import {
 } from '../auth/storage.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { printFailure, printAlreadyDone, msg } from '../utils/messages.js';
+import { exitWithError } from '../utils/exit.js';
 import { getOption } from '../utils/options.js';
 
 const context = msg('whoami');
@@ -64,7 +65,7 @@ export default async function whoami(
 
       if (error) {
         printFailure(context, error.message);
-        process.exit(1);
+        exitWithError(error, context);
       }
 
       organizations = data?.organizations ?? [];
@@ -121,6 +122,6 @@ export default async function whoami(
     } else {
       printFailure(context);
     }
-    process.exit(1);
+    exitWithError(error, context);
   }
 }

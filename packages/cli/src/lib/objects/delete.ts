@@ -7,6 +7,11 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import {
+  exitWithError,
+  getSuccessNextActions,
+  printNextActions,
+} from '../../utils/exit.js';
 import { requireInteractive, confirm } from '../../utils/interactive.js';
 
 const context = msg('objects', 'delete');
@@ -25,12 +30,12 @@ export default async function deleteObject(options: Record<string, unknown>) {
 
   if (!bucket) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   if (!keys) {
     printFailure(context, 'Object key is required');
-    process.exit(1);
+    exitWithError('Object key is required', context);
   }
 
   const config = await getStorageConfig();
@@ -67,12 +72,20 @@ export default async function deleteObject(options: Record<string, unknown>) {
   }
 
   if (format === 'json') {
-    console.log(
-      JSON.stringify({ action: 'deleted', bucket, keys: deleted, errors })
-    );
+    const nextActions = getSuccessNextActions(context, { bucket });
+    const jsonOutput: Record<string, unknown> = {
+      action: 'deleted',
+      bucket,
+      keys: deleted,
+      errors,
+    };
+    if (nextActions.length > 0) jsonOutput.nextActions = nextActions;
+    console.log(JSON.stringify(jsonOutput));
   }
 
   if (errors.length > 0) {
-    process.exit(1);
+    exitWithError(errors[0].error, context);
   }
+
+  printNextActions(context, { bucket });
 }

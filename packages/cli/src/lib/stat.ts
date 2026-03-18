@@ -10,6 +10,7 @@ import {
   msg,
 } from '../utils/messages.js';
 import { buildBucketInfo } from '../utils/bucket-info.js';
+import { exitWithError } from '../utils/exit.js';
 
 const context = msg('stat');
 
@@ -34,7 +35,7 @@ export default async function stat(options: Record<string, unknown>) {
 
     if (error) {
       printFailure(context, error.message);
-      process.exit(1);
+      exitWithError(error, context);
     }
 
     const stats = [
@@ -64,7 +65,7 @@ export default async function stat(options: Record<string, unknown>) {
 
   if (!bucket) {
     printFailure(context, 'Invalid path');
-    process.exit(1);
+    exitWithError('Invalid path', context);
   }
 
   // Bucket only (no path or just trailing slash): show bucket info
@@ -73,7 +74,7 @@ export default async function stat(options: Record<string, unknown>) {
 
     if (error) {
       printFailure(context, error.message);
-      process.exit(1);
+      exitWithError(error, context);
     }
 
     const info = buildBucketInfo(data).map(({ label, value }) => ({
@@ -102,12 +103,12 @@ export default async function stat(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   if (!data) {
     printFailure(context, 'Object not found');
-    process.exit(1);
+    exitWithError('Object not found', context);
   }
 
   const info = [

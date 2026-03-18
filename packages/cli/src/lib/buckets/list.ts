@@ -9,6 +9,7 @@ import {
   printEmpty,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('buckets', 'list');
 
@@ -27,7 +28,7 @@ export default async function list(options: Record<string, unknown>) {
 
     if (error) {
       printFailure(context, error.message);
-      process.exit(1);
+      exitWithError(error, context);
     }
 
     if (!data.buckets || data.buckets.length === 0) {
@@ -44,7 +45,7 @@ export default async function list(options: Record<string, unknown>) {
 
       if (infoError) {
         printFailure(context, infoError.message);
-        process.exit(1);
+        exitWithError(infoError, context);
       }
 
       if (!bucketInfo.hasForks) {
@@ -95,6 +96,6 @@ export default async function list(options: Record<string, unknown>) {
     } else {
       printFailure(context, 'An unknown error occurred');
     }
-    process.exit(1);
+    exitWithError(error, context);
   }
 }

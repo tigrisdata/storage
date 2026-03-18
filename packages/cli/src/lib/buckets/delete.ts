@@ -8,6 +8,11 @@ import {
   msg,
 } from '../../utils/messages.js';
 import { requireInteractive, confirm } from '../../utils/interactive.js';
+import {
+  exitWithError,
+  getSuccessNextActions,
+  printNextActions,
+} from '../../utils/exit.js';
 
 const context = msg('buckets', 'delete');
 
@@ -24,7 +29,7 @@ export default async function deleteBucket(options: Record<string, unknown>) {
 
   if (!names) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   const bucketNames = Array.isArray(names) ? names : [names];
@@ -54,10 +59,19 @@ export default async function deleteBucket(options: Record<string, unknown>) {
   }
 
   if (format === 'json') {
-    console.log(JSON.stringify({ action: 'deleted', names: deleted, errors }));
+    const nextActions = getSuccessNextActions(context);
+    const output: Record<string, unknown> = {
+      action: 'deleted',
+      names: deleted,
+      errors,
+    };
+    if (nextActions.length > 0) output.nextActions = nextActions;
+    console.log(JSON.stringify(output));
   }
 
   if (errors.length > 0) {
-    process.exit(1);
+    exitWithError(errors[0].error, context);
   }
+
+  printNextActions(context);
 }

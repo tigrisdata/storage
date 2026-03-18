@@ -11,6 +11,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('buckets', 'set-locations');
 
@@ -22,7 +23,7 @@ export default async function setLocations(options: Record<string, unknown>) {
 
   if (!name) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   let parsedLocations: BucketLocations;
@@ -34,7 +35,7 @@ export default async function setLocations(options: Record<string, unknown>) {
       parsedLocations = await promptLocations();
     } catch (err) {
       printFailure(context, (err as Error).message);
-      process.exit(1);
+      exitWithError(err, context);
     }
   }
 
@@ -54,7 +55,7 @@ export default async function setLocations(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   printSuccess(context, { name });

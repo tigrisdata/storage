@@ -11,6 +11,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('objects', 'get');
 
@@ -125,12 +126,12 @@ export default async function getObject(options: Record<string, unknown>) {
 
   if (!bucket) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   if (!key) {
     printFailure(context, 'Object key is required');
-    process.exit(1);
+    exitWithError('Object key is required', context);
   }
 
   const config = await getStorageConfig();
@@ -149,7 +150,7 @@ export default async function getObject(options: Record<string, unknown>) {
 
     if (error) {
       printFailure(context, error.message);
-      process.exit(1);
+      exitWithError(error, context);
     }
 
     if (output) {
@@ -177,7 +178,7 @@ export default async function getObject(options: Record<string, unknown>) {
 
     if (error) {
       printFailure(context, error.message);
-      process.exit(1);
+      exitWithError(error, context);
     }
 
     if (output) {

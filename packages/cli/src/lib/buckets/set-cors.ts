@@ -8,6 +8,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('buckets', 'set-cors');
 
@@ -28,7 +29,7 @@ export default async function setCors(options: Record<string, unknown>) {
 
   if (!name) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   if (
@@ -41,17 +42,17 @@ export default async function setCors(options: Record<string, unknown>) {
       override)
   ) {
     printFailure(context, 'Cannot use --reset with other options');
-    process.exit(1);
+    exitWithError('Cannot use --reset with other options', context);
   }
 
   if (!reset && !origins) {
     printFailure(context, 'Provide --origins or --reset');
-    process.exit(1);
+    exitWithError('Provide --origins or --reset', context);
   }
 
   if (maxAge !== undefined && (isNaN(Number(maxAge)) || Number(maxAge) <= 0)) {
     printFailure(context, '--max-age must be a positive number');
-    process.exit(1);
+    exitWithError('--max-age must be a positive number', context);
   }
 
   const config = await getStorageConfig();
@@ -81,7 +82,7 @@ export default async function setCors(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   printSuccess(context, { name });

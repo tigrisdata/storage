@@ -12,6 +12,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError, printNextActions } from '../../utils/exit.js';
 
 const context = msg('organizations', 'select');
 
@@ -40,7 +41,7 @@ export default async function select(options: Record<string, unknown>) {
 
   if (!name) {
     printFailure(context, 'Organization name or ID is required');
-    process.exit(1);
+    exitWithError('Organization name or ID is required', context);
   }
 
   const config = await getStorageConfig();
@@ -49,7 +50,7 @@ export default async function select(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   const orgs = data?.organizations ?? [];
@@ -65,11 +66,12 @@ export default async function select(options: Record<string, unknown>) {
       context,
       `Organization "${name}" not found\n\nAvailable organizations:\n${availableOrgs}`
     );
-    process.exit(1);
+    exitWithError(`Organization "${name}" not found`, context);
   }
 
   // Store selected organization
   await storeSelectedOrganization(org.id);
 
   printSuccess(context, { name: org.name });
+  printNextActions(context, { name: org.name });
 }

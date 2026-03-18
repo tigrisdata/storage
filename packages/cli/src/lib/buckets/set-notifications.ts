@@ -11,6 +11,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('buckets', 'set-notifications');
 
@@ -31,7 +32,7 @@ export default async function setNotifications(
 
   if (!name) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   const flagCount = [enable, disable, reset].filter(Boolean).length;
@@ -40,7 +41,10 @@ export default async function setNotifications(
       context,
       'Only one of --enable, --disable, or --reset can be used'
     );
-    process.exit(1);
+    exitWithError(
+      'Only one of --enable, --disable, or --reset can be used',
+      context
+    );
   }
 
   if (
@@ -52,7 +56,7 @@ export default async function setNotifications(
       password !== undefined)
   ) {
     printFailure(context, 'Cannot use --reset with other options');
-    process.exit(1);
+    exitWithError('Cannot use --reset with other options', context);
   }
 
   if (
@@ -66,7 +70,7 @@ export default async function setNotifications(
     password === undefined
   ) {
     printFailure(context, 'Provide at least one option');
-    process.exit(1);
+    exitWithError('Provide at least one option', context);
   }
 
   if (token && (username !== undefined || password !== undefined)) {
@@ -74,7 +78,10 @@ export default async function setNotifications(
       context,
       'Cannot use --token with --username/--password. Choose one auth method'
     );
-    process.exit(1);
+    exitWithError(
+      'Cannot use --token with --username/--password. Choose one auth method',
+      context
+    );
   }
 
   if (
@@ -82,7 +89,7 @@ export default async function setNotifications(
     (username === undefined && password !== undefined)
   ) {
     printFailure(context, 'Both --username and --password are required');
-    process.exit(1);
+    exitWithError('Both --username and --password are required', context);
   }
 
   const config = await getStorageConfig();
@@ -123,7 +130,7 @@ export default async function setNotifications(
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   printSuccess(context, { name });

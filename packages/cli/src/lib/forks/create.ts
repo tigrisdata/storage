@@ -7,6 +7,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('forks', 'create');
 
@@ -19,12 +20,12 @@ export default async function create(options: Record<string, unknown>) {
 
   if (!name) {
     printFailure(context, 'Source bucket name is required');
-    process.exit(1);
+    exitWithError('Source bucket name is required', context);
   }
 
   if (!forkName) {
     printFailure(context, 'Fork name is required');
-    process.exit(1);
+    exitWithError('Fork name is required', context);
   }
 
   const { error } = await createBucket(forkName, {
@@ -35,7 +36,7 @@ export default async function create(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   printSuccess(context, { name, forkName });

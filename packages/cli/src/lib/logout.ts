@@ -5,6 +5,7 @@ import {
   printFailure,
   msg,
 } from '../utils/messages.js';
+import { exitWithError } from '../utils/exit.js';
 
 const context = msg('logout');
 
@@ -21,6 +22,6 @@ export default async function logout(): Promise<void> {
     } else {
       printFailure(context);
     }
-    process.exit(1);
+    exitWithError(error, context);
   }
 }

@@ -101,6 +101,11 @@ commands:
       onStart: 'Saving credentials...'
       onSuccess: 'Credentials saved to ~/.tigris/config.json. You can now use all tigris commands.'
       onFailure: 'Failed to save credentials'
+      nextActions:
+        - command: 'tigris credentials test'
+          description: 'Verify your credentials are working'
+        - command: 'tigris ls'
+          description: 'List your buckets'
     arguments:
       - name: access-key
         description: Your Tigris access key ID
@@ -156,6 +161,11 @@ commands:
           onFailure: 'Authentication failed'
           onAlreadyDone: "Already logged in.\nRun \"tigris logout\" first to switch accounts."
           hint: "You have {{count}} organizations.\nRun \"tigris orgs list\" to switch."
+          nextActions:
+            - command: 'tigris orgs list'
+              description: 'List and switch organizations'
+            - command: 'tigris ls'
+              description: 'List your buckets'
       # credentials
       - name: credentials
         description: Login with an access key and secret. Creates a temporary session that is cleared on logout
@@ -167,6 +177,9 @@ commands:
           onStart: 'Authenticating...'
           onSuccess: 'Logged in with credentials'
           onFailure: 'Authentication failed'
+          nextActions:
+            - command: 'tigris ls'
+              description: 'List your buckets'
         arguments:
           - name: access-key
             description: Your access key ID (will prompt if not provided)
@@ -615,6 +628,9 @@ commands:
           onSuccess: "Organization '{{name}}' created successfully\nOrganization ID: {{id}}"
           onFailure: 'Failed to create organization'
           hint: "Next steps:\n   - Select this organization: tigris orgs select {{name}}"
+          nextActions:
+            - command: 'tigris orgs select {{name}}'
+              description: 'Select this organization as active'
         arguments:
           - name: name
             type: positional
@@ -631,6 +647,11 @@ commands:
           onStart: ''
           onSuccess: "Organization '{{name}}' selected"
           onFailure: 'Failed to select organization'
+          nextActions:
+            - command: 'tigris ls'
+              description: 'List your buckets'
+            - command: 'tigris buckets create <name>'
+              description: 'Create a new bucket'
         arguments:
           - name: name
             type: positional
@@ -689,6 +710,11 @@ commands:
           onStart: 'Creating bucket...'
           onSuccess: "Bucket '{{name}}' created successfully"
           onFailure: 'Failed to create bucket'
+          nextActions:
+            - command: 'tigris access-keys create <name>'
+              description: 'Create an access key for programmatic access'
+            - command: 'tigris cp ./file t3://{{name}}/'
+              description: 'Upload files to the new bucket'
         arguments:
           - name: name
             description: Name of the bucket
@@ -779,6 +805,9 @@ commands:
           onStart: 'Deleting bucket...'
           onSuccess: "Bucket '{{name}}' deleted successfully"
           onFailure: "Failed to delete bucket '{{name}}'"
+          nextActions:
+            - command: 'tigris ls'
+              description: 'List remaining buckets'
         arguments:
           - name: name
             description: Name of the bucket or comma separated list of buckets
@@ -1289,6 +1318,9 @@ commands:
           onStart: 'Uploading object...'
           onSuccess: "Object '{{key}}' uploaded successfully"
           onFailure: 'Failed to upload object'
+          nextActions:
+            - command: 'tigris presign {{bucket}}/{{key}}'
+              description: 'Generate a presigned URL for the uploaded object'
         arguments:
           - name: bucket
             description: Name of the bucket
@@ -1334,6 +1366,9 @@ commands:
           onStart: 'Deleting object...'
           onSuccess: "Object '{{key}}' deleted successfully"
           onFailure: 'Failed to delete object'
+          nextActions:
+            - command: 'tigris ls {{bucket}}'
+              description: 'List remaining objects in the bucket'
         arguments:
           - name: bucket
             description: Name of the bucket
@@ -1435,6 +1470,9 @@ commands:
           onStart: 'Creating access key...'
           onSuccess: 'Access key created'
           onFailure: 'Failed to create access key'
+          nextActions:
+            - command: 'tigris access-keys assign {{id}} --bucket <bucket> --role Editor'
+              description: 'Assign bucket roles to the new access key'
         arguments:
           - name: name
             description: Name for the access key
@@ -1513,6 +1551,9 @@ commands:
           onStart: 'Assigning bucket roles...'
           onSuccess: 'Bucket roles assigned'
           onFailure: 'Failed to assign bucket roles'
+          nextActions:
+            - command: 'tigris cp ./file t3://<bucket>/'
+              description: 'Upload files using the assigned access key'
         arguments:
           - name: id
             description: Access key ID

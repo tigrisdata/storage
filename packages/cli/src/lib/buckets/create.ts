@@ -12,6 +12,11 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import {
+  exitWithError,
+  getSuccessNextActions,
+  printNextActions,
+} from '../../utils/exit.js';
 
 const { prompt } = enquirer;
 
@@ -130,18 +135,18 @@ export default async function create(options: Record<string, unknown>) {
       parsedLocations = await promptLocations();
     } catch (err) {
       printFailure(context, (err as Error).message);
-      process.exit(1);
+      exitWithError(err, context);
     }
   }
 
   if (!name) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   if (sourceSnapshot && !forkOf) {
     printFailure(context, '--source-snapshot requires --fork-of');
-    process.exit(1);
+    exitWithError('--source-snapshot requires --fork-of', context);
   }
 
   const { error } = await createBucket(name, {
@@ -156,14 +161,20 @@ export default async function create(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   if (format === 'json') {
-    console.log(
-      JSON.stringify({ action: 'created', name, ...(forkOf ? { forkOf } : {}) })
-    );
+    const nextActions = getSuccessNextActions(context, { name });
+    const output: Record<string, unknown> = {
+      action: 'created',
+      name,
+      ...(forkOf ? { forkOf } : {}),
+    };
+    if (nextActions.length > 0) output.nextActions = nextActions;
+    console.log(JSON.stringify(output));
   }
 
   printSuccess(context, { name });
+  printNextActions(context, { name });
 }

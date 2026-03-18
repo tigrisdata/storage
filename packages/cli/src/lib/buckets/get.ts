@@ -9,6 +9,7 @@ import {
   msg,
 } from '../../utils/messages.js';
 import { buildBucketInfo } from '../../utils/bucket-info.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('buckets', 'get');
 
@@ -23,7 +24,7 @@ export default async function get(options: Record<string, unknown>) {
 
   if (!name) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   const { data, error } = await getBucketInfo(name, {
@@ -32,7 +33,7 @@ export default async function get(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   const info = [

@@ -2,25 +2,23 @@ import { parseAnyPath } from '../utils/path.js';
 import { getOption } from '../utils/options.js';
 import { getStorageConfig } from '../auth/s3-client.js';
 import { put } from '@tigrisdata/storage';
+import { exitWithError } from '../utils/exit.js';
 
 export default async function touch(options: Record<string, unknown>) {
   const pathString = getOption<string>(options, ['path']);
 
   if (!pathString) {
-    console.error('path argument is required');
-    process.exit(1);
+    exitWithError('path argument is required');
   }
 
   const { bucket, path } = parseAnyPath(pathString);
 
   if (!bucket) {
-    console.error('Invalid path');
-    process.exit(1);
+    exitWithError('Invalid path');
   }
 
   if (!path) {
-    console.error('Object key is required (use mk to create buckets)');
-    process.exit(1);
+    exitWithError('Object key is required (use mk to create buckets)');
   }
 
   const json = getOption<boolean>(options, ['json']);
@@ -38,8 +36,7 @@ export default async function touch(options: Record<string, unknown>) {
   });
 
   if (error) {
-    console.error(error.message);
-    process.exit(1);
+    exitWithError(error);
   }
 
   if (format === 'json') {

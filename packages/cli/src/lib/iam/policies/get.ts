@@ -14,6 +14,7 @@ import {
   printEmpty,
   msg,
 } from '../../../utils/messages.js';
+import { exitWithError } from '../../../utils/exit.js';
 
 const context = msg('iam policies', 'get');
 
@@ -33,7 +34,10 @@ export default async function get(options: Record<string, unknown>) {
       context,
       'Policies can only be retrieved when logged in via OAuth.\nRun "tigris login oauth" first.'
     );
-    process.exit(1);
+    exitWithError(
+      'Policies can only be retrieved when logged in via OAuth.\nRun "tigris login oauth" first.',
+      context
+    );
   }
 
   const authClient = getAuthClient();
@@ -41,7 +45,10 @@ export default async function get(options: Record<string, unknown>) {
 
   if (!isAuthenticated) {
     printFailure(context, 'Not authenticated. Run "tigris login oauth" first.');
-    process.exit(1);
+    exitWithError(
+      'Not authenticated. Run "tigris login oauth" first.',
+      context
+    );
   }
 
   const accessToken = await authClient.getAccessToken();
@@ -62,7 +69,7 @@ export default async function get(options: Record<string, unknown>) {
 
     if (listError) {
       printFailure(context, listError.message);
-      process.exit(1);
+      exitWithError(listError, context);
     }
 
     if (!listData.policies || listData.policies.length === 0) {
@@ -89,7 +96,7 @@ export default async function get(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   if (format === 'json') {

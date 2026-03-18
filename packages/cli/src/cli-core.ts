@@ -5,6 +5,7 @@
 import { Command as CommanderCommand } from 'commander';
 import type { Argument, CommandSpec, Specs } from './types.js';
 import { printDeprecated } from './utils/messages.js';
+import { exitWithError } from './utils/exit.js';
 
 export interface ModuleLoader {
   (commandPath: string[]): Promise<{
@@ -33,16 +34,11 @@ export function setupErrorHandlers() {
       console.error('\nOperation cancelled');
       process.exit(1);
     }
-    console.error(
-      '\nError:',
-      reason instanceof Error ? reason.message : reason
-    );
-    process.exit(1);
+    exitWithError(reason);
   });
 
   process.on('uncaughtException', (error) => {
-    console.error('\nError:', error.message);
-    process.exit(1);
+    exitWithError(error);
   });
 }
 
@@ -369,6 +365,11 @@ async function loadAndExecuteCommand(
   positionalArgs: string[] = [],
   options: Record<string, unknown> = {}
 ) {
+  // Set JSON mode globally for error handlers
+  if (options.json || options.format === 'json') {
+    globalThis.__TIGRIS_JSON_MODE = true;
+  }
+
   const { module, error: loadError } = await loadModule(pathParts);
 
   if (loadError || !module) {

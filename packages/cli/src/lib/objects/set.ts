@@ -6,6 +6,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 import { updateObject } from '@tigrisdata/storage';
 
 const context = msg('objects', 'set');
@@ -25,17 +26,20 @@ export default async function setObject(options: Record<string, unknown>) {
 
   if (!bucket) {
     printFailure(context, 'Bucket name is required');
-    process.exit(1);
+    exitWithError('Bucket name is required', context);
   }
 
   if (!key) {
     printFailure(context, 'Object key is required');
-    process.exit(1);
+    exitWithError('Object key is required', context);
   }
 
   if (!access) {
     printFailure(context, 'Access level is required (--access public|private)');
-    process.exit(1);
+    exitWithError(
+      'Access level is required (--access public|private)',
+      context
+    );
   }
 
   const config = await getStorageConfig();
@@ -51,7 +55,7 @@ export default async function setObject(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   if (format === 'json') {

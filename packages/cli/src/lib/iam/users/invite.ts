@@ -11,6 +11,7 @@ import {
   printFailure,
   msg,
 } from '../../../utils/messages.js';
+import { exitWithError } from '../../../utils/exit.js';
 
 const context = msg('iam users', 'invite');
 
@@ -24,7 +25,10 @@ export default async function invite(options: Record<string, unknown>) {
       context,
       'Users can only be invited when logged in via OAuth.\nRun "tigris login oauth" first.'
     );
-    process.exit(1);
+    exitWithError(
+      'Users can only be invited when logged in via OAuth.\nRun "tigris login oauth" first.',
+      context
+    );
   }
 
   const selectedOrg = getSelectedOrganization();
@@ -49,7 +53,7 @@ export default async function invite(options: Record<string, unknown>) {
 
   if (emails.length === 0) {
     printFailure(context, 'Email address is required');
-    process.exit(1);
+    exitWithError('Email address is required', context);
   }
 
   const validRoles = ['admin', 'member'] as const;
@@ -60,7 +64,10 @@ export default async function invite(options: Record<string, unknown>) {
       context,
       `Invalid role "${roleInput}". Must be one of: ${validRoles.join(', ')}`
     );
-    process.exit(1);
+    exitWithError(
+      `Invalid role "${roleInput}". Must be one of: ${validRoles.join(', ')}`,
+      context
+    );
   }
 
   const role: Role = roleInput as Role;
@@ -70,7 +77,10 @@ export default async function invite(options: Record<string, unknown>) {
 
   if (!isAuthenticated) {
     printFailure(context, 'Not authenticated. Run "tigris login oauth" first.');
-    process.exit(1);
+    exitWithError(
+      'Not authenticated. Run "tigris login oauth" first.',
+      context
+    );
   }
 
   const accessToken = await authClient.getAccessToken();
@@ -89,7 +99,7 @@ export default async function invite(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   printSuccess(context, { email: emails.join(', ') });

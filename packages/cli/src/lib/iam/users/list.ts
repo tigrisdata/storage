@@ -18,6 +18,7 @@ import {
   printEmpty,
   msg,
 } from '../../../utils/messages.js';
+import { exitWithError } from '../../../utils/exit.js';
 
 const context = msg('iam users', 'list');
 
@@ -36,7 +37,10 @@ export default async function list(options: Record<string, unknown>) {
       context,
       'Users can only be listed when logged in via OAuth.\nRun "tigris login oauth" first.'
     );
-    process.exit(1);
+    exitWithError(
+      'Users can only be listed when logged in via OAuth.\nRun "tigris login oauth" first.',
+      context
+    );
   }
 
   const selectedOrg = getSelectedOrganization();
@@ -55,7 +59,10 @@ export default async function list(options: Record<string, unknown>) {
 
   if (!isAuthenticated) {
     printFailure(context, 'Not authenticated. Run "tigris login oauth" first.');
-    process.exit(1);
+    exitWithError(
+      'Not authenticated. Run "tigris login oauth" first.',
+      context
+    );
   }
 
   const accessToken = await authClient.getAccessToken();
@@ -72,7 +79,7 @@ export default async function list(options: Record<string, unknown>) {
 
   if (error) {
     printFailure(context, error.message);
-    process.exit(1);
+    exitWithError(error, context);
   }
 
   const users = data.users.map((user) => ({

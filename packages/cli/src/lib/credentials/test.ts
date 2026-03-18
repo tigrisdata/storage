@@ -8,6 +8,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('credentials', 'test');
 
@@ -28,7 +29,10 @@ export default async function test(options: Record<string, unknown>) {
       context,
       'No credentials found. Run "tigris configure" or "tigris login" first.'
     );
-    process.exit(1);
+    exitWithError(
+      'No credentials found. Run "tigris configure" or "tigris login" first.',
+      context
+    );
   }
 
   // Include organization ID if available
@@ -51,7 +55,7 @@ export default async function test(options: Record<string, unknown>) {
         context,
         `Current credentials don't have access to bucket "${bucket}"`
       );
-      process.exit(1);
+      exitWithError(error, context);
     }
 
     if (format === 'json') {
@@ -75,7 +79,7 @@ export default async function test(options: Record<string, unknown>) {
 
     if (error) {
       printFailure(context, "Current credentials don't have sufficient access");
-      process.exit(1);
+      exitWithError(error, context);
     }
 
     if (format === 'json') {

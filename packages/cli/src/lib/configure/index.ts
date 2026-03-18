@@ -9,6 +9,7 @@ import {
   printFailure,
   msg,
 } from '../../utils/messages.js';
+import { exitWithError, printNextActions } from '../../utils/exit.js';
 
 const context = msg('configure');
 
@@ -78,7 +79,7 @@ export default async function configure(options: Record<string, unknown>) {
   // Validate that all required fields are present
   if (!accessKey || !accessSecret || !endpoint) {
     printFailure(context, 'All credentials are required');
-    process.exit(1);
+    exitWithError('All credentials are required', context);
   }
 
   // Store credentials
@@ -93,8 +94,9 @@ export default async function configure(options: Record<string, unknown>) {
     await storeLoginMethod('credentials');
 
     printSuccess(context);
-  } catch {
+    printNextActions(context);
+  } catch (error) {
     printFailure(context, 'Failed to save credentials');
-    process.exit(1);
+    exitWithError(error, context);
   }
 }
