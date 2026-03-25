@@ -27,7 +27,7 @@ export function getAuth0Config(): Auth0Config {
   const isDev = process.env.TIGRIS_ENV === 'development';
   const domain = isDev
     ? 'auth-dev.tigris.dev'
-    : (process.env.AUTH0_DOMAIN ?? 'tigrisdata.us.auth0.com');
+    : (process.env.AUTH0_DOMAIN ?? 'auth.storage.dev');
   const clientId = isDev
     ? 'JdJVYIyw0O1uHi5L5OJH903qaWBgd3gF'
     : (process.env.AUTH0_CLIENT_ID ?? 'DMejqeM3CQ4IqTjEcd3oA9eEiT40hn8D');
