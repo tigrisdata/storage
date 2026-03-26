@@ -6,6 +6,7 @@ import {
 import { getPresignedUrl } from '../object/presigned-url';
 import { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import { UploadAction } from './shared';
+import { toError } from '@shared/utils';
 
 export interface ClientUploadRequest {
   action: UploadAction;
@@ -62,12 +63,7 @@ export async function handleClientUpload(
           error: new Error(`Invalid action: ${action}`),
         };
     }
-  } catch (error: unknown) {
-    const { message } = error as { message: string };
-    return {
-      error: message
-        ? new Error(message)
-        : new Error('Unexpected error in handleClientUpload'),
-    };
+  } catch (error) {
+    return { error: toError(error) };
   }
 }

@@ -1,6 +1,7 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { toError } from '@shared/utils';
 import { config } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
@@ -115,15 +116,8 @@ export async function put(
 
   try {
     await upload.done();
-  } catch (error: unknown) {
-    const { message } = error as {
-      message: string;
-    };
-    return {
-      error: message
-        ? new Error(message)
-        : new Error(`Unexpected error while uploading to Tigris Storage`),
-    };
+  } catch (error) {
+    return { error: toError(error) };
   }
 
   let signedUrl: string;

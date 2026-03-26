@@ -4,6 +4,7 @@ import {
   UploadPartCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { toError } from '@shared/utils';
 import { config } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
@@ -45,9 +46,10 @@ export async function initMultipartUpload(
       },
     };
   } catch (error) {
-    const { message } = error as { message: string };
     return {
-      error: new Error(`Unable to initialize multipart upload: ${message}`),
+      error: new Error(
+        `Unable to initialize multipart upload: ${toError(error).message}`
+      ),
     };
   }
 }
