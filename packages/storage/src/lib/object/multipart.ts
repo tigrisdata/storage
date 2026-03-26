@@ -32,17 +32,24 @@ export async function initMultipartUpload(
     Key: path,
   });
 
-  const { UploadId } = await tigrisClient.send(createCommand);
+  try {
+    const { UploadId } = await tigrisClient.send(createCommand);
 
-  if (!UploadId) {
-    return { error: new Error('Unable to initialize multipart upload') };
+    if (!UploadId) {
+      return { error: new Error('Unable to initialize multipart upload') };
+    }
+
+    return {
+      data: {
+        uploadId: UploadId,
+      },
+    };
+  } catch (error) {
+    const { message } = error as { message: string };
+    return {
+      error: new Error(`Unable to initialize multipart upload: ${message}`),
+    };
   }
-
-  return {
-    data: {
-      uploadId: UploadId,
-    },
-  };
 }
 
 export type GetPartsPresignedUrlsOptions = {

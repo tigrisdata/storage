@@ -22,43 +22,52 @@ export async function handleClientUpload(
 ): Promise<TigrisStorageResponse<unknown, Error>> {
   const { action, name, contentType, uploadId, parts, partIds } = request;
 
-  switch (action) {
-    case UploadAction.SinglepartInit:
-      return await getPresignedUrl(name, {
-        contentType,
-        operation: 'put',
-        expiresIn: 3600, // 1 hour
-        config,
-      });
-    case UploadAction.MultipartInit:
-      return await initMultipartUpload(name, {
-        config,
-      });
-    case UploadAction.MultipartGetParts:
-      if (!uploadId || !parts) {
+  try {
+    switch (action) {
+      case UploadAction.SinglepartInit:
+        return await getPresignedUrl(name, {
+          contentType,
+          operation: 'put',
+          expiresIn: 3600, // 1 hour
+          config,
+        });
+      case UploadAction.MultipartInit:
+        return await initMultipartUpload(name, {
+          config,
+        });
+      case UploadAction.MultipartGetParts:
+        if (!uploadId || !parts) {
+          return {
+            error: new Error(
+              'uploadId and parts are required for multipart-parts'
+            ),
+          };
+        }
+        return await getPartsPresignedUrls(name, parts, uploadId, {
+          config,
+        });
+      case UploadAction.MultipartComplete:
+        if (!uploadId || !partIds) {
+          return {
+            error: new Error(
+              'uploadId and partIds are required for multipart-complete'
+            ),
+          };
+        }
+        return await completeMultipartUpload(name, uploadId, partIds, {
+          config,
+        });
+      default:
         return {
-          error: new Error(
-            'uploadId and parts are required for multipart-parts'
-          ),
+          error: new Error(`Invalid action: ${action}`),
         };
-      }
-      return await getPartsPresignedUrls(name, parts, uploadId, {
-        config,
-      });
-    case UploadAction.MultipartComplete:
-      if (!uploadId || !partIds) {
-        return {
-          error: new Error(
-            'uploadId and partIds are required for multipart-complete'
-          ),
-        };
-      }
-      return await completeMultipartUpload(name, uploadId, partIds, {
-        config,
-      });
-    default:
-      return {
-        error: new Error(`Invalid action: ${action}`),
-      };
+    }
+  } catch (error: unknown) {
+    const { message } = error as { message: string };
+    return {
+      error: message
+        ? new Error(message)
+        : new Error('Unexpected error in handleClientUpload'),
+    };
   }
 }
