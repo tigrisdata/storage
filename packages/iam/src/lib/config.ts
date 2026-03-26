@@ -19,6 +19,8 @@ function loadIAMConfig(): TigrisIAMConfig {
     config.mgmtEndpoint = process.env.TIGRIS_MGMT_ENDPOINT;
     config.sessionToken = process.env.TIGRIS_SESSION_TOKEN;
     config.organizationId = process.env.TIGRIS_ORGANIZATION_ID;
+    config.accessKeyId = process.env.TIGRIS_STORAGE_ACCESS_KEY_ID;
+    config.secretAccessKey = process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY;
   }
 
   return config;

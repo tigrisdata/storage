@@ -3,6 +3,8 @@ import { config, DEFAULT_ENDPOINTS } from './config';
 import type { TigrisIAMConfig, TigrisIAMResponse } from './types';
 
 export const IAM_ENDPOINTS = {
+  // Whoami
+  whoami: '/users/whoami',
   // Users
   revokeInvitation: '/tigris-iam/invitations',
   removeUser: '/tigris-iam/namespaces',
@@ -37,16 +39,19 @@ function getManagementEndpoint(options?: TigrisIAMConfig): string {
 
 export function createIAMClient(
   options?: TigrisIAMConfig,
-  isManagement?: boolean
+  isManagement?: boolean,
+  skipCheck?: boolean
 ): TigrisIAMResponse<TigrisHttpClient, Error> {
   const sessionToken = options?.sessionToken ?? config.sessionToken;
   const organizationId = options?.organizationId ?? config.organizationId;
+  const accessKeyId = options?.accessKeyId ?? config.accessKeyId;
+  const secretAccessKey = options?.secretAccessKey ?? config.secretAccessKey;
 
-  if (!sessionToken || sessionToken === '') {
+  if (!skipCheck && (!sessionToken || sessionToken === '')) {
     return { error: new Error('Session token is required') };
   }
 
-  if (!organizationId || organizationId === '') {
+  if (!skipCheck && (!organizationId || organizationId === '')) {
     return { error: new Error('Organization ID is required') };
   }
 
@@ -56,5 +61,7 @@ export function createIAMClient(
       : getIAMEndpoint(options),
     sessionToken,
     organizationId,
+    accessKeyId,
+    secretAccessKey,
   });
 }
