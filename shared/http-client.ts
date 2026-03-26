@@ -13,19 +13,19 @@ export interface HttpClientRequest<T = unknown> {
 
 export type HttpClientResponse<T = unknown> =
   | {
-    status: number;
-    statusText: string;
-    headers: Headers;
-    data: T;
-    error?: never;
-  }
+      status: number;
+      statusText: string;
+      headers: Headers;
+      data: T;
+      error?: never;
+    }
   | {
-    status: number;
-    statusText: string;
-    headers: Headers;
-    error: Error;
-    data?: never;
-  };
+      status: number;
+      statusText: string;
+      headers: Headers;
+      error: Error;
+      data?: never;
+    };
 
 export interface TigrisHttpClient {
   request<TRequest = unknown, TResponse = unknown>(
@@ -184,7 +184,9 @@ export function createTigrisHttpClient(
             status: response.status,
             statusText: response.statusText,
             headers: response.headers,
-            error: new Error(error.Message ?? response.statusText ?? 'Unknown error'),
+            error: new Error(
+              error.Message ?? response.statusText ?? 'Unknown error'
+            ),
           };
         } catch {
           return {

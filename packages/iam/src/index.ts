@@ -66,3 +66,4 @@ export {
   updateUserRole,
   type UpdateUserRoleOptions,
 } from './lib/users/update-role';
+export { whoami, type WhoamiOptions, type WhoamiResponse } from './lib/whoami';
