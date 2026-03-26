@@ -22,6 +22,7 @@ export interface TigrisConfig {
 /**
  * Get Auth0 configuration from environment variables or defaults
  * In production, these should come from environment variables
+ * Production Auth0 domain is auth.storage.tigrisdata.io
  */
 export function getAuth0Config(): Auth0Config {
   const isDev = process.env.TIGRIS_ENV === 'development';
