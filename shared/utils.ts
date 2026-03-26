@@ -31,6 +31,12 @@ export async function executeWithConcurrency<T>(
   return results;
 }
 
+export function toError(value: unknown): Error {
+  if (value instanceof Error) return value;
+  if (typeof value === 'string') return new Error(value);
+  return new Error('An unexpected error occurred');
+}
+
 export const handleError = (error: Error) => {
   let errorMessage: string | undefined;
 

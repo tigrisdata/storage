@@ -4,6 +4,7 @@ import {
   UploadPartCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { toError } from '@shared/utils';
 import { config } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
@@ -32,17 +33,25 @@ export async function initMultipartUpload(
     Key: path,
   });
 
-  const { UploadId } = await tigrisClient.send(createCommand);
+  try {
+    const { UploadId } = await tigrisClient.send(createCommand);
 
-  if (!UploadId) {
-    return { error: new Error('Unable to initialize multipart upload') };
+    if (!UploadId) {
+      return { error: new Error('Unable to initialize multipart upload') };
+    }
+
+    return {
+      data: {
+        uploadId: UploadId,
+      },
+    };
+  } catch (error) {
+    return {
+      error: new Error(
+        `Unable to initialize multipart upload: ${toError(error).message}`
+      ),
+    };
   }
-
-  return {
-    data: {
-      uploadId: UploadId,
-    },
-  };
 }
 
 export type GetPartsPresignedUrlsOptions = {
