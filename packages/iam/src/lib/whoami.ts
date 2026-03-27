@@ -18,7 +18,7 @@ type WhoamiApiResponse = {
 export async function whoami(
   options?: WhoamiOptions
 ): Promise<TigrisIAMResponse<WhoamiResponse, Error>> {
-  const { data: client, error } = createIAMClient(options?.config, true, true);
+  const { data: client, error } = createIAMClient(options?.config, true);
 
   if (error) {
     return { error };

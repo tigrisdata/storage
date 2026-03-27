@@ -39,19 +39,22 @@ function getManagementEndpoint(options?: TigrisIAMConfig): string {
 
 export function createIAMClient(
   options?: TigrisIAMConfig,
-  isManagement?: boolean,
-  skipCheck?: boolean
+  isManagement?: boolean
 ): TigrisIAMResponse<TigrisHttpClient, Error> {
   const sessionToken = options?.sessionToken ?? config.sessionToken;
   const organizationId = options?.organizationId ?? config.organizationId;
   const accessKeyId = options?.accessKeyId ?? config.accessKeyId;
   const secretAccessKey = options?.secretAccessKey ?? config.secretAccessKey;
 
-  if (!skipCheck && (!sessionToken || sessionToken === '')) {
-    return { error: new Error('Session token is required') };
+  // Allow either session token, authorization, or credentials
+  const hasCredentials = accessKeyId && secretAccessKey;
+  if (!sessionToken && !hasCredentials) {
+    return {
+      error: new Error('Session token or credentials are required'),
+    };
   }
 
-  if (!skipCheck && (!organizationId || organizationId === '')) {
+  if (sessionToken && (!organizationId || organizationId === '')) {
     return { error: new Error('Organization ID is required') };
   }
 
