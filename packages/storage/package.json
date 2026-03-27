@@ -64,10 +64,10 @@
   "license": "MIT",
   "dependencies": {
     "@aws-crypto/sha256-js": "^5.2.0",
-    "@aws-sdk/client-s3": "^3.1006.0",
-    "@aws-sdk/lib-storage": "^3.1006.0",
-    "@aws-sdk/s3-request-presigner": "^3.1006.0",
-    "@smithy/signature-v4": "^5.3.11",
+    "@aws-sdk/client-s3": "^3.1018.0",
+    "@aws-sdk/lib-storage": "^3.1018.0",
+    "@aws-sdk/s3-request-presigner": "^3.1018.0",
+    "@smithy/signature-v4": "^5.3.12",
     "dotenv": "^17.3.1"
   }
 }

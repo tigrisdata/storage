@@ -48,6 +48,7 @@ export async function listAccessKeys(
   options?: ListAccessKeysOptions
 ): Promise<TigrisIAMResponse<ListAccessKeysResponse, Error>> {
   const { data: client, error } = createIAMClient(options?.config);
+
   if (error) {
     return { error };
   }
