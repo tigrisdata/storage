@@ -29,7 +29,7 @@
     "lint:fix": "eslint src --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "test": "vitest run test/utils test/auth test/cli-core.test.ts test/specs-completeness.test.ts",
+    "test": "vitest run --exclude test/cli.test.ts",
     "test:watch": "vitest",
     "test:all": "vitest run",
     "test:integration": "vitest run test/cli.test.ts",

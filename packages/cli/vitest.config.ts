@@ -15,6 +15,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    reporter: 'verbose',
     include: ['test/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['node_modules', 'dist'],
     setupFiles: ['test/setup.ts'],

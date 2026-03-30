@@ -36,6 +36,7 @@ export default async function presign(options: Record<string, unknown>) {
   );
   const format = getFormat(options, 'url');
   const accessKeyFlag = getOption<string>(options, ['access-key', 'accessKey']);
+  const selectFlag = getOption<boolean>(options, ['select']);
 
   const config = await getStorageConfig();
 
@@ -49,7 +50,7 @@ export default async function presign(options: Record<string, unknown>) {
     // 2. Credentials/env/configured login has an access key
     accessKeyId = config.accessKeyId;
   } else {
-    // 3. OAuth login — need to resolve an access key interactively
+    // 3. OAuth login — need to resolve an access key
     const loginMethod = await getLoginMethod();
 
     if (loginMethod !== 'oauth') {
@@ -58,7 +59,11 @@ export default async function presign(options: Record<string, unknown>) {
       );
     }
 
-    accessKeyId = await resolveAccessKeyInteractively(bucket);
+    if (selectFlag) {
+      accessKeyId = await resolveAccessKeyWithPrompt(bucket, method);
+    } else {
+      accessKeyId = await resolveAccessKeyAuto(bucket, method);
+    }
   }
 
   if (!accessKeyId) {
@@ -98,15 +103,7 @@ export default async function presign(options: Record<string, unknown>) {
   process.exit(0);
 }
 
-async function resolveAccessKeyInteractively(
-  targetBucket: string
-): Promise<string> {
-  if (!process.stdin.isTTY) {
-    exitWithError(
-      'Presigning requires an access key. Pass --access-key tid_...'
-    );
-  }
-
+async function fetchAccessKeys(): Promise<AccessKey[]> {
   const authClient = getAuthClient();
   const accessToken = await authClient.getAccessToken();
   const selectedOrg = getSelectedOrganization();
@@ -130,11 +127,83 @@ async function resolveAccessKeyInteractively(
     );
   }
 
-  // Filter to active keys that have access to the target bucket
-  const matchingKeys = data.accessKeys.filter(
-    (key: AccessKey) =>
-      key.status === 'active' &&
-      key.roles?.some((r) => r.bucket === targetBucket || r.bucket === '*')
+  return data.accessKeys;
+}
+
+export function keyMatchesOperation(
+  key: AccessKey,
+  targetBucket: string,
+  method: string
+): boolean {
+  if (!key.roles) return false;
+
+  return key.roles.some((r) => {
+    // NamespaceAdmin has access to everything
+    if (r.role === 'NamespaceAdmin') return true;
+
+    // Role must target this bucket or wildcard
+    if (r.bucket !== targetBucket && r.bucket !== '*') return false;
+
+    // For put: need Editor
+    if (method === 'put') return r.role === 'Editor';
+
+    // For get: Editor or ReadOnly
+    return r.role === 'Editor' || r.role === 'ReadOnly';
+  });
+}
+
+async function resolveAccessKeyAuto(
+  targetBucket: string,
+  method: string
+): Promise<string> {
+  const keys = await fetchAccessKeys();
+  const activeKeys = keys.filter((key) => key.status === 'active');
+
+  if (activeKeys.length === 0) {
+    exitWithError(
+      'No active access keys found. Create one with "tigris access-keys create <name>"'
+    );
+  }
+
+  const match = activeKeys.find((key) =>
+    keyMatchesOperation(key, targetBucket, method)
+  );
+
+  if (!match) {
+    const requiredRole = method === 'put' ? 'Editor' : 'Editor or ReadOnly';
+    exitWithError(
+      `No access key with ${requiredRole} access to bucket "${targetBucket}" found.\n` +
+        `Create one: tigris access-keys create <name>\n` +
+        `Then assign: tigris access-keys assign <id> --bucket ${targetBucket} --role Editor`
+    );
+  }
+
+  console.error(`Using access key: ${match.name} (${match.id})`);
+  return match.id;
+}
+
+async function resolveAccessKeyWithPrompt(
+  targetBucket: string,
+  method: string
+): Promise<string> {
+  if (!process.stdin.isTTY) {
+    exitWithError(
+      'Interactive selection requires a TTY. Omit --select to auto-resolve, or pass --access-key tid_...'
+    );
+  }
+
+  const keys = await fetchAccessKeys();
+  const activeKeys = keys.filter((key) => key.status === 'active');
+
+  if (activeKeys.length === 0) {
+    exitWithError(
+      'No active access keys found. Create one with "tigris access-keys create <name>"'
+    );
+  }
+
+  // Filter to active keys that match the operation
+  const matchingKeys = activeKeys.filter((key) =>
+    keyMatchesOperation(key, targetBucket, method)
   );
 
   let candidates: AccessKey[];
@@ -143,16 +212,6 @@ async function resolveAccessKeyInteractively(
     candidates = matchingKeys;
   } else {
     // Fall back to all active keys with a warning
-    const activeKeys = data.accessKeys.filter(
-      (key: AccessKey) => key.status === 'active'
-    );
-
-    if (activeKeys.length === 0) {
-      exitWithError(
-        'No active access keys found. Create one with "tigris access-keys create <name>"'
-      );
-    }
-
     console.error(
       `No access keys with explicit access to bucket "${targetBucket}" found. Showing all active keys.`
     );
@@ -172,7 +231,7 @@ async function resolveAccessKeyInteractively(
     type: 'select',
     name: 'selectedKey',
     message: 'Select an access key for presigning:',
-    choices: candidates.map((key: AccessKey) => ({
+    choices: candidates.map((key) => ({
       name: key.id,
       message: `${key.name} (${key.id})`,
     })),

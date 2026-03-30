@@ -431,7 +431,10 @@ commands:
         alias: e
         default: '3600'
       - name: access-key
-        description: Access key ID to use for signing. If not provided, resolved from credentials or prompted interactively
+        description: Access key ID to use for signing. If not provided, resolved from credentials or auto-selected
+      - name: select
+        description: Interactively select an access key (OAuth only)
+        type: flag
       - name: format
         description: Output format
         options: [url, json]
