@@ -1,7 +1,8 @@
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
+import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import https from 'https';
+import { homedir } from 'os';
+import { join } from 'path';
+
 import { version as currentVersion } from '../../package.json';
 import {
   NPM_REGISTRY_URL,

@@ -1,31 +1,32 @@
+import { getStorageConfig } from '@auth/provider.js';
+import { get, head, list, put } from '@tigrisdata/storage';
+import { executeWithConcurrency } from '@utils/concurrency.js';
+import { exitWithError } from '@utils/exit.js';
+import { formatSize } from '@utils/format.js';
+import { getFormat, getOption } from '@utils/options.js';
+import {
+  globToRegex,
+  isPathFolder,
+  isRemotePath,
+  listAllItems,
+  parseRemotePath,
+  wildcardPrefix,
+} from '@utils/path.js';
+import { calculateUploadParams } from '@utils/upload.js';
 import {
   createReadStream,
   createWriteStream,
-  statSync,
-  readdirSync,
-  mkdirSync,
   existsSync,
+  mkdirSync,
+  readdirSync,
+  statSync,
 } from 'fs';
-import { resolve, dirname, basename, join, relative } from 'path';
 import { homedir } from 'os';
+import { basename, dirname, join, relative, resolve } from 'path';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
-import {
-  isRemotePath,
-  parseRemotePath,
-  isPathFolder,
-  listAllItems,
-  globToRegex,
-  wildcardPrefix,
-} from '../utils/path.js';
-import { getOption } from '../utils/options.js';
-import { getStorageConfig } from '../auth/s3-client.js';
-import { formatSize } from '../utils/format.js';
-import { get, put, list, head } from '@tigrisdata/storage';
-import { executeWithConcurrency } from '../utils/concurrency.js';
-import { calculateUploadParams } from '../utils/upload.js';
+
 import type { ParsedPath } from '../types.js';
-import { exitWithError } from '../utils/exit.js';
 
 let _jsonMode = false;
 
@@ -853,10 +854,7 @@ export default async function cp(options: Record<string, unknown>) {
   }
 
   const recursive = !!getOption<boolean>(options, ['recursive', 'r']);
-  const jsonFlag = getOption<boolean>(options, ['json']);
-  const format = jsonFlag
-    ? 'json'
-    : getOption<string>(options, ['format'], 'table');
+  const format = getFormat(options);
   _jsonMode = format === 'json';
 
   const direction = detectDirection(src, dest);

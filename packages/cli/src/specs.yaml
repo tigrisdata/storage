@@ -86,6 +86,20 @@ definitions:
 
   access_options: &access_options [public, private]
 
+  global_arguments: &global_arguments
+    - name: format
+      description: Output format
+      alias: f
+      options: [json, table]
+      default: table
+    - name: json
+      description: Output as JSON
+      type: flag
+    - name: yes
+      description: Skip confirmation prompts
+      type: flag
+      alias: "y"
+
 commands:
   #########################
   # Authentication
@@ -202,16 +216,6 @@ commands:
       onSuccess: ''
       onFailure: 'Failed to get user information'
       onAlreadyDone: "Not authenticated\nRun \"tigris login\" to authenticate"
-    arguments:
-      - name: format
-        description: Output format
-        alias: f
-        options: [json, table]
-        default: table
-      - name: json
-        description: Output as JSON
-        type: flag
-
   # logout
   - name: logout
     description: End the current session and clear login state. Credentials saved via 'configure' are kept
@@ -245,14 +249,6 @@ commands:
             description: Bucket name to test access against (optional)
             alias: b
             required: false
-          - name: format
-            description: Output format
-            alias: f
-            options: [json, table]
-            default: table
-          - name: json
-            description: Output as JSON
-            type: flag
 
 
   #########################
@@ -287,9 +283,6 @@ commands:
         alias: f
         options: [json, table, xml]
         default: table
-      - name: json
-        description: Output as JSON
-        type: flag
 
   # mk
   - name: mk
@@ -353,14 +346,6 @@ commands:
       - name: source-snapshot
         description: Fork from a specific snapshot of the source bucket. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Requires --fork-of
         alias: source-snap
-      - name: format
-        description: Output format
-        alias: f
-        options: [json, table]
-        default: table
-      - name: json
-        description: Output as JSON
-        type: flag
 
   # touch
   - name: touch
@@ -378,14 +363,6 @@ commands:
         examples:
           - my-bucket/my-file.txt
           - t3://my-bucket/my-file.txt
-      - name: format
-        description: Output format
-        alias: f
-        options: [json, table]
-        default: table
-      - name: json
-        description: Output as JSON
-        type: flag
 
   # stat
   - name: stat
@@ -412,9 +389,6 @@ commands:
         alias: f
         options: [json, table, xml]
         default: table
-      - name: json
-        description: Output as JSON
-        type: flag
       - name: snapshot-version
         description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
         alias: snapshot
@@ -455,9 +429,6 @@ commands:
         alias: f
         options: [url, json]
         default: url
-      - name: json
-        description: Output as JSON
-        type: flag
 
   # cp
   - name: cp
@@ -494,14 +465,6 @@ commands:
         type: flag
         alias: r
         description: Copy directories recursively
-      - name: format
-        description: Output format
-        alias: f
-        options: [json, table]
-        default: table
-      - name: json
-        description: Output as JSON
-        type: flag
 
   # mv
   - name: mv
@@ -533,17 +496,6 @@ commands:
         type: flag
         alias: r
         description: Move directories recursively
-      - name: force
-        type: flag
-        alias: f
-        description: Skip confirmation prompt
-      - name: format
-        description: Output format
-        options: [json, table]
-        default: table
-      - name: json
-        description: Output as JSON
-        type: flag
 
   # rm
   - name: rm
@@ -570,17 +522,6 @@ commands:
         type: flag
         alias: r
         description: Remove directories recursively
-      - name: force
-        type: flag
-        alias: f
-        description: Skip confirmation prompt
-      - name: format
-        description: Output format
-        options: [json, table]
-        default: table
-      - name: json
-        description: Output as JSON
-        type: flag
 
   #########################
   # Manage organizations
@@ -611,9 +552,6 @@ commands:
             alias: f
             options: [json, table, xml, select]
             default: select
-          - name: json
-            description: Output as JSON
-            type: flag
           - name: select
             description: Interactive selection mode
             alias: i
@@ -691,9 +629,6 @@ commands:
             alias: f
             options: [json, table, xml]
             default: table
-          - name: json
-            description: Output as JSON
-            type: flag
           - name: forks-of
             description: Only list buckets that are forks of the named source bucket
       # create
@@ -761,14 +696,6 @@ commands:
           - name: source-snapshot
             description: Fork from a specific snapshot of the source bucket. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Requires --fork-of
             alias: source-snap
-          - name: format
-            description: Output format
-            alias: f
-            options: [json, table]
-            default: table
-          - name: json
-            description: Output as JSON
-            type: flag
       # get
       - name: get
         description: Show details for a bucket including access level, region, tier, and custom domain
@@ -791,9 +718,6 @@ commands:
             alias: f
             options: [json, table, xml]
             default: table
-          - name: json
-            description: Output as JSON
-            type: flag
       # delete
       - name: delete
         description: Delete one or more buckets by name. The bucket must be empty or delete-protection must be off
@@ -816,17 +740,6 @@ commands:
             multiple: true
             examples:
               - my-bucket
-          - name: force
-            type: flag
-            description: Skip confirmation prompt
-          - name: format
-            description: Output format
-            alias: f
-            options: [json, table]
-            default: table
-          - name: json
-            description: Output as JSON
-            type: flag
       # set
       - name: set
         description: Update settings on an existing bucket such as access level, location, caching, or custom domain
@@ -874,13 +787,6 @@ commands:
           - name: enable-additional-headers
             description: Enable additional HTTP headers (X-Content-Type-Options nosniff)
             type: boolean
-          - name: format
-            description: Output format
-            options: [json, table]
-            default: table
-          - name: json
-            description: Output as JSON
-            type: flag
       # set-ttl
       - name: set-ttl
         description: Configure object expiration (TTL) on a bucket. Objects expire after a number of days or on a specific date
@@ -1124,9 +1030,6 @@ commands:
             alias: f
             options: [json, table, xml]
             default: table
-          - name: json
-            description: Output as JSON
-            type: flag
       # create
       - name: create
         description: (Deprecated, use "buckets create --fork-of") Create a new fork (copy-on-write clone) of the source bucket
@@ -1191,9 +1094,6 @@ commands:
             alias: f
             options: [json, table, xml]
             default: table
-          - name: json
-            description: Output as JSON
-            type: flag
       # take
       - name: take
         description: Take a new snapshot of the bucket's current state. Optionally provide a name for the snapshot
@@ -1259,9 +1159,6 @@ commands:
             alias: f
             options: [json, table, xml]
             default: table
-          - name: json
-            description: Output as JSON
-            type: flag
           - name: snapshot-version
             description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
             alias: snapshot
@@ -1299,14 +1196,6 @@ commands:
           - name: snapshot-version
             description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
             alias: snapshot
-          - name: format
-            description: Output format
-            alias: f
-            options: [json, table]
-            default: table
-          - name: json
-            description: Output as JSON
-            type: flag
       # put
       - name: put
         description: Upload a local file as an object. Content-type is auto-detected from extension unless overridden
@@ -1352,9 +1241,6 @@ commands:
             alias: f
             options: [json, table, xml]
             default: table
-          - name: json
-            description: Output as JSON
-            type: flag
       # delete
       - name: delete
         description: Delete one or more objects by key from the given bucket
@@ -1383,17 +1269,6 @@ commands:
             multiple: true
             examples:
               - my-file.txt
-          - name: force
-            type: flag
-            description: Skip confirmation prompt
-          - name: format
-            description: Output format
-            alias: f
-            options: [json, table]
-            default: table
-          - name: json
-            description: Output as JSON
-            type: flag
       # set
       - name: set
         description: Update settings on an existing object such as access level
@@ -1422,14 +1297,6 @@ commands:
           - name: new-key
             description: Rename the object to a new key
             alias: n
-          - name: format
-            description: Output format
-            alias: f
-            options: [json, table]
-            default: table
-          - name: json
-            description: Output as JSON
-            type: flag
 
   #########################
   # Manage access keys
@@ -1458,9 +1325,6 @@ commands:
             alias: f
             options: [json, table, xml]
             default: table
-          - name: json
-            description: Output as JSON
-            type: flag
       - name: create
         description: Create a new access key with the given name. Returns the key ID and secret (shown only once)
         alias: c
@@ -1480,14 +1344,6 @@ commands:
             required: true
             examples:
               - my-key
-          - name: format
-            description: Output format
-            alias: f
-            options: [json, table]
-            default: table
-          - name: json
-            description: Output as JSON
-            type: flag
       - name: delete
         description: Permanently delete an access key by its ID. This revokes all access immediately
         alias: d
@@ -1504,17 +1360,6 @@ commands:
             required: true
             examples:
               - tid_AaBbCcDdEeFf
-          - name: force
-            type: flag
-            description: Skip confirmation prompt
-          - name: format
-            description: Output format
-            alias: f
-            options: [json, table]
-            default: table
-          - name: json
-            description: Output as JSON
-            type: flag
       - name: get
         description: Show details for an access key including its name, creation date, and assigned bucket roles
         alias: g
@@ -1531,14 +1376,6 @@ commands:
             required: true
             examples:
               - tid_AaBbCcDdEeFf
-          - name: format
-            description: Output format
-            alias: f
-            options: [json, table]
-            default: table
-          - name: json
-            description: Output as JSON
-            type: flag
       - name: assign
         description: Assign per-bucket roles to an access key. Pair each --bucket with a --role (Editor or ReadOnly), or use --admin for org-wide access
         alias: a
@@ -1578,14 +1415,6 @@ commands:
           - name: revoke-roles
             description: Revoke all bucket roles from the access key
             type: flag
-          - name: format
-            description: Output format
-            alias: f
-            options: [json, table]
-            default: table
-          - name: json
-            description: Output as JSON
-            type: flag
 
   #########################
   # IAM - Identity and Access Management
@@ -1621,9 +1450,6 @@ commands:
                 alias: f
                 options: [json, table, xml]
                 default: table
-              - name: json
-                description: Output as JSON
-                type: flag
           - name: get
             description: Show details for a policy including its document and attached users. If no ARN provided, shows interactive selection
             alias: g
@@ -1647,9 +1473,6 @@ commands:
                 alias: f
                 options: [json, table, xml]
                 default: table
-              - name: json
-                description: Output as JSON
-                type: flag
           - name: create
             description: Create a new policy with the given name and policy document. Document can be provided via file, inline JSON, or stdin
             alias: c
@@ -1718,9 +1541,6 @@ commands:
                 required: false
                 examples:
                   - arn:aws:iam::org_id:policy/my-policy
-              - name: force
-                type: flag
-                description: Skip confirmation prompt
 
       - name: users
         description: Manage organization users and invitations
@@ -1747,9 +1567,6 @@ commands:
                 alias: f
                 options: [json, table, xml]
                 default: table
-              - name: json
-                description: Output as JSON
-                type: flag
           - name: invite
             description: Invite users to the organization by email
             alias: i
@@ -1793,9 +1610,6 @@ commands:
                 type: positional
                 required: false
                 multiple: true
-              - name: force
-                type: flag
-                description: Skip confirmation prompt
           - name: update-role
             description: Update user roles in the organization. If no user ID provided, shows interactive selection
             alias: ur
@@ -1839,6 +1653,3 @@ commands:
                 type: positional
                 required: false
                 multiple: true
-              - name: force
-                type: flag
-                description: Skip confirmation prompt

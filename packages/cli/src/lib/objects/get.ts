@@ -1,17 +1,12 @@
+import { getStorageConfig } from '@auth/provider.js';
+import { get } from '@tigrisdata/storage';
+import { failWithError } from '@utils/exit.js';
+import { msg, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat, getOption } from '@utils/options.js';
 import { createWriteStream, writeFileSync } from 'fs';
+import { extname } from 'path';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
-import { extname } from 'path';
-import { getOption } from '../../utils/options.js';
-import { getStorageConfig } from '../../auth/s3-client.js';
-import { get } from '@tigrisdata/storage';
-import {
-  printStart,
-  printSuccess,
-  printFailure,
-  msg,
-} from '../../utils/messages.js';
-import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('objects', 'get');
 
@@ -109,10 +104,7 @@ function detectFormat(key: string, output?: string): 'string' | 'stream' {
 export default async function getObject(options: Record<string, unknown>) {
   printStart(context);
 
-  const json = getOption<boolean>(options, ['json']);
-  const outputFormat = json
-    ? 'json'
-    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const outputFormat = getFormat(options);
 
   const bucket = getOption<string>(options, ['bucket']);
   const key = getOption<string>(options, ['key']);
@@ -125,13 +117,11 @@ export default async function getObject(options: Record<string, unknown>) {
   ]);
 
   if (!bucket) {
-    printFailure(context, 'Bucket name is required');
-    exitWithError('Bucket name is required', context);
+    failWithError(context, 'Bucket name is required');
   }
 
   if (!key) {
-    printFailure(context, 'Object key is required');
-    exitWithError('Object key is required', context);
+    failWithError(context, 'Object key is required');
   }
 
   const config = await getStorageConfig();
@@ -149,8 +139,7 @@ export default async function getObject(options: Record<string, unknown>) {
     });
 
     if (error) {
-      printFailure(context, error.message);
-      exitWithError(error, context);
+      failWithError(context, error);
     }
 
     if (output) {
@@ -177,8 +166,7 @@ export default async function getObject(options: Record<string, unknown>) {
     });
 
     if (error) {
-      printFailure(context, error.message);
-      exitWithError(error, context);
+      failWithError(context, error);
     }
 
     if (output) {

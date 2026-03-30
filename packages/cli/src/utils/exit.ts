@@ -1,8 +1,8 @@
-import { classifyError } from './errors.js';
 import type { NextAction } from '../types.js';
-import { getCommandSpec } from './specs.js';
-import { interpolate } from './messages.js';
+import { classifyError } from './errors.js';
 import type { MessageContext, MessageVariables } from './messages.js';
+import { interpolate, printFailure } from './messages.js';
+import { getCommandSpec } from './specs.js';
 
 function isJsonMode(): boolean {
   return globalThis.__TIGRIS_JSON_MODE === true;
@@ -52,6 +52,15 @@ export function exitWithError(error: unknown, context?: MessageContext): never {
   }
 
   process.exit(classified.exitCode);
+}
+
+/**
+ * Print failure message and exit. Combines printFailure + exitWithError.
+ */
+export function failWithError(context: MessageContext, error: unknown): never {
+  const message = error instanceof Error ? error.message : String(error);
+  printFailure(context, message);
+  exitWithError(error, context);
 }
 
 /**

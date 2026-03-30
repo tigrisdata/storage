@@ -1,6 +1,7 @@
+import type { TigrisStorageConfig } from '@auth/provider.js';
 import { list } from '@tigrisdata/storage';
+
 import type { ParsedPath, ParsedPaths } from '../types.js';
-import type { TigrisStorageConfig } from '../auth/s3-client.js';
 
 const REMOTE_PREFIXES = ['t3://', 'tigris://'];
 

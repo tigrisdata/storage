@@ -1,4 +1,5 @@
 import type { BucketInfoResponse } from '@tigrisdata/storage';
+
 import { formatSize } from './format.js';
 
 export function buildBucketInfo(data: BucketInfoResponse) {

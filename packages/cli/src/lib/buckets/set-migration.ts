@@ -1,19 +1,15 @@
-import { getOption } from '../../utils/options.js';
-import { getStorageConfig } from '../../auth/s3-client.js';
-import { getSelectedOrganization } from '../../auth/storage.js';
+import { getStorageConfigWithOrg } from '@auth/provider.js';
 import { setBucketMigration } from '@tigrisdata/storage';
-import {
-  printStart,
-  printSuccess,
-  printFailure,
-  msg,
-} from '../../utils/messages.js';
-import { exitWithError } from '../../utils/exit.js';
+import { failWithError } from '@utils/exit.js';
+import { msg, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat, getOption } from '@utils/options.js';
 
 const context = msg('buckets', 'set-migration');
 
 export default async function setMigration(options: Record<string, unknown>) {
   printStart(context);
+
+  const format = getFormat(options);
 
   const name = getOption<string>(options, ['name']);
   const bucket = getOption<string>(options, ['bucket']);
@@ -28,8 +24,7 @@ export default async function setMigration(options: Record<string, unknown>) {
   const disable = getOption<boolean>(options, ['disable']);
 
   if (!name) {
-    printFailure(context, 'Bucket name is required');
-    exitWithError('Bucket name is required', context);
+    failWithError(context, 'Bucket name is required');
   }
 
   if (
@@ -41,18 +36,10 @@ export default async function setMigration(options: Record<string, unknown>) {
       secretKey !== undefined ||
       writeThrough !== undefined)
   ) {
-    printFailure(context, 'Cannot use --disable with other migration options');
-    exitWithError('Cannot use --disable with other migration options', context);
+    failWithError(context, 'Cannot use --disable with other migration options');
   }
 
-  const config = await getStorageConfig();
-  const selectedOrg = getSelectedOrganization();
-  const finalConfig = {
-    ...config,
-    ...(selectedOrg && !config.organizationId
-      ? { organizationId: selectedOrg }
-      : {}),
-  };
+  const finalConfig = await getStorageConfigWithOrg();
 
   if (disable) {
     const { error } = await setBucketMigration(name, {
@@ -61,8 +48,11 @@ export default async function setMigration(options: Record<string, unknown>) {
     });
 
     if (error) {
-      printFailure(context, error.message);
-      exitWithError(error, context);
+      failWithError(context, error);
+    }
+
+    if (format === 'json') {
+      console.log(JSON.stringify({ action: 'updated', bucket: name }));
     }
 
     printSuccess(context, { name });
@@ -70,13 +60,9 @@ export default async function setMigration(options: Record<string, unknown>) {
   }
 
   if (!bucket || !endpoint || !region || !accessKey || !secretKey) {
-    printFailure(
+    failWithError(
       context,
       'Required: --bucket, --endpoint, --region, --access-key, --secret-key'
-    );
-    exitWithError(
-      'Required: --bucket, --endpoint, --region, --access-key, --secret-key',
-      context
     );
   }
 
@@ -94,8 +80,11 @@ export default async function setMigration(options: Record<string, unknown>) {
   });
 
   if (error) {
-    printFailure(context, error.message);
-    exitWithError(error, context);
+    failWithError(context, error);
+  }
+
+  if (format === 'json') {
+    console.log(JSON.stringify({ action: 'updated', bucket: name }));
   }
 
   printSuccess(context, { name });

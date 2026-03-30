@@ -1,41 +1,37 @@
-import { getOption } from '../../utils/options.js';
-import { getStorageConfig } from '../../auth/s3-client.js';
+import { getStorageConfig } from '@auth/provider.js';
 import { remove } from '@tigrisdata/storage';
 import {
-  printStart,
-  printSuccess,
-  printFailure,
-  msg,
-} from '../../utils/messages.js';
-import {
   exitWithError,
+  failWithError,
   getSuccessNextActions,
   printNextActions,
-} from '../../utils/exit.js';
-import { requireInteractive, confirm } from '../../utils/interactive.js';
+} from '@utils/exit.js';
+import { confirm, requireInteractive } from '@utils/interactive.js';
+import {
+  msg,
+  printFailure,
+  printStart,
+  printSuccess,
+} from '@utils/messages.js';
+import { getFormat, getOption } from '@utils/options.js';
 
 const context = msg('objects', 'delete');
 
 export default async function deleteObject(options: Record<string, unknown>) {
   printStart(context);
 
-  const json = getOption<boolean>(options, ['json']);
-  const format = json
-    ? 'json'
-    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const format = getFormat(options);
 
   const bucket = getOption<string>(options, ['bucket']);
   const keys = getOption<string | string[]>(options, ['key']);
-  const force = getOption<boolean>(options, ['force', 'yes', 'y']);
+  const force = getOption<boolean>(options, ['yes', 'y']);
 
   if (!bucket) {
-    printFailure(context, 'Bucket name is required');
-    exitWithError('Bucket name is required', context);
+    failWithError(context, 'Bucket name is required');
   }
 
   if (!keys) {
-    printFailure(context, 'Object key is required');
-    exitWithError('Object key is required', context);
+    failWithError(context, 'Object key is required');
   }
 
   const config = await getStorageConfig();

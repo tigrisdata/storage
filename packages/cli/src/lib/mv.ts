@@ -1,30 +1,27 @@
+import { getStorageConfig } from '@auth/provider.js';
+import { get, head, list, put, remove } from '@tigrisdata/storage';
+import { exitWithError } from '@utils/exit.js';
+import { formatSize } from '@utils/format.js';
+import { confirm, requireInteractive } from '@utils/interactive.js';
+import { getFormat, getOption } from '@utils/options.js';
 import {
-  isRemotePath,
-  parseRemotePath,
-  isPathFolder,
-  listAllItems,
   globToRegex,
+  isPathFolder,
+  isRemotePath,
+  listAllItems,
+  parseRemotePath,
   wildcardPrefix,
-} from '../utils/path.js';
-import { getOption } from '../utils/options.js';
-import { getStorageConfig } from '../auth/s3-client.js';
-import { formatSize } from '../utils/format.js';
-import { requireInteractive, confirm } from '../utils/interactive.js';
-import { get, put, remove, list, head } from '@tigrisdata/storage';
-import { calculateUploadParams } from '../utils/upload.js';
-import { exitWithError } from '../utils/exit.js';
+} from '@utils/path.js';
+import { calculateUploadParams } from '@utils/upload.js';
 
 let _jsonMode = false;
 
 export default async function mv(options: Record<string, unknown>) {
   const src = getOption<string>(options, ['src']);
   const dest = getOption<string>(options, ['dest']);
-  const force = getOption<boolean>(options, ['force', 'f', 'F', 'yes', 'y']);
+  const force = getOption<boolean>(options, ['yes', 'y']);
   const recursive = !!getOption<boolean>(options, ['recursive', 'r']);
-  const jsonFlag = getOption<boolean>(options, ['json']);
-  const format = jsonFlag
-    ? 'json'
-    : getOption<string>(options, ['format'], 'table');
+  const format = getFormat(options);
   _jsonMode = format === 'json';
 
   if (!src || !dest) {

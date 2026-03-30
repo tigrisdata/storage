@@ -1,27 +1,27 @@
-import { clearAllData } from '../auth/storage.js';
-import {
-  printStart,
-  printSuccess,
-  printFailure,
-  msg,
-} from '../utils/messages.js';
-import { exitWithError } from '../utils/exit.js';
+import { clearAllData } from '@auth/storage.js';
+import { failWithError } from '@utils/exit.js';
+import { msg, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat } from '@utils/options.js';
 
 const context = msg('logout');
 
-export default async function logout(): Promise<void> {
+export default async function logout(
+  options: Record<string, unknown> = {}
+): Promise<void> {
   printStart(context);
+
+  const format = getFormat(options);
+
   try {
     // Clear all authentication data
     await clearAllData();
 
+    if (format === 'json') {
+      console.log(JSON.stringify({ action: 'logged_out' }));
+    }
+
     printSuccess(context);
   } catch (error) {
-    if (error instanceof Error) {
-      printFailure(context, error.message);
-    } else {
-      printFailure(context);
-    }
-    exitWithError(error, context);
+    failWithError(context, error);
   }
 }

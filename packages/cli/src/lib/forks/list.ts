@@ -1,15 +1,9 @@
-import { getOption } from '../../utils/options.js';
-import { formatOutput } from '../../utils/format.js';
-import { getStorageConfig } from '../../auth/s3-client.js';
-import { listBuckets, getBucketInfo } from '@tigrisdata/storage';
-import {
-  printStart,
-  printSuccess,
-  printFailure,
-  printEmpty,
-  msg,
-} from '../../utils/messages.js';
-import { exitWithError } from '../../utils/exit.js';
+import { getStorageConfig } from '@auth/provider.js';
+import { getBucketInfo, listBuckets } from '@tigrisdata/storage';
+import { failWithError } from '@utils/exit.js';
+import { formatOutput } from '@utils/format.js';
+import { msg, printEmpty, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat, getOption } from '@utils/options.js';
 
 const context = msg('forks', 'list');
 
@@ -17,14 +11,10 @@ export default async function list(options: Record<string, unknown>) {
   printStart(context);
 
   const name = getOption<string>(options, ['name']);
-  const json = getOption<boolean>(options, ['json']);
-  const format = json
-    ? 'json'
-    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const format = getFormat(options);
 
   if (!name) {
-    printFailure(context, 'Source bucket name is required');
-    exitWithError('Source bucket name is required', context);
+    failWithError(context, 'Source bucket name is required');
   }
 
   const config = await getStorageConfig();
@@ -35,8 +25,7 @@ export default async function list(options: Record<string, unknown>) {
   });
 
   if (infoError) {
-    printFailure(context, infoError.message);
-    exitWithError(infoError, context);
+    failWithError(context, infoError);
   }
 
   if (!bucketInfo.hasForks) {
@@ -48,8 +37,7 @@ export default async function list(options: Record<string, unknown>) {
   const { data, error } = await listBuckets({ config });
 
   if (error) {
-    printFailure(context, error.message);
-    exitWithError(error, context);
+    failWithError(context, error);
   }
 
   // Get info for each bucket to find forks

@@ -1,6 +1,7 @@
 import axios from 'axios';
-import type { OrganizationInfo } from './types.js';
-import { getAuth0Config, TIGRIS_CLAIMS_NAMESPACE } from './config.js';
+
+import { getAuth0Config, TIGRIS_CLAIMS_NAMESPACE } from './client.js';
+import type { OrganizationInfo } from './storage.js';
 
 export function isFlyUser(organizationId?: string): boolean {
   return !!organizationId?.startsWith('flyio_');

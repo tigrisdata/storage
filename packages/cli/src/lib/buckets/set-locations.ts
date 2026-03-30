@@ -1,29 +1,24 @@
-import { getOption } from '../../utils/options.js';
-import { getStorageConfig } from '../../auth/s3-client.js';
-import { getSelectedOrganization } from '../../auth/storage.js';
-import { updateBucket } from '@tigrisdata/storage';
+import { getStorageConfigWithOrg } from '@auth/provider.js';
 import type { BucketLocations } from '@tigrisdata/storage';
-import { parseLocations, promptLocations } from '../../utils/locations.js';
-import { requireInteractive } from '../../utils/interactive.js';
-import {
-  printStart,
-  printSuccess,
-  printFailure,
-  msg,
-} from '../../utils/messages.js';
-import { exitWithError } from '../../utils/exit.js';
+import { updateBucket } from '@tigrisdata/storage';
+import { failWithError } from '@utils/exit.js';
+import { requireInteractive } from '@utils/interactive.js';
+import { parseLocations, promptLocations } from '@utils/locations.js';
+import { msg, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat, getOption } from '@utils/options.js';
 
 const context = msg('buckets', 'set-locations');
 
 export default async function setLocations(options: Record<string, unknown>) {
   printStart(context);
 
+  const format = getFormat(options);
+
   const name = getOption<string>(options, ['name']);
   const locations = getOption<string | string[]>(options, ['locations']);
 
   if (!name) {
-    printFailure(context, 'Bucket name is required');
-    exitWithError('Bucket name is required', context);
+    failWithError(context, 'Bucket name is required');
   }
 
   let parsedLocations: BucketLocations;
@@ -34,19 +29,11 @@ export default async function setLocations(options: Record<string, unknown>) {
     try {
       parsedLocations = await promptLocations();
     } catch (err) {
-      printFailure(context, (err as Error).message);
-      exitWithError(err, context);
+      failWithError(context, err);
     }
   }
 
-  const config = await getStorageConfig();
-  const selectedOrg = getSelectedOrganization();
-  const finalConfig = {
-    ...config,
-    ...(selectedOrg && !config.organizationId
-      ? { organizationId: selectedOrg }
-      : {}),
-  };
+  const finalConfig = await getStorageConfigWithOrg();
 
   const { error } = await updateBucket(name, {
     locations: parsedLocations,
@@ -54,8 +41,11 @@ export default async function setLocations(options: Record<string, unknown>) {
   });
 
   if (error) {
-    printFailure(context, error.message);
-    exitWithError(error, context);
+    failWithError(context, error);
+  }
+
+  if (format === 'json') {
+    console.log(JSON.stringify({ action: 'updated', bucket: name }));
   }
 
   printSuccess(context, { name });

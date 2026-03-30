@@ -1,9 +1,9 @@
-import { parseAnyPath } from '../utils/path.js';
-import { getOption } from '../utils/options.js';
-import { formatOutput, formatSize } from '../utils/format.js';
-import { getStorageConfig } from '../auth/s3-client.js';
+import { getStorageConfig } from '@auth/provider.js';
 import { list, listBuckets } from '@tigrisdata/storage';
-import { exitWithError } from '../utils/exit.js';
+import { exitWithError } from '@utils/exit.js';
+import { formatOutput, formatSize } from '@utils/format.js';
+import { getFormat, getOption } from '@utils/options.js';
+import { parseAnyPath } from '@utils/path.js';
 
 export default async function ls(options: Record<string, unknown>) {
   const pathString = getOption<string>(options, ['path']);
@@ -12,10 +12,7 @@ export default async function ls(options: Record<string, unknown>) {
     'snapshotVersion',
     'snapshot',
   ]);
-  const json = getOption<boolean>(options, ['json']);
-  const format = json
-    ? 'json'
-    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const format = getFormat(options);
 
   if (!pathString) {
     // No path provided, list all buckets

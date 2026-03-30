@@ -5,17 +5,17 @@
 
 (globalThis as { __TIGRIS_BINARY?: boolean }).__TIGRIS_BINARY = true;
 
-import { loadSpecs } from './specs-embedded.js';
-import { setSpecs } from './utils/specs.js';
-import { commandRegistry } from './command-registry.js';
-import { checkForUpdates } from './utils/update-check.js';
 import { version } from '../package.json';
 import {
-  setupErrorHandlers,
   createProgram,
-  type ModuleLoader,
   type ImplementationChecker,
+  type ModuleLoader,
+  setupErrorHandlers,
 } from './cli-core.js';
+import { commandRegistry } from './command-registry.js';
+import { loadSpecs } from './specs-embedded.js';
+import { setSpecs } from './utils/specs.js';
+import { checkForUpdates } from './utils/update-check.js';
 
 // Pre-populate the shared specs cache so command modules work without filesystem access
 const specs = loadSpecs();

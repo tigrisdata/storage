@@ -1,25 +1,16 @@
-import { getOption, parseBoolean } from '../../utils/options.js';
-import { getStorageConfig } from '../../auth/s3-client.js';
-import { getSelectedOrganization } from '../../auth/storage.js';
+import { getStorageConfigWithOrg } from '@auth/provider.js';
 import { updateBucket, type UpdateBucketOptions } from '@tigrisdata/storage';
-import { parseLocations } from '../../utils/locations.js';
-import {
-  printStart,
-  printSuccess,
-  printFailure,
-  msg,
-} from '../../utils/messages.js';
-import { exitWithError } from '../../utils/exit.js';
+import { failWithError } from '@utils/exit.js';
+import { parseLocations } from '@utils/locations.js';
+import { msg, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat, getOption, parseBoolean } from '@utils/options.js';
 
 const context = msg('buckets', 'set');
 
 export default async function set(options: Record<string, unknown>) {
   printStart(context);
 
-  const json = getOption<boolean>(options, ['json']);
-  const format = json
-    ? 'json'
-    : getOption<string>(options, ['format'], 'table');
+  const format = getFormat(options);
 
   const name = getOption<string>(options, ['name']);
   const access = getOption<string>(options, ['access']);
@@ -61,8 +52,7 @@ export default async function set(options: Record<string, unknown>) {
   ]);
 
   if (!name) {
-    printFailure(context, 'Bucket name is required');
-    exitWithError('Bucket name is required', context);
+    failWithError(context, 'Bucket name is required');
   }
 
   // Check if at least one setting is provided
@@ -76,11 +66,8 @@ export default async function set(options: Record<string, unknown>) {
     enableDeleteProtection === undefined &&
     enableAdditionalHeaders === undefined
   ) {
-    printFailure(context, 'At least one setting is required');
-    exitWithError('At least one setting is required', context);
+    failWithError(context, 'At least one setting is required');
   }
-
-  const config = await getStorageConfig();
 
   // Build update options from provided settings
   const updateOptions: UpdateBucketOptions = {};
@@ -121,14 +108,7 @@ export default async function set(options: Record<string, unknown>) {
     );
   }
 
-  // Include organization ID if available (needed for updateBucket API)
-  const selectedOrg = getSelectedOrganization();
-  const finalConfig = {
-    ...config,
-    ...(selectedOrg && !config.organizationId
-      ? { organizationId: selectedOrg }
-      : {}),
-  };
+  const finalConfig = await getStorageConfigWithOrg();
 
   const { error } = await updateBucket(name, {
     ...updateOptions,
@@ -136,8 +116,7 @@ export default async function set(options: Record<string, unknown>) {
   });
 
   if (error) {
-    printFailure(context, error.message);
-    exitWithError(error, context);
+    failWithError(context, error);
   }
 
   if (format === 'json') {

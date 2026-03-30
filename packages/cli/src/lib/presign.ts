@@ -1,14 +1,14 @@
-import { parseAnyPath } from '../utils/path.js';
-import { getOption } from '../utils/options.js';
-import { getStorageConfig, getLoginMethod } from '../auth/s3-client.js';
-import { getPresignedUrl } from '@tigrisdata/storage';
-import { listAccessKeys } from '@tigrisdata/iam';
+import { getAuthClient } from '@auth/client.js';
+import { getLoginMethod, getStorageConfig } from '@auth/provider.js';
+import { getTigrisConfig } from '@auth/provider.js';
+import { getSelectedOrganization } from '@auth/storage.js';
 import type { AccessKey } from '@tigrisdata/iam';
-import { getAuthClient } from '../auth/client.js';
-import { getSelectedOrganization } from '../auth/storage.js';
-import { getTigrisConfig } from '../auth/config.js';
-import { formatJson } from '../utils/format.js';
-import { exitWithError } from '../utils/exit.js';
+import { listAccessKeys } from '@tigrisdata/iam';
+import { getPresignedUrl } from '@tigrisdata/storage';
+import { exitWithError } from '@utils/exit.js';
+import { formatJson } from '@utils/format.js';
+import { getFormat, getOption } from '@utils/options.js';
+import { parseAnyPath } from '@utils/path.js';
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
 
@@ -34,10 +34,7 @@ export default async function presign(options: Record<string, unknown>) {
     getOption<string>(options, ['expires-in', 'expiresIn', 'e']) ?? '3600',
     10
   );
-  const json = getOption<boolean>(options, ['json']);
-  const format = json
-    ? 'json'
-    : (getOption<string>(options, ['format', 'f']) ?? 'url');
+  const format = getFormat(options, 'url');
   const accessKeyFlag = getOption<string>(options, ['access-key', 'accessKey']);
 
   const config = await getStorageConfig();

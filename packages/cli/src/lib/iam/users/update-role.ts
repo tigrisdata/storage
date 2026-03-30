@@ -1,50 +1,20 @@
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
-import { requireInteractive } from '../../../utils/interactive.js';
-import { getOption } from '../../../utils/options.js';
-import { getLoginMethod } from '../../../auth/s3-client.js';
-import { getAuthClient } from '../../../auth/client.js';
-import { getSelectedOrganization } from '../../../auth/storage.js';
-import { getTigrisConfig } from '../../../auth/config.js';
-import { isFlyUser } from '../../../auth/fly.js';
-import { updateUserRole, listUsers } from '@tigrisdata/iam';
-import {
-  printStart,
-  printSuccess,
-  printFailure,
-  printEmpty,
-  msg,
-} from '../../../utils/messages.js';
-import { exitWithError } from '../../../utils/exit.js';
+import { getOAuthIAMConfig, isFlyOrganization } from '@auth/iam.js';
+import { listUsers, updateUserRole } from '@tigrisdata/iam';
+import { failWithError } from '@utils/exit.js';
+import { requireInteractive } from '@utils/interactive.js';
+import { msg, printEmpty, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat, getOption } from '@utils/options.js';
 
 const context = msg('iam users', 'update-role');
 
 export default async function updateRole(options: Record<string, unknown>) {
   printStart(context);
 
-  const loginMethod = await getLoginMethod();
+  const format = getFormat(options);
 
-  if (loginMethod !== 'oauth') {
-    printFailure(
-      context,
-      'User roles can only be updated when logged in via OAuth.\nRun "tigris login oauth" first.'
-    );
-    exitWithError(
-      'User roles can only be updated when logged in via OAuth.\nRun "tigris login oauth" first.',
-      context
-    );
-  }
-
-  const selectedOrg = getSelectedOrganization();
-
-  if (isFlyUser(selectedOrg ?? undefined)) {
-    console.log(
-      'User management is not available for Fly.io organizations.\n' +
-        'Your users are managed through Fly.io.\n\n' +
-        'Visit https://fly.io to manage your organization members.'
-    );
-    return;
-  }
+  if (isFlyOrganization()) return;
 
   const validRoles = ['admin', 'member'] as const;
   type Role = (typeof validRoles)[number];
@@ -52,13 +22,9 @@ export default async function updateRole(options: Record<string, unknown>) {
   const roleOption = getOption<string | string[]>(options, ['role', 'r']);
 
   if (!roleOption) {
-    printFailure(
+    failWithError(
       context,
       'Role is required. Use --role admin or --role member'
-    );
-    exitWithError(
-      'Role is required. Use --role admin or --role member',
-      context
     );
   }
 
@@ -66,13 +32,9 @@ export default async function updateRole(options: Record<string, unknown>) {
 
   for (const r of roles) {
     if (!validRoles.includes(r as Role)) {
-      printFailure(
+      failWithError(
         context,
         `Invalid role "${r}". Must be one of: ${validRoles.join(', ')}`
-      );
-      exitWithError(
-        `Invalid role "${r}". Must be one of: ${validRoles.join(', ')}`,
-        context
       );
     }
   }
@@ -85,26 +47,7 @@ export default async function updateRole(options: Record<string, unknown>) {
       ? [resourceOption]
       : [];
 
-  const authClient = getAuthClient();
-  const isAuthenticated = await authClient.isAuthenticated();
-
-  if (!isAuthenticated) {
-    printFailure(context, 'Not authenticated. Run "tigris login oauth" first.');
-    exitWithError(
-      'Not authenticated. Run "tigris login oauth" first.',
-      context
-    );
-  }
-
-  const accessToken = await authClient.getAccessToken();
-  const tigrisConfig = getTigrisConfig();
-
-  const iamConfig = {
-    sessionToken: accessToken,
-    organizationId: selectedOrg ?? undefined,
-    iamEndpoint: tigrisConfig.iamEndpoint,
-    mgmtEndpoint: tigrisConfig.mgmtEndpoint,
-  };
+  const iamConfig = await getOAuthIAMConfig(context);
 
   // If no resource provided, list users and let user select
   if (resources.length === 0) {
@@ -113,8 +56,7 @@ export default async function updateRole(options: Record<string, unknown>) {
     });
 
     if (listError) {
-      printFailure(context, listError.message);
-      exitWithError(listError, context);
+      failWithError(context, listError);
     }
 
     if (listData.users.length === 0) {
@@ -139,13 +81,9 @@ export default async function updateRole(options: Record<string, unknown>) {
 
   // Pair roles with users: if one role given, apply to all; otherwise pair 1:1
   if (roles.length > 1 && roles.length !== resources.length) {
-    printFailure(
+    failWithError(
       context,
       `Number of roles (${roles.length}) must match number of users (${resources.length}), or provide a single role for all users`
-    );
-    exitWithError(
-      `Number of roles (${roles.length}) must match number of users (${resources.length}), or provide a single role for all users`,
-      context
     );
   }
 
@@ -159,8 +97,11 @@ export default async function updateRole(options: Record<string, unknown>) {
   });
 
   if (error) {
-    printFailure(context, error.message);
-    exitWithError(error, context);
+    failWithError(context, error);
+  }
+
+  if (format === 'json') {
+    console.log(JSON.stringify({ action: 'updated', users: roleUpdates }));
   }
 
   printSuccess(context);

@@ -19,6 +19,22 @@ export function getOption<T>(
 }
 
 /**
+ * Resolve the output format from --json flag and --format option.
+ * --json takes precedence; falls back to --format or the given default.
+ */
+export function getFormat(
+  options: Record<string, unknown>,
+  defaultFormat = 'table'
+): string {
+  const json = getOption<boolean>(options, ['json']);
+  if (json) return 'json';
+  return (
+    getOption<string>(options, ['format', 'f', 'F'], defaultFormat) ??
+    defaultFormat
+  );
+}
+
+/**
  * Parses a boolean value from string or boolean input
  * - undefined → undefined
  * - true (boolean) → true

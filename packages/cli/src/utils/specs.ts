@@ -1,8 +1,9 @@
 import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import * as YAML from 'yaml';
-import type { Specs, CommandSpec, OperationSpec, Argument } from '../types.js';
+
+import type { Argument, CommandSpec, OperationSpec, Specs } from '../types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

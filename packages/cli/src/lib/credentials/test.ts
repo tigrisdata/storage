@@ -1,37 +1,30 @@
-import { getOption } from '../../utils/options.js';
-import { getStorageConfig } from '../../auth/s3-client.js';
-import { getSelectedOrganization } from '../../auth/storage.js';
-import { listBuckets, getBucketInfo } from '@tigrisdata/storage';
+import { getStorageConfig } from '@auth/provider.js';
+import { getSelectedOrganization } from '@auth/storage.js';
+import { getBucketInfo, listBuckets } from '@tigrisdata/storage';
+import { exitWithError, failWithError } from '@utils/exit.js';
 import {
+  msg,
+  printFailure,
   printStart,
   printSuccess,
-  printFailure,
-  msg,
-} from '../../utils/messages.js';
-import { exitWithError } from '../../utils/exit.js';
+} from '@utils/messages.js';
+import { getFormat, getOption } from '@utils/options.js';
 
 const context = msg('credentials', 'test');
 
 export default async function test(options: Record<string, unknown>) {
   printStart(context);
 
-  const json = getOption<boolean>(options, ['json']);
-  const format = json
-    ? 'json'
-    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const format = getFormat(options);
 
   const bucket = getOption<string>(options, ['bucket', 'b']);
 
   const config = await getStorageConfig();
 
   if (!config.accessKeyId && !config.sessionToken) {
-    printFailure(
+    failWithError(
       context,
       'No credentials found. Run "tigris configure" or "tigris login" first.'
-    );
-    exitWithError(
-      'No credentials found. Run "tigris configure" or "tigris login" first.',
-      context
     );
   }
 

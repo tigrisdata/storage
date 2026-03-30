@@ -1,20 +1,12 @@
-import { getOption } from '../../utils/options.js';
-import { getLoginMethod } from '../../auth/s3-client.js';
-import { getAuthClient } from '../../auth/client.js';
-import { getSelectedOrganization } from '../../auth/storage.js';
-import { getTigrisConfig } from '../../auth/config.js';
+import { getIAMConfig } from '@auth/iam.js';
 import { assignBucketRoles, revokeAllBucketRoles } from '@tigrisdata/iam';
 import {
-  printStart,
-  printSuccess,
-  printFailure,
-  msg,
-} from '../../utils/messages.js';
-import {
-  exitWithError,
+  failWithError,
   getSuccessNextActions,
   printNextActions,
-} from '../../utils/exit.js';
+} from '@utils/exit.js';
+import { msg, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat, getOption } from '@utils/options.js';
 
 const context = msg('access-keys', 'assign');
 
@@ -29,10 +21,7 @@ function normalizeToArray<T>(value: T | T[] | undefined): T[] {
 export default async function assign(options: Record<string, unknown>) {
   printStart(context);
 
-  const json = getOption<boolean>(options, ['json']);
-  const format = json
-    ? 'json'
-    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const format = getFormat(options);
 
   const id = getOption<string>(options, ['id']);
   const admin = getOption<boolean>(options, ['admin']);
@@ -48,55 +37,20 @@ export default async function assign(options: Record<string, unknown>) {
   );
 
   if (!id) {
-    printFailure(context, 'Access key ID is required');
-    exitWithError('Access key ID is required', context);
+    failWithError(context, 'Access key ID is required');
   }
 
   if (admin && revokeRoles) {
-    printFailure(context, 'Cannot use --admin and --revoke-roles together');
-    exitWithError('Cannot use --admin and --revoke-roles together', context);
+    failWithError(context, 'Cannot use --admin and --revoke-roles together');
   }
 
-  const loginMethod = await getLoginMethod();
-
-  if (loginMethod !== 'oauth') {
-    printFailure(
-      context,
-      'Bucket roles can only be managed when logged in via OAuth.\nRun "tigris login oauth" first.'
-    );
-    exitWithError(
-      'Bucket roles can only be managed when logged in via OAuth.\nRun "tigris login oauth" first.',
-      context
-    );
-  }
-
-  const authClient = getAuthClient();
-  const isAuthenticated = await authClient.isAuthenticated();
-
-  if (!isAuthenticated) {
-    printFailure(context, 'Not authenticated. Run "tigris login oauth" first.');
-    exitWithError(
-      'Not authenticated. Run "tigris login oauth" first.',
-      context
-    );
-  }
-
-  const accessToken = await authClient.getAccessToken();
-  const selectedOrg = getSelectedOrganization();
-  const tigrisConfig = getTigrisConfig();
-
-  const config = {
-    sessionToken: accessToken,
-    organizationId: selectedOrg ?? undefined,
-    iamEndpoint: tigrisConfig.iamEndpoint,
-  };
+  const config = await getIAMConfig(context);
 
   if (revokeRoles) {
     const { error } = await revokeAllBucketRoles(id, { config });
 
     if (error) {
-      printFailure(context, error.message);
-      exitWithError(error, context);
+      failWithError(context, error);
     }
 
     if (format === 'json') {
@@ -114,37 +68,25 @@ export default async function assign(options: Record<string, unknown>) {
     assignments = [{ bucket: '*', role: 'NamespaceAdmin' }];
   } else {
     if (buckets.length === 0) {
-      printFailure(
+      failWithError(
         context,
         'At least one bucket name is required (or use --admin or --revoke-roles)'
-      );
-      exitWithError(
-        'At least one bucket name is required (or use --admin or --revoke-roles)',
-        context
       );
     }
 
     if (roles.length === 0) {
-      printFailure(
+      failWithError(
         context,
         'At least one role is required (or use --admin or --revoke-roles)'
-      );
-      exitWithError(
-        'At least one role is required (or use --admin or --revoke-roles)',
-        context
       );
     }
 
     // Validate all roles
     for (const role of roles) {
       if (!validRoles.includes(role as Role)) {
-        printFailure(
+        failWithError(
           context,
           `Invalid role "${role}". Valid roles are: ${validRoles.join(', ')}`
-        );
-        exitWithError(
-          `Invalid role "${role}". Valid roles are: ${validRoles.join(', ')}`,
-          context
         );
       }
     }
@@ -163,13 +105,9 @@ export default async function assign(options: Record<string, unknown>) {
         role: roles[i] as Role,
       }));
     } else {
-      printFailure(
+      failWithError(
         context,
         `Number of roles (${roles.length}) must be 1 or match number of buckets (${buckets.length})`
-      );
-      exitWithError(
-        `Number of roles (${roles.length}) must be 1 or match number of buckets (${buckets.length})`,
-        context
       );
     }
   }
@@ -177,8 +115,7 @@ export default async function assign(options: Record<string, unknown>) {
   const { error } = await assignBucketRoles(id, assignments, { config });
 
   if (error) {
-    printFailure(context, error.message);
-    exitWithError(error, context);
+    failWithError(context, error);
   }
 
   if (format === 'json') {

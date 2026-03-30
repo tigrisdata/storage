@@ -1,5 +1,5 @@
+import type { CommandSpec, Messages, OperationSpec } from '../types.js';
 import { getCommandSpec } from './specs.js';
-import type { CommandSpec, OperationSpec, Messages } from '../types.js';
 
 export type MessageVariables = Record<
   string,

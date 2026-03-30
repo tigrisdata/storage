@@ -1,68 +1,29 @@
-import { getOption } from '../../../utils/options.js';
-import { formatOutput } from '../../../utils/format.js';
-import { getLoginMethod } from '../../../auth/s3-client.js';
-import { getAuthClient } from '../../../auth/client.js';
-import { getSelectedOrganization } from '../../../auth/storage.js';
-import { getTigrisConfig } from '../../../auth/config.js';
+import { getOAuthIAMConfig } from '@auth/iam.js';
 import { listPolicies } from '@tigrisdata/iam';
-import {
-  printStart,
-  printSuccess,
-  printFailure,
-  printEmpty,
-  msg,
-} from '../../../utils/messages.js';
-import { exitWithError } from '../../../utils/exit.js';
+import { failWithError } from '@utils/exit.js';
+import { formatOutput } from '@utils/format.js';
+import { msg, printEmpty, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat } from '@utils/options.js';
 
 const context = msg('iam policies', 'list');
 
 export default async function list(options: Record<string, unknown>) {
   printStart(context);
 
-  const json = getOption<boolean>(options, ['json']);
-  const format = json
-    ? 'json'
-    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const format = getFormat(options);
 
-  const loginMethod = await getLoginMethod();
-
-  if (loginMethod !== 'oauth') {
-    printFailure(
-      context,
-      'Policies can only be listed when logged in via OAuth.\nRun "tigris login oauth" first.'
-    );
-    exitWithError(
-      'Policies can only be listed when logged in via OAuth.\nRun "tigris login oauth" first.',
-      context
-    );
-  }
-
-  const authClient = getAuthClient();
-  const isAuthenticated = await authClient.isAuthenticated();
-
-  if (!isAuthenticated) {
-    printFailure(context, 'Not authenticated. Run "tigris login oauth" first.');
-    exitWithError(
-      'Not authenticated. Run "tigris login oauth" first.',
-      context
-    );
-  }
-
-  const accessToken = await authClient.getAccessToken();
-  const selectedOrg = getSelectedOrganization();
-  const tigrisConfig = getTigrisConfig();
+  const iamConfig = await getOAuthIAMConfig(context);
 
   const { data, error } = await listPolicies({
     config: {
-      sessionToken: accessToken,
-      organizationId: selectedOrg ?? undefined,
-      iamEndpoint: tigrisConfig.iamEndpoint,
+      sessionToken: iamConfig.sessionToken,
+      organizationId: iamConfig.organizationId,
+      iamEndpoint: iamConfig.iamEndpoint,
     },
   });
 
   if (error) {
-    printFailure(context, error.message);
-    exitWithError(error, context);
+    failWithError(context, error);
   }
 
   if (!data.policies || data.policies.length === 0) {

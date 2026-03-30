@@ -1,19 +1,19 @@
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
-import { requireInteractive } from '../../utils/interactive.js';
+import { getTigrisConfig } from '@auth/provider.js';
 import {
-  getSavedCredentials,
+  getStoredCredentials,
+  storeCredentialOrganization,
   storeLoginMethod,
   storeTemporaryCredentials,
-} from '../../auth/storage.js';
+} from '@auth/storage.js';
+import { whoami } from '@tigrisdata/iam';
+import { failWithError, printNextActions } from '@utils/exit.js';
+import { requireInteractive } from '@utils/interactive.js';
+import { msg, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat } from '@utils/options.js';
+
 import { DEFAULT_STORAGE_ENDPOINT } from '../../constants.js';
-import {
-  printStart,
-  printSuccess,
-  printFailure,
-  msg,
-} from '../../utils/messages.js';
-import { exitWithError, printNextActions } from '../../utils/exit.js';
 
 const context = msg('login', 'credentials');
 
@@ -24,6 +24,8 @@ const context = msg('login', 'credentials');
  */
 export default async function credentials(options: Record<string, unknown>) {
   printStart(context);
+
+  const format = getFormat(options);
 
   let accessKey =
     options['access-key'] ||
@@ -73,12 +75,11 @@ export default async function credentials(options: Record<string, unknown>) {
 
   // Validate
   if (!accessKey || !accessSecret) {
-    printFailure(context, 'Access key and secret are required');
-    exitWithError('Access key and secret are required', context);
+    failWithError(context, 'Access key and secret are required');
   }
 
   // Get endpoint: configured → default
-  const configuredCreds = getSavedCredentials();
+  const configuredCreds = getStoredCredentials();
   const endpoint = configuredCreds?.endpoint || DEFAULT_STORAGE_ENDPOINT;
 
   // Store as temporary credentials (cleared on logout)
@@ -89,6 +90,28 @@ export default async function credentials(options: Record<string, unknown>) {
   });
 
   await storeLoginMethod('credentials');
+
+  // Fetch and store organizationId from whoami (best-effort)
+  try {
+    const tigrisConfig = getTigrisConfig();
+    const { data } = await whoami({
+      config: {
+        accessKeyId: accessKey as string,
+        secretAccessKey: accessSecret as string,
+        iamEndpoint: tigrisConfig.iamEndpoint,
+      },
+    });
+    if (data?.organizationId) {
+      await storeCredentialOrganization(data.organizationId);
+    }
+  } catch {
+    // Non-fatal — org will just be missing
+  }
+
+  if (format === 'json') {
+    console.log(JSON.stringify({ action: 'logged_in' }));
+  }
+
   printSuccess(context);
   printNextActions(context);
 }

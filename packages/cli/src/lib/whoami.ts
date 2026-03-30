@@ -1,14 +1,14 @@
-import { listOrganizations } from '@tigrisdata/iam';
-import { getAuthClient } from '../auth/client.js';
+import { getAuthClient } from '@auth/client.js';
+import { getStorageConfig } from '@auth/provider.js';
 import {
-  getSelectedOrganization,
-  getLoginMethod,
   getCredentials,
-} from '../auth/storage.js';
-import { getStorageConfig } from '../auth/s3-client.js';
-import { printFailure, printAlreadyDone, msg } from '../utils/messages.js';
-import { exitWithError } from '../utils/exit.js';
-import { getOption } from '../utils/options.js';
+  getLoginMethod,
+  getSelectedOrganization,
+} from '@auth/storage.js';
+import { listOrganizations } from '@tigrisdata/iam';
+import { failWithError } from '@utils/exit.js';
+import { msg, printAlreadyDone } from '@utils/messages.js';
+import { getFormat } from '@utils/options.js';
 
 const context = msg('whoami');
 
@@ -16,10 +16,7 @@ export default async function whoami(
   options: Record<string, unknown> = {}
 ): Promise<void> {
   try {
-    const json = getOption<boolean>(options, ['json']);
-    const format = json
-      ? 'json'
-      : getOption<string>(options, ['format', 'f', 'F'], 'table');
+    const format = getFormat(options);
     const loginMethod = getLoginMethod();
     const credentials = getCredentials();
 
@@ -64,8 +61,7 @@ export default async function whoami(
       const { data, error } = await listOrganizations({ config });
 
       if (error) {
-        printFailure(context, error.message);
-        exitWithError(error, context);
+        failWithError(context, error);
       }
 
       organizations = data?.organizations ?? [];
@@ -117,11 +113,6 @@ export default async function whoami(
     lines.push('');
     console.log(lines.join('\n'));
   } catch (error) {
-    if (error instanceof Error) {
-      printFailure(context, error.message);
-    } else {
-      printFailure(context);
-    }
-    exitWithError(error, context);
+    failWithError(context, error);
   }
 }

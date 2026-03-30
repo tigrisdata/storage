@@ -10,7 +10,11 @@
     "strict": true,
     "noEmit": true,
     "resolveJsonModule": true,
-    "moduleDetection": "force"
+    "moduleDetection": "force",
+    "paths": {
+      "@auth/*": ["./src/auth/*"],
+      "@utils/*": ["./src/utils/*"]
+    }
   },
   "include": ["src"],
   "exclude": ["src/cli-binary.ts", "src/command-registry.ts"]

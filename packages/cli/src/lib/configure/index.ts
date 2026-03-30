@@ -1,20 +1,30 @@
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
-import { requireInteractive } from '../../utils/interactive.js';
-import { storeCredentials, storeLoginMethod } from '../../auth/storage.js';
-import { DEFAULT_STORAGE_ENDPOINT } from '../../constants.js';
+import { getTigrisConfig } from '@auth/provider.js';
 import {
+  storeCredentialOrganization,
+  storeCredentials,
+  storeLoginMethod,
+} from '@auth/storage.js';
+import { whoami } from '@tigrisdata/iam';
+import { exitWithError, failWithError, printNextActions } from '@utils/exit.js';
+import { requireInteractive } from '@utils/interactive.js';
+import {
+  msg,
+  printFailure,
   printStart,
   printSuccess,
-  printFailure,
-  msg,
-} from '../../utils/messages.js';
-import { exitWithError, printNextActions } from '../../utils/exit.js';
+} from '@utils/messages.js';
+import { getFormat } from '@utils/options.js';
+
+import { DEFAULT_STORAGE_ENDPOINT } from '../../constants.js';
 
 const context = msg('configure');
 
 export default async function configure(options: Record<string, unknown>) {
   printStart(context);
+
+  const format = getFormat(options);
 
   let accessKey =
     options['access-key'] ||
@@ -78,8 +88,7 @@ export default async function configure(options: Record<string, unknown>) {
 
   // Validate that all required fields are present
   if (!accessKey || !accessSecret || !endpoint) {
-    printFailure(context, 'All credentials are required');
-    exitWithError('All credentials are required', context);
+    failWithError(context, 'All credentials are required');
   }
 
   // Store credentials
@@ -92,6 +101,27 @@ export default async function configure(options: Record<string, unknown>) {
 
     // Store login method
     await storeLoginMethod('credentials');
+
+    // Fetch and store organizationId from whoami (best-effort)
+    try {
+      const tigrisConfig = getTigrisConfig();
+      const { data } = await whoami({
+        config: {
+          accessKeyId: accessKey as string,
+          secretAccessKey: accessSecret as string,
+          iamEndpoint: tigrisConfig.iamEndpoint,
+        },
+      });
+      if (data?.organizationId) {
+        await storeCredentialOrganization(data.organizationId);
+      }
+    } catch {
+      // Non-fatal — org will just be missing
+    }
+
+    if (format === 'json') {
+      console.log(JSON.stringify({ action: 'configured' }));
+    }
 
     printSuccess(context);
     printNextActions(context);
