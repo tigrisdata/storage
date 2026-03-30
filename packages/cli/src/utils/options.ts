@@ -28,10 +28,7 @@ export function getFormat(
 ): string {
   const json = getOption<boolean>(options, ['json']);
   if (json) return 'json';
-  return (
-    getOption<string>(options, ['format', 'f', 'F'], defaultFormat) ??
-    defaultFormat
-  );
+  return getOption<string>(options, ['format'], defaultFormat) ?? defaultFormat;
 }
 
 /**

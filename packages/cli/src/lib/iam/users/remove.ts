@@ -15,7 +15,7 @@ export default async function removeUser(options: Record<string, unknown>) {
   const format = getFormat(options);
 
   const resourceOption = getOption<string | string[]>(options, ['resource']);
-  const force = getOption<boolean>(options, ['yes', 'y']);
+  const force = getOption<boolean>(options, ['yes', 'y', 'force']);
 
   if (isFlyOrganization()) return;
 

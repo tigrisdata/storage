@@ -15,7 +15,7 @@ export default async function del(options: Record<string, unknown>) {
   const format = getFormat(options);
 
   let resource = getOption<string>(options, ['resource']);
-  const force = getOption<boolean>(options, ['yes', 'y']);
+  const force = getOption<boolean>(options, ['yes', 'y', 'force']);
 
   const iamConfig = await getOAuthIAMConfig(context);
 

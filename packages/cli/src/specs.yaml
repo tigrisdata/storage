@@ -89,7 +89,6 @@ definitions:
   global_arguments: &global_arguments
     - name: format
       description: Output format
-      alias: f
       options: [json, table]
       default: table
     - name: json
@@ -280,7 +279,6 @@ commands:
         alias: snapshot
       - name: format
         description: Output format
-        alias: f
         options: [json, table, xml]
         default: table
 
@@ -386,7 +384,6 @@ commands:
           - t3://my-bucket/my-object.json
       - name: format
         description: Output format
-        alias: f
         options: [json, table, xml]
         default: table
       - name: snapshot-version
@@ -426,7 +423,6 @@ commands:
         description: Access key ID to use for signing. If not provided, resolved from credentials or prompted interactively
       - name: format
         description: Output format
-        alias: f
         options: [url, json]
         default: url
 
@@ -496,6 +492,10 @@ commands:
         type: flag
         alias: r
         description: Move directories recursively
+      - name: force
+        type: flag
+        alias: f
+        description: Skip confirmation prompts (alias for --yes)
 
   # rm
   - name: rm
@@ -522,6 +522,10 @@ commands:
         type: flag
         alias: r
         description: Remove directories recursively
+      - name: force
+        type: flag
+        alias: f
+        description: Skip confirmation prompts (alias for --yes)
 
   #########################
   # Manage organizations
@@ -549,7 +553,6 @@ commands:
         arguments:
           - name: format
             description: Output format
-            alias: f
             options: [json, table, xml, select]
             default: select
           - name: select
@@ -626,7 +629,6 @@ commands:
         arguments:
           - name: format
             description: Output format
-            alias: f
             options: [json, table, xml]
             default: table
           - name: forks-of
@@ -715,7 +717,6 @@ commands:
               - my-bucket
           - name: format
             description: Output format
-            alias: f
             options: [json, table, xml]
             default: table
       # delete
@@ -723,8 +724,8 @@ commands:
         description: Delete one or more buckets by name. The bucket must be empty or delete-protection must be off
         alias: d
         examples:
-          - "tigris buckets delete my-bucket --force"
-          - "tigris buckets delete bucket-a,bucket-b --force"
+          - "tigris buckets delete my-bucket --yes"
+          - "tigris buckets delete bucket-a,bucket-b --yes"
         messages:
           onStart: 'Deleting bucket...'
           onSuccess: "Bucket '{{name}}' deleted successfully"
@@ -740,6 +741,9 @@ commands:
             multiple: true
             examples:
               - my-bucket
+          - name: force
+            type: flag
+            description: Skip confirmation prompts (alias for --yes)
       # set
       - name: set
         description: Update settings on an existing bucket such as access level, location, caching, or custom domain
@@ -1027,7 +1031,6 @@ commands:
               - my-bucket
           - name: format
             description: Output format
-            alias: f
             options: [json, table, xml]
             default: table
       # create
@@ -1091,7 +1094,6 @@ commands:
               - my-bucket
           - name: format
             description: Output format
-            alias: f
             options: [json, table, xml]
             default: table
       # take
@@ -1156,7 +1158,6 @@ commands:
             alias: p
           - name: format
             description: Output format
-            alias: f
             options: [json, table, xml]
             default: table
           - name: snapshot-version
@@ -1238,7 +1239,6 @@ commands:
             alias: t
           - name: format
             description: Output format
-            alias: f
             options: [json, table, xml]
             default: table
       # delete
@@ -1246,8 +1246,8 @@ commands:
         description: Delete one or more objects by key from the given bucket
         alias: d
         examples:
-          - "tigris objects delete my-bucket old-file.txt --force"
-          - "tigris objects delete my-bucket file-a.txt,file-b.txt --force"
+          - "tigris objects delete my-bucket old-file.txt --yes"
+          - "tigris objects delete my-bucket file-a.txt,file-b.txt --yes"
         messages:
           onStart: 'Deleting object...'
           onSuccess: "Object '{{key}}' deleted successfully"
@@ -1269,6 +1269,9 @@ commands:
             multiple: true
             examples:
               - my-file.txt
+          - name: force
+            type: flag
+            description: Skip confirmation prompts (alias for --yes)
       # set
       - name: set
         description: Update settings on an existing object such as access level
@@ -1322,7 +1325,6 @@ commands:
         arguments:
           - name: format
             description: Output format
-            alias: f
             options: [json, table, xml]
             default: table
       - name: create
@@ -1348,7 +1350,7 @@ commands:
         description: Permanently delete an access key by its ID. This revokes all access immediately
         alias: d
         examples:
-          - "tigris access-keys delete tid_AaBbCcDdEeFf --force"
+          - "tigris access-keys delete tid_AaBbCcDdEeFf --yes"
         messages:
           onStart: 'Deleting access key...'
           onSuccess: 'Access key deleted'
@@ -1360,6 +1362,9 @@ commands:
             required: true
             examples:
               - tid_AaBbCcDdEeFf
+          - name: force
+            type: flag
+            description: Skip confirmation prompts (alias for --yes)
       - name: get
         description: Show details for an access key including its name, creation date, and assigned bucket roles
         alias: g
@@ -1447,7 +1452,6 @@ commands:
             arguments:
               - name: format
                 description: Output format
-                alias: f
                 options: [json, table, xml]
                 default: table
           - name: get
@@ -1470,7 +1474,6 @@ commands:
                   - arn:aws:iam::org_id:policy/my-policy
               - name: format
                 description: Output format
-                alias: f
                 options: [json, table, xml]
                 default: table
           - name: create
@@ -1528,7 +1531,7 @@ commands:
             alias: d
             examples:
               - "tigris iam policies delete"
-              - "tigris iam policies delete arn:aws:iam::org_id:policy/my-policy --force"
+              - "tigris iam policies delete arn:aws:iam::org_id:policy/my-policy --yes"
             messages:
               onStart: 'Deleting policy...'
               onSuccess: "Policy '{{resource}}' deleted"
@@ -1541,6 +1544,9 @@ commands:
                 required: false
                 examples:
                   - arn:aws:iam::org_id:policy/my-policy
+              - name: force
+                type: flag
+                description: Skip confirmation prompts (alias for --yes)
 
       - name: users
         description: Manage organization users and invitations
@@ -1564,7 +1570,6 @@ commands:
             arguments:
               - name: format
                 description: Output format
-                alias: f
                 options: [json, table, xml]
                 default: table
           - name: invite
@@ -1597,8 +1602,8 @@ commands:
             alias: ri
             examples:
               - "tigris iam users revoke-invitation"
-              - "tigris iam users revoke-invitation invitation_id --force"
-              - "tigris iam users revoke-invitation id1,id2,id3 --force"
+              - "tigris iam users revoke-invitation invitation_id --yes"
+              - "tigris iam users revoke-invitation id1,id2,id3 --yes"
             messages:
               onStart: 'Revoking invitation...'
               onSuccess: "Invitation(s) revoked"
@@ -1610,6 +1615,9 @@ commands:
                 type: positional
                 required: false
                 multiple: true
+              - name: force
+                type: flag
+                description: Skip confirmation prompts (alias for --yes)
           - name: update-role
             description: Update user roles in the organization. If no user ID provided, shows interactive selection
             alias: ur
@@ -1640,8 +1648,8 @@ commands:
             alias: rm
             examples:
               - "tigris iam users remove"
-              - "tigris iam users remove user@example.com --force"
-              - "tigris iam users remove user@example.com,user@example.net --force"
+              - "tigris iam users remove user@example.com --yes"
+              - "tigris iam users remove user@example.com,user@example.net --yes"
             messages:
               onStart: 'Removing user...'
               onSuccess: "User(s) removed"
@@ -1653,3 +1661,6 @@ commands:
                 type: positional
                 required: false
                 multiple: true
+              - name: force
+                type: flag
+                description: Skip confirmation prompts (alias for --yes)

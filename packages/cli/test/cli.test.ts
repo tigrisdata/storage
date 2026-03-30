@@ -1,15 +1,16 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { execSync } from 'child_process';
 import {
   existsSync,
-  readFileSync,
-  writeFileSync,
   mkdirSync,
+  readFileSync,
   rmSync,
+  writeFileSync,
 } from 'fs';
-import { join } from 'path';
 import { tmpdir } from 'os';
-import { shouldSkipIntegrationTests, getTestPrefix } from './setup.js';
+import { join } from 'path';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+import { getTestPrefix, shouldSkipIntegrationTests } from './setup.js';
 
 const skipTests = shouldSkipIntegrationTests();
 
@@ -241,8 +242,8 @@ describe('CLI Help Commands', () => {
   });
 });
 
-describe('Destructive commands require --force in non-TTY', () => {
-  // These tests verify that destructive commands refuse to run without --force
+describe('Destructive commands require --yes in non-TTY', () => {
+  // These tests verify that destructive commands refuse to run without --yes/-y
   // when stdin is not a TTY (piped/scripted mode). Since runCli uses
   // stdio: ['ignore', ...], stdin is not a TTY.
 
@@ -1175,30 +1176,37 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
   });
 
   describe('buckets delete command', () => {
-    it('should delete a single bucket with --force', () => {
+    it('should delete a single bucket with --yes', () => {
       const name = `${testPrefix}-bd-1`;
+      runCli(`mk ${name}`);
+      const result = runCli(`buckets delete ${name} --yes`);
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should delete multiple buckets with --yes', () => {
+      const name1 = `${testPrefix}-bd-2`;
+      const name2 = `${testPrefix}-bd-3`;
+      runCli(`mk ${name1}`);
+      runCli(`mk ${name2}`);
+      const result = runCli(`buckets delete ${name1},${name2} --yes`);
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should delete a bucket with --force (backwards compat)', () => {
+      const name = `${testPrefix}-bd-force`;
       runCli(`mk ${name}`);
       const result = runCli(`buckets delete ${name} --force`);
       expect(result.exitCode).toBe(0);
     });
 
-    it('should delete multiple buckets with --force', () => {
-      const name1 = `${testPrefix}-bd-2`;
-      const name2 = `${testPrefix}-bd-3`;
-      runCli(`mk ${name1}`);
-      runCli(`mk ${name2}`);
-      const result = runCli(`buckets delete ${name1},${name2} --force`);
-      expect(result.exitCode).toBe(0);
-    });
-
-    it('should fail without --force in non-TTY', () => {
+    it('should fail without --yes in non-TTY', () => {
       const name = `${testPrefix}-bd-nf`;
       runCli(`mk ${name}`);
       const result = runCli(`buckets delete ${name}`);
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('--yes');
       // Cleanup
-      runCli(`buckets delete ${name} --force`);
+      runCli(`buckets delete ${name} --yes`);
     });
   });
 
@@ -1637,24 +1645,32 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
   });
 
   describe('objects delete command', () => {
-    it('should delete a single object with --force', () => {
+    it('should delete a single object with --yes', () => {
       runCli(`touch ${testBucket}/objdel-1.txt`);
       const result = runCli(
-        `objects delete ${testBucket} objdel-1.txt --force`
+        `objects delete ${testBucket} objdel-1.txt --yes`
       );
       expect(result.exitCode).toBe(0);
     });
 
-    it('should delete multiple objects with --force', () => {
+    it('should delete multiple objects with --yes', () => {
       runCli(`touch ${testBucket}/objdel-2.txt`);
       runCli(`touch ${testBucket}/objdel-3.txt`);
       const result = runCli(
-        `objects delete ${testBucket} objdel-2.txt,objdel-3.txt --force`
+        `objects delete ${testBucket} objdel-2.txt,objdel-3.txt --yes`
       );
       expect(result.exitCode).toBe(0);
     });
 
-    it('should fail without --force in non-TTY', () => {
+    it('should delete an object with --force (backwards compat)', () => {
+      runCli(`touch ${testBucket}/objdel-force.txt`);
+      const result = runCli(
+        `objects delete ${testBucket} objdel-force.txt --force`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should fail without --yes in non-TTY', () => {
       runCli(`touch ${testBucket}/objdel-noforce.txt`);
       const result = runCli(
         `objects delete ${testBucket} objdel-noforce.txt`
@@ -1662,7 +1678,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('--yes');
       // Cleanup
-      runCli(`objects delete ${testBucket} objdel-noforce.txt --force`);
+      runCli(`objects delete ${testBucket} objdel-noforce.txt --yes`);
     });
   });
 

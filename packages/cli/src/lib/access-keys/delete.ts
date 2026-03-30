@@ -13,7 +13,7 @@ export default async function remove(options: Record<string, unknown>) {
   const format = getFormat(options);
 
   const id = getOption<string>(options, ['id']);
-  const force = getOption<boolean>(options, ['yes', 'y']);
+  const force = getOption<boolean>(options, ['yes', 'y', 'force']);
 
   if (!id) {
     failWithError(context, 'Access key ID is required');

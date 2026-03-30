@@ -19,7 +19,7 @@ let _jsonMode = false;
 export default async function mv(options: Record<string, unknown>) {
   const src = getOption<string>(options, ['src']);
   const dest = getOption<string>(options, ['dest']);
-  const force = getOption<boolean>(options, ['yes', 'y']);
+  const force = getOption<boolean>(options, ['yes', 'y', 'force', 'f']);
   const recursive = !!getOption<boolean>(options, ['recursive', 'r']);
   const format = getFormat(options);
   _jsonMode = format === 'json';

@@ -24,7 +24,7 @@ export default async function deleteObject(options: Record<string, unknown>) {
 
   const bucket = getOption<string>(options, ['bucket']);
   const keys = getOption<string | string[]>(options, ['key']);
-  const force = getOption<boolean>(options, ['yes', 'y']);
+  const force = getOption<boolean>(options, ['yes', 'y', 'force']);
 
   if (!bucket) {
     failWithError(context, 'Bucket name is required');

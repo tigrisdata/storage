@@ -24,6 +24,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ["dist/", "node_modules/", "**/*.cjs"],
+    ignores: ["dist/", "node_modules/", "**/*.cjs", "src/command-registry.ts"],
   },
 );

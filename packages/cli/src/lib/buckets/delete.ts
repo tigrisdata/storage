@@ -23,7 +23,7 @@ export default async function deleteBucket(options: Record<string, unknown>) {
   const format = getFormat(options);
 
   const names = getOption<string | string[]>(options, ['name']);
-  const force = getOption<boolean>(options, ['yes', 'y']);
+  const force = getOption<boolean>(options, ['yes', 'y', 'force']);
 
   if (!names) {
     failWithError(context, 'Bucket name is required');

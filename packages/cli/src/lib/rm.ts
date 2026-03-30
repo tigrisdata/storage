@@ -16,7 +16,7 @@ let _jsonMode = false;
 
 export default async function rm(options: Record<string, unknown>) {
   const pathString = getOption<string>(options, ['path']);
-  const force = getOption<boolean>(options, ['yes', 'y']);
+  const force = getOption<boolean>(options, ['yes', 'y', 'force', 'f']);
   const recursive = !!getOption<boolean>(options, ['recursive', 'r']);
   const format = getFormat(options);
   _jsonMode = format === 'json';
