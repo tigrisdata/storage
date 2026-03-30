@@ -21,12 +21,12 @@ jobs:
 
     steps:
       # Checkout code with full history to get tags
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       # Set up Node.js
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
 
@@ -60,11 +60,11 @@ jobs:
 
     steps:
       # Checkout the release tag
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: v${{ needs.release.outputs.new_release_version }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
 
