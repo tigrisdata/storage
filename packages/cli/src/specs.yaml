@@ -215,6 +215,17 @@ commands:
       onSuccess: ''
       onFailure: 'Failed to get user information'
       onAlreadyDone: "Not authenticated\nRun \"tigris login\" to authenticate"
+  # update
+  - name: update
+    description: Update the CLI to the latest version
+    examples:
+      - "tigris update"
+    messages:
+      onStart: 'Checking for updates...'
+      onSuccess: 'Updated to {{latestVersion}}'
+      onFailure: 'Failed to update'
+      onAlreadyDone: 'Already on the latest version ({{currentVersion}})'
+
   # logout
   - name: logout
     description: End the current session and clear login state. Credentials saved via 'configure' are kept

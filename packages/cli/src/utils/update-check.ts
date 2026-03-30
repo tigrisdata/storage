@@ -18,7 +18,7 @@ interface UpdateCheckCache {
 
 const CACHE_PATH = join(homedir(), '.tigris', 'update-check.json');
 
-function readUpdateCache(): UpdateCheckCache | null {
+export function readUpdateCache(): UpdateCheckCache | null {
   try {
     const data = readFileSync(CACHE_PATH, 'utf-8');
     const parsed = JSON.parse(data);
@@ -92,9 +92,33 @@ export function isNewerVersion(current: string, latest: string): boolean {
   return false;
 }
 
-function fetchLatestVersionInBackground(): void {
-  try {
-    const req = https.get(NPM_REGISTRY_URL, { timeout: 5000 }, (res) => {
+/**
+ * Returns the platform-appropriate shell command for updating the CLI.
+ */
+export function getUpdateCommand(): string {
+  const isBinary =
+    (globalThis as { __TIGRIS_BINARY?: boolean }).__TIGRIS_BINARY === true;
+  const isWindows = process.platform === 'win32';
+
+  if (!isBinary) {
+    return 'npm install -g @tigrisdata/cli';
+  } else if (isWindows) {
+    return 'irm https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.ps1 | iex';
+  } else {
+    return 'curl -fsSL https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.sh | sh';
+  }
+}
+
+/**
+ * Fetch the latest published version string from the npm registry.
+ * When `unref` is true the underlying socket is unref'd so it won't
+ * keep the process alive (used by the background check).
+ */
+export function fetchLatestVersion(
+  options: { unref?: boolean } = {}
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const req = https.get(NPM_REGISTRY_URL, { timeout: 10000 }, (res) => {
       let data = '';
       res.on('data', (chunk: Buffer) => {
         data += chunk;
@@ -103,32 +127,40 @@ function fetchLatestVersionInBackground(): void {
         try {
           const json = JSON.parse(data);
           if (typeof json.version === 'string') {
-            const existing = readUpdateCache();
             writeUpdateCache({
-              ...existing,
+              ...readUpdateCache(),
               latestVersion: json.version,
               lastChecked: Date.now(),
             });
+            resolve(json.version);
+          } else {
+            reject(new Error('Unexpected registry response'));
           }
         } catch {
-          // Silent on parse failure
+          reject(new Error('Failed to parse registry response'));
         }
       });
     });
-    req.on('error', () => {
-      // Silent on network failure
+    req.on('error', (err) => {
+      reject(err);
     });
     req.on('timeout', () => {
       req.destroy();
+      reject(new Error('Request timed out'));
     });
+    if (options.unref) {
+      req.on('socket', (socket) => {
+        socket.unref();
+      });
+    }
     req.end();
-    // Unref so the request doesn't keep the process alive
-    req.on('socket', (socket) => {
-      socket.unref();
-    });
-  } catch {
+  });
+}
+
+function fetchLatestVersionInBackground(): void {
+  fetchLatestVersion({ unref: true }).catch(() => {
     // Silent on failure
-  }
+  });
 }
 
 export function checkForUpdates(): void {
@@ -146,20 +178,8 @@ export function checkForUpdates(): void {
       !cache.lastNotified ||
       Date.now() - cache.lastNotified > notifyIntervalMs
     ) {
-      const isBinary =
-        (globalThis as { __TIGRIS_BINARY?: boolean }).__TIGRIS_BINARY === true;
-      const isWindows = process.platform === 'win32';
       const line1 = `Update available: ${currentVersion} → ${cache.latestVersion}`;
-      let line2: string;
-      if (!isBinary) {
-        line2 = 'Run `npm install -g @tigrisdata/cli` to upgrade.';
-      } else if (isWindows) {
-        line2 =
-          'Run `irm https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.ps1 | iex`';
-      } else {
-        line2 =
-          'Run `curl -fsSL https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.sh | sh`';
-      }
+      const line2 = 'Run "tigris update" to upgrade.';
       const width = Math.max(line1.length, line2.length) + 4;
       const top = '┌' + '─'.repeat(width - 2) + '┐';
       const bot = '└' + '─'.repeat(width - 2) + '┘';

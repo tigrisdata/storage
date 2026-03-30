@@ -34,7 +34,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
-      - run: npm run test:all
+      - run: npm run test
+      - run: npm run test:integration
         env:
           TIGRIS_STORAGE_ACCESS_KEY_ID: ${{ secrets.TIGRIS_STORAGE_ACCESS_KEY_ID }}
           TIGRIS_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_STORAGE_SECRET_ACCESS_KEY }}
