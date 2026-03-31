@@ -105,6 +105,22 @@ export function wildcardPrefix(wildcardPath: string): string {
   return slashBefore >= 0 ? wildcardPath.slice(0, slashBefore + 1) : '';
 }
 
+/**
+ * Resolves bucket and key from two positional arguments.
+ * When both `bucketArg` and `keyArg` are provided, strips any URI prefix from bucket.
+ * Otherwise parses `bucketArg` as a full path (supports t3://, tigris://, or bare bucket/key).
+ */
+export function resolveObjectArgs(
+  bucketArg: string,
+  keyArg?: string
+): { bucket: string; key: string } {
+  const parsed = parseAnyPath(bucketArg);
+  if (keyArg) {
+    return { bucket: parsed.bucket, key: keyArg };
+  }
+  return { bucket: parsed.bucket, key: parsed.path };
+}
+
 export type ListItem = {
   id: string;
   name: string;

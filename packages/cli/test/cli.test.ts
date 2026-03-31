@@ -1719,6 +1719,113 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
   });
 
+  describe('objects commands with t3:// paths', () => {
+    const tmpBase = join(tmpdir(), `cli-test-t3path-${testPrefix}`);
+
+    beforeAll(() => {
+      mkdirSync(tmpBase, { recursive: true });
+    });
+
+    afterAll(() => {
+      rmSync(tmpBase, { recursive: true, force: true });
+      runCli(`rm ${t3(testBucket)}/t3path-put.txt -f`);
+      runCli(`rm ${t3(testBucket)}/t3path-put2.txt -f`);
+      runCli(`rm ${t3(testBucket)}/t3path-get.txt -f`);
+      runCli(`rm ${t3(testBucket)}/t3path-info.txt -f`);
+      runCli(`rm ${t3(testBucket)}/t3path-set.txt -f`);
+      runCli(`rm ${t3(testBucket)}/t3path-del.txt -f`);
+    });
+
+    it('should put with t3://bucket/key file', () => {
+      const tmpFile = join(tmpBase, 'put.txt');
+      writeFileSync(tmpFile, 't3 path put test');
+      const result = runCli(
+        `objects put t3://${testBucket}/t3path-put.txt ${tmpFile}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('t3path-put.txt');
+    });
+
+    it('should put with bare bucket/key file', () => {
+      const tmpFile = join(tmpBase, 'put2.txt');
+      writeFileSync(tmpFile, 't3 path put test 2');
+      const result = runCli(
+        `objects put ${testBucket}/t3path-put2.txt ${tmpFile}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('t3path-put2.txt');
+    });
+
+    it('should get with t3://bucket/key', () => {
+      // Setup: create the object first
+      const tmpFile = join(tmpBase, 'get-src.txt');
+      writeFileSync(tmpFile, 't3 path get test');
+      runCli(`objects put ${testBucket} t3path-get.txt ${tmpFile}`);
+
+      const result = runCli(
+        `objects get t3://${testBucket}/t3path-get.txt`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('t3 path get test');
+    });
+
+    it('should list with t3://bucket', () => {
+      const result = runCli(`objects list t3://${testBucket}`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('t3path-put.txt');
+    });
+
+    it('should list with t3://bucket/prefix', () => {
+      const result = runCli(
+        `objects list t3://${testBucket}/t3path-put`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('t3path-put');
+    });
+
+    it('should info with t3://bucket/key', () => {
+      const result = runCli(
+        `objects info t3://${testBucket}/t3path-put.txt`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Size');
+      expect(result.stdout).toContain('Content-Type');
+    });
+
+    it('should info with bare bucket/key', () => {
+      const result = runCli(
+        `objects info ${testBucket}/t3path-put.txt`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Size');
+    });
+
+    it('should set with t3://bucket/key', () => {
+      // Setup: create the object
+      runCli(`touch ${testBucket}/t3path-set.txt`);
+      const result = runCli(
+        `objects set t3://${testBucket}/t3path-set.txt --access public`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should delete with t3://bucket/key', () => {
+      runCli(`touch ${testBucket}/t3path-del.txt`);
+      const result = runCli(
+        `objects delete t3://${testBucket}/t3path-del.txt --yes`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should delete with bare bucket/key', () => {
+      runCli(`touch ${testBucket}/t3path-del.txt`);
+      const result = runCli(
+        `objects delete ${testBucket}/t3path-del.txt --yes`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+  });
+
   describe('snapshot and fork lifecycle', () => {
     const snapBucket = `${testPrefix}-snap`;
     const forkBucket = `${testPrefix}-fork`;

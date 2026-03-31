@@ -14,6 +14,7 @@ import {
   printSuccess,
 } from '@utils/messages.js';
 import { getFormat, getOption } from '@utils/options.js';
+import { resolveObjectArgs } from '@utils/path.js';
 
 const context = msg('objects', 'delete');
 
@@ -22,13 +23,17 @@ export default async function deleteObject(options: Record<string, unknown>) {
 
   const format = getFormat(options);
 
-  const bucket = getOption<string>(options, ['bucket']);
-  const keys = getOption<string | string[]>(options, ['key']);
+  const bucketArg = getOption<string>(options, ['bucket']);
+  const keysArg = getOption<string | string[]>(options, ['key']);
   const force = getOption<boolean>(options, ['yes', 'y', 'force']);
 
-  if (!bucket) {
-    failWithError(context, 'Bucket name is required');
+  if (!bucketArg) {
+    failWithError(context, 'Bucket name or path is required');
   }
+
+  const resolved = resolveObjectArgs(bucketArg);
+  const bucket = resolved.bucket;
+  const keys = keysArg || resolved.key || undefined;
 
   if (!keys) {
     failWithError(context, 'Object key is required');

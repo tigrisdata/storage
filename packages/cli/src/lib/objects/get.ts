@@ -3,6 +3,7 @@ import { get } from '@tigrisdata/storage';
 import { failWithError } from '@utils/exit.js';
 import { msg, printStart, printSuccess } from '@utils/messages.js';
 import { getFormat, getOption } from '@utils/options.js';
+import { resolveObjectArgs } from '@utils/path.js';
 import { createWriteStream, writeFileSync } from 'fs';
 import { extname } from 'path';
 import { Readable } from 'stream';
@@ -106,8 +107,8 @@ export default async function getObject(options: Record<string, unknown>) {
 
   const outputFormat = getFormat(options);
 
-  const bucket = getOption<string>(options, ['bucket']);
-  const key = getOption<string>(options, ['key']);
+  const bucketArg = getOption<string>(options, ['bucket']);
+  const keyArg = getOption<string>(options, ['key']);
   const output = getOption<string>(options, ['output', 'o', 'O']);
   const modeOption = getOption<string>(options, ['mode', 'm', 'M']);
   const snapshotVersion = getOption<string>(options, [
@@ -116,9 +117,11 @@ export default async function getObject(options: Record<string, unknown>) {
     'snapshot',
   ]);
 
-  if (!bucket) {
-    failWithError(context, 'Bucket name is required');
+  if (!bucketArg) {
+    failWithError(context, 'Bucket name or path is required');
   }
+
+  const { bucket, key } = resolveObjectArgs(bucketArg, keyArg);
 
   if (!key) {
     failWithError(context, 'Object key is required');

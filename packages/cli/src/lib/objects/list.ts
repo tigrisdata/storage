@@ -4,14 +4,15 @@ import { failWithError } from '@utils/exit.js';
 import { formatOutput, formatSize } from '@utils/format.js';
 import { msg, printEmpty, printStart, printSuccess } from '@utils/messages.js';
 import { getFormat, getOption } from '@utils/options.js';
+import { parseAnyPath } from '@utils/path.js';
 
 const context = msg('objects', 'list');
 
 export default async function listObjects(options: Record<string, unknown>) {
   printStart(context);
 
-  const bucket = getOption<string>(options, ['bucket']);
-  const prefix = getOption<string>(options, ['prefix', 'p', 'P']);
+  const bucketArg = getOption<string>(options, ['bucket']);
+  const prefixFlag = getOption<string>(options, ['prefix', 'p', 'P']);
   const format = getFormat(options);
   const snapshotVersion = getOption<string>(options, [
     'snapshot-version',
@@ -19,14 +20,18 @@ export default async function listObjects(options: Record<string, unknown>) {
     'snapshot',
   ]);
 
-  if (!bucket) {
+  if (!bucketArg) {
     failWithError(context, 'Bucket name is required');
   }
+
+  const parsed = parseAnyPath(bucketArg);
+  const bucket = parsed.bucket;
+  const prefix = prefixFlag || parsed.path || undefined;
 
   const config = await getStorageConfig();
 
   const { data, error } = await list({
-    prefix: prefix || undefined,
+    prefix,
     ...(snapshotVersion ? { snapshotVersion } : {}),
     config: {
       ...config,

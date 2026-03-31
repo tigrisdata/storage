@@ -4,6 +4,7 @@ import { failWithError, printNextActions } from '@utils/exit.js';
 import { formatOutput, formatSize } from '@utils/format.js';
 import { msg, printStart, printSuccess } from '@utils/messages.js';
 import { getFormat, getOption } from '@utils/options.js';
+import { resolveObjectArgs } from '@utils/path.js';
 import { calculateUploadParams } from '@utils/upload.js';
 import { createReadStream, statSync } from 'fs';
 import { Readable } from 'stream';
@@ -13,9 +14,9 @@ const context = msg('objects', 'put');
 export default async function putObject(options: Record<string, unknown>) {
   printStart(context);
 
-  const bucket = getOption<string>(options, ['bucket']);
-  const key = getOption<string>(options, ['key']);
-  const file = getOption<string>(options, ['file']);
+  const bucketArg = getOption<string>(options, ['bucket']);
+  const keyArg = getOption<string>(options, ['key']);
+  const fileArg = getOption<string>(options, ['file']);
   const access = getOption<string>(options, ['access', 'a', 'A'], 'private');
   const contentType = getOption<string>(options, [
     'content-type',
@@ -25,9 +26,14 @@ export default async function putObject(options: Record<string, unknown>) {
   ]);
   const format = getFormat(options);
 
-  if (!bucket) {
-    failWithError(context, 'Bucket name is required');
+  if (!bucketArg) {
+    failWithError(context, 'Bucket name or path is required');
   }
+
+  const combined = resolveObjectArgs(bucketArg);
+  const bucket = combined.bucket;
+  const key = combined.key || keyArg;
+  const file = combined.key ? keyArg || fileArg : fileArg;
 
   if (!key) {
     failWithError(context, 'Object key is required');
