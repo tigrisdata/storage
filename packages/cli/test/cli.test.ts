@@ -1,11 +1,5 @@
 import { execSync } from 'child_process';
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -786,9 +780,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should download a remote file to local path', () => {
       const localDest = join(tmpBase, 'downloaded.txt');
-      const result = runCli(
-        `cp ${t3(testBucket)}/cp-dl-test.txt ${localDest}`
-      );
+      const result = runCli(`cp ${t3(testBucket)}/cp-dl-test.txt ${localDest}`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Downloaded');
       expect(existsSync(localDest)).toBe(true);
@@ -797,9 +789,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     it('should upload a local file to remote', () => {
       const localSrc = join(tmpBase, 'to-upload.txt');
       writeFileSync(localSrc, 'upload test content');
-      const result = runCli(
-        `cp ${localSrc} ${t3(testBucket)}/cp-ul-test.txt`
-      );
+      const result = runCli(`cp ${localSrc} ${t3(testBucket)}/cp-ul-test.txt`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Uploaded');
 
@@ -813,9 +803,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       mkdirSync(localDir, { recursive: true });
       writeFileSync(join(localDir, 'a.txt'), 'file-a');
       writeFileSync(join(localDir, 'b.txt'), 'file-b');
-      const result = runCli(
-        `cp ${localDir}/ ${t3(testBucket)}/cp-ul-dir/ -r`
-      );
+      const result = runCli(`cp ${localDir}/ ${t3(testBucket)}/cp-ul-dir/ -r`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Uploaded');
       expect(result.stdout).toContain('2 file(s)');
@@ -827,9 +815,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       runCli(`touch ${testBucket}/cp-dl-dir/y.txt`);
       const localDest = join(tmpBase, 'dl-dir');
       mkdirSync(localDest, { recursive: true });
-      const result = runCli(
-        `cp ${t3(testBucket)}/cp-dl-dir/ ${localDest} -r`
-      );
+      const result = runCli(`cp ${t3(testBucket)}/cp-dl-dir/ ${localDest} -r`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Downloaded');
       expect(result.stdout).toContain('2 file(s)');
@@ -995,18 +981,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
 
     it('should list with --prefix filter', () => {
-      const result = runCli(
-        `objects list ${testBucket} --prefix objlist-a`
-      );
+      const result = runCli(`objects list ${testBucket} --prefix objlist-a`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('objlist-a.txt');
       expect(result.stdout).not.toContain('objlist-b.txt');
     });
 
     it('should list with --format json', () => {
-      const result = runCli(
-        `objects list ${testBucket} --format json`
-      );
+      const result = runCli(`objects list ${testBucket} --format json`);
       expect(result.exitCode).toBe(0);
       expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
     });
@@ -1064,9 +1046,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
 
     it('should output --format json for object info', () => {
-      const result = runCli(
-        `stat ${testBucket}/stat-test.txt --format json`
-      );
+      const result = runCli(`stat ${testBucket}/stat-test.txt --format json`);
       expect(result.exitCode).toBe(0);
       expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
     });
@@ -1135,9 +1115,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
 
     it('should error on bucket-only path', () => {
-      const result = runCli(
-        `presign ${testBucket} --access-key ${accessKey}`
-      );
+      const result = runCli(`presign ${testBucket} --access-key ${accessKey}`);
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('Object key is required');
     });
@@ -1253,17 +1231,13 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     afterAll(() => {
       // Disable delete protection before cleanup
-      runCli(
-        `buckets set ${setBucket} --enable-delete-protection false`
-      );
+      runCli(`buckets set ${setBucket} --enable-delete-protection false`);
       runCli(`rm ${t3(setBucket)} -f`);
     });
 
     describe('buckets set', () => {
       it('should set --access public', () => {
-        const result = runCli(
-          `buckets set ${setBucket} --access public`
-        );
+        const result = runCli(`buckets set ${setBucket} --access public`);
         expect(result.exitCode).toBe(0);
         // Reset back
         runCli(`buckets set ${setBucket} --access private`);
@@ -1282,15 +1256,11 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
         );
         expect(result.exitCode).toBe(0);
         // Disable for cleanup
-        runCli(
-          `buckets set ${setBucket} --enable-delete-protection false`
-        );
+        runCli(`buckets set ${setBucket} --enable-delete-protection false`);
       });
 
       it('should set --locations usa', () => {
-        const result = runCli(
-          `buckets set ${setBucket} --locations usa`
-        );
+        const result = runCli(`buckets set ${setBucket} --locations usa`);
         expect(result.exitCode).toBe(0);
       });
 
@@ -1309,30 +1279,22 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     describe('buckets set-ttl', () => {
       it('should set TTL with --days 30', () => {
-        const result = runCli(
-          `buckets set-ttl ${setBucket} --days 30`
-        );
+        const result = runCli(`buckets set-ttl ${setBucket} --days 30`);
         expect(result.exitCode).toBe(0);
       });
 
       it('should set TTL with --date 2027-01-01', () => {
-        const result = runCli(
-          `buckets set-ttl ${setBucket} --date 2027-01-01`
-        );
+        const result = runCli(`buckets set-ttl ${setBucket} --date 2027-01-01`);
         expect(result.exitCode).toBe(0);
       });
 
       it('should enable with --enable', () => {
-        const result = runCli(
-          `buckets set-ttl ${setBucket} --enable`
-        );
+        const result = runCli(`buckets set-ttl ${setBucket} --enable`);
         expect(result.exitCode).toBe(0);
       });
 
       it('should disable with --disable', () => {
-        const result = runCli(
-          `buckets set-ttl ${setBucket} --disable`
-        );
+        const result = runCli(`buckets set-ttl ${setBucket} --disable`);
         expect(result.exitCode).toBe(0);
       });
 
@@ -1357,21 +1319,15 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       });
 
       it('should error on invalid --days', () => {
-        const result = runCli(
-          `buckets set-ttl ${setBucket} --days -5`
-        );
+        const result = runCli(`buckets set-ttl ${setBucket} --days -5`);
         expect(result.exitCode).toBe(1);
         expect(result.stderr).toContain('--days must be a positive number');
       });
 
       it('should error on invalid --date', () => {
-        const result = runCli(
-          `buckets set-ttl ${setBucket} --date not-a-date`
-        );
+        const result = runCli(`buckets set-ttl ${setBucket} --date not-a-date`);
         expect(result.exitCode).toBe(1);
-        expect(result.stderr).toContain(
-          '--date must be a valid ISO-8601 date'
-        );
+        expect(result.stderr).toContain('--date must be a valid ISO-8601 date');
       });
 
       it('should error when no action provided', () => {
@@ -1394,9 +1350,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     describe('buckets set-migration', () => {
       it('should disable migration', () => {
-        const result = runCli(
-          `buckets set-migration ${setBucket} --disable`
-        );
+        const result = runCli(`buckets set-migration ${setBucket} --disable`);
         expect(result.exitCode).toBe(0);
       });
 
@@ -1435,16 +1389,12 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       });
 
       it('should enable with --enable', () => {
-        const result = runCli(
-          `buckets set-transition ${setBucket} --enable`
-        );
+        const result = runCli(`buckets set-transition ${setBucket} --enable`);
         expect(result.exitCode).toBe(0);
       });
 
       it('should disable with --disable', () => {
-        const result = runCli(
-          `buckets set-transition ${setBucket} --disable`
-        );
+        const result = runCli(`buckets set-transition ${setBucket} --disable`);
         expect(result.exitCode).toBe(0);
       });
 
@@ -1459,9 +1409,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       });
 
       it('should error on --days without --storage-class', () => {
-        const result = runCli(
-          `buckets set-transition ${setBucket} --days 30`
-        );
+        const result = runCli(`buckets set-transition ${setBucket} --days 30`);
         expect(result.exitCode).toBe(1);
         expect(result.stderr).toContain(
           '--storage-class is required when setting --days or --date'
@@ -1489,9 +1437,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       });
 
       it('should error when no action provided', () => {
-        const result = runCli(
-          `buckets set-transition ${setBucket}`
-        );
+        const result = runCli(`buckets set-transition ${setBucket}`);
         expect(result.exitCode).toBe(1);
         expect(result.stderr).toContain(
           'Provide --days, --date, --enable, or --disable'
@@ -1523,9 +1469,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       });
 
       it('should reset', () => {
-        const result = runCli(
-          `buckets set-notifications ${setBucket} --reset`
-        );
+        const result = runCli(`buckets set-notifications ${setBucket} --reset`);
         expect(result.exitCode).toBe(0);
       });
 
@@ -1584,9 +1528,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       });
 
       it('should error when no options provided', () => {
-        const result = runCli(
-          `buckets set-notifications ${setBucket}`
-        );
+        const result = runCli(`buckets set-notifications ${setBucket}`);
         expect(result.exitCode).toBe(1);
         expect(result.stderr).toContain('Provide at least one option');
       });
@@ -1601,9 +1543,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       });
 
       it('should reset with --reset', () => {
-        const result = runCli(
-          `buckets set-cors ${setBucket} --reset`
-        );
+        const result = runCli(`buckets set-cors ${setBucket} --reset`);
         expect(result.exitCode).toBe(0);
       });
 
@@ -1625,9 +1565,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       });
 
       it('should error without --origins or --reset', () => {
-        const result = runCli(
-          `buckets set-cors ${setBucket} --methods "GET"`
-        );
+        const result = runCli(`buckets set-cors ${setBucket} --methods "GET"`);
         expect(result.exitCode).toBe(1);
         expect(result.stderr).toContain('Provide --origins or --reset');
       });
@@ -1637,9 +1575,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
           `buckets set-cors ${setBucket} --origins "*" --max-age -1`
         );
         expect(result.exitCode).toBe(1);
-        expect(result.stderr).toContain(
-          '--max-age must be a positive number'
-        );
+        expect(result.stderr).toContain('--max-age must be a positive number');
       });
     });
   });
@@ -1647,9 +1583,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
   describe('objects delete command', () => {
     it('should delete a single object with --yes', () => {
       runCli(`touch ${testBucket}/objdel-1.txt`);
-      const result = runCli(
-        `objects delete ${testBucket} objdel-1.txt --yes`
-      );
+      const result = runCli(`objects delete ${testBucket} objdel-1.txt --yes`);
       expect(result.exitCode).toBe(0);
     });
 
@@ -1672,9 +1606,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should fail without --yes in non-TTY', () => {
       runCli(`touch ${testBucket}/objdel-noforce.txt`);
-      const result = runCli(
-        `objects delete ${testBucket} objdel-noforce.txt`
-      );
+      const result = runCli(`objects delete ${testBucket} objdel-noforce.txt`);
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('--yes');
       // Cleanup
@@ -1762,9 +1694,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       writeFileSync(tmpFile, 't3 path get test');
       runCli(`objects put ${testBucket} t3path-get.txt ${tmpFile}`);
 
-      const result = runCli(
-        `objects get t3://${testBucket}/t3path-get.txt`
-      );
+      const result = runCli(`objects get t3://${testBucket}/t3path-get.txt`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('t3 path get test');
     });
@@ -1776,26 +1706,20 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
 
     it('should list with t3://bucket/prefix', () => {
-      const result = runCli(
-        `objects list t3://${testBucket}/t3path-put`
-      );
+      const result = runCli(`objects list t3://${testBucket}/t3path-put`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('t3path-put');
     });
 
     it('should info with t3://bucket/key', () => {
-      const result = runCli(
-        `objects info t3://${testBucket}/t3path-put.txt`
-      );
+      const result = runCli(`objects info t3://${testBucket}/t3path-put.txt`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Size');
       expect(result.stdout).toContain('Content-Type');
     });
 
     it('should info with bare bucket/key', () => {
-      const result = runCli(
-        `objects info ${testBucket}/t3path-put.txt`
-      );
+      const result = runCli(`objects info ${testBucket}/t3path-put.txt`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Size');
     });
@@ -1848,9 +1772,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
 
     it('should take a named snapshot with --snapshot-name', () => {
-      const result = runCli(
-        `snapshots take ${snapBucket} test-snap`
-      );
+      const result = runCli(`snapshots take ${snapBucket} test-snap`);
       expect(result.exitCode).toBe(0);
     });
 
@@ -1861,9 +1783,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
 
     it('should list snapshots with --format json', () => {
-      const result = runCli(
-        `snapshots list ${snapBucket} --format json`
-      );
+      const result = runCli(`snapshots list ${snapBucket} --format json`);
       expect(result.exitCode).toBe(0);
       const parsed = JSON.parse(result.stdout.trim());
       expect(Array.isArray(parsed)).toBe(true);
@@ -1897,9 +1817,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
 
     it('should create a fork via forks create', () => {
-      const result = runCli(
-        `forks create ${snapBucket} ${forkBucket}`
-      );
+      const result = runCli(`forks create ${snapBucket} ${forkBucket}`);
       expect(result.exitCode).toBe(0);
     });
 
@@ -1916,9 +1834,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     }, 120_000);
 
     it('should list forks with --format json', () => {
-      const result = runCli(
-        `forks list ${snapBucket} --format json`
-      );
+      const result = runCli(`forks list ${snapBucket} --format json`);
       expect(result.exitCode).toBe(0);
       // May return JSON array or empty (printEmpty is TTY-gated)
       if (result.stdout.trim()) {

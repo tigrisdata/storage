@@ -1,17 +1,18 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-  mkdtempSync,
   mkdirSync,
-  writeFileSync,
+  mkdtempSync,
   readFileSync,
   rmSync,
+  writeFileSync,
 } from 'fs';
-import { join } from 'path';
 import { tmpdir } from 'os';
+import { join } from 'path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock os.homedir() to return a temp directory so tests don't touch real config
 let tempHome: string;
 vi.mock('os', async (importOriginal) => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   const actual = await importOriginal<typeof import('os')>();
   return {
     ...actual,
@@ -233,8 +234,8 @@ describe('auth/storage', () => {
         },
       });
 
-      const storage = await import('../../src/auth/storage.js');
-      expect(storage.getCredentials()?.accessKeyId).toBe('TEMP');
+      const provider = await import('../../src/auth/provider.js');
+      expect(provider.getCredentials()?.accessKeyId).toBe('TEMP');
     });
 
     it('falls back to saved when no temporary', async () => {
@@ -249,14 +250,14 @@ describe('auth/storage', () => {
         },
       });
 
-      const storage = await import('../../src/auth/storage.js');
-      expect(storage.getCredentials()?.accessKeyId).toBe('SAVED');
+      const provider = await import('../../src/auth/provider.js');
+      expect(provider.getCredentials()?.accessKeyId).toBe('SAVED');
     });
 
     it('returns null when no credentials exist', async () => {
       writeRawConfig({ version: 2 });
-      const storage = await import('../../src/auth/storage.js');
-      expect(storage.getCredentials()).toBeNull();
+      const provider = await import('../../src/auth/provider.js');
+      expect(provider.getCredentials()).toBeNull();
     });
   });
 
@@ -393,6 +394,107 @@ describe('auth/storage', () => {
 
       const raw = readRawConfig() as Record<string, unknown>;
       expect(raw['credentials']).toBeUndefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // clearTemporaryCredentials
+  // ---------------------------------------------------------------------------
+  describe('clearTemporaryCredentials', () => {
+    it('removes temporary credentials while preserving saved', async () => {
+      writeRawConfig({
+        version: 2,
+        activeMethod: 'credentials',
+        credentials: {
+          saved: {
+            accessKeyId: 'SAVED',
+            secretAccessKey: 'S',
+            endpoint: 'https://s.com',
+          },
+          temporary: {
+            accessKeyId: 'TEMP',
+            secretAccessKey: 'T',
+            endpoint: 'https://t.com',
+          },
+        },
+      });
+
+      const storage = await import('../../src/auth/storage.js');
+      await storage.clearTemporaryCredentials();
+
+      const raw = readRawConfig() as Record<string, unknown>;
+      const creds = raw['credentials'] as Record<string, unknown>;
+      expect(creds['saved']).toBeDefined();
+      expect(creds['temporary']).toBeUndefined();
+    });
+
+    it('does nothing when no credentials exist', async () => {
+      writeRawConfig({ version: 2 });
+
+      const storage = await import('../../src/auth/storage.js');
+      await storage.clearTemporaryCredentials();
+
+      const raw = readRawConfig() as Record<string, unknown>;
+      expect(raw['version']).toBe(2);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // clearOAuthData
+  // ---------------------------------------------------------------------------
+  describe('clearOAuthData', () => {
+    it('removes OAuth data and clears activeMethod when it is oauth', async () => {
+      writeRawConfig({
+        version: 2,
+        activeMethod: 'oauth',
+        oauth: {
+          tokens: { accessToken: 't', expiresAt: 1 },
+          organizations: [{ id: 'org-1', name: 'Org' }],
+          selectedOrganization: 'org-1',
+        },
+        credentials: {
+          saved: {
+            accessKeyId: 'SAVED',
+            secretAccessKey: 'S',
+            endpoint: 'https://s.com',
+          },
+        },
+      });
+
+      const storage = await import('../../src/auth/storage.js');
+      await storage.clearOAuthData();
+
+      const raw = readRawConfig() as Record<string, unknown>;
+      expect(raw['oauth']).toBeUndefined();
+      expect(raw['credentials']).toBeDefined();
+      expect(raw['activeMethod']).toBeUndefined();
+    });
+
+    it('preserves activeMethod when it is not oauth', async () => {
+      writeRawConfig({
+        version: 2,
+        activeMethod: 'credentials',
+        oauth: {
+          tokens: { accessToken: 't', expiresAt: 1 },
+        },
+      });
+
+      const storage = await import('../../src/auth/storage.js');
+      await storage.clearOAuthData();
+
+      const raw = readRawConfig() as Record<string, unknown>;
+      expect(raw['oauth']).toBeUndefined();
+      expect(raw['activeMethod']).toBe('credentials');
+    });
+
+    it('does nothing when no OAuth data exists', async () => {
+      writeRawConfig({ version: 2 });
+
+      const storage = await import('../../src/auth/storage.js');
+      await storage.clearOAuthData();
+
+      const raw = readRawConfig() as Record<string, unknown>;
+      expect(raw['version']).toBe(2);
     });
   });
 

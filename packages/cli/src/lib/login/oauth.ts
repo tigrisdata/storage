@@ -1,9 +1,11 @@
 import { getAuthClient } from '@auth/client.js';
-import { storeSelectedOrganization } from '@auth/storage.js';
+import {
+  clearTemporaryCredentials,
+  storeSelectedOrganization,
+} from '@auth/storage.js';
 import { exitWithError, printNextActions } from '@utils/exit.js';
 import {
   msg,
-  printAlreadyDone,
   printFailure,
   printHint,
   printStart,
@@ -22,13 +24,6 @@ export async function oauth(
   try {
     const authClient = getAuthClient();
 
-    // Check if already authenticated
-    const isAuth = await authClient.isAuthenticated();
-    if (isAuth) {
-      printAlreadyDone(context);
-      return;
-    }
-
     // Initiate login flow with callbacks for output
     await authClient.login({
       onDeviceCode: (code, uri) => {
@@ -37,6 +32,9 @@ export async function oauth(
       },
       onWaiting: () => console.log('\nWaiting for authentication...'),
     });
+
+    // Clear stale credentials session from a previous login method
+    await clearTemporaryCredentials();
 
     // After successful login, automatically select the first organization
     const orgs = await authClient.getOrganizations();

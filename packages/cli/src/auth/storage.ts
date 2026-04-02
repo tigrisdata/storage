@@ -14,8 +14,6 @@ import {
 import { homedir, platform } from 'os';
 import { join } from 'path';
 
-import { DEFAULT_STORAGE_ENDPOINT } from '../constants.js';
-
 export interface TokenSet {
   accessToken: string;
   refreshToken?: string;
@@ -299,43 +297,6 @@ export function getSelectedOrganization(): string | null {
 // ---------------------------------------------------------------------------
 
 /**
- * Get credentials from environment variables.
- * If any TIGRIS_ var is set, use TIGRIS_ vars exclusively.
- * Otherwise, fall back to AWS_ vars.
- */
-export function getEnvCredentials(): CredentialsConfig | null {
-  // Check TIGRIS_ vars first
-  if (
-    process.env.TIGRIS_STORAGE_ACCESS_KEY_ID ||
-    process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY
-  ) {
-    const accessKeyId = process.env.TIGRIS_STORAGE_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY;
-
-    if (!accessKeyId || !secretAccessKey) {
-      return null;
-    }
-
-    const endpoint =
-      process.env.TIGRIS_STORAGE_ENDPOINT || DEFAULT_STORAGE_ENDPOINT;
-
-    return { accessKeyId, secretAccessKey, endpoint };
-  }
-
-  // Fall back to AWS_ vars
-  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-
-  if (!accessKeyId || !secretAccessKey) {
-    return null;
-  }
-
-  const endpoint = process.env.AWS_ENDPOINT_URL_S3 || DEFAULT_STORAGE_ENDPOINT;
-
-  return { accessKeyId, secretAccessKey, endpoint };
-}
-
-/**
  * Check if user explicitly requested an AWS profile via AWS_PROFILE env var
  */
 export function hasAwsProfile(): boolean {
@@ -378,25 +339,6 @@ export async function getAwsProfileConfig(
   } catch {
     return {};
   }
-}
-
-/**
- * Get non-login credentials in priority order:
- * 1. Environment variables (TIGRIS_ACCESS_KEY / AWS_ACCESS_KEY_ID)
- * 2. Temporary credentials (from 'tigris login')
- * 3. Saved credentials (from 'tigris configure')
- *
- * Note: AWS profile and login method checks are handled in provider.ts
- * Full resolution order (in provider): AWS_PROFILE → login → env vars → configured
- */
-export function getCredentials(): CredentialsConfig | null {
-  const config = readConfig();
-  return (
-    getEnvCredentials() ||
-    toCredentialsConfig(config.credentials?.temporary) ||
-    toCredentialsConfig(config.credentials?.saved) ||
-    null
-  );
 }
 
 /**
@@ -492,6 +434,31 @@ export async function storeCredentialOrganization(
     slot.organizationId = orgId;
     await writeConfig(config);
   }
+}
+
+/**
+ * Clear temporary credentials (from login command)
+ */
+export async function clearTemporaryCredentials(): Promise<void> {
+  const config = readConfig();
+  if (config.credentials) {
+    delete config.credentials.temporary;
+  }
+  await writeConfig(config);
+}
+
+/**
+ * Clear all OAuth data (tokens, organizations, selectedOrganization).
+ * Also clears activeMethod when it's 'oauth' to prevent broken state
+ * where resolveAuthMethod() returns oauth but no tokens exist.
+ */
+export async function clearOAuthData(): Promise<void> {
+  const config = readConfig();
+  delete config.oauth;
+  if (config.activeMethod === 'oauth') {
+    delete config.activeMethod;
+  }
+  await writeConfig(config);
 }
 
 /**

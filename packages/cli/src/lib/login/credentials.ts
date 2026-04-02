@@ -2,6 +2,7 @@ import enquirer from 'enquirer';
 const { prompt } = enquirer;
 import { getTigrisConfig } from '@auth/provider.js';
 import {
+  clearOAuthData,
   getStoredCredentials,
   storeCredentialOrganization,
   storeLoginMethod,
@@ -90,6 +91,9 @@ export default async function credentials(options: Record<string, unknown>) {
   });
 
   await storeLoginMethod('credentials');
+
+  // Clear stale OAuth session from a previous login method
+  await clearOAuthData();
 
   // Fetch and store organizationId from whoami (best-effort)
   try {

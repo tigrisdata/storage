@@ -1,23 +1,21 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as YAML from 'yaml';
-import { setSpecs } from '../../src/utils/specs.js';
+
 import {
-  printFailure,
+  printAlreadyDone,
   printDeprecated,
+  printEmpty,
+  printFailure,
+  printHint,
   printStart,
   printSuccess,
-  printEmpty,
-  printAlreadyDone,
-  printHint,
 } from '../../src/utils/messages.js';
+import { setSpecs } from '../../src/utils/specs.js';
 
 // Save original descriptor so we can restore it
-const originalIsTTY = Object.getOwnPropertyDescriptor(
-  process.stdout,
-  'isTTY'
-);
+const originalIsTTY = Object.getOwnPropertyDescriptor(process.stdout, 'isTTY');
 
 function setTTY(value: boolean) {
   Object.defineProperty(process.stdout, 'isTTY', {
@@ -36,7 +34,10 @@ function restoreTTY() {
 }
 
 // Pre-populate specs cache from source YAML so we don't need dist/
-const specsYaml = readFileSync(join(process.cwd(), 'src', 'specs.yaml'), 'utf8');
+const specsYaml = readFileSync(
+  join(process.cwd(), 'src', 'specs.yaml'),
+  'utf8'
+);
 setSpecs(YAML.parse(specsYaml, { schema: 'core' }));
 
 describe('messages', () => {

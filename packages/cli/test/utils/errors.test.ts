@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
+  type ClassifiedError,
   classifyError,
   ExitCode,
-  type ClassifiedError,
 } from '../../src/utils/errors.js';
 
 describe('classifyError', () => {
@@ -23,9 +24,9 @@ describe('classifyError', () => {
         expect(result.exitCode).toBe(ExitCode.AuthFailure);
         expect(result.category).toBe('auth');
         expect(result.nextActions.length).toBeGreaterThan(0);
-        expect(result.nextActions.some((a) => a.command.includes('login'))).toBe(
-          true
-        );
+        expect(
+          result.nextActions.some((a) => a.command.includes('login'))
+        ).toBe(true);
       });
     }
   });
@@ -109,9 +110,7 @@ describe('classifyError', () => {
         expect(result.category).toBe('network');
         expect(result.nextActions.length).toBeGreaterThan(0);
         expect(
-          result.nextActions.some((a) =>
-            a.command.includes('credentials test')
-          )
+          result.nextActions.some((a) => a.command.includes('credentials test'))
         ).toBe(true);
       });
     }

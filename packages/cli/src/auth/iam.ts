@@ -8,8 +8,8 @@ import type { MessageContext } from '@utils/messages.js';
 
 import { getAuthClient } from './client.js';
 import { isFlyUser } from './fly.js';
-import { getLoginMethod, getTigrisConfig } from './provider.js';
-import { getCredentials, getSelectedOrganization } from './storage.js';
+import { getCredentials, getLoginMethod, getTigrisConfig } from './provider.js';
+import { getSelectedOrganization } from './storage.js';
 
 /**
  * Check if current org is Fly.io. Prints message and returns true if so.

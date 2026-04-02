@@ -1,12 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
+  globToRegex,
+  isRemotePath,
+  parseAnyPath,
   parsePath,
   parsePaths,
-  isRemotePath,
   parseRemotePath,
-  parseAnyPath,
   resolveObjectArgs,
-  globToRegex,
   wildcardPrefix,
 } from '../../src/utils/path.js';
 

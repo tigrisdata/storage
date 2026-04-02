@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  isValidCommandName,
-  formatArgumentHelp,
-  extractArgumentValues,
-  validateRequiredWhen,
-  addArgumentsToCommand,
-} from '../src/cli-core.js';
 import type { Command as CommanderCommand } from 'commander';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  addArgumentsToCommand,
+  extractArgumentValues,
+  formatArgumentHelp,
+  isValidCommandName,
+  validateRequiredWhen,
+} from '../src/cli-core.js';
 import type { Argument } from '../src/types.js';
 
 describe('isValidCommandName', () => {
@@ -225,9 +226,7 @@ describe('validateRequiredWhen', () => {
   });
 
   it('returns true when no required args', () => {
-    const args: Argument[] = [
-      { name: 'format', description: 'Format' },
-    ];
+    const args: Argument[] = [{ name: 'format', description: 'Format' }];
     expect(validateRequiredWhen(args, {})).toBe(true);
   });
 
@@ -334,7 +333,12 @@ describe('addArgumentsToCommand', () => {
   it('adds short alias', () => {
     const { cmd, calls } = createMockCmd();
     addArgumentsToCommand(cmd as unknown as CommanderCommand, [
-      { name: 'format', description: 'Format', alias: 'f', options: ['json', 'table'] },
+      {
+        name: 'format',
+        description: 'Format',
+        alias: 'f',
+        options: ['json', 'table'],
+      },
     ]);
     expect(calls.option[0][0]).toBe('-f, --format <value>');
   });

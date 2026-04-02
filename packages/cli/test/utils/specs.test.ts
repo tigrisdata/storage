@@ -1,11 +1,19 @@
-import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { describe, expect, it } from 'vitest';
 import * as YAML from 'yaml';
-import { setSpecs, getCommandSpec, getArgumentSpec } from '../../src/utils/specs.js';
+
+import {
+  getArgumentSpec,
+  getCommandSpec,
+  setSpecs,
+} from '../../src/utils/specs.js';
 
 // Pre-populate specs cache from source YAML so we don't need dist/
-const specsYaml = readFileSync(join(process.cwd(), 'src', 'specs.yaml'), 'utf8');
+const specsYaml = readFileSync(
+  join(process.cwd(), 'src', 'specs.yaml'),
+  'utf8'
+);
 setSpecs(YAML.parse(specsYaml, { schema: 'core' }));
 
 describe('getCommandSpec', () => {
