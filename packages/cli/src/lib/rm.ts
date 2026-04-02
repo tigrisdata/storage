@@ -51,7 +51,7 @@ export default async function rm(options: Record<string, unknown>) {
       }
     }
 
-    const { error } = await removeBucket(bucket, { config });
+    const { error } = await removeBucket(bucket, { config, force });
 
     if (error) {
       exitWithError(error);

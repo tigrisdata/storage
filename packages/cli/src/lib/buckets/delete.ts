@@ -44,7 +44,7 @@ export default async function deleteBucket(options: Record<string, unknown>) {
   const deleted: string[] = [];
   const errors: { name: string; error: string }[] = [];
   for (const name of bucketNames) {
-    const { error } = await removeBucket(name, { config });
+    const { error } = await removeBucket(name, { config, force });
 
     if (error) {
       printFailure(context, error.message, { name });

@@ -392,17 +392,6 @@ export async function storeTemporaryCredentials(
 }
 
 /**
- * Clear saved credentials (from configure)
- */
-export async function clearCredentials(): Promise<void> {
-  const config = readConfig();
-  if (config.credentials) {
-    delete config.credentials.saved;
-  }
-  await writeConfig(config);
-}
-
-/**
  * Store the login method used by the user
  */
 export async function storeLoginMethod(

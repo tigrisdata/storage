@@ -320,18 +320,6 @@ export async function getStorageConfig(options?: {
 }
 
 /**
- * Check if user is authenticated (either method)
- */
-export async function isAuthenticated(): Promise<boolean> {
-  return (
-    hasAwsProfile() ||
-    getEnvCredentials() !== null ||
-    (await getLoginMethod()) !== null ||
-    getStoredCredentials() !== null
-  );
-}
-
-/**
  * Get storage config with organization overlay from selected org.
  */
 export async function getStorageConfigWithOrg() {

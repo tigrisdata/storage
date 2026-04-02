@@ -270,6 +270,30 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       console.warn('Failed to setup credentials, tests may fail');
     }
 
+    // Sweep stale test buckets from previous failed runs
+    const staleThresholdMs = 30 * 60 * 1000; // 30 minutes
+    const listResult = runCli('buckets list --format json');
+    if (listResult.exitCode === 0 && listResult.stdout.trim()) {
+      try {
+        const buckets = JSON.parse(listResult.stdout.trim()) as Array<{
+          name: string;
+          created: string;
+        }>;
+        const now = Date.now();
+        for (const bucket of buckets) {
+          if (!bucket.name.startsWith('tigris-cli-test-')) continue;
+          const age = now - new Date(bucket.created).getTime();
+          if (age > staleThresholdMs) {
+            console.log(`Sweeping stale test bucket: ${bucket.name}`);
+            runCli(`rm ${t3(bucket.name)}/* -r -f`);
+            runCli(`rm ${t3(bucket.name)} -f`);
+          }
+        }
+      } catch {
+        // Best-effort cleanup — don't block tests
+      }
+    }
+
     console.log(`Test prefix: ${testPrefix}`);
     console.log(`Creating test bucket: ${testBucket}`);
     // Use mk command instead of buckets create to avoid interactive prompts

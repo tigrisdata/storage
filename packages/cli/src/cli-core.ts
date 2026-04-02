@@ -8,6 +8,60 @@ import { Command as CommanderCommand } from 'commander';
 
 import type { Argument, CommandSpec, Specs } from './types.js';
 
+/**
+ * Check if the first positional arg is an unrecognized subcommand.
+ * If so, print a helpful error and exit. Returns the positional args
+ * for the caller to use if no error is found.
+ */
+function checkUnknownSubcommand(
+  actionArgs: unknown[],
+  spec: { commands?: CommandSpec[]; name?: string },
+  currentPath: string[],
+  specs: Specs,
+  hasImplementation: ImplementationChecker
+): string[] {
+  // Commander passes the Command object as the last arg; its .args has positionals
+  const last = actionArgs[actionArgs.length - 1];
+  const positional =
+    typeof last === 'object' && last !== null && 'args' in last
+      ? ((last as { args: string[] }).args as string[])
+      : (actionArgs.filter((a) => typeof a === 'string') as string[]);
+
+  if (positional.length === 0) return positional;
+
+  const first = positional[0];
+  const subcommands = spec.commands ?? [];
+  const implemented = subcommands.filter((c) =>
+    commandHasAnyImplementation(c, [...currentPath, c.name], hasImplementation)
+  );
+  const knownNames = new Set(
+    implemented.flatMap((c) => [
+      c.name,
+      ...(Array.isArray(c.alias) ? c.alias : c.alias ? [c.alias] : []),
+    ])
+  );
+
+  if (!knownNames.has(first)) {
+    const available = implemented.map((c) => c.name);
+    const pathLabel =
+      currentPath.length > 0
+        ? `'${first}' for '${currentPath.join(' ')}'`
+        : `'${first}'`;
+    console.error(`Unknown command ${pathLabel}.`);
+    if (available.length > 0) {
+      console.error(`Available commands: ${available.join(', ')}`);
+    }
+    const helpCmd =
+      currentPath.length > 0
+        ? `${specs.name} ${currentPath.join(' ')} help`
+        : `${specs.name} help`;
+    console.error(`\nRun "${helpCmd}" for usage.`);
+    process.exit(1);
+  }
+
+  return positional;
+}
+
 export interface ModuleLoader {
   (commandPath: string[]): Promise<{
     module: Record<string, unknown> | null;
@@ -458,10 +512,17 @@ export function registerCommands(
             ...(defaultCmd.arguments || []),
           ]);
           addArgumentsToCommand(cmd, allArguments);
+          cmd.allowExcessArguments(true);
 
           cmd.action(async (...args) => {
             const options = args.pop();
-            const positionalArgs = args;
+            const positionalArgs = checkUnknownSubcommand(
+              [options],
+              spec,
+              currentPath,
+              specs,
+              hasImplementation
+            );
 
             if (
               allArguments.length > 0 &&
@@ -486,7 +547,15 @@ export function registerCommands(
           });
         }
       } else {
-        cmd.action(() => {
+        cmd.allowExcessArguments(true);
+        cmd.action((...args) => {
+          checkUnknownSubcommand(
+            args,
+            spec,
+            currentPath,
+            specs,
+            hasImplementation
+          );
           showCommandHelp(specs, spec, currentPath, hasImplementation);
         });
       }
@@ -559,7 +628,15 @@ export function createProgram(config: CLIConfig): CommanderCommand {
       console.log(version);
     });
 
-  program.action(() => {
+  program.allowExcessArguments(true);
+  program.action((...args) => {
+    checkUnknownSubcommand(
+      args,
+      { commands: specs.commands },
+      [],
+      specs,
+      hasImplementation
+    );
     showMainHelp(specs, version, hasImplementation);
   });
 
