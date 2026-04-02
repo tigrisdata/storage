@@ -17,7 +17,7 @@ export default async function list(options: Record<string, unknown>) {
 
   const format = getFormat(options);
 
-  if (isFlyOrganization()) return;
+  if (isFlyOrganization('User management')) return;
 
   const iamConfig = await getOAuthIAMConfig(context);
 

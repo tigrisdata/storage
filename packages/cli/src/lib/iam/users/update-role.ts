@@ -14,7 +14,7 @@ export default async function updateRole(options: Record<string, unknown>) {
 
   const format = getFormat(options);
 
-  if (isFlyOrganization()) return;
+  if (isFlyOrganization('User management')) return;
 
   const validRoles = ['admin', 'member'] as const;
   type Role = (typeof validRoles)[number];

@@ -19,7 +19,7 @@ export default async function revokeInvitation(
   const resourceOption = getOption<string | string[]>(options, ['resource']);
   const force = getOption<boolean>(options, ['yes', 'y', 'force']);
 
-  if (isFlyOrganization()) return;
+  if (isFlyOrganization('User management')) return;
 
   const iamConfig = await getOAuthIAMConfig(context);
 

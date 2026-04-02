@@ -1,39 +1,26 @@
 /**
  * Shared IAM auth helpers
- * Consolidates OAuth check + auth check + config building patterns
+ * Uses resolveAuthMethod() as the single source of truth for auth priority.
  */
 
 import { failWithError } from '@utils/exit.js';
 import type { MessageContext } from '@utils/messages.js';
 
 import { getAuthClient } from './client.js';
-import { isFlyUser } from './fly.js';
-import { getCredentials, getLoginMethod, getTigrisConfig } from './provider.js';
-import { getSelectedOrganization } from './storage.js';
-
-/**
- * Check if current org is Fly.io. Prints message and returns true if so.
- */
-export function isFlyOrganization(): boolean {
-  const selectedOrg = getSelectedOrganization();
-  if (isFlyUser(selectedOrg ?? undefined)) {
-    console.log(
-      'User management is not available for Fly.io organizations.\n' +
-        'Your users are managed through Fly.io.\n\n' +
-        'Visit https://fly.io to manage your organization members.'
-    );
-    return true;
-  }
-  return false;
-}
+export { isFlyOrganization } from './fly.js';
+import { getTigrisConfig, resolveAuthMethod } from './provider.js';
+import { getLoginMethod, getSelectedOrganization } from './storage.js';
 
 /**
  * OAuth-only IAM config. Exits on non-OAuth or unauthenticated.
  * Used by IAM policy and user commands.
+ *
+ * Checks the *stored* login method (not resolveAuthMethod) because these
+ * operations always require OAuth — even when env vars or AWS profile
+ * are set for S3.
  */
 export async function getOAuthIAMConfig(context: MessageContext) {
-  const loginMethod = await getLoginMethod();
-  if (loginMethod !== 'oauth') {
+  if (getLoginMethod() !== 'oauth') {
     failWithError(
       context,
       'This operation requires OAuth login.\nRun "tigris login oauth" first.'
@@ -48,12 +35,11 @@ export async function getOAuthIAMConfig(context: MessageContext) {
     );
   }
 
-  const accessToken = await authClient.getAccessToken();
   const selectedOrg = getSelectedOrganization();
   const { iamEndpoint, mgmtEndpoint } = getTigrisConfig();
 
   return {
-    sessionToken: accessToken,
+    sessionToken: await authClient.getAccessToken(),
     organizationId: selectedOrg ?? undefined,
     iamEndpoint,
     mgmtEndpoint,
@@ -62,41 +48,31 @@ export async function getOAuthIAMConfig(context: MessageContext) {
 
 /**
  * Dual-mode IAM config (OAuth or credentials).
+ * Uses resolveAuthMethod() to follow the same priority as getStorageConfig().
  * Used by access-key commands.
  */
 export async function getIAMConfig(context: MessageContext) {
-  const loginMethod = await getLoginMethod();
-  const tigrisConfig = getTigrisConfig();
-  const selectedOrg = getSelectedOrganization();
+  const method = await resolveAuthMethod();
 
-  if (loginMethod === 'oauth') {
-    const authClient = getAuthClient();
-    if (!(await authClient.isAuthenticated())) {
+  switch (method.type) {
+    case 'oauth':
+      return getOAuthIAMConfig(context);
+
+    case 'aws-profile':
+    case 'credentials':
+    case 'environment':
+    case 'configured':
+      return {
+        accessKeyId: method.accessKeyId,
+        secretAccessKey: method.secretAccessKey,
+        organizationId: getSelectedOrganization() ?? undefined,
+        iamEndpoint: getTigrisConfig().iamEndpoint,
+      };
+
+    case 'none':
       failWithError(
         context,
-        'Not authenticated. Run "tigris login oauth" first.'
+        'Not authenticated. Run "tigris login" or "tigris configure" first.'
       );
-    }
-
-    return {
-      sessionToken: await authClient.getAccessToken(),
-      organizationId: selectedOrg ?? undefined,
-      iamEndpoint: tigrisConfig.iamEndpoint,
-    };
   }
-
-  const credentials = getCredentials();
-  if (!credentials) {
-    failWithError(
-      context,
-      'Not authenticated. Run "tigris login" or "tigris configure" first.'
-    );
-  }
-
-  return {
-    accessKeyId: credentials.accessKeyId,
-    secretAccessKey: credentials.secretAccessKey,
-    organizationId: selectedOrg ?? undefined,
-    iamEndpoint: tigrisConfig.iamEndpoint,
-  };
 }

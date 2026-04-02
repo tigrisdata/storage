@@ -11,7 +11,7 @@ export default async function invite(options: Record<string, unknown>) {
 
   const format = getFormat(options);
 
-  if (isFlyOrganization()) return;
+  if (isFlyOrganization('User management')) return;
 
   const emailOption = getOption<string | string[]>(options, ['email']);
   const roleInput = getOption<string>(options, ['role', 'r']) ?? 'member';
