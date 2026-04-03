@@ -2,42 +2,78 @@
  * Secure storage using a single config file
  */
 
-import { homedir, platform } from 'os';
-import { join } from 'path';
+import { loadSharedConfigFiles } from '@smithy/shared-ini-file-loader';
+import { execFileSync } from 'child_process';
 import {
-  readFileSync,
-  writeFileSync,
+  chmodSync,
   existsSync,
   mkdirSync,
-  chmodSync,
+  readFileSync,
+  writeFileSync,
 } from 'fs';
-import { execFileSync } from 'child_process';
-import { loadSharedConfigFiles } from '@smithy/shared-ini-file-loader';
-import type { TokenSet, OrganizationInfo } from './types.js';
-import { DEFAULT_STORAGE_ENDPOINT } from '../constants.js';
+import { homedir, platform } from 'os';
+import { join } from 'path';
 
-const CONFIG_DIR = join(homedir(), '.tigris');
-const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
+export interface TokenSet {
+  accessToken: string;
+  refreshToken?: string;
+  idToken?: string;
+  expiresAt: number; // Unix timestamp
+}
 
-/**
- * Configuration structure
- */
-interface TigrisConfig {
-  tokens?: TokenSet;
-  organizations?: OrganizationInfo[];
-  selectedOrganization?: string;
-  credentials?: CredentialsConfig;
-  temporaryCredentials?: CredentialsConfig;
-  loginMethod?: 'oauth' | 'credentials';
+export interface OrganizationInfo {
+  id: string;
+  name: string;
+  displayName?: string;
 }
 
 /**
- * Credentials configuration interface
+ * Credentials configuration interface (public — callers use this shape)
  */
 export interface CredentialsConfig {
   accessKeyId: string;
   secretAccessKey: string;
   endpoint: string;
+}
+
+/**
+ * Stored credential with optional organization
+ */
+interface StoredCredential {
+  accessKeyId: string;
+  secretAccessKey: string;
+  endpoint: string;
+  organizationId?: string;
+}
+
+/**
+ * V2 configuration structure — config is nested by auth method
+ */
+interface TigrisConfigV2 {
+  version: 2;
+  activeMethod?: 'oauth' | 'credentials';
+  oauth?: {
+    tokens?: TokenSet;
+    organizations?: OrganizationInfo[];
+    selectedOrganization?: string;
+  };
+  credentials?: {
+    saved?: StoredCredential;
+    temporary?: StoredCredential;
+  };
+}
+
+const CONFIG_DIR = join(homedir(), '.tigris');
+const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
+
+// Exported for tests
+export { CONFIG_DIR, CONFIG_FILE };
+
+/**
+ * Type guard — checks that a value is a non-null object (Record-like)
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -82,35 +118,94 @@ function ensureConfigDir(): void {
 }
 
 /**
- * Read config from file
+ * Migrate v1 config to v2.
+ * Preserves saved credentials; discards everything else (tokens, orgs, loginMethod).
+ * User will need to re-login after migration.
  */
-function readConfig(): TigrisConfig {
-  if (existsSync(CONFIG_FILE)) {
-    try {
-      const data = readFileSync(CONFIG_FILE, 'utf8');
-      return JSON.parse(data);
-    } catch {
-      return {};
-    }
+function migrateV1(raw: Record<string, unknown>): TigrisConfigV2 {
+  const config: TigrisConfigV2 = { version: 2 };
+
+  // Preserve saved credentials if they look valid
+  const creds = raw['credentials'];
+  if (
+    isRecord(creds) &&
+    typeof creds['accessKeyId'] === 'string' &&
+    typeof creds['secretAccessKey'] === 'string' &&
+    typeof creds['endpoint'] === 'string'
+  ) {
+    config.credentials = {
+      saved: {
+        accessKeyId: creds['accessKeyId'],
+        secretAccessKey: creds['secretAccessKey'],
+        endpoint: creds['endpoint'],
+      },
+    };
   }
-  return {};
+
+  return config;
 }
 
 /**
- * Write config to file
+ * Read config from file, migrating v1 → v2 if needed
  */
-async function writeConfig(config: TigrisConfig): Promise<void> {
+function readConfig(): TigrisConfigV2 {
+  if (!existsSync(CONFIG_FILE)) {
+    return { version: 2 };
+  }
+
+  try {
+    const data = readFileSync(CONFIG_FILE, 'utf8');
+    const parsed: unknown = JSON.parse(data);
+
+    if (!isRecord(parsed)) {
+      return { version: 2 };
+    }
+
+    // Already v2
+    if (parsed['version'] === 2) {
+      return parsed as unknown as TigrisConfigV2;
+    }
+
+    // v1 → v2 migration
+    const migrated = migrateV1(parsed);
+    // Write migrated config back to disk
+    writeConfigSync(migrated);
+    return migrated;
+  } catch {
+    return { version: 2 };
+  }
+}
+
+/**
+ * Write config to file (sync, used by migration)
+ */
+function writeConfigSync(config: TigrisConfigV2): void {
   ensureConfigDir();
   writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), { mode: 0o600 });
   restrictPermissions(CONFIG_FILE, 0o600);
 }
 
 /**
+ * Write config to file
+ */
+async function writeConfig(config: TigrisConfigV2): Promise<void> {
+  writeConfigSync(config);
+}
+
+// ---------------------------------------------------------------------------
+// OAuth data accessors
+// ---------------------------------------------------------------------------
+
+/**
  * Store tokens securely
  */
 export async function storeTokens(tokens: TokenSet): Promise<void> {
   const config = readConfig();
-  config.tokens = tokens;
+  if (!config.oauth) {
+    config.oauth = { tokens, organizations: [] };
+  } else {
+    config.oauth.tokens = tokens;
+  }
   await writeConfig(config);
 }
 
@@ -119,7 +214,7 @@ export async function storeTokens(tokens: TokenSet): Promise<void> {
  */
 export async function getTokens(): Promise<TokenSet | null> {
   const config = readConfig();
-  return config.tokens || null;
+  return config.oauth?.tokens ?? null;
 }
 
 /**
@@ -127,7 +222,9 @@ export async function getTokens(): Promise<TokenSet | null> {
  */
 export async function clearTokens(): Promise<void> {
   const config = readConfig();
-  delete config.tokens;
+  if (config.oauth) {
+    delete config.oauth.tokens;
+  }
   await writeConfig(config);
 }
 
@@ -138,7 +235,11 @@ export async function storeOrganizations(
   organizations: OrganizationInfo[]
 ): Promise<void> {
   const config = readConfig();
-  config.organizations = organizations;
+  if (!config.oauth) {
+    config.oauth = { organizations };
+  } else {
+    config.oauth.organizations = organizations;
+  }
   await writeConfig(config);
 }
 
@@ -147,62 +248,53 @@ export async function storeOrganizations(
  */
 export function getOrganizations(): OrganizationInfo[] {
   const config = readConfig();
-  return config.organizations || [];
+  return config.oauth?.organizations ?? [];
 }
 
+// ---------------------------------------------------------------------------
+// Selected organization — method-aware
+// ---------------------------------------------------------------------------
+
 /**
- * Store selected organization
+ * Store selected organization (branches on activeMethod)
  */
 export async function storeSelectedOrganization(orgId: string): Promise<void> {
   const config = readConfig();
-  config.selectedOrganization = orgId;
+
+  if (config.activeMethod === 'credentials') {
+    // Write to the active credential slot
+    const slot = config.credentials?.temporary ?? config.credentials?.saved;
+    if (slot) {
+      slot.organizationId = orgId;
+    }
+  } else {
+    // Default: write to oauth
+    if (!config.oauth) {
+      config.oauth = { organizations: [] };
+    }
+    config.oauth.selectedOrganization = orgId;
+  }
+
   await writeConfig(config);
 }
 
 /**
- * Get selected organization
+ * Get selected organization (branches on activeMethod)
  */
 export function getSelectedOrganization(): string | null {
   const config = readConfig();
-  return config.selectedOrganization || null;
-}
 
-/**
- * Get credentials from environment variables.
- * If any TIGRIS_ var is set, use TIGRIS_ vars exclusively.
- * Otherwise, fall back to AWS_ vars.
- */
-export function getEnvCredentials(): CredentialsConfig | null {
-  // Check TIGRIS_ vars first
-  if (
-    process.env.TIGRIS_STORAGE_ACCESS_KEY_ID ||
-    process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY
-  ) {
-    const accessKeyId = process.env.TIGRIS_STORAGE_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY;
-
-    if (!accessKeyId || !secretAccessKey) {
-      return null;
-    }
-
-    const endpoint =
-      process.env.TIGRIS_STORAGE_ENDPOINT || DEFAULT_STORAGE_ENDPOINT;
-
-    return { accessKeyId, secretAccessKey, endpoint };
+  if (config.activeMethod === 'credentials') {
+    const slot = config.credentials?.temporary ?? config.credentials?.saved;
+    return slot?.organizationId ?? null;
   }
 
-  // Fall back to AWS_ vars
-  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-
-  if (!accessKeyId || !secretAccessKey) {
-    return null;
-  }
-
-  const endpoint = process.env.AWS_ENDPOINT_URL_S3 || DEFAULT_STORAGE_ENDPOINT;
-
-  return { accessKeyId, secretAccessKey, endpoint };
+  return config.oauth?.selectedOrganization ?? null;
 }
+
+// ---------------------------------------------------------------------------
+// Credential accessors
+// ---------------------------------------------------------------------------
 
 /**
  * Check if user explicitly requested an AWS profile via AWS_PROFILE env var
@@ -250,40 +342,17 @@ export async function getAwsProfileConfig(
 }
 
 /**
- * Get non-login credentials in priority order:
- * 1. Environment variables (TIGRIS_ACCESS_KEY / AWS_ACCESS_KEY_ID)
- * 2. Temporary credentials (from 'tigris login')
- * 3. Saved credentials (from 'tigris configure')
- *
- * Note: AWS profile and login method checks are handled in s3-client.ts
- * Full resolution order (in s3-client): AWS_PROFILE → login → env vars → configured
- */
-export function getCredentials(): CredentialsConfig | null {
-  const config = readConfig();
-  return (
-    getEnvCredentials() ||
-    config.temporaryCredentials ||
-    config.credentials ||
-    null
-  );
-}
-
-/**
  * Get stored credentials only (no env vars):
  * 1. Temporary credentials (from 'tigris login')
  * 2. Saved credentials (from 'tigris configure')
  */
 export function getStoredCredentials(): CredentialsConfig | null {
   const config = readConfig();
-  return config.temporaryCredentials || config.credentials || null;
-}
-
-/**
- * Get only permanent/saved credentials (from configure command)
- */
-export function getSavedCredentials(): CredentialsConfig | null {
-  const config = readConfig();
-  return config.credentials || null;
+  return (
+    toCredentialsConfig(config.credentials?.temporary) ||
+    toCredentialsConfig(config.credentials?.saved) ||
+    null
+  );
 }
 
 /**
@@ -293,7 +362,14 @@ export async function storeCredentials(
   credentials: CredentialsConfig
 ): Promise<void> {
   const config = readConfig();
-  config.credentials = credentials;
+  if (!config.credentials) {
+    config.credentials = {};
+  }
+  config.credentials.saved = {
+    accessKeyId: credentials.accessKeyId,
+    secretAccessKey: credentials.secretAccessKey,
+    endpoint: credentials.endpoint,
+  };
   await writeConfig(config);
 }
 
@@ -304,25 +380,14 @@ export async function storeTemporaryCredentials(
   credentials: CredentialsConfig
 ): Promise<void> {
   const config = readConfig();
-  config.temporaryCredentials = credentials;
-  await writeConfig(config);
-}
-
-/**
- * Clear temporary credentials
- */
-export async function clearTemporaryCredentials(): Promise<void> {
-  const config = readConfig();
-  delete config.temporaryCredentials;
-  await writeConfig(config);
-}
-
-/**
- * Clear saved credentials (from configure)
- */
-export async function clearCredentials(): Promise<void> {
-  const config = readConfig();
-  delete config.credentials;
+  if (!config.credentials) {
+    config.credentials = {};
+  }
+  config.credentials.temporary = {
+    accessKeyId: credentials.accessKeyId,
+    secretAccessKey: credentials.secretAccessKey,
+    endpoint: credentials.endpoint,
+  };
   await writeConfig(config);
 }
 
@@ -333,7 +398,7 @@ export async function storeLoginMethod(
   method: 'oauth' | 'credentials'
 ): Promise<void> {
   const config = readConfig();
-  config.loginMethod = method;
+  config.activeMethod = method;
   await writeConfig(config);
 }
 
@@ -342,7 +407,47 @@ export async function storeLoginMethod(
  */
 export function getLoginMethod(): 'oauth' | 'credentials' | null {
   const config = readConfig();
-  return config.loginMethod || null;
+  return config.activeMethod ?? null;
+}
+
+/**
+ * Store organizationId on the active credential slot
+ * (temporary if it exists, else saved)
+ */
+export async function storeCredentialOrganization(
+  orgId: string
+): Promise<void> {
+  const config = readConfig();
+  const slot = config.credentials?.temporary ?? config.credentials?.saved;
+  if (slot) {
+    slot.organizationId = orgId;
+    await writeConfig(config);
+  }
+}
+
+/**
+ * Clear temporary credentials (from login command)
+ */
+export async function clearTemporaryCredentials(): Promise<void> {
+  const config = readConfig();
+  if (config.credentials) {
+    delete config.credentials.temporary;
+  }
+  await writeConfig(config);
+}
+
+/**
+ * Clear all OAuth data (tokens, organizations, selectedOrganization).
+ * Also clears activeMethod when it's 'oauth' to prevent broken state
+ * where resolveAuthMethod() returns oauth but no tokens exist.
+ */
+export async function clearOAuthData(): Promise<void> {
+  const config = readConfig();
+  delete config.oauth;
+  if (config.activeMethod === 'oauth') {
+    delete config.activeMethod;
+  }
+  await writeConfig(config);
 }
 
 /**
@@ -350,11 +455,28 @@ export function getLoginMethod(): 'oauth' | 'credentials' | null {
  */
 export async function clearAllData(): Promise<void> {
   const config = readConfig();
-  const savedCredentials = config.credentials;
+  const savedCredentials = config.credentials?.saved;
 
-  // Clear everything except saved credentials
-  // This includes: tokens, organizations, selectedOrganization, temporaryCredentials, loginMethod
   await writeConfig({
-    credentials: savedCredentials,
+    version: 2,
+    credentials: savedCredentials ? { saved: savedCredentials } : undefined,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert StoredCredential → CredentialsConfig (strip organizationId)
+ */
+function toCredentialsConfig(
+  stored: StoredCredential | undefined
+): CredentialsConfig | null {
+  if (!stored) return null;
+  return {
+    accessKeyId: stored.accessKeyId,
+    secretAccessKey: stored.secretAccessKey,
+    endpoint: stored.endpoint,
+  };
 }

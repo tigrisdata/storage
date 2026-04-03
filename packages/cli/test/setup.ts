@@ -1,7 +1,7 @@
-import { beforeAll, afterAll } from 'vitest';
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import path from 'path';
+import { afterAll, beforeAll } from 'vitest';
 
 const distPath = path.resolve(process.cwd(), 'dist/cli.js');
 

@@ -1,26 +1,22 @@
+import { getStorageConfig } from '@auth/provider.js';
+import { put } from '@tigrisdata/storage';
+import { failWithError, printNextActions } from '@utils/exit.js';
+import { formatOutput, formatSize } from '@utils/format.js';
+import { msg, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat, getOption } from '@utils/options.js';
+import { resolveObjectArgs } from '@utils/path.js';
+import { calculateUploadParams } from '@utils/upload.js';
 import { createReadStream, statSync } from 'fs';
 import { Readable } from 'stream';
-import { getOption } from '../../utils/options.js';
-import { formatOutput, formatSize } from '../../utils/format.js';
-import { getStorageConfig } from '../../auth/s3-client.js';
-import { put } from '@tigrisdata/storage';
-import {
-  printStart,
-  printSuccess,
-  printFailure,
-  msg,
-} from '../../utils/messages.js';
-import { exitWithError, printNextActions } from '../../utils/exit.js';
-import { calculateUploadParams } from '../../utils/upload.js';
 
 const context = msg('objects', 'put');
 
 export default async function putObject(options: Record<string, unknown>) {
   printStart(context);
 
-  const bucket = getOption<string>(options, ['bucket']);
-  const key = getOption<string>(options, ['key']);
-  const file = getOption<string>(options, ['file']);
+  const bucketArg = getOption<string>(options, ['bucket']);
+  const keyArg = getOption<string>(options, ['key']);
+  const fileArg = getOption<string>(options, ['file']);
   const access = getOption<string>(options, ['access', 'a', 'A'], 'private');
   const contentType = getOption<string>(options, [
     'content-type',
@@ -28,27 +24,26 @@ export default async function putObject(options: Record<string, unknown>) {
     't',
     'T',
   ]);
-  const json = getOption<boolean>(options, ['json']);
-  const format = json
-    ? 'json'
-    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const format = getFormat(options);
 
-  if (!bucket) {
-    printFailure(context, 'Bucket name is required');
-    exitWithError('Bucket name is required', context);
+  if (!bucketArg) {
+    failWithError(context, 'Bucket name or path is required');
   }
 
+  const combined = resolveObjectArgs(bucketArg);
+  const bucket = combined.bucket;
+  const key = combined.key || keyArg;
+  const file = combined.key ? keyArg || fileArg : fileArg;
+
   if (!key) {
-    printFailure(context, 'Object key is required');
-    exitWithError('Object key is required', context);
+    failWithError(context, 'Object key is required');
   }
 
   // Check for stdin or file input
   const hasStdin = !process.stdin.isTTY;
 
   if (!file && !hasStdin) {
-    printFailure(context, 'File path is required (or pipe data via stdin)');
-    exitWithError('File path is required (or pipe data via stdin)', context);
+    failWithError(context, 'File path is required (or pipe data via stdin)');
   }
 
   let body: ReadableStream;
@@ -60,8 +55,7 @@ export default async function putObject(options: Record<string, unknown>) {
       const stats = statSync(file);
       fileSize = stats.size;
     } catch {
-      printFailure(context, `File not found: ${file}`);
-      exitWithError(`File not found: ${file}`, context);
+      failWithError(context, `File not found: ${file}`);
     }
     const fileStream = createReadStream(file);
     body = Readable.toWeb(fileStream) as ReadableStream;
@@ -100,8 +94,7 @@ export default async function putObject(options: Record<string, unknown>) {
   process.stdout.write('\r' + ' '.repeat(60) + '\r');
 
   if (error) {
-    printFailure(context, error.message);
-    exitWithError(error, context);
+    failWithError(context, error);
   }
 
   const result = [

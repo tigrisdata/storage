@@ -1,53 +1,26 @@
-import { listOrganizations } from '@tigrisdata/iam';
-import { getOption } from '../../utils/options.js';
-import { formatOutput } from '../../utils/format.js';
-import { getStorageConfig } from '../../auth/s3-client.js';
+import { getAuthClient } from '@auth/client.js';
+import { fetchOrganizationsFromUserInfo, isFlyUser } from '@auth/fly.js';
+import { getStorageConfig, requireOAuthLogin } from '@auth/provider.js';
 import {
-  storeSelectedOrganization,
   getSelectedOrganization,
-  getLoginMethod,
-  getCredentials,
-} from '../../auth/storage.js';
-import { getAuthClient } from '../../auth/client.js';
-import { isFlyUser, fetchOrganizationsFromUserInfo } from '../../auth/fly.js';
+  storeSelectedOrganization,
+} from '@auth/storage.js';
+import { listOrganizations } from '@tigrisdata/iam';
+import { failWithError } from '@utils/exit.js';
+import { formatOutput } from '@utils/format.js';
+import { requireInteractive } from '@utils/interactive.js';
+import { msg, printEmpty, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat } from '@utils/options.js';
 import Enquirer from 'enquirer';
-import { requireInteractive } from '../../utils/interactive.js';
-import {
-  printStart,
-  printSuccess,
-  printFailure,
-  printEmpty,
-  msg,
-} from '../../utils/messages.js';
-import { exitWithError } from '../../utils/exit.js';
 
 const context = msg('organizations', 'list');
 
 export default async function list(options: Record<string, unknown>) {
   printStart(context);
 
-  // Check if logged in with OAuth (required for org listing)
-  const loginMethod = getLoginMethod();
-  if (loginMethod !== 'oauth') {
-    // Not logged in via OAuth - check if using credentials
-    if (getCredentials()) {
-      console.log(
-        'You are using access key credentials, which belong to a single organization.\n' +
-          'Organization listing and selection is only available with OAuth login.\n\n' +
-          'Run "tigris login" to login with your Tigris account.'
-      );
-    } else {
-      console.log(
-        'Not authenticated. Please run "tigris login" to login with your Tigris account.'
-      );
-    }
-    return;
-  }
+  if (requireOAuthLogin('Organization listing and selection')) return;
 
-  const json = getOption<boolean>(options, ['json']);
-  const format = json
-    ? 'json'
-    : getOption<string>(options, ['format', 'f', 'F'], 'select');
+  const format = getFormat(options, 'select');
 
   // For Fly users, fetch organizations from userinfo endpoint
   const authClient = getAuthClient();
@@ -68,8 +41,7 @@ export default async function list(options: Record<string, unknown>) {
     const { data, error } = await listOrganizations({ config });
 
     if (error) {
-      printFailure(context, error.message);
-      exitWithError(error, context);
+      failWithError(context, error);
     }
 
     orgs = data?.organizations ?? [];

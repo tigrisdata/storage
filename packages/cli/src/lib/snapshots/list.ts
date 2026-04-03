@@ -1,15 +1,9 @@
-import { getOption } from '../../utils/options.js';
-import { formatOutput } from '../../utils/format.js';
-import { getStorageConfig } from '../../auth/s3-client.js';
+import { getStorageConfig } from '@auth/provider.js';
 import { listBucketSnapshots } from '@tigrisdata/storage';
-import {
-  printStart,
-  printSuccess,
-  printFailure,
-  printEmpty,
-  msg,
-} from '../../utils/messages.js';
-import { exitWithError } from '../../utils/exit.js';
+import { failWithError } from '@utils/exit.js';
+import { formatOutput } from '@utils/format.js';
+import { msg, printEmpty, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat, getOption } from '@utils/options.js';
 
 const context = msg('snapshots', 'list');
 
@@ -17,14 +11,10 @@ export default async function list(options: Record<string, unknown>) {
   printStart(context);
 
   const name = getOption<string>(options, ['name']);
-  const json = getOption<boolean>(options, ['json']);
-  const format = json
-    ? 'json'
-    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const format = getFormat(options);
 
   if (!name) {
-    printFailure(context, 'Bucket name is required');
-    exitWithError('Bucket name is required', context);
+    failWithError(context, 'Bucket name is required');
   }
 
   const config = await getStorageConfig();
@@ -32,8 +22,7 @@ export default async function list(options: Record<string, unknown>) {
   const { data, error } = await listBucketSnapshots(name, { config });
 
   if (error) {
-    printFailure(context, error.message);
-    exitWithError(error, context);
+    failWithError(context, error);
   }
 
   if (!data || data.length === 0) {

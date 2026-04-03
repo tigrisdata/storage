@@ -2,10 +2,65 @@
  * Shared CLI core functionality used by both cli.ts (npm) and cli-binary.ts (binary)
  */
 
+import { exitWithError } from '@utils/exit.js';
+import { printDeprecated } from '@utils/messages.js';
 import { Command as CommanderCommand } from 'commander';
+
 import type { Argument, CommandSpec, Specs } from './types.js';
-import { printDeprecated } from './utils/messages.js';
-import { exitWithError } from './utils/exit.js';
+
+/**
+ * Check if the first positional arg is an unrecognized subcommand.
+ * If so, print a helpful error and exit. Returns the positional args
+ * for the caller to use if no error is found.
+ */
+function checkUnknownSubcommand(
+  actionArgs: unknown[],
+  spec: { commands?: CommandSpec[]; name?: string },
+  currentPath: string[],
+  specs: Specs,
+  hasImplementation: ImplementationChecker
+): string[] {
+  // Commander passes the Command object as the last arg; its .args has positionals
+  const last = actionArgs[actionArgs.length - 1];
+  const positional =
+    typeof last === 'object' && last !== null && 'args' in last
+      ? ((last as { args: string[] }).args as string[])
+      : (actionArgs.filter((a) => typeof a === 'string') as string[]);
+
+  if (positional.length === 0) return positional;
+
+  const first = positional[0];
+  const subcommands = spec.commands ?? [];
+  const implemented = subcommands.filter((c) =>
+    commandHasAnyImplementation(c, [...currentPath, c.name], hasImplementation)
+  );
+  const knownNames = new Set(
+    implemented.flatMap((c) => [
+      c.name,
+      ...(Array.isArray(c.alias) ? c.alias : c.alias ? [c.alias] : []),
+    ])
+  );
+
+  if (!knownNames.has(first)) {
+    const available = implemented.map((c) => c.name);
+    const pathLabel =
+      currentPath.length > 0
+        ? `'${first}' for '${currentPath.join(' ')}'`
+        : `'${first}'`;
+    console.error(`Unknown command ${pathLabel}.`);
+    if (available.length > 0) {
+      console.error(`Available commands: ${available.join(', ')}`);
+    }
+    const helpCmd =
+      currentPath.length > 0
+        ? `${specs.name} ${currentPath.join(' ')} help`
+        : `${specs.name} help`;
+    console.error(`\nRun "${helpCmd}" for usage.`);
+    process.exit(1);
+  }
+
+  return positional;
+}
 
 export interface ModuleLoader {
   (commandPath: string[]): Promise<{
@@ -159,9 +214,11 @@ export function showCommandHelp(
     }
   }
 
-  if (command.arguments && command.arguments.length > 0) {
+  const globalArgs = specs.definitions?.global_arguments ?? [];
+  const effectiveArgs = getEffectiveArguments(globalArgs, command.arguments);
+  if (effectiveArgs.length > 0) {
     console.log('Arguments:');
-    command.arguments.forEach((arg) => {
+    effectiveArgs.forEach((arg) => {
       console.log(formatArgumentHelp(arg));
     });
     console.log();
@@ -209,6 +266,27 @@ export function showMainHelp(
   console.log(
     `\nUse "${specs.name} <command> help" for more information about a command.`
   );
+}
+
+/**
+ * Merge global arguments (from specs.yaml definitions.global_arguments)
+ * into a command's argument list, skipping any that the command already
+ * defines by name or whose alias collides with an existing argument's alias.
+ */
+function getEffectiveArguments(
+  globalArgs: Argument[],
+  specArgs?: Argument[]
+): Argument[] {
+  const args = specArgs ?? [];
+  const definedNames = new Set(args.map((a) => a.name));
+  const definedAliases = new Set(
+    args.filter((a) => a.alias).map((a) => a.alias)
+  );
+  const injected = globalArgs.filter(
+    (g) =>
+      !definedNames.has(g.name) && !(g.alias && definedAliases.has(g.alias))
+  );
+  return [...args, ...injected];
 }
 
 export function addArgumentsToCommand(
@@ -398,6 +476,7 @@ export function registerCommands(
   pathParts: string[] = []
 ) {
   const { specs, loadModule, hasImplementation } = config;
+  const globalArgs = specs.definitions?.global_arguments ?? [];
 
   for (const spec of commandSpecs) {
     if (!isValidCommandName(spec.name)) {
@@ -428,17 +507,22 @@ export function registerCommands(
       if (spec.default) {
         const defaultCmd = spec.commands.find((c) => c.name === spec.default);
         if (defaultCmd) {
-          addArgumentsToCommand(cmd, spec.arguments);
-          addArgumentsToCommand(cmd, defaultCmd.arguments);
-
-          const allArguments = [
+          const allArguments = getEffectiveArguments(globalArgs, [
             ...(spec.arguments || []),
             ...(defaultCmd.arguments || []),
-          ];
+          ]);
+          addArgumentsToCommand(cmd, allArguments);
+          cmd.allowExcessArguments(true);
 
           cmd.action(async (...args) => {
             const options = args.pop();
-            const positionalArgs = args;
+            const positionalArgs = checkUnknownSubcommand(
+              [options],
+              spec,
+              currentPath,
+              specs,
+              hasImplementation
+            );
 
             if (
               allArguments.length > 0 &&
@@ -463,13 +547,24 @@ export function registerCommands(
           });
         }
       } else {
-        cmd.action(() => {
+        cmd.allowExcessArguments(true);
+        cmd.action((...args) => {
+          checkUnknownSubcommand(
+            args,
+            spec,
+            currentPath,
+            specs,
+            hasImplementation
+          );
           showCommandHelp(specs, spec, currentPath, hasImplementation);
         });
       }
     } else {
       // Leaf command
-      addArgumentsToCommand(cmd, spec.arguments);
+      addArgumentsToCommand(
+        cmd,
+        getEffectiveArguments(globalArgs, spec.arguments)
+      );
 
       cmd.action(async (...args) => {
         const options = args.pop();
@@ -516,7 +611,6 @@ export function createProgram(config: CLIConfig): CommanderCommand {
 
   const program = new CommanderCommand();
   program.name(specs.name).description(specs.description).version(version);
-  program.option('-y, --yes', 'Skip all confirmation prompts');
 
   registerCommands(config, program, specs.commands);
 
@@ -534,7 +628,15 @@ export function createProgram(config: CLIConfig): CommanderCommand {
       console.log(version);
     });
 
-  program.action(() => {
+  program.allowExcessArguments(true);
+  program.action((...args) => {
+    checkUnknownSubcommand(
+      args,
+      { commands: specs.commands },
+      [],
+      specs,
+      hasImplementation
+    );
     showMainHelp(specs, version, hasImplementation);
   });
 

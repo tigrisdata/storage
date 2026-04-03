@@ -50,6 +50,10 @@ export interface Specs {
   name: string;
   description: string;
   version: string;
+  definitions?: {
+    global_arguments?: Argument[];
+    [key: string]: unknown;
+  };
   commands: CommandSpec[];
 }
 

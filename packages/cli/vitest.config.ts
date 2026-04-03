@@ -6,9 +6,16 @@ import dotenv from 'dotenv';
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@auth': path.resolve(__dirname, 'src/auth'),
+      '@utils': path.resolve(__dirname, 'src/utils'),
+    },
+  },
   test: {
     globals: true,
     environment: 'node',
+    reporter: 'verbose',
     include: ['test/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['node_modules', 'dist'],
     setupFiles: ['test/setup.ts'],

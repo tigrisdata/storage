@@ -1,27 +1,24 @@
+import { getStorageConfig } from '@auth/provider.js';
+import { list, remove, removeBucket } from '@tigrisdata/storage';
+import { exitWithError } from '@utils/exit.js';
+import { confirm, requireInteractive } from '@utils/interactive.js';
+import { getFormat, getOption } from '@utils/options.js';
 import {
-  isRemotePath,
-  parseRemotePath,
-  isPathFolder,
-  listAllItems,
   globToRegex,
+  isPathFolder,
+  isRemotePath,
+  listAllItems,
+  parseRemotePath,
   wildcardPrefix,
-} from '../utils/path.js';
-import { getOption } from '../utils/options.js';
-import { getStorageConfig } from '../auth/s3-client.js';
-import { remove, removeBucket, list } from '@tigrisdata/storage';
-import { requireInteractive, confirm } from '../utils/interactive.js';
-import { exitWithError } from '../utils/exit.js';
+} from '@utils/path.js';
 
 let _jsonMode = false;
 
 export default async function rm(options: Record<string, unknown>) {
   const pathString = getOption<string>(options, ['path']);
-  const force = getOption<boolean>(options, ['force', 'f', 'F', 'yes', 'y']);
+  const force = getOption<boolean>(options, ['yes', 'y', 'force', 'f']);
   const recursive = !!getOption<boolean>(options, ['recursive', 'r']);
-  const jsonFlag = getOption<boolean>(options, ['json']);
-  const format = jsonFlag
-    ? 'json'
-    : getOption<string>(options, ['format'], 'table');
+  const format = getFormat(options);
   _jsonMode = format === 'json';
 
   if (!pathString) {
@@ -54,7 +51,7 @@ export default async function rm(options: Record<string, unknown>) {
       }
     }
 
-    const { error } = await removeBucket(bucket, { config });
+    const { error } = await removeBucket(bucket, { config, force });
 
     if (error) {
       exitWithError(error);

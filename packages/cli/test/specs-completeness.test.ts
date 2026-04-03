@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { describe, expect, it } from 'vitest';
 import * as YAML from 'yaml';
-import { setSpecs, loadSpecs } from '../src/utils/specs.js';
+
 import type { CommandSpec, Specs } from '../src/types.js';
+import { loadSpecs, setSpecs } from '../src/utils/specs.js';
 
 interface LeafCommand {
   spec: CommandSpec;
@@ -60,7 +61,10 @@ function collectAllCommands(
 const srcRoot = join(process.cwd(), 'src', 'lib');
 
 // Pre-populate specs cache from source YAML so we don't need dist/
-const specsYaml = readFileSync(join(process.cwd(), 'src', 'specs.yaml'), 'utf8');
+const specsYaml = readFileSync(
+  join(process.cwd(), 'src', 'specs.yaml'),
+  'utf8'
+);
 setSpecs(YAML.parse(specsYaml, { schema: 'core' }) as Specs);
 
 describe('specs completeness', () => {
@@ -115,8 +119,8 @@ describe('specs completeness', () => {
       const label = path.join(' ');
       it(`${label}`, () => {
         const names = spec.arguments!.map((a) => a.name);
-        const aliases = spec.arguments!
-          .filter((a) => a.alias)
+        const aliases = spec
+          .arguments!.filter((a) => a.alias)
           .map((a) => a.alias as string);
 
         // No alias should match another arg's name
@@ -144,8 +148,7 @@ describe('specs completeness', () => {
   describe('nextActions entries have command and description', () => {
     const withNextActions = allCommands.filter(
       ({ spec }) =>
-        spec.messages &&
-        (spec.messages as Record<string, unknown>).nextActions
+        spec.messages && (spec.messages as Record<string, unknown>).nextActions
     );
 
     if (withNextActions.length === 0) {

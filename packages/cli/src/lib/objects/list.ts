@@ -1,42 +1,37 @@
-import { getOption } from '../../utils/options.js';
-import { formatOutput, formatSize } from '../../utils/format.js';
-import { getStorageConfig } from '../../auth/s3-client.js';
+import { getStorageConfig } from '@auth/provider.js';
 import { list } from '@tigrisdata/storage';
-import {
-  printStart,
-  printSuccess,
-  printFailure,
-  printEmpty,
-  msg,
-} from '../../utils/messages.js';
-import { exitWithError } from '../../utils/exit.js';
+import { failWithError } from '@utils/exit.js';
+import { formatOutput, formatSize } from '@utils/format.js';
+import { msg, printEmpty, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat, getOption } from '@utils/options.js';
+import { parseAnyPath } from '@utils/path.js';
 
 const context = msg('objects', 'list');
 
 export default async function listObjects(options: Record<string, unknown>) {
   printStart(context);
 
-  const bucket = getOption<string>(options, ['bucket']);
-  const prefix = getOption<string>(options, ['prefix', 'p', 'P']);
-  const json = getOption<boolean>(options, ['json']);
-  const format = json
-    ? 'json'
-    : getOption<string>(options, ['format', 'f', 'F'], 'table');
+  const bucketArg = getOption<string>(options, ['bucket']);
+  const prefixFlag = getOption<string>(options, ['prefix', 'p', 'P']);
+  const format = getFormat(options);
   const snapshotVersion = getOption<string>(options, [
     'snapshot-version',
     'snapshotVersion',
     'snapshot',
   ]);
 
-  if (!bucket) {
-    printFailure(context, 'Bucket name is required');
-    exitWithError('Bucket name is required', context);
+  if (!bucketArg) {
+    failWithError(context, 'Bucket name is required');
   }
+
+  const parsed = parseAnyPath(bucketArg);
+  const bucket = parsed.bucket;
+  const prefix = prefixFlag || parsed.path || undefined;
 
   const config = await getStorageConfig();
 
   const { data, error } = await list({
-    prefix: prefix || undefined,
+    prefix,
     ...(snapshotVersion ? { snapshotVersion } : {}),
     config: {
       ...config,
@@ -45,8 +40,7 @@ export default async function listObjects(options: Record<string, unknown>) {
   });
 
   if (error) {
-    printFailure(context, error.message);
-    exitWithError(error, context);
+    failWithError(context, error);
   }
 
   if (!data.items || data.items.length === 0) {

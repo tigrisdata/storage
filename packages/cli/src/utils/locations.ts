@@ -1,5 +1,6 @@
 import type { BucketLocations } from '@tigrisdata/storage';
 import enquirer from 'enquirer';
+
 import { requireInteractive } from './interactive.js';
 
 const { prompt } = enquirer;

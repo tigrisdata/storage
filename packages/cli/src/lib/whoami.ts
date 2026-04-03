@@ -1,83 +1,164 @@
-import { listOrganizations } from '@tigrisdata/iam';
-import { getAuthClient } from '../auth/client.js';
+import { getAuthClient } from '@auth/client.js';
 import {
-  getSelectedOrganization,
-  getLoginMethod,
-  getCredentials,
-} from '../auth/storage.js';
-import { getStorageConfig } from '../auth/s3-client.js';
-import { printFailure, printAlreadyDone, msg } from '../utils/messages.js';
-import { exitWithError } from '../utils/exit.js';
-import { getOption } from '../utils/options.js';
+  getStorageConfig,
+  getTigrisConfig,
+  resolveAuthMethod,
+} from '@auth/provider.js';
+import { getSelectedOrganization } from '@auth/storage.js';
+import { listOrganizations, whoami as iamWhoami } from '@tigrisdata/iam';
+import { failWithError } from '@utils/exit.js';
+import { msg, printAlreadyDone } from '@utils/messages.js';
+import { getFormat } from '@utils/options.js';
 
 const context = msg('whoami');
+
+/** Auth method label displayed to the user */
+const AUTH_LABELS: Record<string, string> = {
+  'aws-profile': 'AWS Profile',
+  oauth: 'OAuth',
+  credentials: 'Access Key Credentials',
+  environment: 'Environment Variables',
+  configured: 'Configured Credentials',
+};
+
+/**
+ * Call IAM whoami with the given key pair (best-effort).
+ * Returns userId + organizationId on success, undefined fields on failure.
+ */
+async function fetchIamIdentity(accessKeyId: string, secretAccessKey: string) {
+  try {
+    const tigrisConfig = getTigrisConfig();
+    const { data } = await iamWhoami({
+      config: {
+        accessKeyId,
+        secretAccessKey,
+        iamEndpoint: tigrisConfig.iamEndpoint,
+      },
+    });
+    return { userId: data?.userId, organizationId: data?.organizationId };
+  } catch {
+    return { userId: undefined, organizationId: undefined };
+  }
+}
 
 export default async function whoami(
   options: Record<string, unknown> = {}
 ): Promise<void> {
   try {
-    const json = getOption<boolean>(options, ['json']);
-    const format = json
-      ? 'json'
-      : getOption<string>(options, ['format', 'f', 'F'], 'table');
-    const loginMethod = getLoginMethod();
-    const credentials = getCredentials();
+    const format = getFormat(options);
+    const method = await resolveAuthMethod();
 
-    // Get user info based on login method
-    let email: string | undefined;
-    let userId: string | undefined;
-
-    if (loginMethod === 'oauth') {
-      const authClient = getAuthClient();
-      // Verify OAuth tokens actually exist (handles case where tokens were cleared but loginMethod wasn't)
-      const isAuthenticated = await authClient.isAuthenticated();
-      if (!isAuthenticated) {
-        printAlreadyDone(context);
-        return;
-      }
-      const claims = await authClient.getIdTokenClaims();
-      email = claims.email;
-      userId = claims.sub;
-    } else if (credentials) {
-      // Using access key credentials
-      email = undefined;
-      userId = credentials.accessKeyId;
-    } else {
-      // Not authenticated
+    if (method.type === 'none') {
       printAlreadyDone(context);
       return;
     }
 
-    const lines: string[] = [];
+    let email: string | undefined;
+    let userId: string | undefined;
+    let organizationId: string | undefined;
+    let organizations: { id: string; name: string }[] | undefined;
+    let selectedOrg: string | null | undefined;
+
+    const lines: string[] = [''];
+    const label = AUTH_LABELS[method.type] ?? method.type;
+
+    switch (method.type) {
+      case 'aws-profile': {
+        lines.push(`Auth method: ${label} (${method.profile})`);
+        const iam = await fetchIamIdentity(
+          method.accessKeyId,
+          method.secretAccessKey
+        );
+        userId = iam.userId;
+        organizationId = iam.organizationId;
+        break;
+      }
+
+      case 'oauth': {
+        lines.push(`Auth method: ${label}`);
+        const authClient = getAuthClient();
+        const isAuthenticated = await authClient.isAuthenticated();
+        if (!isAuthenticated) {
+          printAlreadyDone(context);
+          return;
+        }
+        const claims = await authClient.getIdTokenClaims();
+        email = claims.email;
+        userId = claims.sub;
+
+        // Fetch organizations
+        const config = await getStorageConfig();
+        selectedOrg = getSelectedOrganization();
+        const { data, error } = await listOrganizations({ config });
+        if (error) {
+          failWithError(context, error);
+        }
+        organizations = data?.organizations ?? [];
+        break;
+      }
+
+      case 'credentials': {
+        lines.push(`Auth method: ${label}`);
+        const iam = await fetchIamIdentity(
+          method.accessKeyId,
+          method.secretAccessKey
+        );
+        userId = iam.userId;
+        organizationId = iam.organizationId;
+        break;
+      }
+
+      case 'environment': {
+        const envLabel =
+          method.source === 'tigris' ? 'TIGRIS_STORAGE_*' : 'AWS_*';
+        lines.push(`Auth method: ${label} (${envLabel})`);
+        const iam = await fetchIamIdentity(
+          method.accessKeyId,
+          method.secretAccessKey
+        );
+        userId = iam.userId;
+        organizationId = iam.organizationId;
+        break;
+      }
+
+      case 'configured': {
+        lines.push(`Auth method: ${label}`);
+        const iam = await fetchIamIdentity(
+          method.accessKeyId,
+          method.secretAccessKey
+        );
+        userId = iam.userId;
+        organizationId = iam.organizationId;
+        break;
+      }
+    }
+
+    // User info
     lines.push('');
     lines.push('User Information:');
     lines.push(`   Email: ${email || 'N/A'}`);
     lines.push(`   User ID: ${userId || 'N/A'}`);
 
-    // Only fetch organizations for OAuth users (credentials don't have session tokens)
-    let organizations: { id: string; name: string }[] = [];
-    let selectedOrg: string | null | undefined;
-
-    if (loginMethod === 'oauth') {
-      const config = await getStorageConfig();
-      selectedOrg = getSelectedOrganization();
-      const { data, error } = await listOrganizations({ config });
-
-      if (error) {
-        printFailure(context, error.message);
-        exitWithError(error, context);
-      }
-
-      organizations = data?.organizations ?? [];
-
+    // Organization display
+    if (organizations) {
+      // OAuth path — list all orgs
       if (organizations.length > 0) {
+        const maxVisible = 5;
+        const visible = organizations.slice(0, maxVisible);
+
         lines.push('');
         lines.push(`Organizations (${organizations.length}):`);
-        organizations.forEach((org) => {
+        visible.forEach((org) => {
           const isSelected = org.id === selectedOrg;
           const marker = isSelected ? '>' : ' ';
           lines.push(`   ${marker} ${org.name} (${org.id})`);
         });
+
+        if (organizations.length > maxVisible) {
+          lines.push(
+            `   ... and ${organizations.length - maxVisible} more. Run "tigris organizations list" to see all.`
+          );
+        }
 
         if (selectedOrg) {
           const selected = organizations.find((o) => o.id === selectedOrg);
@@ -90,17 +171,17 @@ export default async function whoami(
         lines.push('');
         lines.push('Organizations: None');
       }
-    } else {
-      lines.push('');
-      lines.push('Login method: Access Key Credentials');
-      lines.push(
-        '   (Organization listing requires OAuth login: tigris login)'
-      );
+    } else if (organizationId) {
+      lines.push(`   Organization: ${organizationId}`);
     }
 
     if (format === 'json') {
-      const result: Record<string, unknown> = { email, userId, loginMethod };
-      if (loginMethod === 'oauth') {
+      const result: Record<string, unknown> = {
+        authMethod: method.type,
+        email,
+        userId,
+      };
+      if (organizations) {
         result.organizations = organizations.map((org) => ({
           id: org.id,
           name: org.name,
@@ -110,6 +191,9 @@ export default async function whoami(
           if (selected) result.activeOrganization = selected.name;
         }
       }
+      if (organizationId) {
+        result.organizationId = organizationId;
+      }
       console.log(JSON.stringify(result));
       return;
     }
@@ -117,11 +201,6 @@ export default async function whoami(
     lines.push('');
     console.log(lines.join('\n'));
   } catch (error) {
-    if (error instanceof Error) {
-      printFailure(context, error.message);
-    } else {
-      printFailure(context);
-    }
-    exitWithError(error, context);
+    failWithError(context, error);
   }
 }

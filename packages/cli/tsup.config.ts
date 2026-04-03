@@ -1,6 +1,6 @@
-import { defineConfig } from 'tsup';
 import { copyFileSync, watch } from 'fs';
 import { join } from 'path';
+import { defineConfig } from 'tsup';
 
 const copySpecs = () => {
   copyFileSync(
@@ -10,6 +10,12 @@ const copySpecs = () => {
 };
 
 export default defineConfig((options) => ({
+  esbuildOptions(options) {
+    options.alias = {
+      '@auth': './src/auth',
+      '@utils': './src/utils',
+    };
+  },
   entry: [
     'src/cli.ts',
     'src/**/*.ts',

@@ -1,8 +1,9 @@
 import enquirer from 'enquirer';
 const { prompt } = enquirer;
-import { requireInteractive } from '../../utils/interactive.js';
-import { oauth } from './oauth.js';
+import { requireInteractive } from '@utils/interactive.js';
+
 import credentials from './credentials.js';
+import { oauth } from './oauth.js';
 
 /**
  * Main login command

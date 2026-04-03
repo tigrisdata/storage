@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 
 import { existsSync } from 'fs';
-import { join, dirname } from 'path';
+import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { loadSpecs } from './utils/specs.js';
-import { checkForUpdates } from './utils/update-check.js';
+
 import { version } from '../package.json';
 import {
-  setupErrorHandlers,
   createProgram,
-  type ModuleLoader,
   type ImplementationChecker,
+  type ModuleLoader,
+  setupErrorHandlers,
 } from './cli-core.js';
+import { loadSpecs } from './utils/specs.js';
+import { checkForUpdates } from './utils/update-check.js';
 
 setupErrorHandlers();
 

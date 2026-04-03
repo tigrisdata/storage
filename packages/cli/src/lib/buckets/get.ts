@@ -1,15 +1,10 @@
-import { getOption } from '../../utils/options.js';
-import { formatOutput } from '../../utils/format.js';
-import { getStorageConfig } from '../../auth/s3-client.js';
+import { getStorageConfig } from '@auth/provider.js';
 import { getBucketInfo } from '@tigrisdata/storage';
-import {
-  printStart,
-  printSuccess,
-  printFailure,
-  msg,
-} from '../../utils/messages.js';
-import { buildBucketInfo } from '../../utils/bucket-info.js';
-import { exitWithError } from '../../utils/exit.js';
+import { buildBucketInfo } from '@utils/bucket-info.js';
+import { failWithError } from '@utils/exit.js';
+import { formatOutput } from '@utils/format.js';
+import { msg, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat, getOption } from '@utils/options.js';
 
 const context = msg('buckets', 'get');
 
@@ -17,14 +12,10 @@ export default async function get(options: Record<string, unknown>) {
   printStart(context);
 
   const name = getOption<string>(options, ['name']);
-  const json = getOption<boolean>(options, ['json']);
-  const format = json
-    ? 'json'
-    : getOption<string>(options, ['format', 'f', 'F']) || 'table';
+  const format = getFormat(options);
 
   if (!name) {
-    printFailure(context, 'Bucket name is required');
-    exitWithError('Bucket name is required', context);
+    failWithError(context, 'Bucket name is required');
   }
 
   const { data, error } = await getBucketInfo(name, {
@@ -32,8 +23,7 @@ export default async function get(options: Record<string, unknown>) {
   });
 
   if (error) {
-    printFailure(context, error.message);
-    exitWithError(error, context);
+    failWithError(context, error);
   }
 
   const info = [

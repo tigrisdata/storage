@@ -4,24 +4,72 @@
  */
 
 import axios from 'axios';
-import open from 'open';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
-import type {
-  TokenSet,
-  IdTokenClaims,
-  TigrisNamespace,
-  TigrisOrg,
-  OrganizationInfo,
-} from './types.js';
-import { getAuth0Config, TIGRIS_CLAIMS_NAMESPACE } from './config.js';
+import open from 'open';
+
+import type { OrganizationInfo, TokenSet } from './storage.js';
 import {
-  storeTokens,
-  getTokens,
   clearTokens,
-  storeOrganizations,
   getOrganizations,
+  getTokens,
   storeLoginMethod,
+  storeOrganizations,
+  storeTokens,
 } from './storage.js';
+
+/**
+ * Auth0 configuration for CLI authentication
+ */
+export interface Auth0Config {
+  domain: string;
+  clientId: string;
+  audience: string;
+}
+
+/**
+ * Get Auth0 configuration from environment variables or defaults
+ */
+export function getAuth0Config(): Auth0Config {
+  const isDev = process.env.TIGRIS_ENV === 'development';
+  const domain = isDev
+    ? 'auth-dev.tigris.dev'
+    : (process.env.AUTH0_DOMAIN ?? 'auth.storage.tigrisdata.io');
+  const clientId = isDev
+    ? 'JdJVYIyw0O1uHi5L5OJH903qaWBgd3gF'
+    : (process.env.AUTH0_CLIENT_ID ?? 'DMejqeM3CQ4IqTjEcd3oA9eEiT40hn8D');
+  const audience = isDev
+    ? 'https://tigris-api-dev'
+    : (process.env.AUTH0_AUDIENCE ?? 'https://tigris-os-api');
+
+  return { domain, clientId, audience };
+}
+
+/**
+ * Custom claims namespace for Tigris
+ */
+export const TIGRIS_CLAIMS_NAMESPACE =
+  process.env.TIGRIS_CLAIMS_NAMESPACE || 'https://tigris';
+
+/**
+ * OAuth-specific types
+ */
+export interface IdTokenClaims {
+  sub: string;
+  email?: string;
+  email_verified?: boolean;
+  [key: string]: unknown;
+}
+
+interface TigrisOrg {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+interface TigrisNamespace {
+  ns?: (string | TigrisOrg)[];
+  organizations?: (string | TigrisOrg)[];
+}
 
 interface DeviceCodeResponse {
   device_code: string;

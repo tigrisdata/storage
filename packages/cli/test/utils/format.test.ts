@@ -1,11 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import {
-  formatSize,
   formatJson,
+  formatOutput,
+  formatSize,
+  formatTable,
   formatXml,
   formatXmlObject,
-  formatTable,
-  formatOutput,
   type TableColumn,
 } from '../../src/utils/format.js';
 
@@ -133,9 +134,7 @@ describe('formatTable', () => {
 });
 
 describe('formatOutput', () => {
-  const columns: TableColumn[] = [
-    { key: 'name', header: 'Name' },
-  ];
+  const columns: TableColumn[] = [{ key: 'name', header: 'Name' }];
   const items = [{ name: 'test' }];
 
   it("'json' → JSON output", () => {

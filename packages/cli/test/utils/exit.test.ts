@@ -1,14 +1,15 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as YAML from 'yaml';
-import { setSpecs } from '../../src/utils/specs.js';
+
+import { ExitCode } from '../../src/utils/errors.js';
 import {
   exitWithError,
   getSuccessNextActions,
   printNextActions,
 } from '../../src/utils/exit.js';
-import { ExitCode } from '../../src/utils/errors.js';
+import { setSpecs } from '../../src/utils/specs.js';
 
 // Pre-populate specs cache
 const specsYaml = readFileSync(
