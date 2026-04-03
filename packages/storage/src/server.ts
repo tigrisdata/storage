@@ -92,4 +92,9 @@ export {
   handleClientUpload,
   type ClientUploadRequest,
 } from './lib/upload/server';
+export {
+  bundle,
+  type BundleOptions,
+  type BundleResponse,
+} from './lib/object/bundle';
 export { UploadAction } from './lib/upload/shared';

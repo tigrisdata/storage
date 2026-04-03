@@ -15,4 +15,7 @@ export enum TigrisHeaders {
   FORK_SOURCE_BUCKET_SNAPSHOT = 'X-Tigris-Fork-Source-Bucket-Snapshot',
   RENAME = 'X-Tigris-Rename',
   COPY_SOURCE = 'X-Amz-Copy-Source',
+  BUNDLE_FORMAT = 'X-Tigris-Bundle-Format',
+  BUNDLE_COMPRESSION = 'X-Tigris-Bundle-Compression',
+  BUNDLE_ON_ERROR = 'X-Tigris-Bundle-On-Error',
 }
