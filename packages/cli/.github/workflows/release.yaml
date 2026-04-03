@@ -147,3 +147,18 @@ jobs:
           done
 
           echo "All assets uploaded to $TAG"
+
+  update-homebrew:
+    needs: [release, build-binaries]
+    if: needs.release.outputs.new_release_published == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: v${{ needs.release.outputs.new_release_version }}
+
+      - name: Update Homebrew formula
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: scripts/update-homebrew.sh ${{ needs.release.outputs.new_release_version }}

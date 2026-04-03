@@ -1,5 +1,19 @@
 # Tigris CLI Installation Guide
 
+## Homebrew (macOS and Linux)
+
+```sh
+brew install tigrisdata/tap/tigris
+```
+
+### Uninstall (Homebrew)
+
+```sh
+brew uninstall tigris
+```
+
+---
+
 ## npm
 
 Requires Node.js 18+.
@@ -28,8 +42,8 @@ curl -fsSL https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install
 
 #### Options
 
-| Environment Variable | Description                                         |
-| -------------------- | --------------------------------------------------- |
+| Environment Variable | Description                                          |
+| -------------------- | ---------------------------------------------------- |
 | `TIGRIS_VERSION`     | Install a specific version (e.g., `v2.9.0`)          |
 | `TIGRIS_INSTALL_DIR` | Custom install directory (default: `/usr/local/bin`) |
 
