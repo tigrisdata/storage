@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 import { getAuth0Config, TIGRIS_CLAIMS_NAMESPACE } from './client.js';
 import { getSelectedOrganization, type OrganizationInfo } from './storage.js';
 
@@ -29,18 +27,25 @@ export async function fetchOrganizationsFromUserInfo(
 ): Promise<OrganizationInfo[] | null> {
   try {
     const { domain } = getAuth0Config();
-    const response = await axios.get(`https://${domain}/userinfo`, {
+    const response = await fetch(`https://${domain}/userinfo`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
+    if (!response.ok) {
+      return null;
+    }
+
+    const data: Record<string, { ns?: OrganizationInfo[] }> = JSON.parse(
+      await response.text()
+    );
     const namespaces: OrganizationInfo[] | undefined =
-      response.data[TIGRIS_CLAIMS_NAMESPACE]?.ns;
+      data[TIGRIS_CLAIMS_NAMESPACE]?.ns;
 
     if (!Array.isArray(namespaces)) {
       return null;
     }
 
-    return namespaces.map((ns) => ({
+    return namespaces.map((ns: OrganizationInfo) => ({
       id: ns.id,
       name: ns.name,
       displayName: ns.name,

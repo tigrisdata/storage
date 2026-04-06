@@ -3,7 +3,6 @@
  * Uses Device Authorization Flow (OAuth 2.0 Device Flow)
  */
 
-import axios from 'axios';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import open from 'open';
 
@@ -133,19 +132,21 @@ export class TigrisAuthClient {
     onWaiting?: () => void;
   }): Promise<void> {
     // Start device authorization
-    const response = await axios.post<DeviceCodeResponse>(
-      `${this.baseUrl}/oauth/device/code`,
-      {
+    const response = await fetch(`${this.baseUrl}/oauth/device/code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
         client_id: this.config.clientId,
         audience: this.config.audience,
         scope: 'openid profile email offline_access',
-      },
-      {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      }
-    );
+      }),
+    });
 
-    const deviceCode = response.data;
+    if (!response.ok) {
+      throw new Error(`Device authorization failed: ${response.statusText}`);
+    }
+
+    const deviceCode: DeviceCodeResponse = JSON.parse(await response.text());
 
     // Show device code for confirmation
     callbacks?.onDeviceCode?.(
@@ -194,72 +195,66 @@ export class TigrisAuthClient {
     while (attempts < maxAttempts) {
       attempts++;
 
-      try {
-        const response = await axios.post<TokenResponse>(
-          `${this.baseUrl}/oauth/token`,
-          {
-            client_id: this.config.clientId,
-            device_code: deviceCode,
-            grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-          },
-          {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          }
-        );
+      const response = await fetch(`${this.baseUrl}/oauth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: this.config.clientId,
+          device_code: deviceCode,
+          grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+        }),
+      });
 
-        const data = response.data;
+      if (!response.ok) {
+        const errorBody: { error?: string; error_description?: string } =
+          await response
+            .text()
+            .then(JSON.parse)
+            .catch(() => ({}));
 
-        if (!data.id_token) {
-          throw new Error('No ID token found. Please try again.');
+        // authorization_pending: User hasn't completed auth yet
+        if (errorBody.error === 'authorization_pending') {
+          await this.sleep(interval * 1000);
+          continue;
         }
 
-        const idTokenClaims = await this.verifyIdToken(data.id_token);
-
-        if (idTokenClaims['email_verified'] === false) {
-          console.log(
-            'Email not verified. Please verify your email and try again.'
-          );
-          throw new Error(
-            'Email not verified. Please verify your email and try again.'
-          );
+        // slow_down: Polling too fast
+        if (errorBody.error === 'slow_down') {
+          interval += 5;
+          await this.sleep(interval * 1000);
+          continue;
         }
 
-        // Calculate expiration time
-        const expiresAt = Date.now() + (data.expires_in || 3600) * 1000;
-
-        return {
-          accessToken: data.access_token,
-          refreshToken: data.refresh_token,
-          idToken: data.id_token,
-          expiresAt,
-        };
-      } catch (error: unknown) {
-        if (axios.isAxiosError(error) && error.response) {
-          const errorCode = error.response.data?.error;
-
-          // authorization_pending: User hasn't completed auth yet
-          if (errorCode === 'authorization_pending') {
-            await this.sleep(interval * 1000);
-            continue;
-          }
-
-          // slow_down: Polling too fast
-          if (errorCode === 'slow_down') {
-            interval += 5;
-            await this.sleep(interval * 1000);
-            continue;
-          }
-
-          // Any other error should stop polling
-          throw new Error(
-            error.response.data?.error_description || 'Authentication failed',
-            { cause: error }
-          );
-        }
-
-        // Unknown error
-        throw error;
+        // Any other error should stop polling
+        throw new Error(errorBody.error_description || 'Authentication failed');
       }
+
+      const data: TokenResponse = JSON.parse(await response.text());
+
+      if (!data.id_token) {
+        throw new Error('No ID token found. Please try again.');
+      }
+
+      const idTokenClaims = await this.verifyIdToken(data.id_token);
+
+      if (idTokenClaims['email_verified'] === false) {
+        console.log(
+          'Email not verified. Please verify your email and try again.'
+        );
+        throw new Error(
+          'Email not verified. Please verify your email and try again.'
+        );
+      }
+
+      // Calculate expiration time
+      const expiresAt = Date.now() + (data.expires_in || 3600) * 1000;
+
+      return {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        idToken: data.id_token,
+        expiresAt,
+      };
     }
 
     throw new Error('Authentication timed out. Please try again.');
@@ -298,27 +293,29 @@ export class TigrisAuthClient {
       tokenSet = tokens;
     }
 
-    if (!tokenSet) {
+    if (!tokenSet?.refreshToken) {
       throw new Error(
         'No refresh token available. Please run "tigris login" to re-authenticate.'
       );
     }
 
     try {
-      const response = await axios.post<TokenResponse>(
-        `${this.baseUrl}/oauth/token`,
-        {
+      const response = await fetch(`${this.baseUrl}/oauth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
           client_id: this.config.clientId,
           grant_type: 'refresh_token',
           refresh_token: tokenSet.refreshToken,
           scope: 'openid profile email offline_access',
-        },
-        {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        }
-      );
+        }),
+      });
 
-      const data = response.data;
+      if (!response.ok) {
+        throw new Error('Token refresh failed');
+      }
+
+      const data: TokenResponse = JSON.parse(await response.text());
 
       const newTokens: TokenSet = {
         accessToken: data.access_token,
