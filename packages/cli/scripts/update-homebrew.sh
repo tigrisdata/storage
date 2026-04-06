@@ -19,10 +19,40 @@ TAP_REPO="${HOMEBREW_TAP_REPO:-tigrisdata/homebrew-tap}"
 CLI_REPO="tigrisdata/cli"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TEMPLATE="${SCRIPT_DIR}/../homebrew/Formula/tigris.rb"
+BRANCH="update-tigris-${VERSION}"
 
 if [ ! -f "$TEMPLATE" ]; then
   echo "ERROR: Formula template not found at $TEMPLATE"
   exit 1
+fi
+
+CLONE_URL="https://github.com/${TAP_REPO}.git"
+if [ -n "${HOMEBREW_TAP_TOKEN:-}" ]; then
+  CLONE_URL="https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/${TAP_REPO}.git"
+fi
+
+export GH_TOKEN="${HOMEBREW_TAP_TOKEN:-}"
+
+# Early exit: if a PR already exists for this version, nothing to do
+EXISTING_PR="$(gh pr list --repo "$TAP_REPO" --head "$BRANCH" --state open --json number --jq '.[0].number // empty' 2>/dev/null || true)"
+if [ -n "$EXISTING_PR" ]; then
+  echo "PR #${EXISTING_PR} already exists for ${BRANCH}."
+  exit 0
+fi
+
+# Early exit: if the branch exists but no PR, skip downloads and just create the PR
+REMOTE_BRANCH_EXISTS="$(git ls-remote "https://github.com/${TAP_REPO}.git" "refs/heads/${BRANCH}" | head -1)"
+if [ -n "$REMOTE_BRANCH_EXISTS" ]; then
+  echo "Branch ${BRANCH} already exists on remote. Creating PR..."
+  gh pr create \
+    --repo "$TAP_REPO" \
+    --base main \
+    --head "$BRANCH" \
+    --title "tigris ${VERSION}" \
+    --body "Update Tigris CLI formula to [v${VERSION}](https://github.com/${CLI_REPO}/releases/tag/v${VERSION})."
+  echo ""
+  echo "Pull request created for v${VERSION}"
+  exit 0
 fi
 
 # Download each archive and compute SHA256
@@ -72,13 +102,6 @@ echo "---"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-CLONE_URL="https://github.com/${TAP_REPO}.git"
-if [ -n "${HOMEBREW_TAP_TOKEN:-}" ]; then
-  CLONE_URL="https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/${TAP_REPO}.git"
-fi
-
-BRANCH="update-tigris-${VERSION}"
-
 echo ""
 echo "Cloning ${TAP_REPO}..."
 git clone --depth 1 "$CLONE_URL" "$TMP_DIR/tap"
@@ -102,13 +125,12 @@ git push origin "$BRANCH"
 
 echo ""
 echo "Creating pull request..."
-GH_TOKEN="${HOMEBREW_TAP_TOKEN:-}" gh pr create \
+gh pr create \
   --repo "$TAP_REPO" \
   --base main \
   --head "$BRANCH" \
   --title "tigris ${VERSION}" \
-  --body "Update Tigris CLI formula to [v${VERSION}](https://github.com/${CLI_REPO}/releases/tag/v${VERSION})." \
-  --label "automated"
+  --body "Update Tigris CLI formula to [v${VERSION}](https://github.com/${CLI_REPO}/releases/tag/v${VERSION})."
 
 echo ""
 echo "Pull request created for v${VERSION}"
