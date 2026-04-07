@@ -59,6 +59,7 @@ export async function listBuckets(
               name: res.Owner?.DisplayName ?? '',
               id: res.Owner?.ID ?? '',
             },
+            paginationToken: res.ContinuationToken,
           },
         };
       })
