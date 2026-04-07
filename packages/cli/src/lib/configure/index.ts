@@ -4,7 +4,6 @@ import { getTigrisConfig } from '@auth/provider.js';
 import {
   storeCredentialOrganization,
   storeCredentials,
-  storeLoginMethod,
 } from '@auth/storage.js';
 import { whoami } from '@tigrisdata/iam';
 import { exitWithError, failWithError, printNextActions } from '@utils/exit.js';
@@ -99,9 +98,6 @@ export default async function configure(options: Record<string, unknown>) {
       endpoint: endpoint as string,
     });
 
-    // Store login method
-    await storeLoginMethod('credentials');
-
     // Fetch and store organizationId from whoami (best-effort)
     try {
       const tigrisConfig = getTigrisConfig();
@@ -113,7 +109,7 @@ export default async function configure(options: Record<string, unknown>) {
         },
       });
       if (data?.organizationId) {
-        await storeCredentialOrganization(data.organizationId);
+        await storeCredentialOrganization(data.organizationId, 'saved');
       }
     } catch {
       // Non-fatal — org will just be missing

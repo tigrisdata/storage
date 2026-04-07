@@ -214,9 +214,9 @@ describe('auth/storage', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // getCredentials priority: env > temporary > saved
+  // getStoredCredentials priority: temporary > saved
   // ---------------------------------------------------------------------------
-  describe('getCredentials', () => {
+  describe('getStoredCredentials', () => {
     it('returns temporary over saved', async () => {
       writeRawConfig({
         version: 2,
@@ -234,8 +234,8 @@ describe('auth/storage', () => {
         },
       });
 
-      const provider = await import('../../src/auth/provider.js');
-      expect(provider.getCredentials()?.accessKeyId).toBe('TEMP');
+      const storage = await import('../../src/auth/storage.js');
+      expect(storage.getStoredCredentials()?.accessKeyId).toBe('TEMP');
     });
 
     it('falls back to saved when no temporary', async () => {
@@ -250,14 +250,14 @@ describe('auth/storage', () => {
         },
       });
 
-      const provider = await import('../../src/auth/provider.js');
-      expect(provider.getCredentials()?.accessKeyId).toBe('SAVED');
+      const storage = await import('../../src/auth/storage.js');
+      expect(storage.getStoredCredentials()?.accessKeyId).toBe('SAVED');
     });
 
     it('returns null when no credentials exist', async () => {
       writeRawConfig({ version: 2 });
-      const provider = await import('../../src/auth/provider.js');
-      expect(provider.getCredentials()).toBeNull();
+      const storage = await import('../../src/auth/storage.js');
+      expect(storage.getStoredCredentials()).toBeNull();
     });
   });
 
@@ -332,7 +332,7 @@ describe('auth/storage', () => {
   // storeCredentialOrganization
   // ---------------------------------------------------------------------------
   describe('storeCredentialOrganization', () => {
-    it('writes to temporary slot when it exists', async () => {
+    it('writes to temporary slot when target is temporary', async () => {
       writeRawConfig({
         version: 2,
         activeMethod: 'credentials',
@@ -351,7 +351,7 @@ describe('auth/storage', () => {
       });
 
       const storage = await import('../../src/auth/storage.js');
-      await storage.storeCredentialOrganization('my-org');
+      await storage.storeCredentialOrganization('my-org', 'temporary');
 
       const raw = readRawConfig() as Record<string, unknown>;
       const creds = raw['credentials'] as Record<string, unknown>;
@@ -363,7 +363,7 @@ describe('auth/storage', () => {
       expect(saved['organizationId']).toBeUndefined();
     });
 
-    it('writes to saved slot when no temporary exists', async () => {
+    it('writes to saved slot when target is saved', async () => {
       writeRawConfig({
         version: 2,
         activeMethod: 'credentials',
@@ -377,7 +377,7 @@ describe('auth/storage', () => {
       });
 
       const storage = await import('../../src/auth/storage.js');
-      await storage.storeCredentialOrganization('saved-org');
+      await storage.storeCredentialOrganization('saved-org', 'saved');
 
       const raw = readRawConfig() as Record<string, unknown>;
       const creds = raw['credentials'] as Record<string, unknown>;
@@ -386,11 +386,11 @@ describe('auth/storage', () => {
       expect(saved['organizationId']).toBe('saved-org');
     });
 
-    it('does nothing when no credential slots exist', async () => {
+    it('does nothing when target slot does not exist', async () => {
       writeRawConfig({ version: 2 });
 
       const storage = await import('../../src/auth/storage.js');
-      await storage.storeCredentialOrganization('org-id');
+      await storage.storeCredentialOrganization('org-id', 'saved');
 
       const raw = readRawConfig() as Record<string, unknown>;
       expect(raw['credentials']).toBeUndefined();

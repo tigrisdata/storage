@@ -46,7 +46,7 @@ export async function oauth(
         console.log(JSON.stringify({ action: 'logged_in' }));
       }
 
-      printSuccess(context, { org: firstOrg.displayName || firstOrg.name });
+      printSuccess(context, { org: firstOrg.name });
       printNextActions(context);
 
       if (orgs.length > 1) {

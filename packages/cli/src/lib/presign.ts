@@ -1,7 +1,6 @@
 import { getAuthClient } from '@auth/client.js';
-import { getLoginMethod, getStorageConfig } from '@auth/provider.js';
-import { getTigrisConfig } from '@auth/provider.js';
-import { getSelectedOrganization } from '@auth/storage.js';
+import { getStorageConfig, getTigrisConfig } from '@auth/provider.js';
+import { getLoginMethod, getSelectedOrganization } from '@auth/storage.js';
 import type { AccessKey } from '@tigrisdata/iam';
 import { listAccessKeys } from '@tigrisdata/iam';
 import { getPresignedUrl } from '@tigrisdata/storage';
@@ -51,7 +50,7 @@ export default async function presign(options: Record<string, unknown>) {
     accessKeyId = config.accessKeyId;
   } else {
     // 3. OAuth login — need to resolve an access key
-    const loginMethod = await getLoginMethod();
+    const loginMethod = getLoginMethod();
 
     if (loginMethod !== 'oauth') {
       exitWithError(

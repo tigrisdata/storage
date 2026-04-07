@@ -3,18 +3,11 @@
  * Uses Device Authorization Flow (OAuth 2.0 Device Flow)
  */
 
+import type { Organization } from '@tigrisdata/iam';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import open from 'open';
 
-import type { OrganizationInfo, TokenSet } from './storage.js';
-import {
-  clearTokens,
-  getOrganizations,
-  getTokens,
-  storeLoginMethod,
-  storeOrganizations,
-  storeTokens,
-} from './storage.js';
+import * as storage from './storage.js';
 
 /**
  * Auth0 configuration for CLI authentication
@@ -23,6 +16,7 @@ export interface Auth0Config {
   domain: string;
   clientId: string;
   audience: string;
+  claimsNamespace: string;
 }
 
 /**
@@ -39,15 +33,10 @@ export function getAuth0Config(): Auth0Config {
   const audience = isDev
     ? 'https://tigris-api-dev'
     : (process.env.AUTH0_AUDIENCE ?? 'https://tigris-os-api');
-
-  return { domain, clientId, audience };
+  const claimsNamespace =
+    process.env.TIGRIS_CLAIMS_NAMESPACE ?? 'https://tigris';
+  return { domain, clientId, audience, claimsNamespace };
 }
-
-/**
- * Custom claims namespace for Tigris
- */
-export const TIGRIS_CLAIMS_NAMESPACE =
-  process.env.TIGRIS_CLAIMS_NAMESPACE || 'https://tigris';
 
 /**
  * OAuth-specific types
@@ -57,17 +46,6 @@ export interface IdTokenClaims {
   email?: string;
   email_verified?: boolean;
   [key: string]: unknown;
-}
-
-interface TigrisOrg {
-  id: string;
-  name: string;
-  slug: string;
-}
-
-interface TigrisNamespace {
-  ns?: (string | TigrisOrg)[];
-  organizations?: (string | TigrisOrg)[];
 }
 
 interface DeviceCodeResponse {
@@ -173,13 +151,13 @@ export class TigrisAuthClient {
     );
 
     // Store tokens securely
-    await storeTokens(tokens);
+    await storage.storeTokens(tokens);
 
     // Store login method
-    storeLoginMethod('oauth');
+    storage.storeLoginMethod('oauth');
 
     // Extract and store organizations
-    await this.extractAndStoreOrganizations(tokens.idToken);
+    await this.extractAndStoreOrganizations();
   }
 
   /**
@@ -188,7 +166,7 @@ export class TigrisAuthClient {
   private async pollForToken(
     deviceCode: string,
     interval: number
-  ): Promise<TokenSet> {
+  ): Promise<storage.TokenSet> {
     const maxAttempts = 60; // 5 minutes with 5-second intervals
     let attempts = 0;
 
@@ -264,7 +242,7 @@ export class TigrisAuthClient {
    * Get valid access token (refresh if needed)
    */
   async getAccessToken(): Promise<string> {
-    let tokens = await getTokens();
+    let tokens = await storage.getTokens();
 
     if (!tokens) {
       throw new Error(
@@ -284,11 +262,13 @@ export class TigrisAuthClient {
   /**
    * Refresh access token using refresh token
    */
-  async refreshAccessToken(tokens?: TokenSet): Promise<TokenSet> {
-    let tokenSet: TokenSet | null;
+  async refreshAccessToken(
+    tokens?: storage.TokenSet
+  ): Promise<storage.TokenSet> {
+    let tokenSet: storage.TokenSet | null;
 
     if (!tokens?.refreshToken) {
-      tokenSet = await getTokens();
+      tokenSet = await storage.getTokens();
     } else {
       tokenSet = tokens;
     }
@@ -317,18 +297,18 @@ export class TigrisAuthClient {
 
       const data: TokenResponse = JSON.parse(await response.text());
 
-      const newTokens: TokenSet = {
+      const newTokens: storage.TokenSet = {
         accessToken: data.access_token,
         refreshToken: data.refresh_token || tokenSet.refreshToken,
         idToken: data.id_token || tokenSet.idToken,
         expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
       };
 
-      await storeTokens(newTokens);
+      await storage.storeTokens(newTokens);
       return newTokens;
     } catch {
       // Refresh failed, clear tokens and prompt re-login
-      await clearTokens();
+      await storage.clearTokens();
 
       throw new Error(
         'Token refresh failed. Please run "tigris login" to re-authenticate.'
@@ -340,7 +320,7 @@ export class TigrisAuthClient {
    * Get ID token claims
    */
   async getIdTokenClaims(): Promise<IdTokenClaims> {
-    const tokens = await getTokens();
+    const tokens = await storage.getTokens();
 
     if (!tokens || !tokens.idToken) {
       throw new Error(
@@ -360,77 +340,79 @@ export class TigrisAuthClient {
   /**
    * Extract organizations from ID token claims and store them
    */
-  async extractAndStoreOrganizations(
-    idToken: string | undefined
-  ): Promise<void> {
-    if (!idToken) {
-      return;
-    }
-
+  async extractAndStoreOrganizations(): Promise<void> {
     try {
-      const claims = await this.verifyIdToken(idToken);
-
-      // Extract Tigris namespace
-      const tigrisNamespace = claims[TIGRIS_CLAIMS_NAMESPACE] as
-        | TigrisNamespace
-        | undefined;
-
-      if (!tigrisNamespace) {
-        return;
+      const availableOrgs = await this.fetchOrganizationsFromUserInfo();
+      if (availableOrgs) {
+        storage.storeOrganizations(availableOrgs);
       }
-
-      // Get organizations from 'ns' field
-      const availableOrgs: OrganizationInfo[] =
-        tigrisNamespace?.ns?.map((org: string | TigrisOrg) => {
-          // If org is already an object with id, name, slug
-          if (typeof org === 'object' && org !== null) {
-            return {
-              id: org.id,
-              name: org.name,
-              displayName: org.name,
-            };
-          }
-          // Otherwise it's a string
-          return {
-            id: org as string,
-            name: org as string,
-            displayName: org as string,
-          };
-        }) || [];
-
-      if (availableOrgs.length === 0) {
-        return;
-      }
-
-      storeOrganizations(availableOrgs);
     } catch {
       // Silently fail - organizations will need to be fetched another way
+    }
+  }
+
+  async fetchOrganizationsFromUserInfo(): Promise<Organization[] | null> {
+    try {
+      const { domain, claimsNamespace } = this.config;
+      const accessToken = await this.getAccessToken();
+      const response = await fetch(`https://${domain}/userinfo`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data: Record<string, { ns?: Organization[] }> = JSON.parse(
+        await response.text()
+      );
+
+      const namespaces: Organization[] | undefined = data[claimsNamespace]?.ns;
+
+      if (!Array.isArray(namespaces)) {
+        return null;
+      }
+
+      return namespaces.map((ns: Organization) => ({
+        id: ns.id,
+        name: ns.name,
+        slug: ns.name,
+      }));
+    } catch {
+      return null;
     }
   }
 
   /**
    * Get organizations from stored claims
    */
-  async getOrganizations(): Promise<OrganizationInfo[]> {
+  async getOrganizations(): Promise<Organization[]> {
     // First, ensure we have a valid token
     await this.getAccessToken();
 
     // Return stored organizations
-    return getOrganizations();
+    return storage.getOrganizations();
+  }
+
+  async isFlyUser(): Promise<boolean> {
+    // First, ensure we have a valid token
+    const idTokenClaims = await this.getIdTokenClaims();
+
+    return idTokenClaims.sub.includes('fly-sso');
   }
 
   /**
    * Logout and clear all stored data
    */
   async logout(): Promise<void> {
-    await clearTokens();
+    await storage.clearTokens();
   }
 
   /**
    * Check if user is authenticated
    */
   async isAuthenticated(): Promise<boolean> {
-    const tokens = await getTokens();
+    const tokens = await storage.getTokens();
     return tokens !== null;
   }
 
