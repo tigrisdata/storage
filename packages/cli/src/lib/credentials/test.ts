@@ -1,6 +1,5 @@
-import { getStorageConfig } from '@auth/provider.js';
-import { getSelectedOrganization } from '@auth/storage.js';
-import { getBucketInfo, listBuckets } from '@tigrisdata/storage';
+import { getStorageConfigWithOrg } from '@auth/provider.js';
+import { list, listBuckets } from '@tigrisdata/storage';
 import { exitWithError, failWithError } from '@utils/exit.js';
 import {
   msg,
@@ -19,7 +18,7 @@ export default async function test(options: Record<string, unknown>) {
 
   const bucket = getOption<string>(options, ['bucket', 'b']);
 
-  const config = await getStorageConfig();
+  const config = await getStorageConfigWithOrg();
 
   if (!config.accessKeyId && !config.sessionToken) {
     failWithError(
@@ -28,19 +27,11 @@ export default async function test(options: Record<string, unknown>) {
     );
   }
 
-  // Include organization ID if available
-  const selectedOrg = getSelectedOrganization();
-  const finalConfig = {
-    ...config,
-    ...(selectedOrg && !config.organizationId
-      ? { organizationId: selectedOrg }
-      : {}),
-  };
-
   if (bucket) {
-    // Test access to specific bucket
-    const { data, error } = await getBucketInfo(bucket, {
-      config: finalConfig,
+    // Test access to specific bucket by listing objects
+    const { error } = await list({
+      config: { ...config, bucket },
+      limit: 1, // just to check if we can list objects
     });
 
     if (error) {
@@ -56,19 +47,15 @@ export default async function test(options: Record<string, unknown>) {
         JSON.stringify({
           valid: true,
           bucket,
-          ...(data.sourceBucketName ? { forkOf: data.sourceBucketName } : {}),
         })
       );
     } else {
       console.log(`  Bucket: ${bucket}`);
       console.log(`  Access verified.`);
-      if (data.sourceBucketName) {
-        console.log(`  Fork of: ${data.sourceBucketName}`);
-      }
     }
   } else {
     // Test general access by listing buckets
-    const { data, error } = await listBuckets({ config: finalConfig });
+    const { data, error } = await listBuckets({ config });
 
     if (error) {
       printFailure(context, "Current credentials don't have sufficient access");
