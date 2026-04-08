@@ -1,0 +1,54 @@
+name: Sync release to main
+
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+    branches: [release]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check if release is ahead of main
+        id: check
+        run: |
+          git fetch origin main release
+          AHEAD=$(git rev-list --count origin/main..origin/release)
+          echo "ahead=$AHEAD" >> $GITHUB_OUTPUT
+
+      - name: Create sync PR
+        if: steps.check.outputs.ahead != '0'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXISTING=$(gh pr list --repo ${{ github.repository }} --base main --head release --state open --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            echo "Sync PR #$EXISTING already exists"
+          else
+            gh pr create \
+              --repo ${{ github.repository }} \
+              --base main \
+              --head release \
+              --title "chore: sync release to main" \
+              --body "Automated sync of release tags back to main."
+          fi
+
+      - name: Auto-merge sync PR
+        if: steps.check.outputs.ahead != '0'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR=$(gh pr list --repo ${{ github.repository }} --base main --head release --state open --json number --jq '.[0].number')
+          if [ -n "$PR" ]; then
+            gh pr merge "$PR" --repo ${{ github.repository }} --merge
+          fi
