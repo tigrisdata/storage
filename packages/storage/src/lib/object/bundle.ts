@@ -1,4 +1,4 @@
-import { TigrisHeaders } from '@shared/index';
+import { TigrisHeaders, toError } from '@shared/index';
 import { config, missingConfigError } from '../config';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import { createStorageClient } from '../http-client';
@@ -70,28 +70,33 @@ export async function bundle(
   const compression = options?.compression ?? 'none';
   const onError = options?.onError ?? 'skip';
 
-  const response = await storageHttpClient.request<unknown, ReadableStream>({
-    method: 'POST',
-    path: `/${bucket}`,
-    query: { bundle: '' },
-    body: { keys },
-    stream: true,
-    headers: {
-      'Content-Type': 'application/json',
-      [TigrisHeaders.BUNDLE_FORMAT]: 'tar',
-      [TigrisHeaders.BUNDLE_COMPRESSION]: compression,
-      [TigrisHeaders.BUNDLE_ON_ERROR]: onError,
-    },
-  });
+  try {
+    const response = await storageHttpClient.request<unknown, ReadableStream>({
+      method: 'POST',
+      path: `/${bucket}`,
+      query: { bundle: '' },
+      body: { keys },
+      stream: true,
+      headers: {
+        'Content-Type': 'application/json',
+        [TigrisHeaders.BUNDLE_FORMAT]: 'tar',
+        [TigrisHeaders.BUNDLE_COMPRESSION]: compression,
+        [TigrisHeaders.BUNDLE_ON_ERROR]: onError,
+      },
+    });
 
-  if (response.error) {
-    return { error: response.error };
+    if (response.error) {
+      return { error: response.error };
+    }
+
+    return {
+      data: {
+        body: response.data,
+        contentType:
+          response.headers.get('content-type') ?? 'application/x-tar',
+      },
+    };
+  } catch (error) {
+    return { error: toError(error) };
   }
-
-  return {
-    data: {
-      body: response.data,
-      contentType: response.headers.get('content-type') ?? 'application/x-tar',
-    },
-  };
 }
