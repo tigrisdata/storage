@@ -1,8 +1,9 @@
 import { getStorageConfig } from '@auth/provider.js';
 import { list, listBuckets } from '@tigrisdata/storage';
 import { exitWithError } from '@utils/exit.js';
-import { formatOutput, formatSize } from '@utils/format.js';
-import { getFormat, getOption } from '@utils/options.js';
+import { formatPaginatedOutput, formatSize } from '@utils/format.js';
+import { printPaginationHint } from '@utils/messages.js';
+import { getFormat, getOption, getPaginationOptions } from '@utils/options.js';
 import { parseAnyPath } from '@utils/path.js';
 
 export default async function ls(options: Record<string, unknown>) {
@@ -13,11 +14,16 @@ export default async function ls(options: Record<string, unknown>) {
     'snapshot',
   ]);
   const format = getFormat(options);
+  const { limit, pageToken } = getPaginationOptions(options);
 
   if (!pathString) {
     // No path provided, list all buckets
     const config = await getStorageConfig();
-    const { data, error } = await listBuckets({ config });
+    const { data, error } = await listBuckets({
+      ...(limit !== undefined ? { limit } : {}),
+      ...(pageToken ? { paginationToken: pageToken } : {}),
+      config,
+    });
 
     if (error) {
       exitWithError(error);
@@ -28,12 +34,28 @@ export default async function ls(options: Record<string, unknown>) {
       created: bucket.creationDate,
     }));
 
-    const output = formatOutput(buckets, format!, 'buckets', 'bucket', [
+    const columns = [
       { key: 'name', header: 'Name' },
       { key: 'created', header: 'Created' },
-    ]);
+    ];
+
+    const nextToken = data.paginationToken || undefined;
+
+    const output = formatPaginatedOutput(
+      buckets,
+      format!,
+      'buckets',
+      'bucket',
+      columns,
+      { paginationToken: nextToken }
+    );
 
     console.log(output);
+
+    if (format !== 'json' && format !== 'xml') {
+      printPaginationHint(nextToken);
+    }
+
     return;
   }
 
@@ -51,6 +73,8 @@ export default async function ls(options: Record<string, unknown>) {
   const { data, error } = await list({
     prefix,
     ...(snapshotVersion ? { snapshotVersion } : {}),
+    ...(limit !== undefined ? { limit } : {}),
+    ...(pageToken ? { paginationToken: pageToken } : {}),
     config: {
       ...config,
       bucket,
@@ -84,11 +108,26 @@ export default async function ls(options: Record<string, unknown>) {
         item.key !== '' && arr.findIndex((i) => i.key === item.key) === index
     );
 
-  const output = formatOutput(objects, format!, 'objects', 'object', [
+  const columns = [
     { key: 'key', header: 'Key' },
     { key: 'size', header: 'Size' },
     { key: 'modified', header: 'Modified' },
-  ]);
+  ];
+
+  const nextToken = data.paginationToken || undefined;
+
+  const output = formatPaginatedOutput(
+    objects,
+    format!,
+    'objects',
+    'object',
+    columns,
+    { paginationToken: nextToken }
+  );
 
   console.log(output);
+
+  if (format !== 'json' && format !== 'xml') {
+    printPaginationHint(nextToken);
+  }
 }

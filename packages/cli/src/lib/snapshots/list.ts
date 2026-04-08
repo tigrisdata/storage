@@ -1,9 +1,15 @@
 import { getStorageConfig } from '@auth/provider.js';
 import { listBucketSnapshots } from '@tigrisdata/storage';
 import { failWithError } from '@utils/exit.js';
-import { formatOutput } from '@utils/format.js';
-import { msg, printEmpty, printStart, printSuccess } from '@utils/messages.js';
-import { getFormat, getOption } from '@utils/options.js';
+import { formatPaginatedOutput } from '@utils/format.js';
+import {
+  msg,
+  printEmpty,
+  printPaginationHint,
+  printStart,
+  printSuccess,
+} from '@utils/messages.js';
+import { getFormat, getOption, getPaginationOptions } from '@utils/options.js';
 
 const context = msg('snapshots', 'list');
 
@@ -12,6 +18,7 @@ export default async function list(options: Record<string, unknown>) {
 
   const name = getOption<string>(options, ['name']);
   const format = getFormat(options);
+  const { limit, pageToken } = getPaginationOptions(options);
 
   if (!name) {
     failWithError(context, 'Bucket name is required');
@@ -19,29 +26,49 @@ export default async function list(options: Record<string, unknown>) {
 
   const config = await getStorageConfig();
 
-  const { data, error } = await listBucketSnapshots(name, { config });
+  const { data, error } = await listBucketSnapshots(name, {
+    ...(limit !== undefined ? { limit } : {}),
+    ...(pageToken ? { paginationToken: pageToken } : {}),
+    config,
+  });
 
   if (error) {
     failWithError(context, error);
   }
 
-  if (!data || data.length === 0) {
+  if (!data.snapshots || data.snapshots.length === 0) {
     printEmpty(context);
     return;
   }
 
-  const snapshots = data.map((snapshot) => ({
+  const snapshots = data.snapshots.map((snapshot) => ({
     name: snapshot.name || '',
     version: snapshot.version || '',
     created: snapshot.creationDate,
   }));
 
-  const output = formatOutput(snapshots, format!, 'snapshots', 'snapshot', [
+  const columns = [
     { key: 'name', header: 'Name' },
     { key: 'version', header: 'Version' },
     { key: 'created', header: 'Created' },
-  ]);
+  ];
+
+  const nextToken = data.paginationToken || undefined;
+
+  const output = formatPaginatedOutput(
+    snapshots,
+    format!,
+    'snapshots',
+    'snapshot',
+    columns,
+    { paginationToken: nextToken }
+  );
 
   console.log(output);
+
+  if (format !== 'json' && format !== 'xml') {
+    printPaginationHint(nextToken);
+  }
+
   printSuccess(context, { count: snapshots.length });
 }

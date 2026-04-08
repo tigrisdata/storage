@@ -1,11 +1,7 @@
 import { getStorageConfig } from '@auth/provider.js';
 import { list } from '@tigrisdata/storage';
 import { failWithError } from '@utils/exit.js';
-import {
-  formatOutput,
-  formatPaginatedOutput,
-  formatSize,
-} from '@utils/format.js';
+import { formatPaginatedOutput, formatSize } from '@utils/format.js';
 import {
   msg,
   printEmpty,
@@ -29,7 +25,7 @@ export default async function listObjects(options: Record<string, unknown>) {
     'snapshotVersion',
     'snapshot',
   ]);
-  const { limit, pageToken, isPaginated } = getPaginationOptions(options);
+  const { limit, pageToken } = getPaginationOptions(options);
 
   if (!bucketArg) {
     failWithError(context, 'Bucket name is required');
@@ -75,15 +71,18 @@ export default async function listObjects(options: Record<string, unknown>) {
 
   const nextToken = data.paginationToken || undefined;
 
-  const output = isPaginated
-    ? formatPaginatedOutput(objects, format!, 'objects', 'object', columns, {
-        paginationToken: nextToken,
-      })
-    : formatOutput(objects, format!, 'objects', 'object', columns);
+  const output = formatPaginatedOutput(
+    objects,
+    format!,
+    'objects',
+    'object',
+    columns,
+    { paginationToken: nextToken }
+  );
 
   console.log(output);
 
-  if (isPaginated && format !== 'json' && format !== 'xml') {
+  if (format !== 'json' && format !== 'xml') {
     printPaginationHint(nextToken);
   }
 
