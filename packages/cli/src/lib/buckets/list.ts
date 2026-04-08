@@ -28,7 +28,7 @@ export default async function list(options: Record<string, unknown>) {
   }
 
   const { data, error } = await listBuckets({
-    ...(forksOf || !isPaginated
+    ...(forksOf
       ? {}
       : {
           ...(limit !== undefined ? { limit } : {}),
@@ -57,7 +57,7 @@ export default async function list(options: Record<string, unknown>) {
       failWithError(context, infoError);
     }
 
-    if (!bucketInfo.hasForks) {
+    if (!bucketInfo.forkInfo?.hasChildren) {
       printEmpty(context);
       return;
     }
@@ -67,7 +67,10 @@ export default async function list(options: Record<string, unknown>) {
     for (const bucket of data.buckets) {
       if (bucket.name === forksOf) continue;
       const { data: info } = await getBucketInfo(bucket.name, { config });
-      if (info?.sourceBucketName === forksOf) {
+      const isChildOf = info?.forkInfo?.parents?.some(
+        (p) => p.bucketName === forksOf
+      );
+      if (isChildOf) {
         forks.push({ name: bucket.name, created: bucket.creationDate });
       }
     }
@@ -99,15 +102,18 @@ export default async function list(options: Record<string, unknown>) {
 
   const nextToken = data.paginationToken || undefined;
 
-  const output = isPaginated
-    ? formatPaginatedOutput(buckets, format!, 'buckets', 'bucket', columns, {
-        paginationToken: nextToken,
-      })
-    : formatOutput(buckets, format!, 'buckets', 'bucket', columns);
+  const output = formatPaginatedOutput(
+    buckets,
+    format!,
+    'buckets',
+    'bucket',
+    columns,
+    { paginationToken: nextToken }
+  );
 
   console.log(output);
 
-  if (isPaginated && format !== 'json' && format !== 'xml') {
+  if (format !== 'json' && format !== 'xml') {
     printPaginationHint(nextToken);
   }
 
