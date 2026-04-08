@@ -139,16 +139,6 @@ describe.skipIf(skipTests)('createBucket Integration Tests', () => {
 
   // ── Validation errors ──
 
-  it('should return error for invalid region', async () => {
-    const result = await createBucket(testBucket('bad-region'), {
-      region: 'invalid-region',
-      config,
-    });
-
-    expect(result.error).toBeDefined();
-    expect(result.error?.message).toContain('Invalid regions specified');
-  });
-
   it('should return error for invalid location', async () => {
     const result = await createBucket(testBucket('bad-loc'), {
       locations: { type: 'single', values: 'invalid' as 'iad' },

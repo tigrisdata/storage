@@ -31,10 +31,6 @@ export type UploadResponse = {
   contentType?: string;
   modified: Date;
   name: string;
-  /**
-   * @deprecated Use `name` instead. Will be removed in the next major version.
-   */
-  path?: string;
   size: number;
   url: string;
 };
@@ -83,7 +79,6 @@ async function uploadSingle(
       },
       body: JSON.stringify({
         name,
-        path: name,
         action: UploadAction.SinglepartInit,
         operation: 'put',
         contentType: options?.contentType ?? data.type,
@@ -158,7 +153,6 @@ async function uploadSingle(
             contentType: options?.contentType ?? data.type,
             modified: new Date(),
             name,
-            path: name,
             size: data.size,
             url: presignedUrl.replace('x-id=PutObject', 'x-id=GetObject'),
           },
@@ -199,7 +193,6 @@ async function uploadMultipart(
       },
       body: JSON.stringify({
         name,
-        path: name,
         action: UploadAction.MultipartInit,
         contentType: options?.contentType ?? data.type,
       }),
@@ -227,7 +220,6 @@ async function uploadMultipart(
       },
       body: JSON.stringify({
         name,
-        path: name,
         action: UploadAction.MultipartGetParts,
         uploadId,
         parts,
@@ -324,7 +316,6 @@ async function uploadMultipart(
       },
       body: JSON.stringify({
         name,
-        path: name,
         action: UploadAction.MultipartComplete,
         uploadId,
         partIds,
@@ -347,7 +338,6 @@ async function uploadMultipart(
         contentType: options?.contentType ?? data.type,
         modified: new Date(),
         name,
-        path: name,
         size: data.size,
         url: completeData?.url ?? '',
       },

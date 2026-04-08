@@ -5,7 +5,7 @@ export enum TigrisHeaders {
   SESSION_TOKEN = 'x-amz-security-token',
   NAMESPACE = 'X-Tigris-Namespace',
   STORAGE_CLASS = 'X-Amz-Storage-Class',
-  CONSISTENT = 'X-Tigris-Consistent',
+
   REGIONS = 'X-Tigris-Regions',
   SNAPSHOT = 'X-Tigris-Snapshot',
   SNAPSHOT_VERSION = 'X-Tigris-Snapshot-Version',
