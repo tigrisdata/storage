@@ -117,6 +117,27 @@ describe('bundle', () => {
     expect(result.data?.body.getReader).toBeDefined();
   });
 
+  it('returns error when response has no body', async () => {
+    globalThis.fetch = vi.fn(async () => {
+      return new Response(null, {
+        status: 200,
+        headers: { 'content-type': 'application/x-tar' },
+      });
+    }) as typeof fetch;
+
+    const result = await bundle(['a.jpg'], {
+      config: {
+        bucket: 'my-bucket',
+        endpoint: 'https://test.endpoint.dev',
+        accessKeyId: 'test-key',
+        secretAccessKey: 'test-secret',
+      },
+    });
+
+    expect(result.error).toBeDefined();
+    expect(result.data).toBeUndefined();
+  });
+
   it('sends custom compression and error mode', async () => {
     let capturedInit: RequestInit | undefined;
 

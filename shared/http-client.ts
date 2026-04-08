@@ -203,6 +203,14 @@ export function createTigrisHttpClient(
       let data: TResponse;
 
       if (req.stream) {
+        if (!response.body) {
+          return {
+            status: response.status,
+            statusText: response.statusText,
+            headers: response.headers,
+            error: new Error('No body returned from stream request'),
+          };
+        }
         data = response.body as TResponse;
       } else {
         const contentType = response.headers.get('content-type');

@@ -35,16 +35,16 @@ export type BundleResponse = {
  *
  * @example
  * ```ts
- * const result = await bundle("my-bucket", ["img_001.jpg", "img_002.jpg"]);
+ * const result = await bundle(["img_001.jpg", "img_002.jpg"], {
+ *   config: { bucket: "my-bucket" },
+ * });
  * if (result.error) throw result.error;
  *
- * // Pipe to file, or process with a tar library
  * const reader = result.data.body.getReader();
  * ```
  *
- * @param bucketName - The bucket containing the objects.
  * @param keys - Array of object keys to include in the bundle (max 5,000).
- * @param options - Optional configuration for compression and error handling.
+ * @param options - Optional configuration including bucket, compression, and error handling.
  */
 export async function bundle(
   keys: string[],
