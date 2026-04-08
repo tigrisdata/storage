@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatJson,
   formatOutput,
+  formatPaginatedOutput,
   formatSize,
   formatTable,
   formatXml,
@@ -157,5 +158,92 @@ describe('formatOutput', () => {
   it('default format → table output', () => {
     const result = formatOutput(items, 'anything', 'Root', 'Item', columns);
     expect(result).toContain('┌');
+  });
+});
+
+describe('formatPaginatedOutput', () => {
+  const columns: TableColumn[] = [{ key: 'name', header: 'Name' }];
+  const items = [{ name: 'test' }];
+
+  it('json wraps items in object with paginationToken', () => {
+    const result = formatPaginatedOutput(
+      items,
+      'json',
+      'Root',
+      'Item',
+      columns,
+      { paginationToken: 'next-token' }
+    );
+    const parsed = JSON.parse(result);
+    expect(parsed.items).toEqual(items);
+    expect(parsed.paginationToken).toBe('next-token');
+  });
+
+  it('json omits paginationToken key when token is undefined', () => {
+    const result = formatPaginatedOutput(
+      items,
+      'json',
+      'Root',
+      'Item',
+      columns,
+      {}
+    );
+    const parsed = JSON.parse(result);
+    expect(parsed.items).toEqual(items);
+    expect(parsed).not.toHaveProperty('paginationToken');
+  });
+
+  it('xml includes paginationToken element when token provided', () => {
+    const result = formatPaginatedOutput(
+      items,
+      'xml',
+      'Root',
+      'Item',
+      columns,
+      { paginationToken: 'abc123' }
+    );
+    expect(result).toContain('<Root>');
+    expect(result).toContain('<Item>');
+    expect(result).toContain('<paginationToken>abc123</paginationToken>');
+    expect(result).toContain('</Root>');
+  });
+
+  it('xml omits paginationToken element when token is undefined', () => {
+    const result = formatPaginatedOutput(
+      items,
+      'xml',
+      'Root',
+      'Item',
+      columns,
+      {}
+    );
+    expect(result).toContain('<Root>');
+    expect(result).not.toContain('<paginationToken>');
+  });
+
+  it('xml escapes special characters in paginationToken', () => {
+    const result = formatPaginatedOutput(
+      items,
+      'xml',
+      'Root',
+      'Item',
+      columns,
+      { paginationToken: 'a&b<c' }
+    );
+    expect(result).toContain('a&amp;b&lt;c');
+  });
+
+  it('table format returns normal table (token goes to stderr separately)', () => {
+    const result = formatPaginatedOutput(
+      items,
+      'table',
+      'Root',
+      'Item',
+      columns,
+      { paginationToken: 'next-token' }
+    );
+    expect(result).toContain('┌');
+    expect(result).toContain('Name');
+    expect(result).not.toContain('next-token');
   });
 });

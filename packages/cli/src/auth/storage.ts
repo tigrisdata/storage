@@ -3,6 +3,7 @@
  */
 
 import { loadSharedConfigFiles } from '@smithy/shared-ini-file-loader';
+import type { Organization } from '@tigrisdata/iam';
 import { execFileSync } from 'child_process';
 import {
   chmodSync,
@@ -19,12 +20,6 @@ export interface TokenSet {
   refreshToken?: string;
   idToken?: string;
   expiresAt: number; // Unix timestamp
-}
-
-export interface OrganizationInfo {
-  id: string;
-  name: string;
-  displayName?: string;
 }
 
 /**
@@ -54,7 +49,7 @@ interface TigrisConfigV2 {
   activeMethod?: 'oauth' | 'credentials';
   oauth?: {
     tokens?: TokenSet;
-    organizations?: OrganizationInfo[];
+    organizations?: Organization[];
     selectedOrganization?: string;
   };
   credentials?: {
@@ -232,7 +227,7 @@ export async function clearTokens(): Promise<void> {
  * Store organizations list
  */
 export async function storeOrganizations(
-  organizations: OrganizationInfo[]
+  organizations: Organization[]
 ): Promise<void> {
   const config = readConfig();
   if (!config.oauth) {
@@ -246,7 +241,7 @@ export async function storeOrganizations(
 /**
  * Get stored organizations
  */
-export function getOrganizations(): OrganizationInfo[] {
+export function getOrganizations(): Organization[] {
   const config = readConfig();
   return config.oauth?.organizations ?? [];
 }
@@ -411,14 +406,14 @@ export function getLoginMethod(): 'oauth' | 'credentials' | null {
 }
 
 /**
- * Store organizationId on the active credential slot
- * (temporary if it exists, else saved)
+ * Store organizationId on the specified credential slot.
  */
 export async function storeCredentialOrganization(
-  orgId: string
+  orgId: string,
+  target: 'saved' | 'temporary'
 ): Promise<void> {
   const config = readConfig();
-  const slot = config.credentials?.temporary ?? config.credentials?.saved;
+  const slot = config.credentials?.[target];
   if (slot) {
     slot.organizationId = orgId;
     await writeConfig(config);

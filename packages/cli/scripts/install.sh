@@ -1,6 +1,6 @@
 #!/bin/sh
 # Tigris CLI installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.sh | sh
+# Usage: curl -fsSL https://github.com/tigrisdata/cli/releases/latest/download/install.sh | sh
 #
 # Environment variables:
 #   TIGRIS_INSTALL_DIR  - Installation directory (default: /usr/local/bin)

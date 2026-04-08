@@ -1,5 +1,5 @@
 # Tigris CLI installer for Windows
-# Usage: irm https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.ps1 | iex
+# Usage: irm https://github.com/tigrisdata/cli/releases/latest/download/install.ps1 | iex
 #
 # Environment variables:
 #   TIGRIS_INSTALL_DIR  - Installation directory (default: $HOME\.tigris\bin)

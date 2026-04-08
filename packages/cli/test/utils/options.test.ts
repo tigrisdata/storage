@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getOption } from '../../src/utils/options.js';
+import { getOption, getPaginationOptions } from '../../src/utils/options.js';
 
 describe('getOption', () => {
   it('should return value for first matching key', () => {
@@ -55,5 +55,73 @@ describe('getOption', () => {
     const options = { files: ['a.txt', 'b.txt'] };
     const result = getOption<string[]>(options, ['files']);
     expect(result).toEqual(['a.txt', 'b.txt']);
+  });
+});
+
+describe('getPaginationOptions', () => {
+  it('returns isPaginated=false when no pagination flags provided', () => {
+    const result = getPaginationOptions({ format: 'json' });
+    expect(result).toEqual({
+      limit: undefined,
+      pageToken: undefined,
+      isPaginated: false,
+    });
+  });
+
+  it('extracts limit and sets isPaginated=true', () => {
+    const result = getPaginationOptions({ limit: 10 });
+    expect(result).toEqual({
+      limit: 10,
+      pageToken: undefined,
+      isPaginated: true,
+    });
+  });
+
+  it('extracts page-token (kebab-case) and sets isPaginated=true', () => {
+    const result = getPaginationOptions({ 'page-token': 'abc123' });
+    expect(result).toEqual({
+      limit: undefined,
+      pageToken: 'abc123',
+      isPaginated: true,
+    });
+  });
+
+  it('extracts pageToken (camelCase from Commander) and sets isPaginated=true', () => {
+    const result = getPaginationOptions({ pageToken: 'abc123' });
+    expect(result).toEqual({
+      limit: undefined,
+      pageToken: 'abc123',
+      isPaginated: true,
+    });
+  });
+
+  it('extracts both limit and page-token', () => {
+    const result = getPaginationOptions({
+      limit: 25,
+      pageToken: 'token-xyz',
+    });
+    expect(result).toEqual({
+      limit: 25,
+      pageToken: 'token-xyz',
+      isPaginated: true,
+    });
+  });
+
+  it('extracts pt alias', () => {
+    const result = getPaginationOptions({ pt: 'short-token' });
+    expect(result).toEqual({
+      limit: undefined,
+      pageToken: 'short-token',
+      isPaginated: true,
+    });
+  });
+
+  it('coerces string limit from Commander to number', () => {
+    const result = getPaginationOptions({ limit: '10' });
+    expect(result).toEqual({
+      limit: 10,
+      pageToken: undefined,
+      isPaginated: true,
+    });
   });
 });

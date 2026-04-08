@@ -1,9 +1,19 @@
 import { getStorageConfig } from '@auth/provider.js';
 import { list } from '@tigrisdata/storage';
 import { failWithError } from '@utils/exit.js';
-import { formatOutput, formatSize } from '@utils/format.js';
-import { msg, printEmpty, printStart, printSuccess } from '@utils/messages.js';
-import { getFormat, getOption } from '@utils/options.js';
+import {
+  formatOutput,
+  formatPaginatedOutput,
+  formatSize,
+} from '@utils/format.js';
+import {
+  msg,
+  printEmpty,
+  printPaginationHint,
+  printStart,
+  printSuccess,
+} from '@utils/messages.js';
+import { getFormat, getOption, getPaginationOptions } from '@utils/options.js';
 import { parseAnyPath } from '@utils/path.js';
 
 const context = msg('objects', 'list');
@@ -19,6 +29,7 @@ export default async function listObjects(options: Record<string, unknown>) {
     'snapshotVersion',
     'snapshot',
   ]);
+  const { limit, pageToken, isPaginated } = getPaginationOptions(options);
 
   if (!bucketArg) {
     failWithError(context, 'Bucket name is required');
@@ -33,6 +44,8 @@ export default async function listObjects(options: Record<string, unknown>) {
   const { data, error } = await list({
     prefix,
     ...(snapshotVersion ? { snapshotVersion } : {}),
+    ...(limit !== undefined ? { limit } : {}),
+    ...(pageToken ? { paginationToken: pageToken } : {}),
     config: {
       ...config,
       bucket,
@@ -54,12 +67,25 @@ export default async function listObjects(options: Record<string, unknown>) {
     modified: item.lastModified,
   }));
 
-  const output = formatOutput(objects, format!, 'objects', 'object', [
+  const columns = [
     { key: 'key', header: 'Key' },
     { key: 'size', header: 'Size' },
     { key: 'modified', header: 'Modified' },
-  ]);
+  ];
+
+  const nextToken = data.paginationToken || undefined;
+
+  const output = isPaginated
+    ? formatPaginatedOutput(objects, format!, 'objects', 'object', columns, {
+        paginationToken: nextToken,
+      })
+    : formatOutput(objects, format!, 'objects', 'object', columns);
 
   console.log(output);
+
+  if (isPaginated && format !== 'json' && format !== 'xml') {
+    printPaginationHint(nextToken);
+  }
+
   printSuccess(context, { count: objects.length });
 }

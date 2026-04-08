@@ -106,7 +106,7 @@ export default async function credentials(options: Record<string, unknown>) {
       },
     });
     if (data?.organizationId) {
-      await storeCredentialOrganization(data.organizationId);
+      await storeCredentialOrganization(data.organizationId, 'temporary');
     }
   } catch {
     // Non-fatal — org will just be missing

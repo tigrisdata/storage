@@ -1,9 +1,15 @@
 import { getIAMConfig } from '@auth/iam.js';
 import { listAccessKeys } from '@tigrisdata/iam';
 import { failWithError } from '@utils/exit.js';
-import { formatOutput } from '@utils/format.js';
-import { msg, printEmpty, printStart, printSuccess } from '@utils/messages.js';
-import { getFormat } from '@utils/options.js';
+import { formatOutput, formatPaginatedOutput } from '@utils/format.js';
+import {
+  msg,
+  printEmpty,
+  printPaginationHint,
+  printStart,
+  printSuccess,
+} from '@utils/messages.js';
+import { getFormat, getPaginationOptions } from '@utils/options.js';
 
 const context = msg('access-keys', 'list');
 
@@ -11,10 +17,15 @@ export default async function list(options: Record<string, unknown>) {
   printStart(context);
 
   const format = getFormat(options);
+  const { limit, pageToken, isPaginated } = getPaginationOptions(options);
 
   const config = await getIAMConfig(context);
 
-  const { data, error } = await listAccessKeys({ config });
+  const { data, error } = await listAccessKeys({
+    ...(limit !== undefined ? { limit } : {}),
+    ...(pageToken ? { paginationToken: pageToken } : {}),
+    config,
+  });
 
   if (error) {
     failWithError(context, error);
@@ -32,13 +43,26 @@ export default async function list(options: Record<string, unknown>) {
     created: key.createdAt,
   }));
 
-  const output = formatOutput(keys, format!, 'keys', 'key', [
+  const columns = [
     { key: 'name', header: 'Name' },
     { key: 'id', header: 'ID' },
     { key: 'status', header: 'Status' },
     { key: 'created', header: 'Created' },
-  ]);
+  ];
+
+  const nextToken = data.paginationToken || undefined;
+
+  const output = isPaginated
+    ? formatPaginatedOutput(keys, format!, 'keys', 'key', columns, {
+        paginationToken: nextToken,
+      })
+    : formatOutput(keys, format!, 'keys', 'key', columns);
 
   console.log(output);
+
+  if (isPaginated && format !== 'json' && format !== 'xml') {
+    printPaginationHint(nextToken);
+  }
+
   printSuccess(context, { count: keys.length });
 }

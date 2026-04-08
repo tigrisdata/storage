@@ -1,5 +1,19 @@
 # Tigris CLI Installation Guide
 
+## Homebrew (macOS and Linux)
+
+```sh
+brew install tigrisdata/tap/tigris
+```
+
+### Uninstall (Homebrew)
+
+```sh
+brew uninstall tigris
+```
+
+---
+
 ## npm
 
 Requires Node.js 18+.
@@ -23,20 +37,20 @@ No dependencies required. Downloads a self-contained executable.
 ### macOS / Linux
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.sh | sh
+curl -fsSL https://github.com/tigrisdata/cli/releases/latest/download/install.sh | sh
 ```
 
 #### Options
 
-| Environment Variable | Description                                         |
-| -------------------- | --------------------------------------------------- |
+| Environment Variable | Description                                          |
+| -------------------- | ---------------------------------------------------- |
 | `TIGRIS_VERSION`     | Install a specific version (e.g., `v2.9.0`)          |
 | `TIGRIS_INSTALL_DIR` | Custom install directory (default: `/usr/local/bin`) |
 
 Example:
 
 ```sh
-TIGRIS_VERSION=v2.9.0 curl -fsSL https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.sh | sh
+TIGRIS_VERSION=v2.9.0 curl -fsSL https://github.com/tigrisdata/cli/releases/latest/download/install.sh | sh
 ```
 
 #### Uninstall (macOS / Linux)
@@ -52,7 +66,7 @@ If you used a custom `TIGRIS_INSTALL_DIR`, remove from that directory instead an
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.ps1 | iex
+irm https://github.com/tigrisdata/cli/releases/latest/download/install.ps1 | iex
 ```
 
 #### Options
@@ -65,7 +79,7 @@ irm https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.ps1 | 
 Example:
 
 ```powershell
-$env:TIGRIS_VERSION = "v2.9.0"; irm https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.ps1 | iex
+$env:TIGRIS_VERSION = "v2.9.0"; irm https://github.com/tigrisdata/cli/releases/latest/download/install.ps1 | iex
 ```
 
 #### Uninstall (Windows)

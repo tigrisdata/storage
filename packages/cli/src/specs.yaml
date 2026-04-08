@@ -647,6 +647,11 @@ commands:
             default: table
           - name: forks-of
             description: Only list buckets that are forks of the named source bucket
+          - name: limit
+            description: Maximum number of items to return per page
+          - name: page-token
+            description: Pagination token from a previous request to fetch the next page
+            alias: pt
       # create
       - name: create
         description: Create a new bucket with optional access, tier, and location settings
@@ -1182,6 +1187,11 @@ commands:
           - name: snapshot-version
             description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
             alias: snapshot
+          - name: limit
+            description: Maximum number of items to return per page
+          - name: page-token
+            description: Pagination token from a previous request to fetch the next page
+            alias: pt
       # get
       - name: get
         description: Download an object by key. Prints to stdout by default, or saves to a file with --output
@@ -1376,6 +1386,11 @@ commands:
             description: Output format
             options: [json, table, xml]
             default: table
+          - name: limit
+            description: Maximum number of items to return per page
+          - name: page-token
+            description: Pagination token from a previous request to fetch the next page
+            alias: pt
       - name: create
         description: Create a new access key with the given name. Returns the key ID and secret (shown only once)
         alias: c
@@ -1503,6 +1518,11 @@ commands:
                 description: Output format
                 options: [json, table, xml]
                 default: table
+              - name: limit
+                description: Maximum number of items to return per page
+              - name: page-token
+                description: Pagination token from a previous request to fetch the next page
+                alias: pt
           - name: get
             description: Show details for a policy including its document and attached users. If no ARN provided, shows interactive selection
             alias: g

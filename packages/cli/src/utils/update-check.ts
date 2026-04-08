@@ -1,3 +1,4 @@
+import { execSync } from 'child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import https from 'https';
 import { homedir } from 'os';
@@ -92,6 +93,16 @@ export function isNewerVersion(current: string, latest: string): boolean {
   return false;
 }
 
+function isHomebrewInstall(): boolean {
+  if (process.platform === 'win32') return false;
+  try {
+    execSync('brew list tigris', { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Returns the platform-appropriate shell command for updating the CLI.
  */
@@ -102,10 +113,12 @@ export function getUpdateCommand(): string {
 
   if (!isBinary) {
     return 'npm install -g @tigrisdata/cli';
+  } else if (isHomebrewInstall()) {
+    return 'brew upgrade tigris';
   } else if (isWindows) {
-    return 'irm https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.ps1 | iex';
+    return 'irm https://github.com/tigrisdata/cli/releases/latest/download/install.ps1 | iex';
   } else {
-    return 'curl -fsSL https://raw.githubusercontent.com/tigrisdata/cli/main/scripts/install.sh | sh';
+    return 'curl -fsSL https://github.com/tigrisdata/cli/releases/latest/download/install.sh | sh';
   }
 }
 

@@ -1,11 +1,10 @@
 import { getAuthClient } from '@auth/client.js';
-import { fetchOrganizationsFromUserInfo, isFlyUser } from '@auth/fly.js';
 import { getStorageConfig, requireOAuthLogin } from '@auth/provider.js';
 import {
   getSelectedOrganization,
   storeSelectedOrganization,
 } from '@auth/storage.js';
-import { listOrganizations } from '@tigrisdata/iam';
+import { listOrganizations, type Organization } from '@tigrisdata/iam';
 import { failWithError } from '@utils/exit.js';
 import { formatOutput } from '@utils/format.js';
 import { requireInteractive } from '@utils/interactive.js';
@@ -22,20 +21,12 @@ export default async function list(options: Record<string, unknown>) {
 
   const format = getFormat(options, 'select');
 
-  // For Fly users, fetch organizations from userinfo endpoint
   const authClient = getAuthClient();
-  const accessToken = await authClient.getAccessToken();
-  const tokenOrgs = await fetchOrganizationsFromUserInfo(accessToken);
-  const flyUser = tokenOrgs?.some((org) => isFlyUser(org.id)) ?? false;
 
-  let orgs: { id: string; name: string; slug: string }[];
+  let orgs: Organization[];
 
-  if (flyUser && tokenOrgs) {
-    orgs = tokenOrgs.map((org) => ({
-      id: org.id,
-      name: org.name,
-      slug: org.name,
-    }));
+  if (await authClient.isFlyUser()) {
+    orgs = (await authClient.fetchOrganizationsFromUserInfo()) ?? [];
   } else {
     const config = await getStorageConfig();
     const { data, error } = await listOrganizations({ config });
