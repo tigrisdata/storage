@@ -9,6 +9,8 @@ export interface HttpClientRequest<T = unknown> {
   headers?: Record<string, string>;
   body?: T;
   query?: Record<string, string | number | boolean>;
+  /** Return the raw response body as a ReadableStream instead of parsing it. */
+  stream?: boolean;
 }
 
 export type HttpClientResponse<T = unknown> =
@@ -199,12 +201,24 @@ export function createTigrisHttpClient(
       }
 
       let data: TResponse;
-      const contentType = response.headers.get('content-type');
 
-      if (contentType && contentType.includes('application/json')) {
-        data = (await response.json()) as TResponse;
+      if (req.stream) {
+        if (!response.body) {
+          return {
+            status: response.status,
+            statusText: response.statusText,
+            headers: response.headers,
+            error: new Error('No body returned from stream request'),
+          };
+        }
+        data = response.body as TResponse;
       } else {
-        data = (await response.text()) as TResponse;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          data = (await response.json()) as TResponse;
+        } else {
+          data = (await response.text()) as TResponse;
+        }
       }
 
       return {

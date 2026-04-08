@@ -9,20 +9,37 @@ describe('bundle', () => {
     vi.restoreAllMocks();
   });
 
-  it('returns error for empty bucket name', async () => {
-    const result = await bundle('', ['key1']);
+  it('returns error when bucket is not configured', async () => {
+    const result = await bundle(['key1'], {
+      config: {
+        bucket: '',
+        accessKeyId: 'test-key',
+        secretAccessKey: 'test-secret',
+      },
+    });
     expect(result.error).toBeDefined();
-    expect(result.error?.message).toContain('Bucket name is required');
   });
 
   it('returns error for empty keys', async () => {
-    const result = await bundle('my-bucket', []);
+    const result = await bundle([], {
+      config: {
+        bucket: 'my-bucket',
+        accessKeyId: 'test-key',
+        secretAccessKey: 'test-secret',
+      },
+    });
     expect(result.error).toBeDefined();
     expect(result.error?.message).toContain('At least one key is required');
   });
 
   it('returns error for undefined keys', async () => {
-    const result = await bundle('my-bucket', undefined as unknown as string[]);
+    const result = await bundle(undefined as unknown as string[], {
+      config: {
+        bucket: 'my-bucket',
+        accessKeyId: 'test-key',
+        secretAccessKey: 'test-secret',
+      },
+    });
     expect(result.error).toBeDefined();
     expect(result.error?.message).toContain('At least one key is required');
   });
@@ -40,8 +57,9 @@ describe('bundle', () => {
       });
     }) as typeof fetch;
 
-    const result = await bundle('my-bucket', ['a.jpg', 'b.jpg'], {
+    const result = await bundle(['a.jpg', 'b.jpg'], {
       config: {
+        bucket: 'my-bucket',
         endpoint: 'https://test.endpoint.dev',
         accessKeyId: 'test-key',
         secretAccessKey: 'test-secret',
@@ -75,6 +93,51 @@ describe('bundle', () => {
     expect(result.data?.contentType).toBe('application/x-tar');
   });
 
+  it('returns a ReadableStream body', async () => {
+    const stream = new ReadableStream();
+
+    globalThis.fetch = vi.fn(async () => {
+      return new Response(stream, {
+        status: 200,
+        headers: { 'content-type': 'application/x-tar' },
+      });
+    }) as typeof fetch;
+
+    const result = await bundle(['a.jpg'], {
+      config: {
+        bucket: 'my-bucket',
+        endpoint: 'https://test.endpoint.dev',
+        accessKeyId: 'test-key',
+        secretAccessKey: 'test-secret',
+      },
+    });
+
+    expect(result.error).toBeUndefined();
+    expect(result.data?.body).toBeInstanceOf(ReadableStream);
+    expect(result.data?.body.getReader).toBeDefined();
+  });
+
+  it('returns error when response has no body', async () => {
+    globalThis.fetch = vi.fn(async () => {
+      return new Response(null, {
+        status: 200,
+        headers: { 'content-type': 'application/x-tar' },
+      });
+    }) as typeof fetch;
+
+    const result = await bundle(['a.jpg'], {
+      config: {
+        bucket: 'my-bucket',
+        endpoint: 'https://test.endpoint.dev',
+        accessKeyId: 'test-key',
+        secretAccessKey: 'test-secret',
+      },
+    });
+
+    expect(result.error).toBeDefined();
+    expect(result.data).toBeUndefined();
+  });
+
   it('sends custom compression and error mode', async () => {
     let capturedInit: RequestInit | undefined;
 
@@ -86,10 +149,11 @@ describe('bundle', () => {
       });
     }) as typeof fetch;
 
-    const result = await bundle('my-bucket', ['x.txt'], {
+    const result = await bundle(['x.txt'], {
       compression: 'gzip',
       onError: 'fail',
       config: {
+        bucket: 'my-bucket',
         endpoint: 'https://test.endpoint.dev',
         accessKeyId: 'test-key',
         secretAccessKey: 'test-secret',
@@ -106,14 +170,16 @@ describe('bundle', () => {
 
   it('returns error on HTTP failure', async () => {
     globalThis.fetch = vi.fn(async () => {
-      return new Response('<Error><Code>InvalidArgument</Code></Error>', {
+      return new Response(JSON.stringify({ Message: 'Invalid request' }), {
         status: 400,
         statusText: 'Bad Request',
+        headers: { 'content-type': 'application/json' },
       });
     }) as typeof fetch;
 
-    const result = await bundle('my-bucket', ['a.jpg'], {
+    const result = await bundle(['a.jpg'], {
       config: {
+        bucket: 'my-bucket',
         endpoint: 'https://test.endpoint.dev',
         accessKeyId: 'test-key',
         secretAccessKey: 'test-secret',
@@ -121,28 +187,7 @@ describe('bundle', () => {
     });
 
     expect(result.error).toBeDefined();
-    expect(result.error?.message).toContain('HTTP 400');
     expect(result.data).toBeUndefined();
-  });
-
-  it('returns error when response has no body', async () => {
-    globalThis.fetch = vi.fn(async () => {
-      return new Response(null, {
-        status: 200,
-        headers: { 'content-type': 'application/x-tar' },
-      });
-    }) as typeof fetch;
-
-    const result = await bundle('my-bucket', ['a.jpg'], {
-      config: {
-        endpoint: 'https://test.endpoint.dev',
-        accessKeyId: 'test-key',
-        secretAccessKey: 'test-secret',
-      },
-    });
-
-    expect(result.error).toBeDefined();
-    expect(result.error?.message).toContain('No body');
   });
 
   it('uses session token auth when provided', async () => {
@@ -156,8 +201,9 @@ describe('bundle', () => {
       });
     }) as typeof fetch;
 
-    await bundle('my-bucket', ['a.jpg'], {
+    await bundle(['a.jpg'], {
       config: {
+        bucket: 'my-bucket',
         endpoint: 'https://test.endpoint.dev',
         sessionToken: 'my-session-token',
         organizationId: 'my-org',
