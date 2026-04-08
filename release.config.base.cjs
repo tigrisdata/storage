@@ -28,6 +28,7 @@ module.exports = (packageName) => {
             { scope: `!(${scope})`, type: 'perf', release: false },
             { scope: `!(${scope})`, type: 'refactor', release: false },
             { scope: `!(${scope})`, type: 'chore', release: false },
+            { scope: `!(${scope})`, breaking: true, release: false },
           ],
         },
       ],
