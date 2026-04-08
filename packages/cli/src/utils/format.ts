@@ -248,3 +248,60 @@ export function formatOutput<T extends Record<string, unknown>>(
       return formatTable(items, columns);
   }
 }
+
+export interface PaginationMeta {
+  paginationToken?: string;
+}
+
+/**
+ * Format output with pagination metadata.
+ * JSON wraps items in an object with optional paginationToken.
+ * XML adds a <paginationToken> element inside the root.
+ * Table output is unchanged (pagination hint goes to stderr separately).
+ */
+export function formatPaginatedOutput<T extends Record<string, unknown>>(
+  items: T[],
+  format: string,
+  rootElement: string,
+  itemElement: string,
+  columns: TableColumn[],
+  pagination: PaginationMeta
+): string {
+  switch (format) {
+    case 'json': {
+      const result: Record<string, unknown> = { items };
+      if (pagination.paginationToken) {
+        result.paginationToken = pagination.paginationToken;
+      }
+      return formatJson(result);
+    }
+    case 'xml':
+      return formatPaginatedXml(items, rootElement, itemElement, pagination);
+    default:
+      return formatTable(items, columns);
+  }
+}
+
+function formatPaginatedXml<T extends Record<string, unknown>>(
+  items: T[],
+  rootElement: string,
+  itemElement: string,
+  pagination: PaginationMeta
+): string {
+  const lines = [`<${rootElement}>`];
+
+  items.forEach((item) => {
+    lines.push(`  <${itemElement}>`);
+    lines.push(formatXmlObject(item, '    '));
+    lines.push(`  </${itemElement}>`);
+  });
+
+  if (pagination.paginationToken) {
+    lines.push(
+      `  <paginationToken>${escapeXml(pagination.paginationToken)}</paginationToken>`
+    );
+  }
+
+  lines.push(`</${rootElement}>`);
+  return lines.join('\n');
+}

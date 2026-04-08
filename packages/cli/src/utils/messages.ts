@@ -169,6 +169,15 @@ export function printDeprecated(message: string): void {
 }
 
 /**
+ * Print a pagination hint to stderr when more pages are available.
+ * Shows in all modes (TTY and piped) for table/xml output.
+ */
+export function printPaginationHint(paginationToken?: string): void {
+  if (!paginationToken) return;
+  console.error(`\nNext page: --page-token ${paginationToken}`);
+}
+
+/**
  * Helper to create a message context
  */
 export function msg(command: string, operation?: string): MessageContext {

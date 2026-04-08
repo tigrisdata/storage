@@ -31,6 +31,33 @@ export function getFormat(
   return getOption<string>(options, ['format'], defaultFormat) ?? defaultFormat;
 }
 
+export interface PaginationOptions {
+  limit?: number;
+  pageToken?: string;
+  isPaginated: boolean;
+}
+
+/**
+ * Extract pagination flags from command options.
+ * Returns isPaginated=true when at least one pagination flag was provided.
+ */
+export function getPaginationOptions(
+  options: Record<string, unknown>
+): PaginationOptions {
+  const rawLimit = getOption<string | number>(options, ['limit']);
+  const limit = rawLimit !== undefined ? Number(rawLimit) : undefined;
+  const pageToken = getOption<string>(options, [
+    'page-token',
+    'pageToken',
+    'pt',
+  ]);
+  return {
+    limit,
+    pageToken,
+    isPaginated: limit !== undefined || pageToken !== undefined,
+  };
+}
+
 /**
  * Parses a boolean value from string or boolean input
  * - undefined → undefined
