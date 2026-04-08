@@ -7,17 +7,20 @@ import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type ListBucketSnapshotsOptions = {
   config?: Omit<TigrisStorageConfig, 'bucket'>;
+  paginationToken?: string;
+  limit?: number;
 };
 
-export type ListBucketSnapshotsResponse = Array<{
+export type BucketSnapshot = {
   name?: string | undefined;
   version: string | undefined;
-  /**
-   * @deprecated Use name and version instead, will be removed in the next major version
-   */
-  snapshotName: string | undefined;
   creationDate: Date | undefined;
-}>;
+};
+
+export type ListBucketSnapshotsResponse = {
+  snapshots: BucketSnapshot[];
+  paginationToken?: string;
+};
 
 export async function listBucketSnapshots(
   options?: ListBucketSnapshotsOptions
@@ -50,7 +53,10 @@ export async function listBucketSnapshots(
     return { error: new Error('Source bucket name is required') };
   }
 
-  const command = new ListBucketsCommand({});
+  const command = new ListBucketsCommand({
+    ContinuationToken: options?.paginationToken,
+    MaxBuckets: options?.limit,
+  });
   command.middlewareStack.add(
     (next) => async (args) => {
       (args.request as HttpRequest).headers[TigrisHeaders.SNAPSHOT] =
@@ -65,16 +71,15 @@ export async function listBucketSnapshots(
       .send(command)
       .then((res) => {
         return {
-          data:
-            res.Buckets?.map((bucket) => ({
-              name: bucket.Name?.split('; name=')[1],
-              version: bucket.Name?.split(';')[0],
-              /**
-               * @deprecated Use name and version instead, will be removed in the next major version
-               */
-              snapshotName: bucket.Name,
-              creationDate: bucket.CreationDate,
-            })) ?? [],
+          data: {
+            snapshots:
+              res.Buckets?.map((bucket) => ({
+                name: bucket.Name?.split('; name=')[1],
+                version: bucket.Name?.split(';')[0],
+                creationDate: bucket.CreationDate,
+              })) ?? [],
+            paginationToken: res.ContinuationToken,
+          },
         };
       })
       .catch((error) => {
@@ -89,10 +94,6 @@ export async function listBucketSnapshots(
 
 export type CreateBucketSnapshotOptions = {
   name?: string;
-  /**
-   * @deprecated Use name instead, will be removed in the next major version
-   */
-  description?: string;
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
@@ -136,8 +137,8 @@ export async function createBucketSnapshot(
   command.middlewareStack.add(
     (next) => async (args) => {
       let header = 'true';
-      if (options?.name ?? options?.description) {
-        header = `${header}; name=${options?.name ?? options?.description}`;
+      if (options?.name) {
+        header = `${header}; name=${options.name}`;
       }
       (args.request as HttpRequest).headers[TigrisHeaders.SNAPSHOT] = header;
       return next(args);

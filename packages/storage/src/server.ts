@@ -38,6 +38,7 @@ export {
   listBucketSnapshots,
   type CreateBucketSnapshotOptions,
   type CreateBucketSnapshotResponse,
+  type BucketSnapshot,
   type ListBucketSnapshotsOptions,
   type ListBucketSnapshotsResponse,
 } from './lib/bucket/snapshot';

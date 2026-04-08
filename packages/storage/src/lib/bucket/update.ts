@@ -22,11 +22,6 @@ export type UpdateBucketOptions = {
   allowObjectAcl?: boolean;
   disableDirectoryListing?: boolean;
   // storage settings
-  /**
-   * @deprecated This property is deprecated and will be removed in the next major version. Use locations instead.
-   * @see https://www.tigrisdata.com/docs/buckets/locations/
-   */
-  regions?: string | string[];
   locations?: BucketLocations;
   cacheControl?: string;
   customDomain?: string;
@@ -64,15 +59,6 @@ export async function updateBucket(
   }
 
   // storage settings
-  if (options?.regions !== undefined) {
-    console.warn(
-      'The regions property is deprecated and will be removed in the next major version. Use locations instead.'
-    );
-    body.object_regions = Array.isArray(options.regions)
-      ? options.regions.join(',')
-      : options.regions;
-  }
-
   if (options?.locations && options?.locations !== undefined) {
     const validation = validateLocationValues(options.locations);
     if (validation.valid) {

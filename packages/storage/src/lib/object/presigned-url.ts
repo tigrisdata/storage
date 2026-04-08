@@ -25,10 +25,6 @@ export type GetPresignedUrlOptions = {
    * Default is 3600 seconds (1 hour).
    */
   expiresIn?: number;
-  /**
-   @deprecated This property is deprecated and will be removed in the next major version.
-   */
-  contentType?: string;
   config?: TigrisStorageConfig;
 } & MethodOrOperation;
 

@@ -21,13 +21,12 @@ export async function handleClientUpload(
   request: ClientUploadRequest,
   config?: TigrisStorageConfig
 ): Promise<TigrisStorageResponse<unknown, Error>> {
-  const { action, name, contentType, uploadId, parts, partIds } = request;
+  const { action, name, uploadId, parts, partIds } = request;
 
   try {
     switch (action) {
       case UploadAction.SinglepartInit:
         return await getPresignedUrl(name, {
-          contentType,
           operation: 'put',
           expiresIn: 3600, // 1 hour
           config,

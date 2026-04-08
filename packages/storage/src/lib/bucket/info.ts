@@ -16,25 +16,6 @@ export type GetBucketInfoOptions = {
 
 export type BucketInfoResponse = {
   isSnapshotEnabled: boolean;
-  /**
-   * @deprecated
-   * @see forkInfo.hasChildren
-   * This property is deprecated and will be removed in the next major version
-   */
-  hasForks: boolean;
-  /**
-   * @deprecated
-   * @see forkInfo.parents[0].bucketName
-   * This property is deprecated and will be removed in the next major version
-   */
-  sourceBucketName?: string;
-  /**
-   * @deprecated
-   * @see forkInfo.parents[0].snapshot
-   * This property is deprecated and will be removed in the next major version
-   */
-  sourceBucketSnapshot?: string;
-
   forkInfo:
     | {
         hasChildren: boolean;
@@ -120,10 +101,6 @@ export async function getBucketInfo(
 
     const data: BucketInfoResponse = {
       isSnapshotEnabled: response.data.type === 1,
-      hasForks: response.data.ForkInfo?.HasChildren ?? false,
-      sourceBucketName: response.data.ForkInfo?.Parents?.[0]?.BucketName,
-      sourceBucketSnapshot: response.data.ForkInfo?.Parents?.[0]?.Snapshot,
-
       forkInfo: response.data.ForkInfo
         ? {
             hasChildren: response.data.ForkInfo.HasChildren,

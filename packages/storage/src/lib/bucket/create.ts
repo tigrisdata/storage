@@ -3,11 +3,7 @@ import type { HttpRequest } from '@aws-sdk/types';
 import { TigrisHeaders } from '@shared/index';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
-import {
-  availableRegions,
-  validateLocationValues,
-  validateRegions,
-} from './utils/regions';
+import { validateLocationValues } from './utils/regions';
 import type { BucketLocations, StorageClass } from './types';
 
 export type CreateBucketOptions = {
@@ -16,16 +12,6 @@ export type CreateBucketOptions = {
   sourceBucketSnapshot?: string;
   access?: 'public' | 'private';
   defaultTier?: StorageClass;
-  /**
-   * @deprecated This property is deprecated and will be removed in the next major version. Use locations instead.
-   * @see https://www.tigrisdata.com/docs/buckets/locations/
-   */
-  consistency?: 'strict' | 'default';
-  /**
-   * @deprecated This property is deprecated and will be removed in the next major version. Use locations instead.
-   * @see https://www.tigrisdata.com/docs/buckets/locations/
-   */
-  region?: string | string[];
   locations?: BucketLocations;
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
@@ -48,20 +34,6 @@ export async function createBucket(
 
   if (error) {
     return { error };
-  }
-
-  if (options?.region && options?.region !== undefined) {
-    console.warn(
-      'The region property is deprecated and will be removed in the next major version. Use locations instead.'
-    );
-    if (!validateRegions(options.region)) {
-      return {
-        error: new Error(
-          'Invalid regions specified, possible values are: ' +
-            availableRegions.join(', ')
-        ),
-      };
-    }
   }
 
   if (options?.locations && options?.locations !== undefined) {
@@ -103,18 +75,6 @@ export async function createBucket(
       // Set storage class
       if (options?.defaultTier) {
         req.headers[TigrisHeaders.STORAGE_CLASS] = options.defaultTier;
-      }
-
-      // Set consistency level
-      if (options?.consistency === 'strict') {
-        req.headers[TigrisHeaders.CONSISTENT] = 'true';
-      }
-
-      // Set regions
-      if (options?.region && options?.region !== undefined) {
-        req.headers[TigrisHeaders.REGIONS] = Array.isArray(options.region)
-          ? options.region.join(',')
-          : options.region;
       }
 
       // Set locations
