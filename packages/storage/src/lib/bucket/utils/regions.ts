@@ -4,18 +4,6 @@ import {
   type BucketLocations,
 } from '../types';
 
-export const availableRegions: string[] = [
-  ...multiRegions,
-  ...singleOrDualRegions,
-];
-
-export const validateRegions = (regions: string | string[]): boolean => {
-  if (Array.isArray(regions)) {
-    return regions.every((region) => availableRegions.includes(region));
-  }
-  return availableRegions.includes(regions);
-};
-
 export function validateLocationValues(
   locations: BucketLocations
 ): { valid: true } | { valid: false; error: string } {

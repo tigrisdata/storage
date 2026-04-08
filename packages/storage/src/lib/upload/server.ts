@@ -11,6 +11,7 @@ import { toError } from '@shared/utils';
 export interface ClientUploadRequest {
   action: UploadAction;
   name: string;
+  /** @deprecated This property is no longer used by the server handler. Will be removed in the next major version. */
   contentType?: string;
   uploadId?: string;
   parts?: number[];
