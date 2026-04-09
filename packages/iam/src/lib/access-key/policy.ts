@@ -131,10 +131,9 @@ export async function listPoliciesForAccessKey(
 
   return {
     data: {
-      paginationToken:
-        response.data.ListUserPoliciesResult.Marker !== ''
-          ? response.data.ListUserPoliciesResult.Marker
-          : undefined,
+      paginationToken: response.data.ListUserPoliciesResult.IsTruncated
+        ? response.data.ListUserPoliciesResult.Marker || undefined
+        : undefined,
       policies: response.data.ListUserPoliciesResult.PolicyNames ?? [],
     },
   };

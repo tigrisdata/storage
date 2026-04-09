@@ -55,10 +55,14 @@ export async function rotateAccessKey(
     };
   }
 
-  return {
-    data: {
-      id: response.data?.rotate_access_key_result.id,
-      newSecret: response.data?.rotate_access_key_result.new_secret,
-    },
-  };
+  const id = response.data?.rotate_access_key_result?.id;
+  const newSecret = response.data?.rotate_access_key_result?.new_secret;
+
+  if (!id || !newSecret) {
+    return {
+      error: new Error('Invalid response: missing access key id or secret'),
+    };
+  }
+
+  return { data: { id, newSecret } };
 }
