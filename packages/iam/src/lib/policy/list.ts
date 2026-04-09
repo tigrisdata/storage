@@ -45,7 +45,10 @@ export async function listPolicies(
 
   const formData = new URLSearchParams();
   formData.append('MaxItems', options?.limit?.toString() ?? '1000');
-  formData.append('Marker', options?.paginationToken ?? '0');
+
+  if (options?.paginationToken) {
+    formData.append('Marker', options.paginationToken);
+  }
 
   const headers = {
     'Content-Type': 'application/x-www-form-urlencoded',
