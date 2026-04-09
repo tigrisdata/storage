@@ -9,7 +9,10 @@ export type GetPolicyOptions = {
 
 export type GetPolicyResponse = Policy & {
   document: PolicyDocument;
-  users: string[];
+  users: {
+    id: string;
+    name: string;
+  }[];
 };
 
 type GetPolicyApiResponse = {
@@ -27,7 +30,10 @@ type GetPolicyApiResponse = {
     PolicyName: string;
     Tags: null;
     UpdateDate: string;
-    Users: string[];
+    Users: {
+      UserId: string;
+      UserName: string;
+    }[];
   };
 };
 
@@ -100,7 +106,11 @@ export async function getPolicy(
       path: policy.Path,
       resource: policy.Arn,
       updateDate: new Date(policy.UpdateDate),
-      users: policy.Users ?? [],
+      users:
+        policy.Users?.map((user) => ({
+          id: user.UserId,
+          name: user.UserName,
+        })) ?? [],
     },
   };
 }

@@ -21,12 +21,18 @@ export const IAM_ENDPOINTS = {
   listAccessKeys: '/?Detailed',
   removeAccessKey: '/?Action=DeleteAccessKey',
   revokeAccessKey: '/?Action=UpdateAccessKeyWithBucketsRole',
+  rotateAccessKey: '/?Action=RotateAccessKey',
   // Policies
   addPolicy: '/?Action=CreatePolicy',
   deletePolicy: '/?Action=ForceDeletePolicy',
   editPolicy: '/?Action=UpdatePolicy',
   getPolicy: '/?Action=GetPolicyDetailed',
   listPolicies: '/?Action=ListPolicies',
+
+  // policy and access key
+  attachPolicy: '/?Action=AttachUserPolicy',
+  detachPolicy: '/?Action=DetachUserPolicy',
+  listPoliciesForAccessKey: '/?Action=ListUserPolicies',
 };
 
 function getIAMEndpoint(options?: TigrisIAMConfig): string {

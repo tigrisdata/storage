@@ -14,6 +14,15 @@ export {
   type ListAccessKeysResponse,
 } from './lib/access-key/list';
 export {
+  attachPolicyToAccessKey,
+  detachPolicyFromAccessKey,
+  listPoliciesForAccessKey,
+  type AttachPolicyToAccessKeyOptions,
+  type DetachPolicyFromAccessKeyOptions,
+  type ListPoliciesForAccessKeyOptions,
+  type ListPoliciesForAccessKeyResponse,
+} from './lib/access-key/policy';
+export {
   removeAccessKey,
   type RemoveAccessKeyOptions,
 } from './lib/access-key/remove';
@@ -21,6 +30,11 @@ export {
   revokeAllBucketRoles,
   type RevokeAllBucketRolesOptions,
 } from './lib/access-key/revoke';
+export {
+  rotateAccessKey,
+  type RotateAccessKeyOptions,
+  type RotateAccessKeyResponse,
+} from './lib/access-key/rotate';
 export {
   createOrganization,
   type CreateOrganizationOptions,
