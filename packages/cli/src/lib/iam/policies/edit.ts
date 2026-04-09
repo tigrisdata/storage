@@ -1,19 +1,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 
-import enquirer from 'enquirer';
-const { prompt } = enquirer;
 import { getOAuthIAMConfig } from '@auth/iam.js';
-import {
-  editPolicy,
-  getPolicy,
-  listPolicies,
-  type PolicyDocument,
-} from '@tigrisdata/iam';
+import { editPolicy, getPolicy, type PolicyDocument } from '@tigrisdata/iam';
 import { failWithError } from '@utils/exit.js';
-import { requireInteractive } from '@utils/interactive.js';
-import { msg, printEmpty, printStart, printSuccess } from '@utils/messages.js';
+import { msg, printStart, printSuccess } from '@utils/messages.js';
 import { getFormat, getOption } from '@utils/options.js';
 
+import { selectPolicy } from './select-policy.js';
 import { parseDocument, readStdin } from './utils.js';
 
 const context = msg('iam policies', 'edit');
@@ -29,8 +22,6 @@ export default async function edit(options: Record<string, unknown>) {
 
   const iamConfig = await getOAuthIAMConfig(context);
 
-  // If no resource provided, list policies and let user select
-  // But if stdin is piped, we can't use interactive selection
   if (!resource) {
     if (!process.stdin.isTTY) {
       failWithError(
@@ -39,31 +30,12 @@ export default async function edit(options: Record<string, unknown>) {
       );
     }
 
-    const { data: listData, error: listError } = await listPolicies({
-      config: iamConfig,
-    });
-
-    if (listError) {
-      failWithError(context, listError);
-    }
-
-    if (!listData.policies || listData.policies.length === 0) {
-      printEmpty(context);
-      return;
-    }
-
-    requireInteractive('Provide the policy ARN as a positional argument');
-
-    const { selected } = await prompt<{ selected: string }>({
-      type: 'select',
-      name: 'selected',
-      message: 'Select a policy to edit:',
-      choices: listData.policies.map((p) => ({
-        name: p.resource,
-        message: `${p.name} (${p.resource})`,
-      })),
-    });
-
+    const selected = await selectPolicy(
+      iamConfig,
+      context,
+      'Select a policy to edit:'
+    );
+    if (!selected) return;
     resource = selected;
   }
 

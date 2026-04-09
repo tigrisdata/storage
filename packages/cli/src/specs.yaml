@@ -1494,6 +1494,99 @@ commands:
           - name: revoke-roles
             description: Revoke all bucket roles from the access key
             type: flag
+      - name: rotate
+        description: Rotate an access key's secret. The current secret is immediately invalidated and a new one is returned (shown only once)
+        alias: r
+        examples:
+          - "tigris access-keys rotate tid_AaBbCcDdEeFf --yes"
+        messages:
+          onStart: 'Rotating access key...'
+          onSuccess: 'Access key rotated'
+          onFailure: 'Failed to rotate access key'
+          nextActions:
+            - command: 'tigris access-keys get {{id}}'
+              description: 'Verify the rotated access key'
+        arguments:
+          - name: id
+            description: Access key ID
+            type: positional
+            required: true
+            examples:
+              - tid_AaBbCcDdEeFf
+          - name: force
+            type: flag
+            description: Skip confirmation prompts (alias for --yes)
+      - name: attach-policy
+        description: Attach an IAM policy to an access key. If no policy ARN is provided, shows interactive selection of available policies
+        alias: ap
+        examples:
+          - "tigris access-keys attach-policy tid_AaBb --policy-arn arn:aws:iam::org_id:policy/my-policy"
+          - "tigris access-keys attach-policy tid_AaBb"
+        messages:
+          onStart: 'Attaching policy...'
+          onSuccess: 'Policy attached'
+          onFailure: 'Failed to attach policy'
+        arguments:
+          - name: id
+            description: Access key ID
+            type: positional
+            required: true
+            examples:
+              - tid_AaBbCcDdEeFf
+          - name: policy-arn
+            description: ARN of the policy to attach
+            examples:
+              - arn:aws:iam::org_id:policy/my-policy
+      - name: detach-policy
+        description: Detach an IAM policy from an access key. If no policy ARN is provided, shows interactive selection of attached policies
+        alias: dp
+        examples:
+          - "tigris access-keys detach-policy tid_AaBb --policy-arn arn:aws:iam::org_id:policy/my-policy --yes"
+          - "tigris access-keys detach-policy tid_AaBb"
+        messages:
+          onStart: 'Detaching policy...'
+          onSuccess: 'Policy detached'
+          onFailure: 'Failed to detach policy'
+        arguments:
+          - name: id
+            description: Access key ID
+            type: positional
+            required: true
+            examples:
+              - tid_AaBbCcDdEeFf
+          - name: policy-arn
+            description: ARN of the policy to detach
+            examples:
+              - arn:aws:iam::org_id:policy/my-policy
+          - name: force
+            type: flag
+            description: Skip confirmation prompts (alias for --yes)
+      - name: list-policies
+        description: List all IAM policies attached to an access key
+        alias: lp
+        examples:
+          - "tigris access-keys list-policies tid_AaBbCcDdEeFf"
+        messages:
+          onStart: ''
+          onSuccess: ''
+          onFailure: 'Failed to list policies for access key'
+          onEmpty: 'No policies attached to this access key'
+        arguments:
+          - name: id
+            description: Access key ID
+            type: positional
+            required: true
+            examples:
+              - tid_AaBbCcDdEeFf
+          - name: format
+            description: Output format
+            options: [json, table, xml]
+            default: table
+          - name: limit
+            description: Maximum number of items to return per page
+          - name: page-token
+            description: Pagination token from a previous request to fetch the next page
+            alias: pt
 
   #########################
   # IAM - Identity and Access Management
@@ -1626,6 +1719,75 @@ commands:
               - name: force
                 type: flag
                 description: Skip confirmation prompts (alias for --yes)
+          - name: link-key
+            description: Link an access key to a policy. If no policy ARN is provided, shows interactive selection. If no access key ID is provided, shows interactive selection of unlinked keys
+            alias: lnk
+            examples:
+              - "tigris iam policies link-key arn:aws:iam::org_id:policy/my-policy --id tid_AaBb"
+              - "tigris iam policies link-key"
+            messages:
+              onStart: 'Linking access key...'
+              onSuccess: 'Access key linked'
+              onFailure: 'Failed to link access key'
+              onEmpty: 'No policies found'
+            arguments:
+              - name: resource
+                description: Policy ARN. If omitted, shows interactive selection
+                type: positional
+                required: false
+                examples:
+                  - arn:aws:iam::org_id:policy/my-policy
+              - name: id
+                description: Access key ID to attach
+                examples:
+                  - tid_AaBbCcDdEeFf
+          - name: unlink-key
+            description: Unlink an access key from a policy. If no policy ARN is provided, shows interactive selection. If no access key ID is provided, shows interactive selection of linked keys
+            alias: ulnk
+            examples:
+              - "tigris iam policies unlink-key arn:aws:iam::org_id:policy/my-policy --id tid_AaBb --yes"
+              - "tigris iam policies unlink-key"
+            messages:
+              onStart: 'Unlinking access key...'
+              onSuccess: 'Access key unlinked'
+              onFailure: 'Failed to unlink access key'
+              onEmpty: 'No policies found'
+            arguments:
+              - name: resource
+                description: Policy ARN. If omitted, shows interactive selection
+                type: positional
+                required: false
+                examples:
+                  - arn:aws:iam::org_id:policy/my-policy
+              - name: id
+                description: Access key ID to detach
+                examples:
+                  - tid_AaBbCcDdEeFf
+              - name: force
+                type: flag
+                description: Skip confirmation prompts (alias for --yes)
+          - name: list-keys
+            description: List all access keys attached to a policy. If no policy ARN is provided, shows interactive selection
+            alias: lk
+            examples:
+              - "tigris iam policies list-keys arn:aws:iam::org_id:policy/my-policy"
+              - "tigris iam policies list-keys"
+            messages:
+              onStart: ''
+              onSuccess: ''
+              onFailure: 'Failed to list access keys for policy'
+              onEmpty: 'No access keys attached to this policy'
+            arguments:
+              - name: resource
+                description: Policy ARN. If omitted, shows interactive selection
+                type: positional
+                required: false
+                examples:
+                  - arn:aws:iam::org_id:policy/my-policy
+              - name: format
+                description: Output format
+                options: [json, table, xml]
+                default: table
 
       - name: users
         description: Manage organization users and invitations
