@@ -92,7 +92,7 @@
   "dependencies": {
     "@aws-sdk/credential-providers": "^3.1024.0",
     "@smithy/shared-ini-file-loader": "^4.4.7",
-    "@tigrisdata/iam": "^1.4.1",
+    "@tigrisdata/iam": "^2.1.0",
     "@tigrisdata/storage": "^3.0.0",
     "commander": "^14.0.3",
     "enquirer": "^2.4.1",
