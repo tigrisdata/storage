@@ -28,6 +28,11 @@ export const IAM_ENDPOINTS = {
   editPolicy: '/?Action=UpdatePolicy',
   getPolicy: '/?Action=GetPolicyDetailed',
   listPolicies: '/?Action=ListPolicies',
+
+  // policy and access key
+  attachPolicy: '/?Action=AttachUserPolicy',
+  detachPolicy: '/?Action=DetachUserPolicy',
+  listPoliciesForAccessKey: '/?Action=ListUserPolicies',
 };
 
 function getIAMEndpoint(options?: TigrisIAMConfig): string {

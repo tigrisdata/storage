@@ -14,6 +14,15 @@ export {
   type ListAccessKeysResponse,
 } from './lib/access-key/list';
 export {
+  attachPolicyToAccessKey,
+  detachPolicyFromAccessKey,
+  listPoliciesForAccessKey,
+  type AttachPolicyToAccessKeyOptions,
+  type DetachPolicyFromAccessKeyOptions,
+  type ListPoliciesForAccessKeyOptions,
+  type ListPoliciesForAccessKeyResponse,
+} from './lib/access-key/policy';
+export {
   removeAccessKey,
   type RemoveAccessKeyOptions,
 } from './lib/access-key/remove';
