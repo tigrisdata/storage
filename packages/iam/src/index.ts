@@ -22,6 +22,11 @@ export {
   type RevokeAllBucketRolesOptions,
 } from './lib/access-key/revoke';
 export {
+  rotateAccessKey,
+  type RotateAccessKeyOptions,
+  type RotateAccessKeyResponse,
+} from './lib/access-key/rotate';
+export {
   createOrganization,
   type CreateOrganizationOptions,
   type CreateOrganizationResponse,
