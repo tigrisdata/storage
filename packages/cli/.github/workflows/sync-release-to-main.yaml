@@ -40,15 +40,5 @@ jobs:
               --base main \
               --head release \
               --title "chore: sync release to main" \
-              --body "Automated sync of release tags back to main."
-          fi
-
-      - name: Enable auto-merge on sync PR
-        if: steps.check.outputs.ahead != '0'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR=$(gh pr list --repo ${{ github.repository }} --base main --head release --state open --json number --jq '.[0].number')
-          if [ -n "$PR" ]; then
-            gh pr merge "$PR" --repo ${{ github.repository }} --merge --auto
+              --body "Automated sync of release tags back to main. Merge with **merge commit**."
           fi

@@ -126,6 +126,16 @@ describe('CLI Help Commands', () => {
     expect(result.stdout).toContain('path');
   });
 
+  it('should show bundle help', () => {
+    const result = runCli('bundle help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('bundle');
+    expect(result.stdout).toContain('--keys');
+    expect(result.stdout).toContain('--output');
+    expect(result.stdout).toContain('--compression');
+    expect(result.stdout).toContain('--on-error');
+  });
+
   it('should show configure help', () => {
     const result = runCli('configure help');
     expect(result.exitCode).toBe(0);
@@ -449,6 +459,129 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(`ls ${testBucket}`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).not.toContain(fileName);
+    });
+  });
+
+  describe('bundle command', () => {
+    const bundleDir = 'bundle-test';
+    const rootTxt = 'bundle-root.txt';
+    const rootJson = 'bundle-root.json';
+    const nestedTxt = `${bundleDir}/nested.txt`;
+    const nestedJson = `${bundleDir}/nested.json`;
+    const tmpDir = join(tmpdir(), `tigris-bundle-test-${Date.now()}`);
+
+    beforeAll(() => {
+      mkdirSync(tmpDir, { recursive: true });
+
+      // Create test files at bucket root
+      const txtFile = join(tmpDir, 'root.txt');
+      const jsonFile = join(tmpDir, 'root.json');
+      writeFileSync(txtFile, 'hello from txt');
+      writeFileSync(jsonFile, JSON.stringify({ hello: 'from json' }));
+
+      runCli(`objects put ${testBucket} ${rootTxt} ${txtFile}`);
+      runCli(`objects put ${testBucket} ${rootJson} ${jsonFile}`);
+
+      // Create test files in a folder
+      const nestedTxtFile = join(tmpDir, 'nested.txt');
+      const nestedJsonFile = join(tmpDir, 'nested.json');
+      writeFileSync(nestedTxtFile, 'nested txt content');
+      writeFileSync(nestedJsonFile, JSON.stringify({ nested: true }));
+
+      runCli(`mk ${testBucket}/${bundleDir}/`);
+      runCli(`objects put ${testBucket} ${nestedTxt} ${nestedTxtFile}`);
+      runCli(`objects put ${testBucket} ${nestedJson} ${nestedJsonFile}`);
+    });
+
+    afterAll(() => {
+      rmSync(tmpDir, { recursive: true, force: true });
+      runCli(`rm ${t3(testBucket)}/${bundleDir} -r -f`);
+      runCli(`rm ${t3(testBucket)}/${rootTxt} -f`);
+      runCli(`rm ${t3(testBucket)}/${rootJson} -f`);
+    });
+
+    it('should bundle root objects with inline keys', () => {
+      const output = join(tmpDir, 'root-bundle.tar');
+      const result = runCli(
+        `bundle ${testBucket} --keys ${rootTxt},${rootJson} --output ${output}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(existsSync(output)).toBe(true);
+
+      // Verify tar contents
+      const tarList = execSync(`tar tf ${output}`, { encoding: 'utf-8' });
+      expect(tarList).toContain(rootTxt);
+      expect(tarList).toContain(rootJson);
+    });
+
+    it('should bundle with keys from file', () => {
+      const keysFile = join(tmpDir, 'keys.txt');
+      writeFileSync(keysFile, `${rootTxt}\n${rootJson}\n`);
+
+      const output = join(tmpDir, 'from-file.tar');
+      const result = runCli(
+        `bundle ${testBucket} --keys ${keysFile} --output ${output}`
+      );
+      expect(result.exitCode).toBe(0);
+
+      const tarList = execSync(`tar tf ${output}`, { encoding: 'utf-8' });
+      expect(tarList).toContain(rootTxt);
+      expect(tarList).toContain(rootJson);
+    });
+
+    it('should bundle nested objects with path prefix', () => {
+      const output = join(tmpDir, 'nested-bundle.tar');
+      const result = runCli(
+        `bundle ${t3(testBucket)}/${bundleDir} --keys nested.txt,nested.json --output ${output}`
+      );
+      expect(result.exitCode).toBe(0);
+
+      const tarList = execSync(`tar tf ${output}`, { encoding: 'utf-8' });
+      expect(tarList).toContain('nested.txt');
+      expect(tarList).toContain('nested.json');
+    });
+
+    it('should bundle with gzip compression', () => {
+      const output = join(tmpDir, 'compressed.tar.gz');
+      const result = runCli(
+        `bundle ${testBucket} --keys ${rootTxt},${rootJson} --output ${output}`
+      );
+      expect(result.exitCode).toBe(0);
+
+      // tar should be able to decompress gzip
+      const tarList = execSync(`tar tzf ${output}`, { encoding: 'utf-8' });
+      expect(tarList).toContain(rootTxt);
+      expect(tarList).toContain(rootJson);
+    });
+
+    it('should bundle with explicit compression flag', () => {
+      const output = join(tmpDir, 'explicit-gzip.tar');
+      const result = runCli(
+        `bundle ${testBucket} --keys ${rootTxt} --compression gzip --output ${output}`
+      );
+      expect(result.exitCode).toBe(0);
+
+      // Despite .tar extension, content is gzip-compressed
+      const tarList = execSync(`tar tzf ${output}`, { encoding: 'utf-8' });
+      expect(tarList).toContain(rootTxt);
+    });
+
+    it('should output JSON with --json flag', () => {
+      const output = join(tmpDir, 'json-mode.tar');
+      const result = runCli(
+        `bundle ${testBucket} --keys ${rootTxt},${rootJson} --output ${output} --json`
+      );
+      expect(result.exitCode).toBe(0);
+
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(parsed.action).toBe('bundled');
+      expect(parsed.bucket).toBe(testBucket);
+      expect(parsed.keys).toBe(2);
+    });
+
+    it('should fail with no keys provided', () => {
+      const result = runCli(`bundle ${testBucket}`);
+      expect(result.exitCode).not.toBe(0);
     });
   });
 

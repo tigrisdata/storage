@@ -546,6 +546,41 @@ commands:
         alias: f
         description: Skip confirmation prompts (alias for --yes)
 
+  # bundle
+  - name: bundle
+    description: Download multiple objects as a streaming tar archive in a single request. Designed for batch workloads that need many objects without per-object HTTP overhead
+    examples:
+      - "tigris bundle my-bucket --keys key1.jpg,key2.jpg --output archive.tar"
+      - "tigris bundle my-bucket --keys keys.txt --output archive.tar"
+      - "tigris bundle t3://my-bucket --keys keys.txt --compression gzip -o archive.tar.gz"
+      - "cat keys.txt | tigris bundle my-bucket > archive.tar"
+    messages:
+      onStart: ''
+      onSuccess: ''
+      onFailure: 'Bundle failed. Verify the bucket exists and credentials have read access'
+    arguments:
+      - name: bucket
+        required: true
+        type: positional
+        description: Bucket name or t3:// path containing the objects to bundle
+        examples:
+          - my-bucket
+          - t3://my-bucket
+      - name: keys
+        description: "Comma-separated object keys, or path to a file with one key per line. If a local file matching the value exists, it is read as a keys file. If omitted, reads keys from stdin"
+        alias: k
+      - name: output
+        description: Output file path. Defaults to stdout (for piping)
+        alias: o
+      - name: compression
+        description: Compression algorithm for the archive
+        options: [none, gzip, zstd]
+        default: none
+      - name: on-error
+        description: How to handle missing objects. 'skip' omits them, 'fail' aborts the request
+        options: [skip, fail]
+        default: skip
+
   #########################
   # Manage organizations
   #########################

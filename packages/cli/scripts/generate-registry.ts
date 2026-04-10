@@ -9,7 +9,7 @@
  * Run: npm run generate:registry
  */
 
-import { readFileSync, existsSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import * as YAML from 'yaml';
 
