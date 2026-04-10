@@ -4,9 +4,14 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { getTestPrefix, shouldSkipIntegrationTests } from './setup.js';
+import {
+  getTestPrefix,
+  shouldSkipIntegrationTests,
+  shouldSkipOAuthTests,
+} from './setup.js';
 
 const skipTests = shouldSkipIntegrationTests();
+const skipOAuth = shouldSkipOAuthTests();
 
 // Helper to run CLI commands with env vars for auth
 function runCli(args: string): {
@@ -2022,6 +2027,206 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(`credentials test --bucket ${testBucket}`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Access verified');
+    });
+  });
+
+  describe('access-keys lifecycle', () => {
+    let createdKeyId: string | undefined;
+    const keyName = `${testPrefix}-ak`;
+
+    afterAll(() => {
+      if (createdKeyId) {
+        runCli(`access-keys delete ${createdKeyId} --yes`);
+      }
+    });
+
+    it('should create an access key', () => {
+      const result = runCli(`access-keys create ${keyName} --format json`);
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      createdKeyId = parsed.id;
+      expect(parsed.name).toBe(keyName);
+      expect(parsed.secret).toBeTruthy();
+    });
+
+    it('should get the access key', () => {
+      if (!createdKeyId) return;
+      const result = runCli(`access-keys get ${createdKeyId} --format json`);
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(parsed.name).toBe(keyName);
+      expect(parsed.id).toBe(createdKeyId);
+    });
+
+    it('should list access keys and include the created one', () => {
+      if (!createdKeyId) return;
+      const result = runCli('access-keys list --format json');
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      const found = parsed.items.some(
+        (k: { id: string }) => k.id === createdKeyId
+      );
+      expect(found).toBe(true);
+    });
+
+    it('should assign bucket-specific role', () => {
+      if (!createdKeyId) return;
+      const result = runCli(
+        `access-keys assign ${createdKeyId} --bucket ${testBucket} --role Editor`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should assign admin role', () => {
+      if (!createdKeyId) return;
+      // Revoke bucket roles first, then assign admin
+      runCli(`access-keys assign ${createdKeyId} --revoke-roles`);
+      const result = runCli(`access-keys assign ${createdKeyId} --admin`);
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should revoke all roles', () => {
+      if (!createdKeyId) return;
+      const result = runCli(
+        `access-keys assign ${createdKeyId} --revoke-roles`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should rotate the access key', () => {
+      if (!createdKeyId) return;
+      const result = runCli(
+        `access-keys rotate ${createdKeyId} --yes --format json`
+      );
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(parsed.secret).toBeTruthy();
+    });
+
+    it('should delete the access key', () => {
+      if (!createdKeyId) return;
+      const result = runCli(`access-keys delete ${createdKeyId} --yes`);
+      expect(result.exitCode).toBe(0);
+      createdKeyId = undefined;
+    });
+  });
+
+  describe('access-keys error cases', () => {
+    it('should error on create without name', () => {
+      const result = runCli('access-keys create');
+      expect(result.exitCode).not.toBe(0);
+    });
+
+    it('should error on get without id', () => {
+      const result = runCli('access-keys get');
+      expect(result.exitCode).not.toBe(0);
+    });
+
+    it('should error on delete without --yes in non-TTY', () => {
+      const result = runCli('access-keys delete fake-id');
+      expect(result.exitCode).toBe(1);
+    });
+
+    it('should error on rotate without --yes in non-TTY', () => {
+      const result = runCli('access-keys rotate fake-id');
+      expect(result.exitCode).toBe(1);
+    });
+  });
+
+  describe('whoami command', () => {
+    it('should show auth info', () => {
+      const result = runCli('whoami');
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should show auth info with --format json', () => {
+      const result = runCli('whoami --format json');
+      expect(result.exitCode).toBe(0);
+      expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
+    });
+  });
+});
+
+describe.skipIf(skipTests || skipOAuth)('OAuth Integration Tests', () => {
+  const testPrefix = getTestPrefix();
+
+  describe('iam policies lifecycle', () => {
+    let policyArn: string | undefined;
+    const policyName = `${testPrefix}-policy`;
+
+    afterAll(() => {
+      if (policyArn) {
+        runCli(`iam policies delete --resource ${policyArn} --yes`);
+      }
+    });
+
+    it('should create a policy', () => {
+      const doc = JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          { Effect: 'Allow', Action: ['s3:GetObject'], Resource: ['*'] },
+        ],
+      });
+      const result = runCli(
+        `iam policies create --name ${policyName} --document '${doc}' --format json`
+      );
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      policyArn = parsed.arn;
+      expect(parsed.name).toBe(policyName);
+    });
+
+    it('should list policies and include the created one', () => {
+      if (!policyArn) return;
+      const result = runCli('iam policies list --format json');
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      const found = parsed.items.some(
+        (p: { resource: string }) => p.resource === policyArn
+      );
+      expect(found).toBe(true);
+    });
+
+    it('should get the policy', () => {
+      if (!policyArn) return;
+      const result = runCli(
+        `iam policies get --resource ${policyArn} --format json`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should delete the policy', () => {
+      if (!policyArn) return;
+      const result = runCli(
+        `iam policies delete --resource ${policyArn} --yes`
+      );
+      expect(result.exitCode).toBe(0);
+      policyArn = undefined;
+    });
+  });
+
+  describe('iam users', () => {
+    it('should list users', () => {
+      const result = runCli('iam users list --format json');
+      // May fail for Fly orgs — that's expected
+      if (result.exitCode === 0 && result.stdout.trim()) {
+        expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
+      }
+    });
+  });
+
+  describe('organizations', () => {
+    it('should list organizations with --format table', () => {
+      const result = runCli('organizations list --format table');
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should list organizations with --format json', () => {
+      const result = runCli('organizations list --format json');
+      expect(result.exitCode).toBe(0);
+      if (result.stdout.trim()) {
+        expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
+      }
     });
   });
 });

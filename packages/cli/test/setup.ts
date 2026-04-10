@@ -39,6 +39,20 @@ export function shouldSkipIntegrationTests(): boolean {
 }
 
 /**
+ * Check if OAuth-dependent integration tests should run.
+ * Set TIGRIS_OAUTH_TEST=true in the environment to enable.
+ */
+export function shouldSkipOAuthTests(): boolean {
+  if (!process.env.TIGRIS_OAUTH_TEST) {
+    console.warn(
+      'Skipping OAuth integration tests - set TIGRIS_OAUTH_TEST=true to enable'
+    );
+    return true;
+  }
+  return false;
+}
+
+/**
  * Generate a unique test prefix using nanosecond timestamp
  * Format: tigris-cli-test-{timestamp}
  */

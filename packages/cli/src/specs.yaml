@@ -573,9 +573,8 @@ commands:
         description: Output file path. Defaults to stdout (for piping)
         alias: o
       - name: compression
-        description: Compression algorithm for the archive
+        description: Compression algorithm for the archive. Auto-detected from output file extension when not specified
         options: [none, gzip, zstd]
-        default: none
       - name: on-error
         description: How to handle missing objects. 'skip' omits them, 'fail' aborts the request
         options: [skip, fail]
