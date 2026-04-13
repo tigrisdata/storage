@@ -5,7 +5,7 @@ import {
 } from '@shared/index';
 import type { TigrisStorageConfig } from './types';
 
-const configMap: Record<keyof TigrisStorageConfig, string> = {
+const configMap: Partial<Record<keyof TigrisStorageConfig, string>> = {
   endpoint: 'TIGRIS_STORAGE_ENDPOINT',
   bucket: 'TIGRIS_STORAGE_BUCKET',
   accessKeyId: 'TIGRIS_STORAGE_ACCESS_KEY_ID',
