@@ -23,7 +23,7 @@
   },
   "scripts": {
     "build": "tsc --noEmit && tsup",
-    "dev": "export $(grep -v '^#' .env | xargs) && (tsc --noEmit --watch --preserveWatchOutput & tsup --watch)",
+    "dev": "export $(grep -v '^#' .env.test | xargs) && (tsc --noEmit --watch --preserveWatchOutput & tsup --watch)",
     "cli": "node dist/cli.js",
     "lint": "eslint src test",
     "lint:fix": "eslint src test --fix",

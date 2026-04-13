@@ -1,9 +1,9 @@
-import { defineConfig } from 'vitest/config';
-import path from 'path';
 import dotenv from 'dotenv';
+import path from 'path';
+import { defineConfig } from 'vitest/config';
 
-// Load .env for integration tests
-dotenv.config({ path: path.resolve(__dirname, '.env') });
+// Load .env.test for integration tests
+dotenv.config({ path: path.resolve(__dirname, '.env.test') });
 
 export default defineConfig({
   resolve: {
@@ -15,7 +15,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    reporter: 'verbose',
+    reporters: 'verbose',
     include: ['test/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['node_modules', 'dist'],
     setupFiles: ['test/setup.ts'],
