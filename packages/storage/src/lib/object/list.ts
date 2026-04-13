@@ -11,6 +11,7 @@ export type ListOptions = {
   limit?: number;
   paginationToken?: string;
   snapshotVersion?: string;
+  source?: 'tigris' | 'shadow';
   config?: TigrisStorageConfig;
 };
 
@@ -23,6 +24,7 @@ export type ListItem = {
 
 export type ListResponse = {
   items: ListItem[];
+  commonPrefixes: string[];
   paginationToken: string | undefined;
   hasMore: boolean;
 };
@@ -65,6 +67,18 @@ export async function list(
     );
   }
 
+  if (options?.source) {
+    const source = options.source;
+    list.middlewareStack.add(
+      (next) => async (args) => {
+        const req = args.request as HttpRequest;
+        req.headers[TigrisHeaders.BUCKET_LIST_SOURCE] = source;
+        return next(args);
+      },
+      { name: 'X-Tigris-List-Source-Middleware', step: 'build', override: true }
+    );
+  }
+
   try {
     return tigrisClient
       .send(list)
@@ -78,6 +92,9 @@ export async function list(
                 size: item.Size ?? 0,
                 lastModified: item.LastModified ?? new Date(),
               })) ?? [],
+            commonPrefixes:
+              res.CommonPrefixes?.map((p) => p.Prefix ?? '').filter(Boolean) ??
+              [],
             paginationToken: res.NextContinuationToken,
             hasMore: res.IsTruncated ?? false,
           },

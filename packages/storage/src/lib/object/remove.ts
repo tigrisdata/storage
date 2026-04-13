@@ -2,6 +2,7 @@ import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { config } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import { handleError } from '@shared/utils';
 
 export type RemoveOptions = {
   config?: TigrisStorageConfig;
@@ -29,17 +30,6 @@ export async function remove(
       })
       .catch(handleError);
   } catch (error) {
-    return handleError(error);
+    return handleError(error as Error);
   }
 }
-
-const handleError = (error: unknown) => {
-  if ((error as { Code?: string }).Code === 'AccessDenied') {
-    return {
-      error: new Error('Access denied while deleting file'),
-    };
-  }
-  return {
-    error: new Error('Error deleting file'),
-  };
-};

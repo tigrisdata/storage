@@ -6,6 +6,10 @@ export enum TigrisHeaders {
   NAMESPACE = 'X-Tigris-Namespace',
   STORAGE_CLASS = 'X-Amz-Storage-Class',
 
+  BUCKET_LIST_SOURCE = 'X-Tigris-List-Source', // tigris or shadow
+  SCHEDULE_MIGRATION = 'X-Tigris-Schedule-Migration',
+  SERVED_FROM = 'X-Tigris-Served-From',
+
   REGIONS = 'X-Tigris-Regions',
   SNAPSHOT = 'X-Tigris-Snapshot',
   SNAPSHOT_VERSION = 'X-Tigris-Snapshot-Version',
@@ -13,6 +17,7 @@ export enum TigrisHeaders {
   HAS_FORKS = 'X-Tigris-Is-Fork-Parent',
   FORK_SOURCE_BUCKET = 'X-Tigris-Fork-Source-Bucket',
   FORK_SOURCE_BUCKET_SNAPSHOT = 'X-Tigris-Fork-Source-Bucket-Snapshot',
+
   RENAME = 'X-Tigris-Rename',
   COPY_SOURCE = 'X-Amz-Copy-Source',
   BUNDLE_FORMAT = 'X-Tigris-Bundle-Format',

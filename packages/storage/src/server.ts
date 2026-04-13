@@ -36,9 +36,9 @@ export { setBucketTtl, type SetBucketTtlOptions } from './lib/bucket/set/ttl';
 export {
   createBucketSnapshot,
   listBucketSnapshots,
+  type BucketSnapshot,
   type CreateBucketSnapshotOptions,
   type CreateBucketSnapshotResponse,
-  type BucketSnapshot,
   type ListBucketSnapshotsOptions,
   type ListBucketSnapshotsResponse,
 } from './lib/bucket/snapshot';
@@ -53,6 +53,11 @@ export {
   type UpdateBucketResponse,
 } from './lib/bucket/types';
 export { updateBucket, type UpdateBucketOptions } from './lib/bucket/update';
+export {
+  bundle,
+  type BundleOptions,
+  type BundleResponse,
+} from './lib/object/bundle';
 export { get, type GetOptions, type GetResponse } from './lib/object/get';
 export { head, type HeadOptions, type HeadResponse } from './lib/object/head';
 export {
@@ -61,6 +66,7 @@ export {
   type ListOptions,
   type ListResponse,
 } from './lib/object/list';
+export { isMigrated, migrate, type MigrateOptions } from './lib/object/migrate';
 export {
   completeMultipartUpload,
   getPartsPresignedUrls,
@@ -93,9 +99,4 @@ export {
   handleClientUpload,
   type ClientUploadRequest,
 } from './lib/upload/server';
-export {
-  bundle,
-  type BundleOptions,
-  type BundleResponse,
-} from './lib/object/bundle';
 export { UploadAction } from './lib/upload/shared';

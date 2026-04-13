@@ -3,8 +3,8 @@ import { createTigrisClient } from '../tigris-client';
 import { TigrisHeaders } from '@shared/headers';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import { config, missingConfigError } from '../config';
-import { handleError } from '../utils';
 import { createStorageClient } from '../http-client';
+import { handleError } from '@shared/utils';
 
 export type UpdateObjectOptions = {
   config?: TigrisStorageConfig;
