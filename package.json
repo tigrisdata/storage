@@ -12,11 +12,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "build:storage": "npm run build --workspace=@tigrisdata/storage",
-    "build:iam": "npm run build --workspace=@tigrisdata/iam",
-    "build:keyv-tigris": "npm run build --workspace=@tigrisdata/keyv-tigris",
-    "build:react": "npm run build --workspace=@tigrisdata/react",
-    "dev": "npm run dev --workspaces",
+    "dev": "npm run dev --workspaces --if-present",
     "publint": "npm run publint --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",

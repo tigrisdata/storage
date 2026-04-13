@@ -47,8 +47,8 @@
   },
   "homepage": "https://github.com/tigrisdata/storage/tree/main/packages/react#readme",
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "tsc --noEmit && tsup",
+    "dev": "tsc --noEmit && tsup --watch",
     "test": "vitest run --config vitest.config.ts",
     "prepublishOnly": "npm run build"
   },
