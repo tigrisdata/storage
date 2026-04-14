@@ -48,8 +48,8 @@
   "license": "MIT",
   "dependencies": {
     "@keyv/serialize": "^1.1.1",
-    "@tigrisdata/storage": "^2.15.6",
-    "dotenv": "^17.4.1",
+    "@tigrisdata/storage": "^3.1.0",
+    "dotenv": "^17.4.2",
     "keyv": "^5.6.0"
   },
   "devDependencies": {
