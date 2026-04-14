@@ -48,7 +48,7 @@ const cachedHttpClients = new Map<string, TigrisHttpClient>();
 /**
  * Generate AWS Signature V4 headers for a request
  */
-export async function generateSignatureHeaders(
+async function generateSignatureHeaders(
   method: string,
   url: URL,
   headers: Record<string, string>,

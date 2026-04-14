@@ -1,6 +1,6 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import type { HttpRequest } from '@aws-sdk/types';
-import { TigrisHeaders } from '@shared/index';
+import { handleError, TigrisHeaders } from '@shared/index';
 import { config } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
@@ -104,27 +104,3 @@ export async function get(
     return handleError(error as Error);
   }
 }
-
-const handleError = (error: Error) => {
-  let errorMessage: string | undefined;
-
-  if ((error as { Code?: string }).Code === 'AccessDenied') {
-    errorMessage =
-      'Access denied while downloading from Tigris Storage. Please check your credentials.';
-  }
-  if ((error as { Code?: string }).Code === 'NoSuchKey') {
-    errorMessage = 'File not found in Tigris Storage';
-  }
-
-  if (errorMessage) {
-    return {
-      error: new Error(errorMessage),
-    };
-  }
-
-  return {
-    error: new Error(
-      error?.message || 'Unexpected error while downloading from Tigris Storage'
-    ),
-  };
-};

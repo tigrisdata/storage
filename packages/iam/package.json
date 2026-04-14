@@ -27,8 +27,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "tsc --noEmit && tsup",
+    "dev": "tsc --noEmit && tsup --watch",
     "publint": "publint",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",

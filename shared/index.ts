@@ -4,7 +4,6 @@ export { executeWithConcurrency, handleError, toError } from './utils';
 export { TigrisHeaders } from './headers';
 export {
   createTigrisHttpClient,
-  generateSignatureHeaders,
   type HttpClientRequest,
   type HttpClientResponse,
   type TigrisHttpClient,
