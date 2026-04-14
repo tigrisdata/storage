@@ -174,7 +174,7 @@ export function printDeprecated(message: string): void {
  */
 export function printPaginationHint(paginationToken?: string): void {
   if (!paginationToken) return;
-  console.error(`\nNext page: --page-token ${paginationToken}`);
+  console.error(`\nNext page: --page-token "${paginationToken}"`);
 }
 
 /**
