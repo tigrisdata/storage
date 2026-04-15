@@ -17,12 +17,11 @@
 		"sourceMap": true,
 
 		"outDir": "dist",
-		"rootDir": "src",
 
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
 		"isolatedModules": true
 	},
-	"include": ["src"],
-	"exclude": ["node_modules", "dist", "**/*.test.ts"]
+	"include": ["src", "tests"],
+	"exclude": ["node_modules", "dist"]
 }
