@@ -1,6 +1,6 @@
 {
 	"name": "@tigrisdata/agent-shell",
-	"version": "0.0.0-development",
+	"version": "0.0.1",
 	"description": "A virtual bash environment for AI agents, backed by Tigris object storage",
 	"type": "module",
 	"main": "dist/index.js",
@@ -24,12 +24,13 @@
 	],
 	"scripts": {
 		"typecheck": "tsc --noEmit",
-		"build": "tsc",
+		"build": "tsc -p tsconfig.build.json",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"lint": "biome check",
 		"lint:fix": "biome check --write",
 		"format": "biome format --write",
+		"format:md": "npx prettier --write \"**/*.md\"",
 		"prepare": "husky"
 	},
 	"keywords": [
@@ -42,11 +43,11 @@
 		"virtual-filesystem",
 		"sandbox"
 	],
-	"author": "Tigris Data <team@tigrisdata.com>",
+	"author": "Tigris Data Inc",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/tigrisdata/agent-shell.git"
+		"url": "git+https://github.com/tigrisdata/agent-shell.git"
 	},
 	"engines": {
 		"node": ">=18.0.0"
@@ -54,6 +55,17 @@
 	"dependencies": {
 		"@tigrisdata/storage": "^3.1.0",
 		"just-bash": "^2.14.2"
+	},
+	"release": {
+		"branches": [
+			"main"
+		],
+		"plugins": [
+			"@semantic-release/commit-analyzer",
+			"@semantic-release/release-notes-generator",
+			"@semantic-release/npm",
+			"@semantic-release/github"
+		]
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.0.0",
