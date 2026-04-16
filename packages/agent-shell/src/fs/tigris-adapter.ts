@@ -25,8 +25,8 @@ export class TigrisAdapter implements IFileSystem {
 	private readonly cache = new FsCache();
 	readonly config: TigrisConfig;
 
-	constructor(config?: TigrisConfig) {
-		this.config = config ?? {};
+	constructor(config: TigrisConfig) {
+		this.config = config;
 	}
 
 	// ── Path helpers ──────────────────────────────────────────────

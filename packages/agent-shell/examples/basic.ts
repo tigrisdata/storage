@@ -1,37 +1,29 @@
 import { TigrisShell } from "../src/index.js";
 
-async function main() {
-	const shell = new TigrisShell();
-
-	// Write some files
-	console.log("--- Writing files ---");
-	await shell.exec('echo "Hello from agent-shell" > greeting.txt');
-	await shell.exec("mkdir -p reports/2026");
-	await shell.exec('echo "Q1 results: all good" > reports/2026/q1.txt');
-	await shell.exec('echo "Q2 results: even better" > reports/2026/q2.txt');
-
-	// Read them back
-	console.log("--- Reading files ---");
-	const cat = await shell.exec("cat greeting.txt");
-	console.log("greeting.txt:", cat.stdout.trim());
-
-	// List directory
-	console.log("\n--- Listing directory ---");
-	const ls = await shell.exec("ls reports/2026");
-	console.log("reports/2026:", ls.stdout.trim());
-
-	// Pipes and text processing
-	console.log("\n--- Pipes ---");
-	const upper = await shell.exec("cat greeting.txt | tr a-z A-Z");
-	console.log("uppercase:", upper.stdout.trim());
-
-	const wc = await shell.exec("cat reports/2026/q1.txt | wc -w");
-	console.log("word count:", wc.stdout.trim());
-
-	// Flush to Tigris
-	console.log("\n--- Flushing to Tigris ---");
-	await shell.flush();
-	console.log("Done! Files persisted to Tigris.");
+const bucket = process.env.TIGRIS_STORAGE_BUCKET;
+const accessKeyId = process.env.TIGRIS_STORAGE_ACCESS_KEY_ID;
+const secretAccessKey = process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY;
+if (!bucket || !accessKeyId || !secretAccessKey) {
+	console.error(
+		"Set TIGRIS_STORAGE_BUCKET, TIGRIS_STORAGE_ACCESS_KEY_ID, TIGRIS_STORAGE_SECRET_ACCESS_KEY",
+	);
+	process.exit(1);
 }
 
-main().catch(console.error);
+const shell = new TigrisShell({ bucket, accessKeyId, secretAccessKey });
+
+// Write files
+await shell.exec('echo "Hello from agent-shell" > greeting.txt');
+await shell.exec("mkdir -p reports");
+await shell.exec('echo "Q1: revenue up 15%" > reports/q1.txt');
+
+// Read and process
+const upper = await shell.exec("cat greeting.txt | tr a-z A-Z");
+console.log(upper.stdout.trim()); // HELLO FROM AGENT-SHELL
+
+const wc = await shell.exec("cat reports/q1.txt | wc -w");
+console.log("words:", wc.stdout.trim()); // words: 4
+
+// Persist to Tigris
+await shell.flush();
+console.log("Done — files written to bucket:", bucket);

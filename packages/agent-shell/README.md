@@ -13,7 +13,11 @@ npm install @tigrisdata/agent-shell
 ```typescript
 import { TigrisShell } from "@tigrisdata/agent-shell";
 
-const shell = new TigrisShell({ bucket: "my-agent-workspace" });
+const shell = new TigrisShell({
+  bucket: process.env.TIGRIS_STORAGE_BUCKET,
+  accessKeyId: process.env.TIGRIS_STORAGE_ACCESS_KEY_ID,
+  secretAccessKey: process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY,
+});
 
 await shell.exec('echo "Hello world" > greeting.txt');
 await shell.exec("cat greeting.txt"); // stdout: "Hello world\n"
@@ -28,19 +32,13 @@ await shell.flush();
 
 ## Authentication
 
-Pass credentials explicitly or set environment variables. The SDK reads from env vars automatically when no config is provided.
+All three fields are required — bucket, access key, and secret key:
 
 ```typescript
-// Option 1: Environment variables (recommended)
-// Set TIGRIS_STORAGE_ACCESS_KEY_ID, TIGRIS_STORAGE_SECRET_ACCESS_KEY, TIGRIS_STORAGE_BUCKET
-
-const shell = new TigrisShell();
-
-// Option 2: Explicit config
 const shell = new TigrisShell({
-  bucket: "my-bucket",
-  accessKeyId: "tid_...",
-  secretAccessKey: "tsec_...",
+  bucket: process.env.TIGRIS_STORAGE_BUCKET,
+  accessKeyId: process.env.TIGRIS_STORAGE_ACCESS_KEY_ID,
+  secretAccessKey: process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY,
 });
 ```
 
@@ -59,7 +57,11 @@ This means:
 - You control when data is persisted
 
 ```typescript
-const shell = new TigrisShell({ bucket: "agent-runs" });
+const shell = new TigrisShell({
+  bucket: process.env.TIGRIS_STORAGE_BUCKET,
+  accessKeyId: process.env.TIGRIS_STORAGE_ACCESS_KEY_ID,
+  secretAccessKey: process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY,
+});
 
 try {
   await shell.exec('echo "processing..." > status.txt');
@@ -79,7 +81,11 @@ The second argument configures shell behavior:
 
 ```typescript
 const shell = new TigrisShell(
-  { bucket: "my-bucket" },
+  {
+    bucket: process.env.TIGRIS_STORAGE_BUCKET,
+    accessKeyId: process.env.TIGRIS_STORAGE_ACCESS_KEY_ID,
+    secretAccessKey: process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY,
+  },
   {
     cwd: "/workspace", // Starting directory (default: /workspace)
     env: { DEBUG: "true" }, // Initial environment variables
@@ -147,18 +153,24 @@ import { Bash, MountableFs, InMemoryFs } from "just-bash";
 import { TigrisAdapter } from "@tigrisdata/agent-shell/fs";
 import { createTigrisCommands } from "@tigrisdata/agent-shell/commands";
 
-const config = { bucket: "agent-workspace" };
+const auth = {
+  accessKeyId: process.env.TIGRIS_STORAGE_ACCESS_KEY_ID,
+  secretAccessKey: process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY,
+};
+
+const workspaceConfig = { bucket: "agent-workspace", ...auth };
+const datasetsConfig = { bucket: "shared-datasets", ...auth };
 
 // Build your own filesystem layout
 const fs = new MountableFs({ base: new InMemoryFs() });
-fs.mount("/workspace", new TigrisAdapter(config));
-fs.mount("/datasets", new TigrisAdapter({ bucket: "shared-datasets" }));
+fs.mount("/workspace", new TigrisAdapter(workspaceConfig));
+fs.mount("/datasets", new TigrisAdapter(datasetsConfig));
 
 const bash = new Bash({
   fs,
   cwd: "/workspace",
   customCommands: [
-    ...createTigrisCommands(config),
+    ...createTigrisCommands(workspaceConfig),
     // your own custom commands
   ],
 });
@@ -176,16 +188,16 @@ await workspaceFs.flush();
 
 ### `@tigrisdata/agent-shell`
 
-| Export         | Description                                                           |
-| -------------- | --------------------------------------------------------------------- |
-| `TigrisShell`  | Main class — shell backed by a Tigris bucket                          |
-| `TigrisConfig` | Config type: `{ bucket?, accessKeyId?, secretAccessKey?, endpoint? }` |
-| `ShellOptions` | Shell options type: `{ cwd?, env? }`                                  |
+| Export         | Description                                                        |
+| -------------- | ------------------------------------------------------------------ |
+| `TigrisShell`  | Main class — shell backed by a Tigris bucket                       |
+| `TigrisConfig` | Config type: `{ bucket, accessKeyId, secretAccessKey, endpoint? }` |
+| `ShellOptions` | Shell options type: `{ cwd?, env? }`                               |
 
 #### `TigrisShell`
 
 ```typescript
-new TigrisShell(config?: TigrisConfig, shellOptions?: ShellOptions)
+new TigrisShell(config: TigrisConfig, shellOptions?: ShellOptions)
 ```
 
 | Method          | Returns                   | Description                     |
@@ -193,14 +205,14 @@ new TigrisShell(config?: TigrisConfig, shellOptions?: ShellOptions)
 | `exec(command)` | `Promise<BashExecResult>` | Execute a bash command          |
 | `flush()`       | `Promise<void>`           | Persist cached writes to Tigris |
 | `engine`        | `Bash`                    | Underlying just-bash instance   |
-| `fs`            | `TigrisAdapter`         | Underlying filesystem instance  |
+| `fs`            | `TigrisAdapter`           | Underlying filesystem instance  |
 
 ### `@tigrisdata/agent-shell/fs`
 
-| Export            | Description                                             |
-| ----------------- | ------------------------------------------------------- |
-| `TigrisAdapter` | Filesystem class implementing just-bash's `IFileSystem` |
-| `TigrisConfig`    | Same config type as main export                         |
+| Export          | Description                                               |
+| --------------- | --------------------------------------------------------- |
+| `TigrisAdapter` | Filesystem adapter implementing just-bash's `IFileSystem` |
+| `TigrisConfig`  | Same config type as main export                           |
 
 ### `@tigrisdata/agent-shell/commands`
 
@@ -212,6 +224,17 @@ new TigrisShell(config?: TigrisConfig, shellOptions?: ShellOptions)
 | `createForkCommand(config)`      | Create fork command only     |
 | `createForksListCommand(config)` | Create forks command only    |
 | `createBundleCommand(config)`    | Create bundle command only   |
+
+## Examples
+
+All examples require `TIGRIS_STORAGE_ACCESS_KEY_ID`, `TIGRIS_STORAGE_SECRET_ACCESS_KEY`, and `TIGRIS_STORAGE_BUCKET` env vars. Run with `npx tsx examples/<name>.ts`.
+
+| Example                                                 | Description                                              |
+| ------------------------------------------------------- | -------------------------------------------------------- |
+| [`basic.ts`](examples/basic.ts)                         | Write files, pipe/process, flush to Tigris               |
+| [`presign.ts`](examples/presign.ts)                     | Generate shareable and upload URLs for objects           |
+| [`snapshot-and-fork.ts`](examples/snapshot-and-fork.ts) | Take snapshots and create forks — Tigris-unique features |
+| [`multi-bucket.ts`](examples/multi-bucket.ts)           | Mount two buckets, copy across them (advanced)           |
 
 ## Development
 

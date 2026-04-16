@@ -1,3 +1,12 @@
+import type { TigrisConfig } from "../src/types.js";
+
+/** Test config with dummy credentials. */
+export const TEST_CONFIG: TigrisConfig = {
+	bucket: "test",
+	accessKeyId: "tid_test",
+	secretAccessKey: "tsec_test",
+};
+
 /** Mock data helpers for tests. */
 
 export function mockListResponse(

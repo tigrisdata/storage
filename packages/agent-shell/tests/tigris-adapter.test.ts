@@ -6,6 +6,7 @@ import {
 	mockListResponse,
 	mockPutResponse,
 	mockUpdateObjectResponse,
+	TEST_CONFIG,
 } from "./helpers.js";
 
 vi.mock("@tigrisdata/storage", () => ({
@@ -32,20 +33,15 @@ afterEach(() => {
 
 describe("TigrisAdapter", () => {
 	describe("constructor", () => {
-		it("creates with empty config", () => {
-			const fs = new TigrisAdapter();
-			expect(fs.config).toEqual({});
-		});
-
 		it("stores config", () => {
-			const fs = new TigrisAdapter({ bucket: "test-bucket" });
-			expect(fs.config).toEqual({ bucket: "test-bucket" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
+			expect(fs.config).toEqual(TEST_CONFIG);
 		});
 	});
 
 	describe("writeFile and readFile", () => {
 		it("writes to cache and reads back without hitting Tigris", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			await fs.writeFile("/file.txt", "hello");
 			const content = await fs.readFile("/file.txt");
@@ -55,7 +51,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("fetches from Tigris on cache miss", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedGet.mockResolvedValue(mockGetResponse("remote content"));
 			mockedHead.mockResolvedValue(
@@ -65,11 +61,11 @@ describe("TigrisAdapter", () => {
 			const content = await fs.readFile("/file.txt");
 
 			expect(content).toBe("remote content");
-			expect(mockedGet).toHaveBeenCalledWith("file.txt", "string", { config: { bucket: "test" } });
+			expect(mockedGet).toHaveBeenCalledWith("file.txt", "string", { config: TEST_CONFIG });
 		});
 
 		it("caches remote reads for subsequent access", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedGet.mockResolvedValue(mockGetResponse("remote content"));
 			mockedHead.mockResolvedValue(mockHeadResponse({ size: 14 }));
@@ -81,7 +77,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("throws ENOENT for missing files", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedGet.mockResolvedValue({ error: new Error("not found") });
 
@@ -89,7 +85,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("throws ENOENT for deleted files", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			await fs.writeFile("/file.txt", "content");
 			await fs.rm("/file.txt");
@@ -101,7 +97,7 @@ describe("TigrisAdapter", () => {
 
 	describe("readFileBuffer", () => {
 		it("returns Uint8Array for cached content", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			await fs.writeFile("/file.txt", "hello");
 			const buf = await fs.readFileBuffer("/file.txt");
@@ -113,7 +109,7 @@ describe("TigrisAdapter", () => {
 
 	describe("appendFile", () => {
 		it("appends to existing cached file", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			await fs.writeFile("/file.txt", "hello");
 			await fs.appendFile("/file.txt", " world");
@@ -123,7 +119,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("creates file if it does not exist", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedGet.mockResolvedValue({ error: new Error("not found") });
 
@@ -136,7 +132,7 @@ describe("TigrisAdapter", () => {
 
 	describe("exists", () => {
 		it("returns true for cached files", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			await fs.writeFile("/file.txt", "content");
 
@@ -145,7 +141,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("returns false for deleted files", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			await fs.writeFile("/file.txt", "content");
 			await fs.rm("/file.txt");
@@ -154,7 +150,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("checks Tigris for uncached paths", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedHead.mockResolvedValue(mockHeadResponse({ size: 5 }));
 
@@ -163,7 +159,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("checks list for directory existence", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedHead.mockResolvedValue({ data: undefined });
 			mockedList.mockResolvedValue(mockListResponse([{ name: "dir/file.txt", size: 5 }]));
@@ -174,7 +170,7 @@ describe("TigrisAdapter", () => {
 
 	describe("stat", () => {
 		it("returns stat for cached files", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			await fs.writeFile("/file.txt", "hello");
 
@@ -185,7 +181,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("returns stat for cached directories", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			await fs.mkdir("/dir");
 
@@ -195,7 +191,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("throws ENOENT for deleted paths", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			await fs.writeFile("/file.txt", "content");
 			await fs.rm("/file.txt");
@@ -206,7 +202,7 @@ describe("TigrisAdapter", () => {
 
 	describe("mkdir and readdir", () => {
 		it("creates directories recursively", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			await fs.mkdir("/a/b/c", { recursive: true });
 
@@ -216,7 +212,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("lists cached entries", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedList.mockResolvedValue(mockListResponse());
 
@@ -228,7 +224,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("merges cached and remote entries", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedList.mockResolvedValue(mockListResponse([{ name: "dir/remote.txt", size: 5 }]));
 
@@ -240,7 +236,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("excludes deleted entries from remote listing", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedList.mockResolvedValue(
 				mockListResponse([
@@ -259,7 +255,7 @@ describe("TigrisAdapter", () => {
 
 	describe("readdir edge cases", () => {
 		it("lists entries at root /", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedList.mockResolvedValue(mockListResponse());
 
@@ -272,7 +268,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("returns sorted entries", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedList.mockResolvedValue(mockListResponse());
 
@@ -285,7 +281,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("includes subdirectories from commonPrefixes", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedList.mockResolvedValue(mockListResponse([], ["dir/subdir/"]));
 
@@ -296,7 +292,7 @@ describe("TigrisAdapter", () => {
 
 	describe("cp", () => {
 		it("copies file content", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			await fs.writeFile("/src.txt", "content");
 			await fs.cp("/src.txt", "/dest.txt");
@@ -305,7 +301,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("copies directories recursively", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedList.mockResolvedValue(mockListResponse());
 
@@ -318,7 +314,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("throws EISDIR when copying directory without recursive", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			await fs.mkdir("/dir");
 
@@ -328,7 +324,7 @@ describe("TigrisAdapter", () => {
 
 	describe("rm", () => {
 		it("deletes a single file", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			await fs.writeFile("/file.txt", "content");
 			await fs.rm("/file.txt");
@@ -337,7 +333,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("recursively deletes nested directories", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedList.mockResolvedValue(mockListResponse());
 
@@ -352,7 +348,7 @@ describe("TigrisAdapter", () => {
 
 	describe("mv", () => {
 		it("moves dirty files in cache without hitting Tigris", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			await fs.writeFile("/old.txt", "content");
 			await fs.mv("/old.txt", "/new.txt");
@@ -362,7 +358,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("uses updateObject for files on Tigris", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedGet.mockResolvedValue(mockGetResponse("remote"));
 			mockedHead.mockResolvedValue(mockHeadResponse({ size: 6 }));
@@ -374,12 +370,12 @@ describe("TigrisAdapter", () => {
 
 			expect(mockedUpdateObject).toHaveBeenCalledWith("remote.txt", {
 				key: "new.txt",
-				config: { bucket: "test" },
+				config: TEST_CONFIG,
 			});
 		});
 
 		it("falls back to cp+rm when updateObject fails", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedGet.mockResolvedValue(mockGetResponse("remote"));
 			mockedHead.mockResolvedValue(mockHeadResponse({ size: 6 }));
@@ -396,30 +392,30 @@ describe("TigrisAdapter", () => {
 
 	describe("symlink and link", () => {
 		it("throws EPERM for symlink", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 			await expect(fs.symlink("/target", "/link")).rejects.toThrow("EPERM");
 		});
 
 		it("throws EPERM for hard link", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 			await expect(fs.link("/existing", "/new")).rejects.toThrow("EPERM");
 		});
 
 		it("throws EINVAL for readlink", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 			await expect(fs.readlink("/path")).rejects.toThrow("EINVAL");
 		});
 	});
 
 	describe("no-op methods", () => {
 		it("chmod does not throw", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 			await fs.writeFile("/file.txt", "content");
 			await expect(fs.chmod("/file.txt", 0o777)).resolves.toBeUndefined();
 		});
 
 		it("utimes does not throw", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 			await fs.writeFile("/file.txt", "content");
 			await expect(fs.utimes("/file.txt", new Date(), new Date())).resolves.toBeUndefined();
 		});
@@ -427,7 +423,7 @@ describe("TigrisAdapter", () => {
 
 	describe("lstat", () => {
 		it("delegates to stat", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 			await fs.writeFile("/file.txt", "hello");
 
 			const stat = await fs.lstat("/file.txt");
@@ -438,24 +434,24 @@ describe("TigrisAdapter", () => {
 
 	describe("realpath", () => {
 		it("returns normalized path", async () => {
-			const fs = new TigrisAdapter();
+			const fs = new TigrisAdapter(TEST_CONFIG);
 			expect(await fs.realpath("/a/b/../c")).toBe("/a/c");
 		});
 
 		it("normalizes . segments", async () => {
-			const fs = new TigrisAdapter();
+			const fs = new TigrisAdapter(TEST_CONFIG);
 			expect(await fs.realpath("/a/./b/./c")).toBe("/a/b/c");
 		});
 	});
 
 	describe("getAllPaths", () => {
 		it("returns only cached paths", () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 			expect(fs.getAllPaths()).toEqual([]);
 		});
 
 		it("includes written files and directories", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 			await fs.writeFile("/file.txt", "content");
 			await fs.mkdir("/dir");
 
@@ -467,7 +463,7 @@ describe("TigrisAdapter", () => {
 
 	describe("flush", () => {
 		it("puts dirty entries to Tigris", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedPut.mockResolvedValue(mockPutResponse());
 
@@ -476,12 +472,12 @@ describe("TigrisAdapter", () => {
 			await fs.flush();
 
 			expect(mockedPut).toHaveBeenCalledTimes(2);
-			expect(mockedPut).toHaveBeenCalledWith("a.txt", "aaa", { config: { bucket: "test" } });
-			expect(mockedPut).toHaveBeenCalledWith("b.txt", "bbb", { config: { bucket: "test" } });
+			expect(mockedPut).toHaveBeenCalledWith("a.txt", "aaa", { config: TEST_CONFIG });
+			expect(mockedPut).toHaveBeenCalledWith("b.txt", "bbb", { config: TEST_CONFIG });
 		});
 
 		it("removes deleted paths from Tigris", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedRemove.mockResolvedValue({ data: undefined });
 
@@ -489,11 +485,11 @@ describe("TigrisAdapter", () => {
 			await fs.rm("/file.txt");
 			await fs.flush();
 
-			expect(mockedRemove).toHaveBeenCalledWith("file.txt", { config: { bucket: "test" } });
+			expect(mockedRemove).toHaveBeenCalledWith("file.txt", { config: TEST_CONFIG });
 		});
 
 		it("is a no-op when nothing is dirty", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			await fs.flush();
 
@@ -502,7 +498,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("flushes Uint8Array content as Buffer", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedPut.mockResolvedValue(mockPutResponse());
 
@@ -516,7 +512,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("throws AggregateError on SDK failures", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedPut.mockResolvedValue({ error: new Error("upload failed") });
 
@@ -526,7 +522,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("reports all errors in AggregateError", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedPut.mockResolvedValue({ error: new Error("upload failed") });
 			mockedRemove.mockResolvedValue({ error: new Error("delete failed") });
@@ -546,7 +542,7 @@ describe("TigrisAdapter", () => {
 		});
 
 		it("does not mark clean on failure", async () => {
-			const fs = new TigrisAdapter({ bucket: "test" });
+			const fs = new TigrisAdapter(TEST_CONFIG);
 
 			mockedPut.mockResolvedValue({ error: new Error("upload failed") });
 
@@ -564,17 +560,17 @@ describe("TigrisAdapter", () => {
 
 	describe("resolvePath", () => {
 		it("resolves relative paths", () => {
-			const fs = new TigrisAdapter();
+			const fs = new TigrisAdapter(TEST_CONFIG);
 			expect(fs.resolvePath("/workspace", "file.txt")).toBe("/workspace/file.txt");
 		});
 
 		it("returns absolute paths as-is", () => {
-			const fs = new TigrisAdapter();
+			const fs = new TigrisAdapter(TEST_CONFIG);
 			expect(fs.resolvePath("/workspace", "/other/file.txt")).toBe("/other/file.txt");
 		});
 
 		it("resolves .. segments", () => {
-			const fs = new TigrisAdapter();
+			const fs = new TigrisAdapter(TEST_CONFIG);
 			expect(fs.resolvePath("/a/b", "../c.txt")).toBe("/a/c.txt");
 		});
 	});
