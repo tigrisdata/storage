@@ -9,6 +9,7 @@ export enum TigrisHeaders {
   BUCKET_LIST_SOURCE = 'X-Tigris-List-Source', // tigris or shadow
   SCHEDULE_MIGRATION = 'X-Tigris-Schedule-Migration',
   SERVED_FROM = 'X-Tigris-Served-From',
+  READ_SOURCE = 'X-Tigris-Read-Source',
 
   REGIONS = 'X-Tigris-Regions',
   SNAPSHOT = 'X-Tigris-Snapshot',
