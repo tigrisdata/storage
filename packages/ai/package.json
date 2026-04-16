@@ -1,0 +1,60 @@
+{
+  "name": "@tigrisdata/ai",
+  "version": "0.0.1",
+  "description": "Composed workflows for AI agents on Tigris — sandboxes, workspaces, checkpoints, and coordination",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc --noEmit && tsup",
+    "dev": "tsc --noEmit && tsup --watch",
+    "publint": "publint",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "format:check": "prettier --check src/**/*.ts",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run --config vitest.config.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "tigris",
+    "storage",
+    "sandbox",
+    "checkpoint"
+  ],
+  "author": "Tigris Data",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tigrisdata/storage.git",
+    "directory": "packages/ai"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@tigrisdata/storage": "^3.1.0",
+    "@tigrisdata/iam": "^2.1.0"
+  }
+}
