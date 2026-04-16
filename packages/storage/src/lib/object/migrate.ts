@@ -84,7 +84,9 @@ export async function isMigrated(
       .send(head)
       .then(async () => {
         return {
-          data: TigrisHeaders.SERVED_FROM.toLowerCase() in responseHeaders,
+          data:
+            responseHeaders[TigrisHeaders.READ_SOURCE]?.toLowerCase() !==
+            'block_shadow',
         };
       })
       .catch(handleError);
