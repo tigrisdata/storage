@@ -60,7 +60,7 @@ export async function teardownCoordination(
   const storageConfig = toStorageConfig(config);
 
   const result = await setBucketNotifications(bucket, {
-    notificationConfig: { enabled: false },
+    notificationConfig: {},
     config: storageConfig,
   });
 
