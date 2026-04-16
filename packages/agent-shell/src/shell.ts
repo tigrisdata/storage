@@ -18,7 +18,7 @@ export class TigrisShell {
 	private readonly bash: Bash;
 	private readonly adapter: TigrisAdapter;
 
-	constructor(config?: TigrisConfig, shellOptions?: ShellOptions) {
+	constructor(config: TigrisConfig, shellOptions?: ShellOptions) {
 		this.adapter = new TigrisAdapter(config);
 
 		const fs = new MountableFs({ base: new InMemoryFs() });

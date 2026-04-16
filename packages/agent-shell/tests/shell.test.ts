@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TigrisShell } from "../src/shell.js";
-import { mockListResponse, mockPutResponse } from "./helpers.js";
+import { mockListResponse, mockPutResponse, TEST_CONFIG } from "./helpers.js";
 
 vi.mock("@tigrisdata/storage", () => ({
 	get: vi.fn(),
@@ -25,30 +25,30 @@ afterEach(() => {
 
 describe("TigrisShell", () => {
 	describe("constructor", () => {
-		it("creates with no arguments", () => {
-			const shell = new TigrisShell();
+		it("creates with config", () => {
+			const shell = new TigrisShell(TEST_CONFIG);
 			expect(shell).toBeDefined();
 			expect(shell.engine).toBeDefined();
 			expect(shell.fs).toBeDefined();
 		});
 
-		it("accepts storage config", () => {
-			const shell = new TigrisShell({ bucket: "test" });
-			expect(shell.fs.config).toEqual({ bucket: "test" });
+		it("stores config on adapter", () => {
+			const shell = new TigrisShell(TEST_CONFIG);
+			expect(shell.fs.config).toEqual(TEST_CONFIG);
 		});
 
 		it("accepts shell options", () => {
-			const shell = new TigrisShell({ bucket: "test" }, { cwd: "/custom" });
+			const shell = new TigrisShell(TEST_CONFIG, { cwd: "/custom" });
 			expect(shell.engine.getCwd()).toBe("/custom");
 		});
 
 		it("defaults cwd to /workspace", () => {
-			const shell = new TigrisShell();
+			const shell = new TigrisShell(TEST_CONFIG);
 			expect(shell.engine.getCwd()).toBe("/workspace");
 		});
 
 		it("passes env to bash", async () => {
-			const shell = new TigrisShell({}, { env: { MY_VAR: "hello" } });
+			const shell = new TigrisShell(TEST_CONFIG, { env: { MY_VAR: "hello" } });
 			const result = await shell.exec("echo $MY_VAR");
 			expect(result.stdout.trim()).toBe("hello");
 		});
@@ -56,7 +56,7 @@ describe("TigrisShell", () => {
 
 	describe("exec", () => {
 		it("executes basic bash commands", async () => {
-			const shell = new TigrisShell();
+			const shell = new TigrisShell(TEST_CONFIG);
 
 			const result = await shell.exec('echo "hello"');
 			expect(result.stdout).toBe("hello\n");
@@ -64,7 +64,7 @@ describe("TigrisShell", () => {
 		});
 
 		it("writes and reads files in /workspace", async () => {
-			const shell = new TigrisShell();
+			const shell = new TigrisShell(TEST_CONFIG);
 
 			await shell.exec('echo "content" > file.txt');
 			const result = await shell.exec("cat file.txt");
@@ -72,7 +72,7 @@ describe("TigrisShell", () => {
 		});
 
 		it("supports pipes", async () => {
-			const shell = new TigrisShell();
+			const shell = new TigrisShell(TEST_CONFIG);
 
 			await shell.exec('echo "hello world" > file.txt');
 			const result = await shell.exec("cat file.txt | tr a-z A-Z");
@@ -82,7 +82,7 @@ describe("TigrisShell", () => {
 		it("supports mkdir and ls", async () => {
 			vi.mocked(list).mockResolvedValue(mockListResponse());
 
-			const shell = new TigrisShell();
+			const shell = new TigrisShell(TEST_CONFIG);
 
 			await shell.exec("mkdir -p dir/sub");
 			await shell.exec('echo "data" > dir/sub/file.txt');
@@ -91,7 +91,7 @@ describe("TigrisShell", () => {
 		});
 
 		it("uses /tmp as in-memory scratch space", async () => {
-			const shell = new TigrisShell();
+			const shell = new TigrisShell(TEST_CONFIG);
 
 			await shell.exec('echo "temp" > /tmp/scratch.txt');
 			const result = await shell.exec("cat /tmp/scratch.txt");
@@ -101,7 +101,7 @@ describe("TigrisShell", () => {
 		it("/tmp is separate from /workspace", async () => {
 			vi.mocked(list).mockResolvedValue(mockListResponse());
 
-			const shell = new TigrisShell();
+			const shell = new TigrisShell(TEST_CONFIG);
 
 			await shell.exec('echo "workspace" > /workspace/a.txt');
 			await shell.exec('echo "tmp" > /tmp/b.txt');
@@ -120,7 +120,7 @@ describe("TigrisShell", () => {
 				data: { url: "https://signed.url", expiresIn: 3600, operation: "get" },
 			});
 
-			const shell = new TigrisShell({ bucket: "test" });
+			const shell = new TigrisShell(TEST_CONFIG);
 			const result = await shell.exec("presign /file.txt");
 
 			expect(result.exitCode).toBe(0);
@@ -132,7 +132,7 @@ describe("TigrisShell", () => {
 				data: { snapshotVersion: "1713200000" },
 			});
 
-			const shell = new TigrisShell({ bucket: "test" });
+			const shell = new TigrisShell(TEST_CONFIG);
 			const result = await shell.exec("snapshot test-bucket");
 
 			expect(result.exitCode).toBe(0);
@@ -144,7 +144,7 @@ describe("TigrisShell", () => {
 		it("delegates to TigrisAdapter.flush", async () => {
 			vi.mocked(put).mockResolvedValue(mockPutResponse());
 
-			const shell = new TigrisShell({ bucket: "test" });
+			const shell = new TigrisShell(TEST_CONFIG);
 			await shell.exec('echo "data" > file.txt');
 			await shell.flush();
 
@@ -152,7 +152,7 @@ describe("TigrisShell", () => {
 		});
 
 		it("flush is a no-op when no writes occurred", async () => {
-			const shell = new TigrisShell({ bucket: "test" });
+			const shell = new TigrisShell(TEST_CONFIG);
 			await shell.flush();
 
 			expect(vi.mocked(put)).not.toHaveBeenCalled();
