@@ -7,7 +7,7 @@
   "workspaces": [
     "packages/storage",
     "packages/iam",
-    "packages/ai",
+    "packages/agent-kit",
     "packages/keyv-tigris",
     "packages/react"
   ],

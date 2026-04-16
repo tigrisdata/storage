@@ -1,5 +1,5 @@
 {
-  "name": "@tigrisdata/ai",
+  "name": "@tigrisdata/agent-kit",
   "version": "0.0.1",
   "description": "Composed workflows for AI agents on Tigris — sandboxes, workspaces, checkpoints, and coordination",
   "type": "module",
@@ -50,7 +50,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tigrisdata/storage.git",
-    "directory": "packages/ai"
+    "directory": "packages/agent-kit"
   },
   "license": "MIT",
   "dependencies": {

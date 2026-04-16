@@ -1,11 +1,11 @@
-# @tigrisdata/ai
+# @tigrisdata/agent-kit
 
 Composed workflows for AI agents on [Tigris](https://www.tigrisdata.com) object storage. Builds on `@tigrisdata/storage` and `@tigrisdata/iam` to provide higher-level operations for common agent patterns — sandboxes, workspaces, checkpoints, and coordination.
 
 ## Install
 
 ```bash
-npm install @tigrisdata/ai
+npm install @tigrisdata/agent-kit
 ```
 
 ## Configuration
@@ -33,7 +33,7 @@ All functions return a `TigrisResponse<T>` — a discriminated union of `{ data:
 Give each agent an isolated, copy-on-write clone of a shared dataset. Snapshots a base bucket, forks it N times, and optionally creates scoped credentials per fork.
 
 ```typescript
-import { createSandbox, teardownSandbox } from '@tigrisdata/ai';
+import { createSandbox, teardownSandbox } from '@tigrisdata/agent-kit';
 
 // Create 3 isolated forks of a dataset bucket
 // 'my-dataset' must have snapshots enabled
@@ -58,7 +58,7 @@ await teardownSandbox(sandbox);
 Provision a fresh working area for a single agent — a new bucket with optional TTL and scoped credentials in one call.
 
 ```typescript
-import { createWorkspace, teardownWorkspace } from '@tigrisdata/ai';
+import { createWorkspace, teardownWorkspace } from '@tigrisdata/agent-kit';
 
 const { data: workspace } = await createWorkspace('agent-workspace-abc', {
   ttl: { days: 1 },               // auto-expire objects after 1 day
@@ -78,7 +78,7 @@ await teardownWorkspace(workspace);
 Snapshot a bucket at a point in time and restore from it later by forking.
 
 ```typescript
-import { checkpoint, restore, listCheckpoints } from '@tigrisdata/ai';
+import { checkpoint, restore, listCheckpoints } from '@tigrisdata/agent-kit';
 
 // Take a checkpoint
 const { data: ckpt } = await checkpoint('training-data', {
@@ -106,7 +106,7 @@ const { data: restored } = await restore(
 Set up event-driven multi-agent pipelines using bucket notifications. One agent writes, Tigris fires a webhook, another agent reacts.
 
 ```typescript
-import { setupCoordination, teardownCoordination } from '@tigrisdata/ai';
+import { setupCoordination, teardownCoordination } from '@tigrisdata/agent-kit';
 
 // Configure notifications on a bucket
 await setupCoordination('pipeline-bucket', {
