@@ -36,9 +36,8 @@ Give each agent an isolated, copy-on-write clone of a shared dataset. Snapshots 
 import { createSandbox, teardownSandbox } from '@tigrisdata/ai';
 
 // Create 3 isolated forks of a dataset bucket
-const { data: sandbox, error } = await createSandbox({
-  baseBucket: 'my-dataset',       // must have snapshots enabled
-  count: 3,
+// 'my-dataset' must have snapshots enabled
+const { data: sandbox, error } = await createSandbox('my-dataset', 3, {
   prefix: 'experiment-run-42',    // optional, controls fork bucket names
   credentials: { role: 'Editor' }, // optional, creates scoped keys per fork
 });
@@ -61,8 +60,7 @@ Provision a fresh working area for a single agent — a new bucket with optional
 ```typescript
 import { createWorkspace, teardownWorkspace } from '@tigrisdata/ai';
 
-const { data: workspace } = await createWorkspace({
-  name: 'agent-workspace-abc',
+const { data: workspace } = await createWorkspace('agent-workspace-abc', {
   ttl: { days: 1 },               // auto-expire objects after 1 day
   enableSnapshots: true,           // allow checkpointing later
   credentials: { role: 'Editor' }, // optional scoped access key
@@ -111,15 +109,14 @@ Set up event-driven multi-agent pipelines using bucket notifications. One agent 
 import { setupCoordination, teardownCoordination } from '@tigrisdata/ai';
 
 // Configure notifications on a bucket
-await setupCoordination({
-  bucket: 'pipeline-bucket',
+await setupCoordination('pipeline-bucket', {
   webhookUrl: 'https://my-service.com/webhook',
   filter: 'WHERE `key` REGEXP "^results/"',
   auth: { token: 'my-webhook-secret' },
 });
 
 // Disable notifications
-await teardownCoordination({ bucket: 'pipeline-bucket' });
+await teardownCoordination('pipeline-bucket');
 ```
 
 ## API Reference
@@ -128,14 +125,14 @@ await teardownCoordination({ bucket: 'pipeline-bucket' });
 
 | Function | Description |
 |---|---|
-| `createSandbox(options)` | Snapshot + fork N times + scoped credentials |
+| `createSandbox(baseBucket, count, options?)` | Snapshot + fork N times + scoped credentials |
 | `teardownSandbox(sandbox, options?)` | Revoke credentials + delete forks |
 
 ### Workspaces
 
 | Function | Description |
 |---|---|
-| `createWorkspace(options)` | Create bucket + TTL + scoped credentials |
+| `createWorkspace(name, options?)` | Create bucket + TTL + scoped credentials |
 | `teardownWorkspace(workspace, options?)` | Revoke credentials + delete bucket |
 
 ### Checkpoints
@@ -150,8 +147,8 @@ await teardownCoordination({ bucket: 'pipeline-bucket' });
 
 | Function | Description |
 |---|---|
-| `setupCoordination(options)` | Configure bucket notifications |
-| `teardownCoordination(options)` | Clear bucket notifications |
+| `setupCoordination(bucket, options)` | Configure bucket notifications |
+| `teardownCoordination(bucket, options?)` | Clear bucket notifications |
 
 ## License
 

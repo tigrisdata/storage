@@ -6,8 +6,6 @@ import { toStorageConfig } from './config';
 // -- Types --
 
 export type SetupCoordinationOptions = {
-  /** The bucket to configure notifications on. */
-  bucket: string;
   /** Webhook URL to receive notifications. */
   webhookUrl: string;
   /** Optional key filter regex, e.g. `WHERE \`key\` REGEXP "^results/"`. */
@@ -20,16 +18,16 @@ export type SetupCoordinationOptions = {
 };
 
 export type TeardownCoordinationOptions = {
-  bucket: string;
   config?: TigrisAIConfig;
 };
 
 // -- Functions --
 
 export async function setupCoordination(
+  bucket: string,
   options: SetupCoordinationOptions
 ): Promise<TigrisResponse<void>> {
-  const { bucket, webhookUrl, filter, auth, config } = options;
+  const { webhookUrl, filter, auth, config } = options;
   const storageConfig = toStorageConfig(config);
 
   const result = await setBucketNotifications(bucket, {
@@ -54,9 +52,10 @@ export async function setupCoordination(
 }
 
 export async function teardownCoordination(
-  options: TeardownCoordinationOptions
+  bucket: string,
+  options?: TeardownCoordinationOptions
 ): Promise<TigrisResponse<void>> {
-  const { bucket, config } = options;
+  const { config } = options ?? {};
   const storageConfig = toStorageConfig(config);
 
   const result = await setBucketNotifications(bucket, {

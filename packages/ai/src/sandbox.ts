@@ -11,10 +11,6 @@ import { toStorageConfig, toIAMConfig } from './config';
 // -- Types --
 
 export type CreateSandboxOptions = {
-  /** The bucket to snapshot and fork from. Must have snapshots enabled. */
-  baseBucket: string;
-  /** Number of forks to create. */
-  count: number;
   /** Prefix for fork bucket names. Defaults to `${baseBucket}-sandbox-${timestamp}`. */
   prefix?: string;
   /** If provided, creates a scoped access key per fork with this role. */
@@ -45,9 +41,11 @@ export type TeardownSandboxOptions = {
 // -- Functions --
 
 export async function createSandbox(
-  options: CreateSandboxOptions
+  baseBucket: string,
+  count: number,
+  options?: CreateSandboxOptions
 ): Promise<TigrisResponse<Sandbox>> {
-  const { baseBucket, count, prefix, credentials, config } = options;
+  const { prefix, credentials, config } = options ?? {};
   const storageConfig = toStorageConfig(config);
   const iamConfig = toIAMConfig(config);
 

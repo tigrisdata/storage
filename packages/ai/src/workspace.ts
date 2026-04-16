@@ -7,8 +7,6 @@ import { toStorageConfig, toIAMConfig } from './config';
 // -- Types --
 
 export type CreateWorkspaceOptions = {
-  /** Bucket name for the workspace. */
-  name: string;
   access?: 'public' | 'private';
   /** Auto-expire objects after this many days. */
   ttl?: {
@@ -37,9 +35,10 @@ export type TeardownWorkspaceOptions = {
 // -- Functions --
 
 export async function createWorkspace(
-  options: CreateWorkspaceOptions
+  name: string,
+  options?: CreateWorkspaceOptions
 ): Promise<TigrisResponse<Workspace>> {
-  const { name, access, ttl, enableSnapshots, credentials, config } = options;
+  const { access, ttl, enableSnapshots, credentials, config } = options ?? {};
   const storageConfig = toStorageConfig(config);
   const iamConfig = toIAMConfig(config);
 

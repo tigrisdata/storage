@@ -26,7 +26,7 @@ describe.skipIf(skipTests)('createWorkspace / teardownWorkspace', () => {
   });
 
   it('should create a basic workspace and tear it down', async () => {
-    const result = await createWorkspace({ name: uniqueName('ws') });
+    const result = await createWorkspace(uniqueName('ws'));
 
     expect(result.error).toBeUndefined();
     expect(result.data).toBeDefined();
@@ -44,8 +44,7 @@ describe.skipIf(skipTests)('createWorkspace / teardownWorkspace', () => {
   });
 
   it('should create a workspace with TTL', async () => {
-    const result = await createWorkspace({
-      name: uniqueName('ws-ttl'),
+    const result = await createWorkspace(uniqueName('ws-ttl'), {
       ttl: { days: 1 },
     });
 
@@ -59,8 +58,7 @@ describe.skipIf(skipTests)('createWorkspace / teardownWorkspace', () => {
   });
 
   it('should create a workspace with snapshots enabled', async () => {
-    const result = await createWorkspace({
-      name: uniqueName('ws-snap'),
+    const result = await createWorkspace(uniqueName('ws-snap'), {
       enableSnapshots: true,
     });
 
@@ -73,8 +71,7 @@ describe.skipIf(skipTests)('createWorkspace / teardownWorkspace', () => {
   });
 
   it('should create a workspace with scoped credentials', async () => {
-    const result = await createWorkspace({
-      name: uniqueName('ws-creds'),
+    const result = await createWorkspace(uniqueName('ws-creds'), {
       credentials: { role: 'Editor' },
     });
 
@@ -111,8 +108,7 @@ describe.skipIf(skipTests)('checkpoint / restore / listCheckpoints', () => {
 
   it('should checkpoint and list checkpoints', async () => {
     // Create a bucket with snapshots enabled
-    const wsResult = await createWorkspace({
-      name: uniqueName('ckpt'),
+    const wsResult = await createWorkspace(uniqueName('ckpt'), {
       enableSnapshots: true,
     });
     expect(wsResult.error).toBeUndefined();
@@ -141,8 +137,7 @@ describe.skipIf(skipTests)('checkpoint / restore / listCheckpoints', () => {
 
   it('should restore from a checkpoint', async () => {
     // Create source bucket with snapshots
-    const wsResult = await createWorkspace({
-      name: uniqueName('restore-src'),
+    const wsResult = await createWorkspace(uniqueName('restore-src'), {
       enableSnapshots: true,
     });
     expect(wsResult.error).toBeUndefined();
@@ -192,8 +187,7 @@ describe.skipIf(skipTests)('createSandbox / teardownSandbox', () => {
   it('should create a sandbox with multiple forks', async () => {
     // Create a base bucket with snapshots and data
     const baseBucket = uniqueName('sandbox-base');
-    const wsResult = await createWorkspace({
-      name: baseBucket,
+    const wsResult = await createWorkspace(baseBucket, {
       enableSnapshots: true,
     });
     expect(wsResult.error).toBeUndefined();
@@ -204,9 +198,7 @@ describe.skipIf(skipTests)('createSandbox / teardownSandbox', () => {
     });
 
     // Create sandbox with 2 forks
-    const result = await createSandbox({
-      baseBucket,
-      count: 2,
+    const result = await createSandbox(baseBucket, 2, {
       prefix: uniqueName('sandbox-fork'),
     });
 
@@ -237,16 +229,13 @@ describe.skipIf(skipTests)('createSandbox / teardownSandbox', () => {
 
   it('should create a sandbox with scoped credentials per fork', async () => {
     const baseBucket = uniqueName('sandbox-creds');
-    const wsResult = await createWorkspace({
-      name: baseBucket,
+    const wsResult = await createWorkspace(baseBucket, {
       enableSnapshots: true,
     });
     expect(wsResult.error).toBeUndefined();
     extraBucketsToCleanup.push(baseBucket);
 
-    const result = await createSandbox({
-      baseBucket,
-      count: 2,
+    const result = await createSandbox(baseBucket, 2, {
       prefix: uniqueName('sandbox-cfork'),
       credentials: { role: 'Editor' },
     });
@@ -275,16 +264,13 @@ describe.skipIf(skipTests)('createSandbox / teardownSandbox', () => {
 
   it('should teardown a sandbox cleanly', async () => {
     const baseBucket = uniqueName('sandbox-td');
-    const wsResult = await createWorkspace({
-      name: baseBucket,
+    const wsResult = await createWorkspace(baseBucket, {
       enableSnapshots: true,
     });
     expect(wsResult.error).toBeUndefined();
     extraBucketsToCleanup.push(baseBucket);
 
-    const result = await createSandbox({
-      baseBucket,
-      count: 2,
+    const result = await createSandbox(baseBucket, 2, {
       prefix: uniqueName('sandbox-tdfork'),
       credentials: { role: 'Editor' },
     });
@@ -322,13 +308,12 @@ describe.skipIf(skipTests)('setupCoordination / teardownCoordination', () => {
 
   it('should setup and teardown coordination notifications', async () => {
     const bucket = uniqueName('coord');
-    const wsResult = await createWorkspace({ name: bucket });
+    const wsResult = await createWorkspace(bucket);
     expect(wsResult.error).toBeUndefined();
     bucketsToCleanup.push(bucket);
 
     // Setup coordination
-    const setupResult = await setupCoordination({
-      bucket,
+    const setupResult = await setupCoordination(bucket, {
       webhookUrl: 'https://example.com/webhook',
       filter: 'WHERE `key` REGEXP "^results/"',
       auth: { token: 'test-secret-token' },
@@ -336,7 +321,7 @@ describe.skipIf(skipTests)('setupCoordination / teardownCoordination', () => {
     expect(setupResult.error).toBeUndefined();
 
     // Teardown coordination
-    const teardownResult = await teardownCoordination({ bucket });
+    const teardownResult = await teardownCoordination(bucket);
     expect(teardownResult.error).toBeUndefined();
   });
 });
