@@ -53,7 +53,7 @@
 		"url": "git+https://github.com/tigrisdata/agent-shell.git"
 	},
 	"engines": {
-		"node": ">=18.0.0"
+		"node": ">=20.0.0"
 	},
 	"dependencies": {
 		"@tigrisdata/storage": "^3.1.0",
