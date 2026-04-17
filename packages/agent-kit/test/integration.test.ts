@@ -57,6 +57,21 @@ describe.skipIf(skipTests)('createWorkspace / teardownWorkspace', () => {
     expect(info.error).toBeUndefined();
   });
 
+  it('should create a workspace with TTL and credentials', async () => {
+    const result = await createWorkspace(uniqueName('ws-ttl-creds'), {
+      ttl: { days: 1 },
+      credentials: { role: 'Editor' },
+    });
+
+    expect(result.error).toBeUndefined();
+    workspace = result.data!;
+
+    // Credentials must be present even if TTL config fails
+    expect(workspace.credentials).toBeDefined();
+    expect(workspace.credentials!.accessKeyId).toBeTruthy();
+    expect(workspace.credentials!.secretAccessKey).toBeTruthy();
+  });
+
   it('should create a workspace with snapshots enabled', async () => {
     const result = await createWorkspace(uniqueName('ws-snap'), {
       enableSnapshots: true,

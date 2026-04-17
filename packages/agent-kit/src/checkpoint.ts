@@ -121,11 +121,13 @@ export async function listCheckpoints(
 
   return {
     data: {
-      checkpoints: result.data.snapshots.map((s) => ({
-        snapshotId: s.version ?? '',
-        name: s.name,
-        createdAt: s.creationDate,
-      })),
+      checkpoints: result.data.snapshots
+        .filter((s) => s.version != null)
+        .map((s) => ({
+          snapshotId: s.version!,
+          name: s.name,
+          createdAt: s.creationDate,
+        })),
       paginationToken: result.data.paginationToken,
     },
   };

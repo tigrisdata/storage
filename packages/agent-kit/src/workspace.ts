@@ -65,11 +65,8 @@ export async function createWorkspace(
     });
 
     if (ttlResult.error) {
-      // Bucket was created but TTL failed — return workspace without TTL
-      // rather than rolling back the bucket
-      return {
-        data: { bucket: name },
-      };
+      // TTL failed but bucket exists — continue to credential creation
+      // rather than returning early and skipping requested credentials
     }
   }
 
