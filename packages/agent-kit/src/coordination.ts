@@ -1,6 +1,6 @@
 import { setBucketNotifications } from '@tigrisdata/storage';
 import type { TigrisResponse } from '@shared/types';
-import type { TigrisAIConfig } from './config';
+import type { TigrisAgentKitConfig } from './config';
 import { toStorageConfig } from './config';
 
 // -- Types --
@@ -14,11 +14,11 @@ export type SetupCoordinationOptions = {
   auth?:
     | { token: string; username?: never; password?: never }
     | { username: string; password: string; token?: never };
-  config?: TigrisAIConfig;
+  config?: TigrisAgentKitConfig;
 };
 
 export type TeardownCoordinationOptions = {
-  config?: TigrisAIConfig;
+  config?: TigrisAgentKitConfig;
 };
 
 // -- Functions --

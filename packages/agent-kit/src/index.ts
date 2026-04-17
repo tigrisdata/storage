@@ -23,7 +23,7 @@ export type {
   RestoreOptions,
   RestoreResult,
   ListCheckpointsOptions,
-  ListCheckpointsResult,
+  ListCheckpointsResponse,
 } from './checkpoint';
 
 // Coordination — event-driven multi-agent pipelines via bucket notifications
@@ -34,4 +34,4 @@ export type {
 } from './coordination';
 
 // Config
-export type { TigrisAIConfig } from './config';
+export type { TigrisAgentKitConfig } from './config';

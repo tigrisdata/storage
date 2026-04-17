@@ -5,7 +5,7 @@ import {
 } from '@tigrisdata/storage';
 import { createAccessKey, removeAccessKey } from '@tigrisdata/iam';
 import type { TigrisResponse } from '@shared/types';
-import type { TigrisAIConfig } from './config';
+import type { TigrisAgentKitConfig } from './config';
 import { toStorageConfig, toIAMConfig } from './config';
 
 // -- Types --
@@ -17,7 +17,7 @@ export type CreateSandboxOptions = {
   credentials?: {
     role: 'Editor' | 'ReadOnly';
   };
-  config?: TigrisAIConfig;
+  config?: TigrisAgentKitConfig;
 };
 
 export type SandboxFork = {
@@ -35,7 +35,7 @@ export type Sandbox = {
 };
 
 export type TeardownSandboxOptions = {
-  config?: TigrisAIConfig;
+  config?: TigrisAgentKitConfig;
 };
 
 // -- Functions --

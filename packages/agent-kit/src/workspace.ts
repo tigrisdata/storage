@@ -1,7 +1,7 @@
 import { createBucket, removeBucket, setBucketTtl } from '@tigrisdata/storage';
 import { createAccessKey, removeAccessKey } from '@tigrisdata/iam';
 import type { TigrisResponse } from '@shared/types';
-import type { TigrisAIConfig } from './config';
+import type { TigrisAgentKitConfig } from './config';
 import { toStorageConfig, toIAMConfig } from './config';
 
 // -- Types --
@@ -17,7 +17,7 @@ export type CreateWorkspaceOptions = {
   credentials?: {
     role: 'Editor' | 'ReadOnly';
   };
-  config?: TigrisAIConfig;
+  config?: TigrisAgentKitConfig;
 };
 
 export type Workspace = {
@@ -29,7 +29,7 @@ export type Workspace = {
 };
 
 export type TeardownWorkspaceOptions = {
-  config?: TigrisAIConfig;
+  config?: TigrisAgentKitConfig;
 };
 
 // -- Functions --

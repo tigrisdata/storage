@@ -1,9 +1,9 @@
 /**
- * Unified configuration for Tigris AI operations.
+ * Unified configuration for Tigris Agentic operations.
  * Maps to both TigrisStorageConfig and TigrisIAMConfig internally.
  * When omitted, the underlying SDKs use environment variables.
  */
-export type TigrisAIConfig = {
+export type TigrisAgentKitConfig = {
   accessKeyId?: string;
   secretAccessKey?: string;
   sessionToken?: string;
@@ -13,7 +13,7 @@ export type TigrisAIConfig = {
   mgmtEndpoint?: string;
 };
 
-export function toStorageConfig(config?: TigrisAIConfig) {
+export function toStorageConfig(config?: TigrisAgentKitConfig) {
   if (!config) return undefined;
   return {
     accessKeyId: config.accessKeyId,
@@ -24,7 +24,7 @@ export function toStorageConfig(config?: TigrisAIConfig) {
   };
 }
 
-export function toIAMConfig(config?: TigrisAIConfig) {
+export function toIAMConfig(config?: TigrisAgentKitConfig) {
   if (!config) return undefined;
   return {
     accessKeyId: config.accessKeyId,

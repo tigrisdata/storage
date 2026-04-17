@@ -4,7 +4,7 @@ import {
   listBucketSnapshots,
 } from '@tigrisdata/storage';
 import type { TigrisResponse } from '@shared/types';
-import type { TigrisAIConfig } from './config';
+import type { TigrisAgentKitConfig } from './config';
 import { toStorageConfig } from './config';
 
 // -- Types --
@@ -12,7 +12,7 @@ import { toStorageConfig } from './config';
 export type CheckpointOptions = {
   /** Optional name for the checkpoint snapshot. */
   name?: string;
-  config?: TigrisAIConfig;
+  config?: TigrisAgentKitConfig;
 };
 
 export type Checkpoint = {
@@ -24,7 +24,7 @@ export type Checkpoint = {
 export type RestoreOptions = {
   /** Name for the restored fork bucket. Defaults to `${bucket}-restore-${timestamp}`. */
   forkName?: string;
-  config?: TigrisAIConfig;
+  config?: TigrisAgentKitConfig;
 };
 
 export type RestoreResult = {
@@ -34,10 +34,10 @@ export type RestoreResult = {
 export type ListCheckpointsOptions = {
   limit?: number;
   paginationToken?: string;
-  config?: TigrisAIConfig;
+  config?: TigrisAgentKitConfig;
 };
 
-export type ListCheckpointsResult = {
+export type ListCheckpointsResponse = {
   checkpoints: Checkpoint[];
   paginationToken?: string;
 };
@@ -102,7 +102,7 @@ export async function restore(
 export async function listCheckpoints(
   bucket: string,
   options?: ListCheckpointsOptions
-): Promise<TigrisResponse<ListCheckpointsResult>> {
+): Promise<TigrisResponse<ListCheckpointsResponse>> {
   const storageConfig = toStorageConfig(options?.config);
 
   const result = await listBucketSnapshots(bucket, {
