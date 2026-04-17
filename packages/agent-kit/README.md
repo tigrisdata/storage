@@ -1,6 +1,8 @@
 # @tigrisdata/agent-kit
 
-Composed workflows for AI agents on [Tigris](https://www.tigrisdata.com) object storage. Builds on `@tigrisdata/storage` and `@tigrisdata/iam` to provide higher-level operations for common agent patterns — sandboxes, workspaces, checkpoints, and coordination.
+Storage workflows for AI agents on [Tigris](https://www.tigrisdata.com). Gives agents isolated storage environments, persistent checkpoints, scoped credentials, and event-driven coordination — all backed by Tigris object storage.
+
+Builds on `@tigrisdata/storage` and `@tigrisdata/iam` to compose higher-level operations from low-level storage and IAM primitives.
 
 ## Install
 
@@ -28,21 +30,20 @@ const config = {
 
 All functions return a `TigrisResponse<T>` — a discriminated union of `{ data: T }` or `{ error: Error }`.
 
-## Sandboxes
+## Storage Sandboxes
 
-Give each agent an isolated, copy-on-write clone of a shared dataset. Snapshots a base bucket, forks it N times, and optionally creates scoped credentials per fork.
+Give each agent its own isolated copy of a shared dataset using copy-on-write storage forks. Each fork is an independent bucket — agents can read and write freely without affecting the original data or each other. Forks are instant at any size with zero data duplication.
 
 ```typescript
 import { createSandbox, teardownSandbox } from '@tigrisdata/agent-kit';
 
-// Create 3 isolated forks of a dataset bucket
 // 'my-dataset' must have snapshots enabled
 const { data: sandbox, error } = await createSandbox('my-dataset', 3, {
   prefix: 'experiment-run-42',    // optional, controls fork bucket names
   credentials: { role: 'Editor' }, // optional, creates scoped keys per fork
 });
 
-// Each fork has its own bucket and (optionally) credentials
+// Each fork is its own bucket with isolated storage
 for (const fork of sandbox.forks) {
   console.log(fork.bucket);
   // fork.credentials?.accessKeyId
@@ -55,7 +56,7 @@ await teardownSandbox(sandbox);
 
 ## Workspaces
 
-Provision a fresh working area for a single agent — a new bucket with optional TTL and scoped credentials in one call.
+Provision dedicated storage for a single agent — a new bucket with optional TTL for auto-cleanup and scoped credentials for least-privilege access.
 
 ```typescript
 import { createWorkspace, teardownWorkspace } from '@tigrisdata/agent-kit';
@@ -75,7 +76,7 @@ await teardownWorkspace(workspace);
 
 ## Checkpoints
 
-Snapshot a bucket at a point in time and restore from it later by forking.
+Capture the state of a bucket at a point in time and restore from it later. Restore creates a copy-on-write fork from that snapshot, leaving the original untouched.
 
 ```typescript
 import { checkpoint, restore, listCheckpoints } from '@tigrisdata/agent-kit';
@@ -92,18 +93,18 @@ for (const c of list.checkpoints) {
   console.log(c.snapshotId, c.name, c.createdAt);
 }
 
-// Restore from a checkpoint into a new fork
+// Restore into a new fork from that checkpoint
 const { data: restored } = await restore(
   'training-data',
   ckpt.snapshotId,
   { forkName: 'training-data-retry' },
 );
-// restored.bucket — a copy-on-write clone at that point in time
+// restored.bucket — an independent copy-on-write clone at that point in time
 ```
 
 ## Coordination
 
-Set up event-driven multi-agent pipelines using bucket notifications. One agent writes, Tigris fires a webhook, another agent reacts.
+Wire up event-driven multi-agent pipelines using bucket notifications. When objects are created, deleted, or modified, Tigris fires a webhook — no polling required.
 
 ```typescript
 import { setupCoordination, teardownCoordination } from '@tigrisdata/agent-kit';
@@ -121,7 +122,7 @@ await teardownCoordination('pipeline-bucket');
 
 ## API Reference
 
-### Sandboxes
+### Storage Sandboxes
 
 | Function | Description |
 |---|---|
