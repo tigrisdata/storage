@@ -1,7 +1,7 @@
 {
 	"name": "@tigrisdata/agent-shell",
 	"version": "0.0.2",
-	"description": "A virtual bash environment for AI agents, backed by Tigris object storage",
+	"description": "Persistent sandboxed storage for AI agents — a bash filesystem backed by Tigris object storage",
 	"type": "module",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -37,14 +37,16 @@
 		"prepare": "husky"
 	},
 	"keywords": [
-		"bash",
-		"shell",
 		"ai",
 		"agent",
+		"agent-storage",
+		"sandbox",
+		"sandboxed-storage",
+		"bash",
+		"shell",
+		"filesystem",
 		"tigris",
-		"object-storage",
-		"virtual-filesystem",
-		"sandbox"
+		"object-storage"
 	],
 	"author": "Tigris Data Inc",
 	"license": "MIT",
