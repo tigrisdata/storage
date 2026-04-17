@@ -1,8 +1,18 @@
 # @tigrisdata/agent-shell
 
-A virtual bash environment for AI agents, backed by [Tigris](https://www.tigrisdata.com/) object storage.
+Persistent sandboxed storage for AI agents — a bash filesystem backed by [Tigris](https://www.tigrisdata.com/) object storage.
 
-Built on top of [just-bash](https://github.com/vercel-labs/just-bash), this package gives AI agents a full bash shell where the filesystem is a Tigris bucket. Agents can run standard Unix commands (`cat`, `grep`, `sed`, `jq`, `awk`, etc.), and all file operations are backed by Tigris.
+AI agents produce artifacts — reports, data, configs, logs. These need to go somewhere durable, shareable, and globally accessible. `@tigrisdata/agent-shell` gives agents a familiar bash interface (`cat`, `grep`, `sed`, `jq`, `awk`, pipes, redirects) where every file operation is backed by a Tigris bucket.
+
+**What makes it a storage sandbox:**
+
+- **Isolated** — writes stay in-memory until you explicitly flush. No partial state leaks to storage.
+- **Durable** — flush persists files to Tigris, globally distributed.
+- **Checkpointable** — take snapshots of your storage at any point. Roll back if needed.
+- **Forkable** — create copy-on-write forks of a bucket for safe experimentation.
+- **Shareable** — generate presigned URLs for any stored file.
+
+Built on [just-bash](https://github.com/vercel-labs/just-bash) for the shell engine and [@tigrisdata/storage](https://www.npmjs.com/package/@tigrisdata/storage) for the storage layer.
 
 ## Quick Start
 
@@ -42,19 +52,21 @@ const shell = new TigrisShell({
 });
 ```
 
-## How It Works
+## Storage Sandbox Model
 
-The shell uses an in-memory write-back cache:
+The shell uses an in-memory write-back cache that acts as a storage sandbox:
 
-- **Writes stay local** until you call `flush()`
-- **Reads check cache first**, then fetch from Tigris on cache miss
-- **Deletes are tracked** locally and applied on flush
+```
+Agent writes file  →  cached locally (isolated)
+Agent reads file   →  cache hit or fetch from Tigris
+Agent calls flush  →  all changes persisted atomically
+```
 
-This means:
+This gives you:
 
-- Fast execution — most operations never hit the network
-- Atomic commits — if your agent fails midway, nothing is written to the bucket
-- You control when data is persisted
+- **Isolation** — nothing touches storage until you say so
+- **Atomic commits** — if your agent fails midway, no partial state is written
+- **Fast execution** — most operations never hit the network
 
 ```typescript
 const shell = new TigrisShell({
@@ -71,7 +83,7 @@ try {
   // Only persist on success
   await shell.flush();
 } catch (e) {
-  // Nothing was written to Tigris
+  // Nothing was written to Tigris — storage is clean
 }
 ```
 
@@ -89,7 +101,7 @@ const shell = new TigrisShell(
   {
     cwd: "/workspace", // Starting directory (default: /workspace)
     env: { DEBUG: "true" }, // Initial environment variables
-  },
+  }
 );
 ```
 
@@ -99,7 +111,7 @@ In addition to all standard bash commands from [just-bash](https://github.com/ve
 
 ### presign
 
-Generate a presigned URL for an object.
+Generate presigned URLs for sharing or uploading.
 
 ```bash
 presign /path/to/file.txt                    # GET URL, 1 hour expiry
@@ -109,7 +121,7 @@ presign /path/to/file.txt --put              # PUT URL for uploads
 
 ### snapshot
 
-Create or list point-in-time bucket snapshots.
+Checkpoint your dataset. Create or list point-in-time bucket snapshots.
 
 ```bash
 snapshot my-bucket                           # Create a snapshot
@@ -119,7 +131,7 @@ snapshot my-bucket --list                    # List all snapshots
 
 ### fork
 
-Create a fork of a bucket, optionally from a snapshot.
+Branch your dataset. Create a copy-on-write fork for safe experimentation.
 
 ```bash
 fork source-bucket my-fork                   # Fork a bucket
@@ -136,7 +148,7 @@ forks my-bucket
 
 ### bundle
 
-Batch-download multiple objects as a tar archive.
+Batch-download multiple files as a tar archive.
 
 ```bash
 bundle file1.txt file2.txt                   # Download as tar
@@ -146,7 +158,7 @@ bundle file1.txt file2.txt --zstd           # Download as zstd tar
 
 ## Advanced: Compose with just-bash
 
-For more control, import `TigrisAdapter` and the commands separately to build your own shell configuration. This is useful when you need multiple buckets mounted at different paths.
+For more control, import `TigrisAdapter` and the commands separately to build your own storage layout. This is useful when you need multiple buckets mounted at different paths.
 
 ```typescript
 import { Bash, MountableFs, InMemoryFs } from "just-bash";
@@ -161,7 +173,7 @@ const auth = {
 const workspaceConfig = { bucket: "agent-workspace", ...auth };
 const datasetsConfig = { bucket: "shared-datasets", ...auth };
 
-// Build your own filesystem layout
+// Build your own storage layout
 const fs = new MountableFs({ base: new InMemoryFs() });
 fs.mount("/workspace", new TigrisAdapter(workspaceConfig));
 fs.mount("/datasets", new TigrisAdapter(datasetsConfig));
@@ -190,7 +202,7 @@ await workspaceFs.flush();
 
 | Export         | Description                                                        |
 | -------------- | ------------------------------------------------------------------ |
-| `TigrisShell`  | Main class — shell backed by a Tigris bucket                       |
+| `TigrisShell`  | Main class — sandboxed storage shell backed by a Tigris bucket     |
 | `TigrisConfig` | Config type: `{ bucket, accessKeyId, secretAccessKey, endpoint? }` |
 | `ShellOptions` | Shell options type: `{ cwd?, env? }`                               |
 
@@ -229,12 +241,12 @@ new TigrisShell(config: TigrisConfig, shellOptions?: ShellOptions)
 
 All examples require `TIGRIS_STORAGE_ACCESS_KEY_ID`, `TIGRIS_STORAGE_SECRET_ACCESS_KEY`, and `TIGRIS_STORAGE_BUCKET` env vars. Run with `npx tsx examples/<name>.ts`.
 
-| Example                                                 | Description                                              |
-| ------------------------------------------------------- | -------------------------------------------------------- |
-| [`basic.ts`](examples/basic.ts)                         | Write files, pipe/process, flush to Tigris               |
-| [`presign.ts`](examples/presign.ts)                     | Generate shareable and upload URLs for objects           |
-| [`snapshot-and-fork.ts`](examples/snapshot-and-fork.ts) | Take snapshots and create forks — Tigris-unique features |
-| [`multi-bucket.ts`](examples/multi-bucket.ts)           | Mount two buckets, copy across them (advanced)           |
+| Example                                                 | Description                                            |
+| ------------------------------------------------------- | ------------------------------------------------------ |
+| [`basic.ts`](examples/basic.ts)                         | Write files, pipe/process, flush to Tigris             |
+| [`presign.ts`](examples/presign.ts)                     | Generate shareable and upload URLs for stored files    |
+| [`snapshot-and-fork.ts`](examples/snapshot-and-fork.ts) | Checkpoint and branch storage — Tigris-unique features |
+| [`multi-bucket.ts`](examples/multi-bucket.ts)           | Mount multiple buckets, copy across them (advanced)    |
 
 ## Development
 
