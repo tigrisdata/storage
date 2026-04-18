@@ -39,6 +39,7 @@ NC='\033[0m' # No Color
 PACKAGES=(
   "packages/storage"
   "packages/iam"
+  "packages/agent-kit"
   "packages/keyv-tigris"
   "packages/react"
 )
@@ -73,7 +74,7 @@ release_package() {
 
 main() {
   echo -e "${BLUE}🚀 Starting @tigrisdata release process${NC}"
-  echo -e "${BLUE}   Release order: storage → iam → keyv-tigris → react${NC}\n"
+  echo -e "${BLUE}   Release order: storage → iam → agent-kit → keyv-tigris → react${NC}\n"
 
   cd "$ROOT_DIR"
 

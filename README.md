@@ -8,6 +8,7 @@ This monorepo contains multiple JavaScript/TypeScript packages for Tigris object
 
 - [`@tigrisdata/storage`](./packages/storage) - Tigris Storage SDK
 - [`@tigrisdata/iam`](./packages/iam) - Tigris IAM SDK
+- [`@tigrisdata/agent-kit`](./packages/agent-kit) - Composed workflows for AI agents (sandboxes, workspaces, checkpoints, coordination)
 - [`@tigrisdata/keyv-tigris`](./packages/keyv-tigris) - Tigris adapter for [Keyv](https://keyv.org/)
 - [`@tigrisdata/react`](./packages/react) - Ready to use React Components and Hooks
 
