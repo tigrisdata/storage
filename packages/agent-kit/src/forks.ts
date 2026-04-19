@@ -10,8 +10,8 @@ import { toStorageConfig, toIAMConfig } from './config';
 
 // -- Types --
 
-export type CreateSandboxOptions = {
-  /** Prefix for fork bucket names. Defaults to `${baseBucket}-sandbox-${timestamp}`. */
+export type CreateForksOptions = {
+  /** Prefix for fork bucket names. Defaults to `${baseBucket}-fork-${timestamp}`. */
   prefix?: string;
   /** If provided, creates a scoped access key per fork with this role. */
   credentials?: {
@@ -20,7 +20,7 @@ export type CreateSandboxOptions = {
   config?: TigrisAgentKitConfig;
 };
 
-export type SandboxFork = {
+export type Fork = {
   bucket: string;
   credentials?: {
     accessKeyId: string;
@@ -28,23 +28,23 @@ export type SandboxFork = {
   };
 };
 
-export type Sandbox = {
+export type Forks = {
   baseBucket: string;
   snapshotId: string;
-  forks: SandboxFork[];
+  forks: Fork[];
 };
 
-export type TeardownSandboxOptions = {
+export type TeardownForksOptions = {
   config?: TigrisAgentKitConfig;
 };
 
 // -- Functions --
 
-export async function createSandbox(
+export async function createForks(
   baseBucket: string,
   count: number,
-  options?: CreateSandboxOptions
-): Promise<TigrisResponse<Sandbox>> {
+  options?: CreateForksOptions
+): Promise<TigrisResponse<Forks>> {
   const { prefix, credentials, config } = options ?? {};
   const storageConfig = toStorageConfig(config);
   const iamConfig = toIAMConfig(config);
@@ -63,8 +63,8 @@ export async function createSandbox(
   }
 
   const snapshotId = snapshotResult.data.snapshotVersion;
-  const forkPrefix = prefix ?? `${baseBucket}-sandbox-${Date.now()}`;
-  const forks: SandboxFork[] = [];
+  const forkPrefix = prefix ?? `${baseBucket}-fork-${Date.now()}`;
+  const forks: Fork[] = [];
 
   // Step 2: Create forks with optional scoped credentials
   for (let i = 0; i < count; i++) {
@@ -81,7 +81,7 @@ export async function createSandbox(
       break;
     }
 
-    const fork: SandboxFork = { bucket: forkName };
+    const fork: Fork = { bucket: forkName };
 
     if (credentials) {
       const keyResult = await createAccessKey(`${forkName}-key`, {
@@ -102,7 +102,7 @@ export async function createSandbox(
 
   if (forks.length === 0) {
     return {
-      error: new Error('Failed to create any forks for sandbox'),
+      error: new Error('Failed to create any forks'),
     };
   }
 
@@ -115,15 +115,15 @@ export async function createSandbox(
   };
 }
 
-export async function teardownSandbox(
-  sandbox: Sandbox,
-  options?: TeardownSandboxOptions
+export async function teardownForks(
+  forkSet: Forks,
+  options?: TeardownForksOptions
 ): Promise<TigrisResponse<void>> {
   const storageConfig = toStorageConfig(options?.config);
   const iamConfig = toIAMConfig(options?.config);
   const errors: string[] = [];
 
-  for (const fork of sandbox.forks) {
+  for (const fork of forkSet.forks) {
     // Revoke credentials first
     if (fork.credentials) {
       const keyResult = await removeAccessKey(fork.credentials.accessKeyId, {
@@ -151,7 +151,7 @@ export async function teardownSandbox(
   if (errors.length > 0) {
     return {
       error: new Error(
-        `Sandbox teardown completed with errors:\n${errors.join('\n')}`
+        `Fork teardown completed with errors:\n${errors.join('\n')}`
       ),
     };
   }

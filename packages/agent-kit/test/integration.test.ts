@@ -1,8 +1,8 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { put, get, removeBucket, getBucketInfo } from '@tigrisdata/storage';
 import { createWorkspace, teardownWorkspace } from '../src/workspace';
-import { createSandbox, teardownSandbox } from '../src/sandbox';
-import type { Sandbox } from '../src/sandbox';
+import { createForks, teardownForks } from '../src/forks';
+import type { Forks } from '../src/forks';
 import { checkpoint, restore, listCheckpoints } from '../src/checkpoint';
 import { setupCoordination, teardownCoordination } from '../src/coordination';
 import type { Workspace } from '../src/workspace';
@@ -182,16 +182,16 @@ describe.skipIf(skipTests)('checkpoint / restore / listCheckpoints', () => {
   });
 });
 
-// ── Sandbox ──
+// ── Forks ──
 
-describe.skipIf(skipTests)('createSandbox / teardownSandbox', () => {
-  let sandbox: Sandbox | undefined;
+describe.skipIf(skipTests)('createForks / teardownForks', () => {
+  let forkSet: Forks | undefined;
   const extraBucketsToCleanup: string[] = [];
 
   afterEach(async () => {
-    if (sandbox) {
-      await teardownSandbox(sandbox);
-      sandbox = undefined;
+    if (forkSet) {
+      await teardownForks(forkSet);
+      forkSet = undefined;
     }
     for (const bucket of extraBucketsToCleanup) {
       await removeBucket(bucket, { force: true });
@@ -199,9 +199,9 @@ describe.skipIf(skipTests)('createSandbox / teardownSandbox', () => {
     extraBucketsToCleanup.length = 0;
   });
 
-  it('should create a sandbox with multiple forks', async () => {
+  it('should create forks from a base bucket', async () => {
     // Create a base bucket with snapshots and data
-    const baseBucket = uniqueName('sandbox-base');
+    const baseBucket = uniqueName('forks-base');
     const wsResult = await createWorkspace(baseBucket, {
       enableSnapshots: true,
     });
@@ -212,18 +212,18 @@ describe.skipIf(skipTests)('createSandbox / teardownSandbox', () => {
       config: { bucket: baseBucket },
     });
 
-    // Create sandbox with 2 forks
-    const result = await createSandbox(baseBucket, 2, {
-      prefix: uniqueName('sandbox-fork'),
+    // Create 2 forks
+    const result = await createForks(baseBucket, 2, {
+      prefix: uniqueName('fork'),
     });
 
     expect(result.error).toBeUndefined();
     expect(result.data!.forks).toHaveLength(2);
     expect(result.data!.snapshotId).toBeTruthy();
-    sandbox = result.data!;
+    forkSet = result.data!;
 
     // Verify each fork has the data from the base bucket
-    for (const fork of sandbox.forks) {
+    for (const fork of forkSet.forks) {
       const getResult = await get('dataset.json', 'string', {
         config: { bucket: fork.bucket },
       });
@@ -233,40 +233,40 @@ describe.skipIf(skipTests)('createSandbox / teardownSandbox', () => {
 
     // Verify forks are isolated — write to fork 0, fork 1 unchanged
     await put('fork-0-only.txt', 'only in fork 0', {
-      config: { bucket: sandbox.forks[0].bucket },
+      config: { bucket: forkSet.forks[0].bucket },
     });
 
     const fork1Check = await get('fork-0-only.txt', 'string', {
-      config: { bucket: sandbox.forks[1].bucket },
+      config: { bucket: forkSet.forks[1].bucket },
     });
     expect(fork1Check.error).toBeDefined();
   });
 
-  it('should create a sandbox with scoped credentials per fork', async () => {
-    const baseBucket = uniqueName('sandbox-creds');
+  it('should create forks with scoped credentials', async () => {
+    const baseBucket = uniqueName('forks-creds');
     const wsResult = await createWorkspace(baseBucket, {
       enableSnapshots: true,
     });
     expect(wsResult.error).toBeUndefined();
     extraBucketsToCleanup.push(baseBucket);
 
-    const result = await createSandbox(baseBucket, 2, {
-      prefix: uniqueName('sandbox-cfork'),
+    const result = await createForks(baseBucket, 2, {
+      prefix: uniqueName('fork-cred'),
       credentials: { role: 'Editor' },
     });
 
     expect(result.error).toBeUndefined();
-    sandbox = result.data!;
+    forkSet = result.data!;
 
     // Each fork should have its own credentials
-    for (const fork of sandbox.forks) {
+    for (const fork of forkSet.forks) {
       expect(fork.credentials).toBeDefined();
       expect(fork.credentials!.accessKeyId).toBeTruthy();
       expect(fork.credentials!.secretAccessKey).toBeTruthy();
     }
 
     // Verify scoped credentials can write to their own fork
-    const fork = sandbox.forks[0];
+    const fork = forkSet.forks[0];
     const putResult = await put('scoped-write.txt', 'written with scoped key', {
       config: {
         bucket: fork.bucket,
@@ -277,25 +277,25 @@ describe.skipIf(skipTests)('createSandbox / teardownSandbox', () => {
     expect(putResult.error).toBeUndefined();
   });
 
-  it('should teardown a sandbox cleanly', async () => {
-    const baseBucket = uniqueName('sandbox-td');
+  it('should teardown forks cleanly', async () => {
+    const baseBucket = uniqueName('forks-td');
     const wsResult = await createWorkspace(baseBucket, {
       enableSnapshots: true,
     });
     expect(wsResult.error).toBeUndefined();
     extraBucketsToCleanup.push(baseBucket);
 
-    const result = await createSandbox(baseBucket, 2, {
-      prefix: uniqueName('sandbox-tdfork'),
+    const result = await createForks(baseBucket, 2, {
+      prefix: uniqueName('fork-td'),
       credentials: { role: 'Editor' },
     });
     expect(result.error).toBeUndefined();
-    const sbx = result.data!;
+    const created = result.data!;
 
-    const forkBuckets = sbx.forks.map((f) => f.bucket);
+    const forkBuckets = created.forks.map((f) => f.bucket);
 
     // Teardown
-    const teardown = await teardownSandbox(sbx);
+    const teardown = await teardownForks(created);
     expect(teardown.error).toBeUndefined();
 
     // Verify forks are deleted
@@ -304,8 +304,8 @@ describe.skipIf(skipTests)('createSandbox / teardownSandbox', () => {
       expect(info.error).toBeDefined();
     }
 
-    // sandbox is cleaned up, don't double-teardown in afterEach
-    sandbox = undefined;
+    // Forks cleaned up, don't double-teardown in afterEach
+    forkSet = undefined;
   });
 });
 

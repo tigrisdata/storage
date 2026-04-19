@@ -30,28 +30,28 @@ const config = {
 
 All functions return a `TigrisResponse<T>` — a discriminated union of `{ data: T }` or `{ error: Error }`.
 
-## Storage Sandboxes
+## Forks
 
 Give each agent its own isolated copy of a shared dataset using copy-on-write storage forks. Each fork is an independent bucket — agents can read and write freely without affecting the original data or each other. Forks are instant at any size with zero data duplication.
 
 ```typescript
-import { createSandbox, teardownSandbox } from '@tigrisdata/agent-kit';
+import { createForks, teardownForks } from '@tigrisdata/agent-kit';
 
 // 'my-dataset' must have snapshots enabled
-const { data: sandbox, error } = await createSandbox('my-dataset', 3, {
+const { data: forkSet, error } = await createForks('my-dataset', 3, {
   prefix: 'experiment-run-42',    // optional, controls fork bucket names
   credentials: { role: 'Editor' }, // optional, creates scoped keys per fork
 });
 
 // Each fork is its own bucket with isolated storage
-for (const fork of sandbox.forks) {
+for (const fork of forkSet.forks) {
   console.log(fork.bucket);
   // fork.credentials?.accessKeyId
   // fork.credentials?.secretAccessKey
 }
 
 // Clean up — revokes credentials, deletes all fork buckets
-await teardownSandbox(sandbox);
+await teardownForks(forkSet);
 ```
 
 ## Workspaces
@@ -122,12 +122,12 @@ await teardownCoordination('pipeline-bucket');
 
 ## API Reference
 
-### Storage Sandboxes
+### Forks
 
 | Function | Description |
 |---|---|
-| `createSandbox(baseBucket, count, options?)` | Snapshot + fork N times + scoped credentials |
-| `teardownSandbox(sandbox, options?)` | Revoke credentials + delete forks |
+| `createForks(baseBucket, count, options?)` | Snapshot + fork N times + scoped credentials |
+| `teardownForks(forkSet, options?)` | Revoke credentials + delete forks |
 
 ### Workspaces
 
