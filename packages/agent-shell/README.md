@@ -101,7 +101,7 @@ const shell = new TigrisShell(
   {
     cwd: "/workspace", // Starting directory (default: /workspace)
     env: { DEBUG: "true" }, // Initial environment variables
-  }
+  },
 );
 ```
 
@@ -158,7 +158,11 @@ bundle file1.txt file2.txt --zstd           # Download as zstd tar
 
 ## Advanced: Compose with just-bash
 
-For more control, import `TigrisAdapter` and the commands separately to build your own storage layout. This is useful when you need multiple buckets mounted at different paths.
+For more control, install [just-bash](https://github.com/vercel-labs/just-bash) alongside agent-shell to build custom storage layouts with multiple buckets:
+
+```bash
+npm install @tigrisdata/agent-shell just-bash
+```
 
 ```typescript
 import { Bash, MountableFs, InMemoryFs } from "just-bash";

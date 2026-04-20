@@ -25,6 +25,7 @@ export function showWelcome(terminal: Terminal) {
 	);
 	terminal.writeln("");
 	terminal.writeln(
-		`${DIM}Or use bash commands directly — files are stored in memory until you flush.${RESET}`,
+		`${DIM}After configuring, all bash commands are available. Files are stored${RESET}`,
 	);
+	terminal.writeln(`${DIM}in memory until you run flush.${RESET}`);
 }
