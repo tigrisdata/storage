@@ -18,6 +18,7 @@ export class ShellLoop {
 	private shell: TigrisShell | null = null;
 	private terminal: Terminal;
 	private busy = false;
+	private cwd: string | undefined;
 
 	constructor(terminal: Terminal) {
 		this.terminal = terminal;
@@ -152,7 +153,14 @@ export class ShellLoop {
 		}
 
 		try {
-			const result = await this.shell.exec(command);
+			const result = await this.shell.engine.exec(command, {
+				...(this.cwd !== undefined && { cwd: this.cwd }),
+			});
+
+			// Track cwd changes (e.g. cd) across exec calls
+			if (result.env?.PWD) {
+				this.cwd = result.env.PWD;
+			}
 
 			if (result.stdout) {
 				this.writeOutput(result.stdout);
@@ -204,6 +212,7 @@ export class ShellLoop {
 		this.shell = new TigrisShell(config, {
 			env: { BUCKET: bucket },
 		});
+		this.cwd = undefined;
 
 		this.writeOutput(`${GREEN}Connected to bucket: ${bucket}${RESET}\r\n`);
 		this.writeOutput("\r\n");
