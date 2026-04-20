@@ -1,11 +1,11 @@
-// Sandbox — isolated copy-on-write forks for parallel agent work
-export { createSandbox, teardownSandbox } from './sandbox';
+// Forks — isolated copy-on-write forks for parallel agent work
+export { createForks, teardownForks } from './forks';
 export type {
-  CreateSandboxOptions,
-  Sandbox,
-  SandboxFork,
-  TeardownSandboxOptions,
-} from './sandbox';
+  CreateForksOptions,
+  Forks,
+  Fork,
+  TeardownForksOptions,
+} from './forks';
 
 // Workspace — single-agent working area with optional TTL and credentials
 export { createWorkspace, teardownWorkspace } from './workspace';

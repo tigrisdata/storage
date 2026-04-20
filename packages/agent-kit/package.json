@@ -1,7 +1,7 @@
 {
   "name": "@tigrisdata/agent-kit",
   "version": "0.0.1",
-  "description": "Composed workflows for AI agents on Tigris — sandboxes, workspaces, checkpoints, and coordination",
+  "description": "Composed workflows for AI agents on Tigris — forks, workspaces, checkpoints, and coordination",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -43,7 +43,7 @@
     "agents",
     "tigris",
     "storage",
-    "sandbox",
+    "forks",
     "checkpoint"
   ],
   "author": "Tigris Data",
