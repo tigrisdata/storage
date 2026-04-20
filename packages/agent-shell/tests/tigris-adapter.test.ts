@@ -166,6 +166,30 @@ describe("TigrisAdapter", () => {
 
 			expect(await fs.exists("/dir")).toBe(true);
 		});
+
+		it("returns false when remote calls throw", async () => {
+			const fs = new TigrisAdapter(TEST_CONFIG);
+
+			mockedHead.mockRejectedValue(new Error("network error"));
+
+			expect(await fs.exists("/remote.txt")).toBe(false);
+		});
+
+		it("uses empty prefix for root / when checking directory existence", async () => {
+			const fs = new TigrisAdapter(TEST_CONFIG);
+
+			mockedHead.mockResolvedValue({ data: undefined });
+			mockedList.mockResolvedValue(mockListResponse([{ name: "file.txt" }]));
+
+			expect(await fs.exists("/")).toBe(true);
+
+			expect(mockedList).toHaveBeenCalledWith({
+				prefix: "",
+				delimiter: "/",
+				limit: 1,
+				config: TEST_CONFIG,
+			});
+		});
 	});
 
 	describe("stat", () => {
@@ -197,6 +221,17 @@ describe("TigrisAdapter", () => {
 			await fs.rm("/file.txt");
 
 			await expect(fs.stat("/file.txt")).rejects.toThrow("ENOENT");
+		});
+
+		it("returns directory stat for root /", async () => {
+			const fs = new TigrisAdapter(TEST_CONFIG);
+
+			const stat = await fs.stat("/");
+			expect(stat.isFile).toBe(false);
+			expect(stat.isDirectory).toBe(true);
+			expect(stat.isSymbolicLink).toBe(false);
+			expect(mockedHead).not.toHaveBeenCalled();
+			expect(mockedList).not.toHaveBeenCalled();
 		});
 	});
 
@@ -265,6 +300,42 @@ describe("TigrisAdapter", () => {
 			const entries = await fs.readdir("/");
 			expect(entries).toContain("a.txt");
 			expect(entries).toContain("b.txt");
+		});
+
+		it("uses empty prefix for root / when listing remote entries", async () => {
+			const fs = new TigrisAdapter(TEST_CONFIG);
+
+			mockedList.mockResolvedValue(mockListResponse([{ name: "remote.txt" }]));
+
+			await fs.readdir("/");
+
+			expect(mockedList).toHaveBeenCalledWith({
+				prefix: "",
+				delimiter: "/",
+				config: TEST_CONFIG,
+			});
+		});
+
+		it("returns cached entries even when remote list throws", async () => {
+			const fs = new TigrisAdapter(TEST_CONFIG);
+
+			mockedList.mockRejectedValue(new Error("network error"));
+
+			await fs.writeFile("/cached.txt", "data");
+
+			const entries = await fs.readdir("/");
+			expect(entries).toContain("cached.txt");
+		});
+
+		it("returns cached entries even when remote list returns error", async () => {
+			const fs = new TigrisAdapter(TEST_CONFIG);
+
+			mockedList.mockResolvedValue({ error: new Error("access denied") });
+
+			await fs.writeFile("/cached.txt", "data");
+
+			const entries = await fs.readdir("/");
+			expect(entries).toContain("cached.txt");
 		});
 
 		it("returns sorted entries", async () => {
