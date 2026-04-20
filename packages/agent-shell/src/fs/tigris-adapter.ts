@@ -109,21 +109,38 @@ export class TigrisAdapter implements IFileSystem {
 		if (this.cache.has(normalized)) return true;
 		if (this.cache.isDeleted(normalized)) return false;
 
-		const result = await head(this.toKey(normalized), { config: this.config });
-		if (result && "data" in result && result.data) return true;
+		try {
+			const result = await head(this.toKey(normalized), { config: this.config });
+			if (result && "data" in result && result.data) return true;
 
-		const listResult = await list({
-			prefix: `${this.toKey(normalized)}/`,
-			delimiter: "/",
-			limit: 1,
-			...{ config: this.config },
-		});
-		if ("error" in listResult) return false;
-		return listResult.data.items.length > 0 || listResult.data.commonPrefixes.length > 0;
+			const existsKey = this.toKey(normalized);
+			const listResult = await list({
+				prefix: existsKey ? `${existsKey}/` : "",
+				delimiter: "/",
+				limit: 1,
+				...{ config: this.config },
+			});
+			if ("error" in listResult) return false;
+			return listResult.data.items.length > 0 || listResult.data.commonPrefixes.length > 0;
+		} catch {
+			return false;
+		}
 	}
 
 	async stat(path: string): Promise<FsStat> {
 		const normalized = this.normalizePath(path);
+
+		// Root is always a directory
+		if (normalized === "/") {
+			return {
+				isFile: false,
+				isDirectory: true,
+				isSymbolicLink: false,
+				mode: DEFAULT_DIR_MODE,
+				size: 0,
+				mtime: new Date(),
+			};
+		}
 
 		const cached = this.cache.get(normalized);
 		if (cached) {
@@ -163,8 +180,9 @@ export class TigrisAdapter implements IFileSystem {
 			};
 		}
 
+		const statKey = this.toKey(normalized);
 		const listResult = await list({
-			prefix: `${this.toKey(normalized)}/`,
+			prefix: statKey ? `${statKey}/` : "",
 			delimiter: "/",
 			limit: 1,
 			...{ config: this.config },
@@ -231,20 +249,25 @@ export class TigrisAdapter implements IFileSystem {
 	}
 
 	private async collectRemoteEntries(normalized: string, entries: Set<string>): Promise<void> {
-		const tigrisPrefix = `${this.toKey(normalized)}/`;
-		const result = await list({
-			prefix: tigrisPrefix,
-			delimiter: "/",
-			...{ config: this.config },
-		});
+		try {
+			const key = this.toKey(normalized);
+			const tigrisPrefix = key ? `${key}/` : "";
+			const result = await list({
+				prefix: tigrisPrefix,
+				delimiter: "/",
+				...{ config: this.config },
+			});
 
-		if ("error" in result) return;
+			if ("error" in result) return;
 
-		for (const item of result.data.items) {
-			this.addRemoteEntry(item.name, tigrisPrefix, normalized, entries);
-		}
-		for (const prefix of result.data.commonPrefixes) {
-			this.addRemoteEntry(prefix, tigrisPrefix, normalized, entries);
+			for (const item of result.data.items) {
+				this.addRemoteEntry(item.name, tigrisPrefix, normalized, entries);
+			}
+			for (const prefix of result.data.commonPrefixes) {
+				this.addRemoteEntry(prefix, tigrisPrefix, normalized, entries);
+			}
+		} catch {
+			// Network errors should not prevent listing cached entries
 		}
 	}
 
