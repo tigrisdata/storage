@@ -1,7 +1,6 @@
+import type { TigrisConfig } from "@tigrisdata/agent-shell";
+import { TigrisShell } from "@tigrisdata/agent-shell";
 import type { Terminal } from "@xterm/xterm";
-import type { Bash, BashExecResult } from "just-bash";
-import type { TigrisConfig } from "../../src/index.js";
-import { TigrisShell } from "../../src/index.js";
 import { getCredentials, setCredentials } from "./credentials.js";
 
 const PROMPT = "\x1b[32m$ \x1b[0m";
@@ -17,13 +16,11 @@ export class ShellLoop {
 	private history: string[] = [];
 	private historyIndex = -1;
 	private shell: TigrisShell | null = null;
-	private bash: Bash;
 	private terminal: Terminal;
 	private busy = false;
 
-	constructor(terminal: Terminal, bash: Bash) {
+	constructor(terminal: Terminal) {
 		this.terminal = terminal;
-		this.bash = bash;
 	}
 
 	start() {
@@ -144,16 +141,18 @@ export class ShellLoop {
 			return;
 		}
 
+		if (!this.shell) {
+			this.writeOutput(`${RED}Not configured. Run 'configure' first.${RESET}\r\n`);
+			return;
+		}
+
 		if (command === "flush") {
 			await this.handleFlush();
 			return;
 		}
 
-		// Use TigrisShell if configured, otherwise plain bash
-		const engine = this.shell ? this.shell : { exec: (cmd: string) => this.bash.exec(cmd) };
-
 		try {
-			const result: BashExecResult = await engine.exec(command);
+			const result = await this.shell.exec(command);
 
 			if (result.stdout) {
 				this.writeOutput(result.stdout);
@@ -202,7 +201,6 @@ export class ShellLoop {
 		const config: TigrisConfig = { bucket, accessKeyId, secretAccessKey };
 		setCredentials(config);
 
-		// Create TigrisShell with BUCKET env var for use in snapshot/fork commands
 		this.shell = new TigrisShell(config, {
 			env: { BUCKET: bucket },
 		});

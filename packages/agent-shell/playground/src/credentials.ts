@@ -1,4 +1,4 @@
-import type { TigrisConfig } from "../../src/index.js";
+import type { TigrisConfig } from "@tigrisdata/agent-shell";
 
 let stored: TigrisConfig | null = null;
 

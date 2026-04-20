@@ -1,7 +1,6 @@
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
-import { Bash, InMemoryFs } from "just-bash";
 import { ShellLoop } from "./shell-loop.js";
 import { showWelcome } from "./welcome.js";
 
@@ -37,10 +36,7 @@ fitAddon.fit();
 
 window.addEventListener("resize", () => fitAddon.fit());
 
-// Basic bash for before configure — in-memory only
-const bash = new Bash({ fs: new InMemoryFs(), cwd: "/workspace" });
-
 showWelcome(terminal);
 
-const loop = new ShellLoop(terminal, bash);
+const loop = new ShellLoop(terminal);
 loop.start();
