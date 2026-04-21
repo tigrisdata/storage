@@ -21,9 +21,9 @@ import { createBundleCommand } from "../src/commands/bundle.js";
 import { createForkCommand, createForksListCommand } from "../src/commands/fork.js";
 import { createPresignCommand } from "../src/commands/presign.js";
 import { createSnapshotCommand } from "../src/commands/snapshot.js";
-import { TEST_CONFIG } from "./helpers.js";
+import { TEST_CONFIG_WITH_BUCKET } from "./helpers.js";
 
-const config = TEST_CONFIG;
+const config = TEST_CONFIG_WITH_BUCKET;
 
 // Minimal CommandContext for testing
 function makeCtx() {

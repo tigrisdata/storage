@@ -23,10 +23,12 @@ const DEFAULT_DIR_MODE = 0o755; // Placeholder — object storage has no POSIX p
  */
 export class TigrisAdapter implements IFileSystem {
 	private readonly cache = new FsCache();
-	readonly config: TigrisConfig;
+	private readonly sdkConfig: TigrisConfig & { bucket: string };
+	readonly bucket: string;
 
-	constructor(config: TigrisConfig) {
-		this.config = config;
+	constructor(config: TigrisConfig, bucket: string) {
+		this.bucket = bucket;
+		this.sdkConfig = { ...config, bucket };
 	}
 
 	// ── Path helpers ──────────────────────────────────────────────
@@ -56,12 +58,12 @@ export class TigrisAdapter implements IFileSystem {
 			throw new Error(`ENOENT: no such file or directory, open '${path}'`);
 		}
 
-		const result = await get(this.toKey(normalized), "string", { config: this.config });
+		const result = await get(this.toKey(normalized), "string", { config: this.sdkConfig });
 		if ("error" in result) {
 			throw new Error(`ENOENT: no such file or directory, open '${path}'`);
 		}
 
-		const headResult = await head(this.toKey(normalized), { config: this.config });
+		const headResult = await head(this.toKey(normalized), { config: this.sdkConfig });
 		const mtime =
 			headResult && "data" in headResult && headResult.data ? headResult.data.modified : new Date();
 
@@ -110,7 +112,7 @@ export class TigrisAdapter implements IFileSystem {
 		if (this.cache.isDeleted(normalized)) return false;
 
 		try {
-			const result = await head(this.toKey(normalized), { config: this.config });
+			const result = await head(this.toKey(normalized), { config: this.sdkConfig });
 			if (result && "data" in result && result.data) return true;
 
 			const existsKey = this.toKey(normalized);
@@ -118,7 +120,7 @@ export class TigrisAdapter implements IFileSystem {
 				prefix: existsKey ? `${existsKey}/` : "",
 				delimiter: "/",
 				limit: 1,
-				...{ config: this.config },
+				...{ config: this.sdkConfig },
 			});
 			if ("error" in listResult) return false;
 			return listResult.data.items.length > 0 || listResult.data.commonPrefixes.length > 0;
@@ -168,7 +170,7 @@ export class TigrisAdapter implements IFileSystem {
 			throw new Error(`ENOENT: no such file or directory, stat '${path}'`);
 		}
 
-		const headResult = await head(this.toKey(normalized), { config: this.config });
+		const headResult = await head(this.toKey(normalized), { config: this.sdkConfig });
 		if (headResult && "data" in headResult && headResult.data) {
 			return {
 				isFile: true,
@@ -185,7 +187,7 @@ export class TigrisAdapter implements IFileSystem {
 			prefix: statKey ? `${statKey}/` : "",
 			delimiter: "/",
 			limit: 1,
-			...{ config: this.config },
+			...{ config: this.sdkConfig },
 		});
 		if ("error" in listResult) {
 			throw new Error(`ENOENT: no such file or directory, stat '${path}'`);
@@ -255,7 +257,7 @@ export class TigrisAdapter implements IFileSystem {
 			const result = await list({
 				prefix: tigrisPrefix,
 				delimiter: "/",
-				...{ config: this.config },
+				...{ config: this.sdkConfig },
 			});
 
 			if ("error" in result) return;
@@ -330,7 +332,7 @@ export class TigrisAdapter implements IFileSystem {
 
 		const result = await updateObject(this.toKey(srcNorm), {
 			key: this.toKey(destNorm),
-			...{ config: this.config },
+			...{ config: this.sdkConfig },
 		});
 		if ("error" in result) {
 			await this.cp(src, dest, { recursive: true });
@@ -388,7 +390,7 @@ export class TigrisAdapter implements IFileSystem {
 		await Promise.all(
 			dirty.map(({ path, entry }) => {
 				const body = typeof entry.content === "string" ? entry.content : Buffer.from(entry.content);
-				return put(this.toKey(path), body, { config: this.config }).then((result) => {
+				return put(this.toKey(path), body, { config: this.sdkConfig }).then((result) => {
 					if ("error" in result) {
 						errors.push(new Error(`flush put "${path}": ${result.error.message}`));
 					}
@@ -398,7 +400,7 @@ export class TigrisAdapter implements IFileSystem {
 
 		await Promise.all(
 			deleted.map((path) =>
-				remove(this.toKey(path), { config: this.config }).then((result) => {
+				remove(this.toKey(path), { config: this.sdkConfig }).then((result) => {
 					if ("error" in result) {
 						errors.push(new Error(`flush remove "${path}": ${result.error.message}`));
 					}

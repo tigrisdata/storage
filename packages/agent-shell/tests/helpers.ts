@@ -1,11 +1,20 @@
 import type { TigrisConfig } from "../src/types.js";
 
-/** Test config with dummy credentials. */
+/** Test config with dummy access key credentials. */
 export const TEST_CONFIG: TigrisConfig = {
+	accessKeyId: "tid_test",
+	secretAccessKey: "tsec_test",
+};
+
+/** Test config with bucket for auto-mount. */
+export const TEST_CONFIG_WITH_BUCKET: TigrisConfig = {
 	bucket: "test",
 	accessKeyId: "tid_test",
 	secretAccessKey: "tsec_test",
 };
+
+/** Test bucket name for adapter tests. */
+export const TEST_BUCKET = "test";
 
 /** Mock data helpers for tests. */
 
