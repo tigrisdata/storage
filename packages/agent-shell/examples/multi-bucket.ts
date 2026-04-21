@@ -1,6 +1,4 @@
-import { Bash, InMemoryFs, MountableFs } from "just-bash";
-import { createTigrisCommands } from "../src/commands/index.js";
-import { TigrisAdapter } from "../src/fs/tigris-adapter.js";
+import { TigrisShell } from "../src/index.js";
 
 const bucket1 = process.env.TIGRIS_STORAGE_BUCKET;
 const bucket2 = process.env.TIGRIS_STORAGE_BUCKET_2;
@@ -13,25 +11,17 @@ if (!bucket1 || !bucket2 || !accessKeyId || !secretAccessKey) {
 	process.exit(1);
 }
 
-// Mount two buckets at different paths
-const workspaceFs = new TigrisAdapter({ bucket: bucket1, accessKeyId, secretAccessKey });
-const datasetsFs = new TigrisAdapter({ bucket: bucket2, accessKeyId, secretAccessKey });
-
-const fs = new MountableFs({ base: new InMemoryFs() });
-fs.mount("/workspace", workspaceFs);
-fs.mount("/datasets", datasetsFs);
-
-const bash = new Bash({
-	fs,
-	cwd: "/workspace",
-	customCommands: createTigrisCommands(workspaceFs.config),
-});
+// Create shell and mount two buckets
+const shell = new TigrisShell(
+	{ accessKeyId, secretAccessKey, bucket: bucket1 },
+	{ cwd: "/workspace" },
+);
+shell.mount(bucket2, "/datasets");
 
 // Copy across buckets and process
-await bash.exec("cp /datasets/data.csv ./local.csv");
-await bash.exec("cat local.csv | sort -t, -k2 -rn > sorted.csv");
+await shell.exec("cp /datasets/data.csv ./local.csv");
+await shell.exec("cat local.csv | sort -t, -k2 -rn > sorted.csv");
 
-// Flush each independently
-await workspaceFs.flush();
-await datasetsFs.flush();
+// Flush all mounts
+await shell.flush();
 console.log("Both buckets flushed.");

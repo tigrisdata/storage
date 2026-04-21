@@ -42,13 +42,20 @@ await shell.flush();
 
 ## Authentication
 
-All three fields are required — bucket, access key, and secret key:
+Two auth modes are supported. At least one is required:
 
 ```typescript
+// Access key auth
 const shell = new TigrisShell({
-  bucket: process.env.TIGRIS_STORAGE_BUCKET,
   accessKeyId: process.env.TIGRIS_STORAGE_ACCESS_KEY_ID,
   secretAccessKey: process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY,
+  bucket: process.env.TIGRIS_STORAGE_BUCKET, // optional — auto-mounts at /workspace
+});
+
+// Session token auth (from OAuth login)
+const shell = new TigrisShell({
+  sessionToken: "...",
+  organizationId: "...",
 });
 ```
 
@@ -156,9 +163,37 @@ bundle file1.txt file2.txt --gzip           # Download as gzip tar
 bundle file1.txt file2.txt --zstd           # Download as zstd tar
 ```
 
-## Advanced: Compose with just-bash
+## Multi-Bucket
 
-For more control, install [just-bash](https://github.com/vercel-labs/just-bash) alongside agent-shell to build custom storage layouts with multiple buckets:
+Mount multiple buckets at different paths:
+
+```typescript
+import { TigrisShell } from "@tigrisdata/agent-shell";
+
+const shell = new TigrisShell({
+  accessKeyId: process.env.TIGRIS_STORAGE_ACCESS_KEY_ID,
+  secretAccessKey: process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY,
+  bucket: "agent-workspace", // auto-mounted at /workspace
+});
+
+shell.mount("shared-datasets", "/datasets");
+
+await shell.exec("cat /datasets/training/labels.csv | head -10");
+await shell.exec("cp /datasets/training/labels.csv ./local-copy.csv");
+await shell.exec('echo "processed" > results.txt');
+
+// Flush all mounts, or a specific one
+await shell.flush(); // all
+await shell.flush("/datasets"); // just /datasets
+
+// List and unmount
+shell.listMounts(); // [{ bucket: "agent-workspace", mountPoint: "/workspace" }, ...]
+shell.unmount("/datasets");
+```
+
+### Advanced: Compose with just-bash
+
+For full control over the filesystem layout, install [just-bash](https://github.com/vercel-labs/just-bash) alongside agent-shell:
 
 ```bash
 npm install @tigrisdata/agent-shell just-bash
@@ -174,41 +209,30 @@ const auth = {
   secretAccessKey: process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY,
 };
 
-const workspaceConfig = { bucket: "agent-workspace", ...auth };
-const datasetsConfig = { bucket: "shared-datasets", ...auth };
-
-// Build your own storage layout
 const fs = new MountableFs({ base: new InMemoryFs() });
-fs.mount("/workspace", new TigrisAdapter(workspaceConfig));
-fs.mount("/datasets", new TigrisAdapter(datasetsConfig));
+fs.mount("/workspace", new TigrisAdapter(auth, "agent-workspace"));
+fs.mount("/datasets", new TigrisAdapter(auth, "shared-datasets"));
 
 const bash = new Bash({
   fs,
   cwd: "/workspace",
   customCommands: [
-    ...createTigrisCommands(workspaceConfig),
-    // your own custom commands
+    ...createTigrisCommands({ ...auth, bucket: "agent-workspace" }),
   ],
 });
 
-await bash.exec("cat /datasets/training/labels.csv | head -10");
-await bash.exec("cp /datasets/training/labels.csv ./local-copy.csv");
-await bash.exec('echo "processed" > results.txt');
-
-// Flush a specific mount
-const workspaceFs = fs.getMount("/workspace") as TigrisAdapter;
-await workspaceFs.flush();
+await bash.exec("cp /datasets/data.csv ./local.csv");
 ```
 
 ## API Reference
 
 ### `@tigrisdata/agent-shell`
 
-| Export         | Description                                                        |
-| -------------- | ------------------------------------------------------------------ |
-| `TigrisShell`  | Main class — sandboxed storage shell backed by a Tigris bucket     |
-| `TigrisConfig` | Config type: `{ bucket, accessKeyId, secretAccessKey, endpoint? }` |
-| `ShellOptions` | Shell options type: `{ cwd?, env? }`                               |
+| Export         | Description                                                                                           |
+| -------------- | ----------------------------------------------------------------------------------------------------- |
+| `TigrisShell`  | Main class — sandboxed storage shell backed by Tigris                                                 |
+| `TigrisConfig` | Config type: `{ accessKeyId?, secretAccessKey?, sessionToken?, organizationId?, bucket?, endpoint? }` |
+| `ShellOptions` | Shell options type: `{ cwd?, env? }`                                                                  |
 
 #### `TigrisShell`
 
@@ -216,12 +240,14 @@ await workspaceFs.flush();
 new TigrisShell(config: TigrisConfig, shellOptions?: ShellOptions)
 ```
 
-| Method          | Returns                   | Description                     |
-| --------------- | ------------------------- | ------------------------------- |
-| `exec(command)` | `Promise<BashExecResult>` | Execute a bash command          |
-| `flush()`       | `Promise<void>`           | Persist cached writes to Tigris |
-| `engine`        | `Bash`                    | Underlying just-bash instance   |
-| `fs`            | `TigrisAdapter`           | Underlying filesystem instance  |
+| Method                      | Returns                         | Description                        |
+| --------------------------- | ------------------------------- | ---------------------------------- |
+| `exec(command)`             | `Promise<BashExecResult>`       | Execute a bash command             |
+| `mount(bucket, mountPoint)` | `void`                          | Mount a bucket at a path           |
+| `unmount(mountPoint)`       | `void`                          | Unmount a path                     |
+| `listMounts()`              | `Array<{ bucket, mountPoint }>` | List current mounts                |
+| `flush(mountPoint?)`        | `Promise<void>`                 | Flush all mounts or a specific one |
+| `engine`                    | `Bash`                          | Underlying just-bash instance      |
 
 ### `@tigrisdata/agent-shell/fs`
 
