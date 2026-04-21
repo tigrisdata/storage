@@ -5,6 +5,9 @@
 	"type": "module",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
+	"bin": {
+		"tigris-shell": "dist/cli.js"
+	},
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
@@ -17,6 +20,10 @@
 		"./commands": {
 			"types": "./dist/commands/index.d.ts",
 			"import": "./dist/commands/index.js"
+		},
+		"./repl": {
+			"types": "./dist/repl/index.d.ts",
+			"import": "./dist/repl/index.js"
 		}
 	},
 	"publishConfig": {
