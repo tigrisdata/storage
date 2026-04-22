@@ -1,6 +1,5 @@
 import type { Command } from "just-bash";
 import type { TigrisConfig } from "../types.js";
-import { createBundleCommand } from "./bundle.js";
 import { createForkCommand, createForksListCommand } from "./fork.js";
 import { createPresignCommand } from "./presign.js";
 import { createSnapshotCommand } from "./snapshot.js";
@@ -14,11 +13,9 @@ export function createTigrisCommands(config: TigrisConfig): Command[] {
 		createSnapshotCommand(config),
 		createForkCommand(config),
 		createForksListCommand(config),
-		createBundleCommand(config),
 	];
 }
 
-export { createBundleCommand } from "./bundle.js";
 export { createForkCommand, createForksListCommand } from "./fork.js";
 export { createPresignCommand } from "./presign.js";
 export { createSnapshotCommand } from "./snapshot.js";

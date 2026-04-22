@@ -108,32 +108,32 @@ export class ReplSession {
 			const mountPoint = `/${options.bucket}`;
 			const newShell = new TigrisShell(newConfig, { cwd: mountPoint });
 			this.commitSession(newConfig, newShell, "access-key");
+			this.cwd = mountPoint;
 			io.write(`Configured. Mounted ${options.bucket} at ${mountPoint}\n`);
 		} else {
-			const newShell = new TigrisShell(newConfig);
-			await this.listAndMountBuckets(newConfig, newShell, "access-key", io);
+			await this.listAndMountBuckets(newConfig, "access-key", io);
 		}
 	}
 
 	/** Shared: list buckets, auto-mount first, commit session. */
 	private async listAndMountBuckets(
 		newConfig: TigrisConfig,
-		newShell: TigrisShell,
 		authMethod: "access-key" | "oauth",
 		io: ReplIO,
 	): Promise<void> {
 		const bucketsResult = await listBuckets({ config: newConfig });
 		if ("error" in bucketsResult) {
+			const newShell = new TigrisShell(newConfig);
 			this.commitSession(newConfig, newShell, authMethod);
 			io.write(`Could not list buckets: ${bucketsResult.error.message}\n`);
 			io.write("Use 'mount <bucket> <path>' to mount manually.\n");
 			return;
 		}
 
-		this.commitSession(newConfig, newShell, authMethod);
-
 		const bucketNames = bucketsResult.data.buckets.map((b) => b.name);
 		if (bucketNames.length === 0) {
+			const newShell = new TigrisShell(newConfig);
+			this.commitSession(newConfig, newShell, authMethod);
 			io.write("No buckets found.\n");
 			io.write("Use 'mount <bucket> <path>' to mount manually.\n");
 			return;
@@ -146,8 +146,11 @@ export class ReplSession {
 
 		const first = bucketNames[0];
 		if (first) {
+			// Create shell with the first bucket so commands get the right config
+			newConfig.bucket = first;
 			const mountPoint = `/${first}`;
-			this.shell?.mount(first, mountPoint);
+			const newShell = new TigrisShell(newConfig, { cwd: mountPoint });
+			this.commitSession(newConfig, newShell, authMethod);
 			this.cwd = mountPoint;
 			io.write(`\nMounted ${first} at ${mountPoint}\n`);
 		}
@@ -214,9 +217,8 @@ export class ReplSession {
 				organizationId: selectedOrg.id,
 			};
 
-			const newShell = new TigrisShell(newConfig);
 			this.email = result.email;
-			await this.listAndMountBuckets(newConfig, newShell, "oauth", io);
+			await this.listAndMountBuckets(newConfig, "oauth", io);
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			io.write(`login: ${message}\n`);
@@ -427,5 +429,13 @@ export class ReplSession {
 	/** Whether a shell is configured and ready. */
 	get isConfigured(): boolean {
 		return this.shell !== null;
+	}
+
+	/** Get the current prompt string (e.g. "/my-bucket $ "). */
+	get promptText(): string {
+		if (this.cwd) {
+			return `${this.cwd} $ `;
+		}
+		return "$ ";
 	}
 }
