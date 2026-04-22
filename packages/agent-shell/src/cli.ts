@@ -33,8 +33,41 @@ function parseArgs(args: string[]): {
 	return result;
 }
 
+function printHelp() {
+	process.stdout.write(`Tigris Agent Shell — A virtual bash environment with a persistent filesystem backed by Tigris object storage
+
+Usage:
+  tigris-agent-shell [options]
+
+Options:
+  --key <id>        Access key ID
+  --secret <key>    Secret access key
+  --bucket <name>   Bucket to mount
+  --endpoint <url>  Tigris endpoint
+  --help            Show this help
+  --version         Show version
+
+Inside the shell, type 'help' for available commands.
+`);
+}
+
 async function main() {
-	const args = parseArgs(process.argv.slice(2));
+	const rawArgs = process.argv.slice(2);
+
+	if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
+		printHelp();
+		return;
+	}
+
+	if (rawArgs.includes("--version") || rawArgs.includes("-v")) {
+		const { createRequire } = await import("node:module");
+		const require = createRequire(import.meta.url);
+		const pkg = require("../package.json") as { version: string };
+		process.stdout.write(`${pkg.version}\n`);
+		return;
+	}
+
+	const args = parseArgs(rawArgs);
 	const session = new ReplSession({ loginFn: deviceLogin });
 
 	const rl = readline.createInterface({
