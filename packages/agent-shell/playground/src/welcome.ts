@@ -20,12 +20,7 @@ export function showWelcome(terminal: Terminal) {
 	);
 	terminal.writeln("");
 	terminal.writeln(`${DIM}Connect to Tigris:${RESET}`);
-	terminal.writeln(
-		`${DIM}  configure --bucket <name> --key <accessKeyId> --secret <secretAccessKey>${RESET}`,
-	);
+	terminal.writeln(`${DIM}  configure --key <id> --secret <key>  Set credentials${RESET}`);
 	terminal.writeln("");
-	terminal.writeln(
-		`${DIM}After configuring, all bash commands are available. Files are stored${RESET}`,
-	);
-	terminal.writeln(`${DIM}in memory until you run flush.${RESET}`);
+	terminal.writeln(`${DIM}Type 'help' for all commands.${RESET}`);
 }

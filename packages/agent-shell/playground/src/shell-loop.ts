@@ -1,32 +1,51 @@
-import type { TigrisConfig } from "@tigrisdata/agent-shell";
-import { TigrisShell } from "@tigrisdata/agent-shell";
+import type { ReplIO } from "@tigrisdata/agent-shell/repl";
+import { ReplSession } from "@tigrisdata/agent-shell/repl";
 import type { Terminal } from "@xterm/xterm";
-import { getCredentials, setCredentials } from "./credentials.js";
+import { browserLogin } from "./auth.js";
 
 const PROMPT = "\x1b[32m$ \x1b[0m";
-const YELLOW = "\x1b[33m";
-const RED = "\x1b[31m";
-const GREEN = "\x1b[32m";
-const DIM = "\x1b[2m";
-const RESET = "\x1b[0m";
 
+/**
+ * Thin xterm.js adapter over ReplSession.
+ * Handles keyboard input, history, and line editing.
+ * Delegates all command execution to the shared REPL layer.
+ */
 export class ShellLoop {
 	private currentLine = "";
 	private cursorPos = 0;
 	private history: string[] = [];
 	private historyIndex = -1;
-	private shell: TigrisShell | null = null;
 	private terminal: Terminal;
+	private session: ReplSession;
 	private busy = false;
-	private cwd: string | undefined;
+	private pendingPromptResolve: ((value: string) => void) | null = null;
+	private pendingPromptText = "";
 
 	constructor(terminal: Terminal) {
 		this.terminal = terminal;
+		this.session = new ReplSession({ loginFn: browserLogin });
 	}
 
 	start() {
 		this.prompt();
 		this.terminal.onData((data) => this.handleInput(data));
+	}
+
+	private get io(): ReplIO {
+		return {
+			write: (text: string) => {
+				this.terminal.write(text.replace(/\r?\n/g, "\r\n"));
+			},
+			prompt: (message: string) => {
+				this.terminal.write(message.replace(/\r?\n/g, "\r\n"));
+				// Store only the last line for redrawing (strip leading newlines)
+				const lines = message.split(/\r?\n/);
+				this.pendingPromptText = lines[lines.length - 1] ?? "";
+				return new Promise<string>((resolve) => {
+					this.pendingPromptResolve = resolve;
+				});
+			},
+		};
 	}
 
 	private prompt() {
@@ -36,18 +55,34 @@ export class ShellLoop {
 	}
 
 	private async handleInput(data: string) {
-		// Block input while a command is executing
-		if (this.busy) return;
+		if (this.busy && !this.pendingPromptResolve) return;
 
 		if (data === "\r") {
 			this.terminal.write("\r\n");
 			const line = this.currentLine.trim();
+			this.currentLine = "";
+			this.cursorPos = 0;
+
+			// If a prompt is waiting for input, resolve it
+			if (this.pendingPromptResolve) {
+				const resolve = this.pendingPromptResolve;
+				this.pendingPromptResolve = null;
+				this.pendingPromptText = "";
+				resolve(line);
+				return;
+			}
 
 			if (line) {
 				this.history.push(line);
 				this.historyIndex = this.history.length;
 				this.busy = true;
-				await this.execute(line);
+
+				if (line === "clear") {
+					this.terminal.clear();
+				} else {
+					await this.session.handle(line, this.io);
+				}
+
 				this.busy = false;
 			}
 
@@ -66,34 +101,47 @@ export class ShellLoop {
 		}
 
 		if (data === "\x03") {
-			this.terminal.write("^C");
+			this.terminal.write("^C\r\n");
+			if (this.pendingPromptResolve) {
+				const resolve = this.pendingPromptResolve;
+				this.pendingPromptResolve = null;
+				this.pendingPromptText = "";
+				resolve("");
+				// Don't prompt here — the session flow will resume and prompt when done
+				return;
+			}
 			this.prompt();
 			return;
 		}
 
 		if (data === "\x0c") {
 			this.terminal.clear();
-			this.terminal.write(PROMPT + this.currentLine);
+			const prefix = this.pendingPromptResolve ? this.pendingPromptText : PROMPT;
+			this.terminal.write(prefix + this.currentLine);
 			return;
 		}
 
-		if (data === "\x1b[A") {
-			if (this.historyIndex > 0) {
-				this.historyIndex--;
-				this.setLine(this.history[this.historyIndex] ?? "");
+		// Arrow keys only when not in prompt mode
+		if (!this.pendingPromptResolve) {
+			if (data === "\x1b[A") {
+				if (this.historyIndex > 0) {
+					this.historyIndex--;
+					this.setLine(this.history[this.historyIndex] ?? "");
+				}
+				return;
 			}
-			return;
-		}
-		if (data === "\x1b[B") {
-			if (this.historyIndex < this.history.length - 1) {
-				this.historyIndex++;
-				this.setLine(this.history[this.historyIndex] ?? "");
-			} else {
-				this.historyIndex = this.history.length;
-				this.setLine("");
+			if (data === "\x1b[B") {
+				if (this.historyIndex < this.history.length - 1) {
+					this.historyIndex++;
+					this.setLine(this.history[this.historyIndex] ?? "");
+				} else {
+					this.historyIndex = this.history.length;
+					this.setLine("");
+				}
+				return;
 			}
-			return;
 		}
+
 		if (data === "\x1b[C") {
 			if (this.cursorPos < this.currentLine.length) {
 				this.cursorPos++;
@@ -122,127 +170,11 @@ export class ShellLoop {
 	}
 
 	private redrawLine() {
-		this.terminal.write(`\r\x1b[K${PROMPT}${this.currentLine}`);
+		const prefix = this.pendingPromptResolve ? this.pendingPromptText : PROMPT;
+		this.terminal.write(`\r\x1b[K${prefix}${this.currentLine}`);
 		const back = this.currentLine.length - this.cursorPos;
 		if (back > 0) {
 			this.terminal.write(`\x1b[${back}D`);
 		}
-	}
-
-	private async execute(command: string) {
-		if (command === "clear") {
-			this.terminal.clear();
-			return;
-		}
-
-		const firstToken = command.split(/\s+/)[0];
-
-		if (firstToken === "configure") {
-			this.handleConfigure(command);
-			return;
-		}
-
-		if (!this.shell) {
-			this.writeOutput(`${RED}Not configured. Run 'configure' first.${RESET}\r\n`);
-			return;
-		}
-
-		if (command === "flush") {
-			await this.handleFlush();
-			return;
-		}
-
-		try {
-			const result = await this.shell.engine.exec(command, {
-				...(this.cwd !== undefined && { cwd: this.cwd }),
-			});
-
-			// Track cwd changes (e.g. cd) across exec calls
-			if (result.env?.PWD) {
-				this.cwd = result.env.PWD;
-			}
-
-			if (result.stdout) {
-				this.writeOutput(result.stdout);
-			}
-			if (result.stderr) {
-				this.writeOutput(`${RED}${result.stderr}${RESET}`);
-			}
-		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err);
-			this.writeOutput(`${RED}Error: ${message}${RESET}\r\n`);
-		}
-	}
-
-	private handleConfigure(command: string) {
-		const args = command.split(/\s+/);
-		let bucket: string | undefined;
-		let accessKeyId: string | undefined;
-		let secretAccessKey: string | undefined;
-
-		for (let i = 1; i < args.length; i++) {
-			if (args[i] === "--bucket" && args[i + 1]) {
-				bucket = args[i + 1];
-				i++;
-			} else if (args[i] === "--key" && args[i + 1]) {
-				accessKeyId = args[i + 1];
-				i++;
-			} else if (args[i] === "--secret" && args[i + 1]) {
-				secretAccessKey = args[i + 1];
-				i++;
-			}
-		}
-
-		if (!bucket || !accessKeyId || !secretAccessKey) {
-			const creds = getCredentials();
-			if (creds) {
-				this.writeOutput(`${GREEN}Connected to bucket: ${creds.bucket}${RESET}\r\n`);
-				this.writeOutput(`${DIM}Access key: ${creds.accessKeyId.slice(0, 8)}...${RESET}\r\n`);
-			} else {
-				this.writeOutput(
-					"Usage: configure --bucket <name> --key <accessKeyId> --secret <secretAccessKey>\r\n",
-				);
-			}
-			return;
-		}
-
-		const config: TigrisConfig = { bucket, accessKeyId, secretAccessKey };
-		setCredentials(config);
-
-		this.shell = new TigrisShell(config, {
-			env: { BUCKET: bucket },
-		});
-		this.cwd = undefined;
-
-		this.writeOutput(`${GREEN}Connected to bucket: ${bucket}${RESET}\r\n`);
-		this.writeOutput("\r\n");
-		this.writeOutput(
-			`${YELLOW}WARNING: Credentials are stored in browser memory only.${RESET}\r\n`,
-		);
-		this.writeOutput(`${YELLOW}They will be lost when you close or refresh this tab.${RESET}\r\n`);
-		this.writeOutput("\r\n");
-		this.writeOutput(`${DIM}Commands available: flush, presign, snapshot, fork${RESET}\r\n`);
-		this.writeOutput(`${DIM}Use $BUCKET in commands, e.g.: snapshot $BUCKET --list${RESET}\r\n`);
-	}
-
-	private async handleFlush() {
-		if (!this.shell) {
-			this.writeOutput(`${RED}Not configured. Run 'configure' first.${RESET}\r\n`);
-			return;
-		}
-
-		try {
-			await this.shell.flush();
-			const creds = getCredentials();
-			this.writeOutput(`${GREEN}Flushed to bucket: ${creds?.bucket}${RESET}\r\n`);
-		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err);
-			this.writeOutput(`${RED}Flush failed: ${message}${RESET}\r\n`);
-		}
-	}
-
-	private writeOutput(text: string) {
-		const lines = text.replace(/\r?\n/g, "\r\n");
-		this.terminal.write(lines);
 	}
 }
