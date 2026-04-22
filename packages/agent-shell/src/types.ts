@@ -25,7 +25,7 @@ export interface TigrisConfig {
  * Shell-specific options.
  */
 export interface ShellOptions {
-	/** Starting working directory. Defaults to /workspace. */
+	/** Starting working directory and auto-mount point. Defaults to /workspace. */
 	cwd?: string;
 	/** Initial environment variables for the shell. */
 	env?: Record<string, string>;

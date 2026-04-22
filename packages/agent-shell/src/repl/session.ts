@@ -2,6 +2,7 @@ import { listBuckets } from "@tigrisdata/storage";
 import type { BashExecResult } from "just-bash";
 import { TigrisShell } from "../shell.js";
 import type { TigrisConfig } from "../types.js";
+import { deviceLogin } from "./auth.js";
 import type { ReplIO } from "./io.js";
 
 /**
@@ -13,6 +14,8 @@ import type { ReplIO } from "./io.js";
 export class ReplSession {
 	private shell: TigrisShell | null = null;
 	private config: TigrisConfig | null = null;
+	private authMethod: "access-key" | "oauth" | null = null;
+	private email: string | undefined;
 	private cwd: string | undefined;
 
 	/** Handle a command line. Returns true if handled, false to pass to bash. */
@@ -26,6 +29,9 @@ export class ReplSession {
 		switch (command) {
 			case "clear":
 				// Handled by the frontend (CLI/playground)
+				return;
+			case "login":
+				await this.handleLogin(io);
 				return;
 			case "configure":
 				await this.handleConfigure(parts.slice(1), io);
@@ -86,51 +92,119 @@ export class ReplSession {
 
 		if (options.bucket) {
 			newConfig.bucket = options.bucket;
-			const newShell = new TigrisShell(newConfig);
-			this.config = newConfig;
-			this.shell = newShell;
-			this.cwd = undefined;
-			io.write(`Configured. Mounted ${options.bucket} at /workspace\n`);
+			const mountPoint = `/${options.bucket}`;
+			const newShell = new TigrisShell(newConfig, { cwd: mountPoint });
+			this.commitSession(newConfig, newShell, "access-key");
+			io.write(`Configured. Mounted ${options.bucket} at ${mountPoint}\n`);
 		} else {
 			const newShell = new TigrisShell(newConfig);
+			await this.listAndMountBuckets(newConfig, newShell, "access-key", io);
+		}
+	}
 
-			const bucketsResult = await listBuckets({ config: newConfig });
-			if ("error" in bucketsResult) {
-				// Commit new session even if bucket listing fails — auth is valid
-				this.config = newConfig;
-				this.shell = newShell;
-				this.cwd = undefined;
-				io.write(`Configured. Could not list buckets: ${bucketsResult.error.message}\n`);
-				io.write("Use 'mount <bucket> <path>' to mount manually.\n");
+	/** Shared: list buckets, auto-mount first, commit session. */
+	private async listAndMountBuckets(
+		newConfig: TigrisConfig,
+		newShell: TigrisShell,
+		authMethod: "access-key" | "oauth",
+		io: ReplIO,
+	): Promise<void> {
+		const bucketsResult = await listBuckets({ config: newConfig });
+		if ("error" in bucketsResult) {
+			this.commitSession(newConfig, newShell, authMethod);
+			io.write(`Could not list buckets: ${bucketsResult.error.message}\n`);
+			io.write("Use 'mount <bucket> <path>' to mount manually.\n");
+			return;
+		}
+
+		this.commitSession(newConfig, newShell, authMethod);
+
+		const bucketNames = bucketsResult.data.buckets.map((b) => b.name);
+		if (bucketNames.length === 0) {
+			io.write("No buckets found.\n");
+			io.write("Use 'mount <bucket> <path>' to mount manually.\n");
+			return;
+		}
+
+		io.write("Available buckets:\n");
+		for (const name of bucketNames) {
+			io.write(`  ${name}\n`);
+		}
+
+		const first = bucketNames[0];
+		if (first) {
+			const mountPoint = `/${first}`;
+			this.shell?.mount(first, mountPoint);
+			this.cwd = mountPoint;
+			io.write(`\nMounted ${first} at ${mountPoint}\n`);
+		}
+
+		if (bucketNames.length > 1) {
+			io.write("\nTo mount additional buckets:\n");
+			io.write("  mount <bucket-name> <path>\n");
+		}
+	}
+
+	/** Commit a new session — replace config, shell, reset cwd. */
+	private commitSession(
+		config: TigrisConfig,
+		shell: TigrisShell,
+		authMethod: "access-key" | "oauth",
+	): void {
+		this.config = config;
+		this.shell = shell;
+		this.authMethod = authMethod;
+		this.cwd = undefined;
+	}
+
+	private async handleLogin(io: ReplIO): Promise<void> {
+		try {
+			const result = await deviceLogin(io);
+
+			if (result.organizations.length === 0) {
+				io.write("No organizations found.\n");
 				return;
 			}
 
-			// Success — commit new session
-			this.config = newConfig;
-			this.shell = newShell;
-			this.cwd = undefined;
+			let selectedOrg = result.organizations[0];
 
-			const bucketNames = bucketsResult.data.buckets.map((b) => b.name);
-			if (bucketNames.length === 0) {
-				io.write("Configured. No buckets found.\n");
-				io.write("Use 'mount <bucket> <path>' to mount manually.\n");
+			if (result.organizations.length > 1) {
+				io.write("\nSelect organization:\n");
+				for (let i = 0; i < result.organizations.length; i++) {
+					io.write(`  ${i + 1}) ${result.organizations[i]?.name}\n`);
+				}
+
+				const answer = await io.prompt("\nEnter number: ");
+				const index = Number.parseInt(answer, 10) - 1;
+				if (Number.isNaN(index) || index < 0 || index >= result.organizations.length) {
+					io.write("Invalid selection.\n");
+					return;
+				}
+				selectedOrg = result.organizations[index];
+			}
+
+			if (!selectedOrg) {
+				io.write("No organization selected.\n");
 				return;
 			}
 
-			io.write("Available buckets:\n");
-			for (const name of bucketNames) {
-				io.write(`  ${name}\n`);
-			}
+			io.write(`\nSelected: ${selectedOrg.name}\n`);
 
-			const first = bucketNames[0];
-			if (first) {
-				this.shell.mount(first, "/workspace");
-				io.write(`\nMounted ${first} at /workspace\n`);
-			}
+			const newConfig: TigrisConfig = {
+				sessionToken: result.accessToken,
+				organizationId: selectedOrg.id,
+			};
 
-			if (bucketNames.length > 1) {
-				io.write("\nTo mount additional buckets:\n");
-				io.write("  mount <bucket-name> <path>\n");
+			const newShell = new TigrisShell(newConfig);
+			this.email = result.email;
+			await this.listAndMountBuckets(newConfig, newShell, "oauth", io);
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			if (message.includes("fetch") || message.includes("CORS") || message.includes("network")) {
+				io.write("login: OAuth login is not supported in the browser.\n");
+				io.write("Use 'configure' with access keys instead.\n");
+			} else {
+				io.write(`login: ${message}\n`);
 			}
 		}
 	}
@@ -160,7 +234,11 @@ export class ReplSession {
 		// Show status if no args
 		if (!accessKeyId && !secretAccessKey && !bucket) {
 			if (this.config) {
-				io.write(`Access key: ${this.config.accessKeyId?.slice(0, 8)}...\n`);
+				if (this.authMethod === "oauth") {
+					io.write(`Logged in as ${this.email ?? "unknown"}\n`);
+				} else {
+					io.write(`Access key: ${this.config.accessKeyId?.slice(0, 8)}...\n`);
+				}
 				const mounts = this.shell?.listMounts() ?? [];
 				for (const m of mounts) {
 					io.write(`  ${m.bucket} → ${m.mountPoint}\n`);
@@ -287,12 +365,17 @@ export class ReplSession {
 	private handleLogout(io: ReplIO): void {
 		this.shell = null;
 		this.config = null;
+		this.authMethod = null;
+		this.email = undefined;
 		this.cwd = undefined;
 		io.write("Logged out. All mounts removed.\n");
 	}
 
 	private handleHelp(io: ReplIO): void {
 		io.write("Commands:\n");
+		io.write(
+			"  login                                                   Login via browser (OAuth)\n",
+		);
 		io.write("  configure --key <id> --secret <key> [--bucket <name>] [--endpoint <url>]\n");
 		io.write("  mount <bucket> <path>                                   Mount a bucket\n");
 		io.write("  mount                                                   List mounts\n");

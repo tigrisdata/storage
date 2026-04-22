@@ -32,9 +32,11 @@ export class TigrisShell {
 
 		this.mountableFs = new MountableFs({ base: new InMemoryFs() });
 
+		const cwd = shellOptions?.cwd ?? "/workspace";
+
 		// Auto-mount if bucket is provided
 		if (config.bucket) {
-			this.mount(config.bucket, "/workspace");
+			this.mount(config.bucket, cwd);
 		}
 
 		const commandConfig = config.bucket
@@ -43,7 +45,7 @@ export class TigrisShell {
 
 		this.bash = new Bash({
 			fs: this.mountableFs,
-			cwd: shellOptions?.cwd ?? "/workspace",
+			cwd,
 			...(shellOptions?.env !== undefined && { env: shellOptions.env }),
 			customCommands: createTigrisCommands(commandConfig),
 		});
