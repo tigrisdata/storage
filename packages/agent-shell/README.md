@@ -1,10 +1,8 @@
 # @tigrisdata/agent-shell
 
-Persistent sandboxed storage for AI agents — a bash filesystem backed by [Tigris](https://www.tigrisdata.com/) object storage.
+A virtual bash environment with a persistent filesystem backed by Tigris object storage, written in TypeScript and designed for AI agents.
 
 AI agents produce artifacts — reports, data, configs, logs. These need to go somewhere durable, shareable, and globally accessible. `@tigrisdata/agent-shell` gives agents a familiar bash interface (`cat`, `grep`, `sed`, `jq`, `awk`, pipes, redirects) where every file operation is backed by a Tigris bucket.
-
-**What makes it a storage sandbox:**
 
 - **Isolated** — writes stay in-memory until you explicitly flush. No partial state leaks to storage.
 - **Durable** — flush persists files to Tigris, globally distributed.
@@ -16,6 +14,8 @@ Built on [just-bash](https://github.com/vercel-labs/just-bash) for the shell eng
 
 ## Quick Start
 
+### Programmatic Usage
+
 ```bash
 npm install @tigrisdata/agent-shell
 ```
@@ -24,47 +24,71 @@ npm install @tigrisdata/agent-shell
 import { TigrisShell } from "@tigrisdata/agent-shell";
 
 const shell = new TigrisShell({
-  bucket: process.env.TIGRIS_STORAGE_BUCKET,
   accessKeyId: process.env.TIGRIS_STORAGE_ACCESS_KEY_ID,
   secretAccessKey: process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY,
+  bucket: process.env.TIGRIS_STORAGE_BUCKET, // optional — auto-mounts at /workspace
 });
 
 await shell.exec('echo "Hello world" > greeting.txt');
 await shell.exec("cat greeting.txt"); // stdout: "Hello world\n"
-await shell.exec("mkdir -p reports/2026");
-await shell.exec('echo "Q1 done" > reports/2026/q1.txt');
-await shell.exec("ls reports/2026"); // stdout: "q1.txt\n"
 await shell.exec("cat greeting.txt | tr a-z A-Z"); // stdout: "HELLO WORLD\n"
 
 // Persist to Tigris when you're ready
 await shell.flush();
 ```
 
-## Authentication
+### Interactive Shell
 
-Two auth modes are supported. At least one is required:
+Launch a shell directly — no install needed:
 
-```typescript
-// Access key auth
-const shell = new TigrisShell({
-  accessKeyId: process.env.TIGRIS_STORAGE_ACCESS_KEY_ID,
-  secretAccessKey: process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY,
-  bucket: process.env.TIGRIS_STORAGE_BUCKET, // optional — auto-mounts at /workspace
-});
-
-// Session token auth (from OAuth login)
-const shell = new TigrisShell({
-  sessionToken: "...",
-  organizationId: "...",
-});
+```bash
+npx @tigrisdata/agent-shell
 ```
 
-## Storage Sandbox Model
-
-The shell uses an in-memory write-back cache that acts as a storage sandbox:
+Authenticate with access keys:
 
 ```
-Agent writes file  →  cached locally (isolated)
+$ configure --key tid_... --secret tsec_...
+Available buckets:
+  my-bucket
+  shared-data
+
+Mounted my-bucket at /workspace
+
+$ echo "hello" > greeting.txt
+$ cat greeting.txt
+hello
+$ ls
+greeting.txt
+$ flush
+Flushed 1 mount(s)
+```
+
+Or login with your Tigris account:
+
+```
+$ login
+Open this URL in your browser:
+  https://auth.storage.tigrisdata.io/activate?user_code=XKCD-1234
+
+Waiting for authorization... done!
+Logged in as you@example.com
+
+Mounted my-bucket at /workspace
+```
+
+You can also pass credentials as flags:
+
+```bash
+npx @tigrisdata/agent-shell --key tid_... --secret tsec_... --bucket my-bucket
+```
+
+## Storage Model
+
+The shell uses an in-memory write-back cache that provides isolation:
+
+```
+Agent writes file  →  cached in memory (isolated)
 Agent reads file   →  cache hit or fetch from Tigris
 Agent calls flush  →  all changes persisted atomically
 ```
@@ -230,7 +254,7 @@ await bash.exec("cp /datasets/data.csv ./local.csv");
 
 | Export         | Description                                                                                           |
 | -------------- | ----------------------------------------------------------------------------------------------------- |
-| `TigrisShell`  | Main class — sandboxed storage shell backed by Tigris                                                 |
+| `TigrisShell`  | Main class — persisted storage shell backed by Tigris                                                 |
 | `TigrisConfig` | Config type: `{ accessKeyId?, secretAccessKey?, sessionToken?, organizationId?, bucket?, endpoint? }` |
 | `ShellOptions` | Shell options type: `{ cwd?, env? }`                                                                  |
 
