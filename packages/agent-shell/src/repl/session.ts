@@ -58,6 +58,9 @@ export class ReplSession {
 			case "flush":
 				await this.handleFlush(parts.slice(1), io);
 				return;
+			case "whoami":
+				this.handleWhoami(io);
+				return;
 			case "help":
 				this.handleHelp(io);
 				return;
@@ -373,6 +376,29 @@ export class ReplSession {
 		}
 	}
 
+	private handleWhoami(io: ReplIO): void {
+		if (!this.config) {
+			io.write("Not logged in.\n");
+			return;
+		}
+
+		if (this.authMethod === "oauth") {
+			io.write(`Logged in as ${this.email ?? "unknown"} (OAuth)\n`);
+		} else {
+			io.write(
+				`Access key: ${this.config.accessKeyId ? this.config.accessKeyId.slice(0, 8) : "unknown"}...\n`,
+			);
+		}
+
+		const mounts = this.shell?.listMounts() ?? [];
+		if (mounts.length > 0) {
+			io.write("Mounts:\n");
+			for (const m of mounts) {
+				io.write(`  ${m.bucket} → ${m.mountPoint}\n`);
+			}
+		}
+	}
+
 	private handleLogout(io: ReplIO): void {
 		this.shell = null;
 		this.config = null;
@@ -384,15 +410,14 @@ export class ReplSession {
 
 	private handleHelp(io: ReplIO): void {
 		io.write("Commands:\n");
-		io.write(
-			"  login                                                   Login via browser (OAuth)\n",
-		);
+		io.write("  login                                                   Login (OAuth)\n");
 		io.write("  configure --key <id> --secret <key> [--bucket <name>] [--endpoint <url>]\n");
 		io.write("  mount <bucket> <path>                                   Mount a bucket\n");
 		io.write("  mount                                                   List mounts\n");
 		io.write("  umount <path>                                           Unmount a path\n");
 		io.write("  df                                                      List mounts\n");
 		io.write("  flush [path]                                            Flush to Tigris\n");
+		io.write("  whoami                                                  Show current session\n");
 		io.write("  logout                                                  Clear session\n");
 		io.write("  clear                                                   Clear screen\n");
 		io.write("  help                                                    Show this help\n");
