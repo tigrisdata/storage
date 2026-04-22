@@ -58,21 +58,23 @@ export class TigrisShell {
 
 	/** Mount a bucket at a path. Throws if path is already mounted. */
 	mount(bucket: string, mountPoint: string): void {
-		if (this.mounts.some((m) => m.mountPoint === mountPoint)) {
-			throw new Error(`Already mounted at ${mountPoint}`);
+		const normalized = mountPoint.startsWith("/") ? mountPoint : `/${mountPoint}`;
+		if (this.mounts.some((m) => m.mountPoint === normalized)) {
+			throw new Error(`Already mounted at ${normalized}`);
 		}
 		const adapter = new TigrisAdapter(this.tigrisConfig, bucket);
-		this.mountableFs.mount(mountPoint, adapter);
-		this.mounts.push({ bucket, mountPoint, adapter });
+		this.mountableFs.mount(normalized, adapter);
+		this.mounts.push({ bucket, mountPoint: normalized, adapter });
 	}
 
 	/** Unmount a path. */
 	unmount(mountPoint: string): void {
-		const index = this.mounts.findIndex((m) => m.mountPoint === mountPoint);
+		const normalized = mountPoint.startsWith("/") ? mountPoint : `/${mountPoint}`;
+		const index = this.mounts.findIndex((m) => m.mountPoint === normalized);
 		if (index === -1) {
-			throw new Error(`No mount at ${mountPoint}`);
+			throw new Error(`No mount at ${normalized}`);
 		}
-		this.mountableFs.unmount(mountPoint);
+		this.mountableFs.unmount(normalized);
 		this.mounts.splice(index, 1);
 	}
 
@@ -84,9 +86,10 @@ export class TigrisShell {
 	/** Flush cached writes to Tigris. Flush all mounts or a specific path. */
 	async flush(mountPoint?: string): Promise<void> {
 		if (mountPoint !== undefined) {
-			const mount = this.mounts.find((m) => m.mountPoint === mountPoint);
+			const normalized = mountPoint.startsWith("/") ? mountPoint : `/${mountPoint}`;
+			const mount = this.mounts.find((m) => m.mountPoint === normalized);
 			if (!mount) {
-				throw new Error(`No mount at ${mountPoint}`);
+				throw new Error(`No mount at ${normalized}`);
 			}
 			return mount.adapter.flush();
 		}

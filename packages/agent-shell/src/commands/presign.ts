@@ -38,6 +38,14 @@ export function createPresignCommand(config: TigrisConfig) {
 			};
 		}
 
+		if (!config.accessKeyId) {
+			return {
+				stdout: "",
+				stderr: "presign: requires access key auth. Use 'configure' instead of 'login'.\n",
+				exitCode: 1,
+			};
+		}
+
 		const { expiresIn, operation } = parsePresignArgs(args.slice(1));
 		const key = path.startsWith("/") ? path.slice(1) : path;
 		const result = await getPresignedUrl(key, {

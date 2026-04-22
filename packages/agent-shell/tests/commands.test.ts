@@ -6,18 +6,15 @@ vi.mock("@tigrisdata/storage", () => ({
 	listBucketSnapshots: vi.fn(),
 	createBucket: vi.fn(),
 	listBuckets: vi.fn(),
-	bundle: vi.fn(),
 }));
 
 import {
-	bundle,
 	createBucket,
 	createBucketSnapshot,
 	getPresignedUrl,
 	listBucketSnapshots,
 	listBuckets,
 } from "@tigrisdata/storage";
-import { createBundleCommand } from "../src/commands/bundle.js";
 import { createForkCommand, createForksListCommand } from "../src/commands/fork.js";
 import { createPresignCommand } from "../src/commands/presign.js";
 import { createSnapshotCommand } from "../src/commands/snapshot.js";
@@ -208,47 +205,5 @@ describe("forks", () => {
 		expect(result.exitCode).toBe(0);
 		expect(result.stdout).toContain("bucket-a");
 		expect(result.stdout).toContain("bucket-b");
-	});
-});
-
-describe("bundle", () => {
-	const cmd = createBundleCommand(config);
-
-	it("returns error when no files specified", async () => {
-		const result = await cmd.execute([], makeCtx());
-		expect(result.exitCode).toBe(1);
-		expect(result.stderr).toContain("missing file");
-	});
-
-	it("bundles files", async () => {
-		vi.mocked(bundle).mockResolvedValue({
-			data: { contentType: "application/x-tar", body: new ReadableStream() },
-		});
-
-		const result = await cmd.execute(["/a.txt", "/b.txt"], makeCtx());
-		expect(result.exitCode).toBe(0);
-		const output = JSON.parse(result.stdout);
-		expect(output.keys).toEqual(["a.txt", "b.txt"]);
-		expect(output.compression).toBe("none");
-	});
-
-	it("passes gzip compression flag", async () => {
-		vi.mocked(bundle).mockResolvedValue({
-			data: { contentType: "application/gzip", body: new ReadableStream() },
-		});
-
-		await cmd.execute(["/a.txt", "--gzip"], makeCtx());
-		expect(vi.mocked(bundle)).toHaveBeenCalledWith(["a.txt"], {
-			compression: "gzip",
-			config,
-		});
-	});
-
-	it("returns error on SDK failure", async () => {
-		vi.mocked(bundle).mockResolvedValue({ error: new Error("timeout") });
-
-		const result = await cmd.execute(["/file.txt"], makeCtx());
-		expect(result.exitCode).toBe(1);
-		expect(result.stderr).toContain("timeout");
 	});
 });

@@ -70,10 +70,28 @@ async function main() {
 	const args = parseArgs(rawArgs);
 	const session = new ReplSession({ loginFn: deviceLogin });
 
+	const REPL_COMMANDS = [
+		"login",
+		"configure",
+		"mount",
+		"umount",
+		"df",
+		"flush",
+		"whoami",
+		"logout",
+		"clear",
+		"help",
+		"exit",
+	];
+
 	const rl = readline.createInterface({
 		input: process.stdin,
 		output: process.stdout,
 		prompt: "$ ",
+		completer: (line: string) => {
+			const hits = REPL_COMMANDS.filter((cmd) => cmd.startsWith(line));
+			return [hits.length ? hits : REPL_COMMANDS, line];
+		},
 	});
 
 	const io: ReplIO = {
@@ -110,6 +128,7 @@ async function main() {
 	io.write("Type 'help' for available commands.\n\n");
 
 	// Process lines sequentially using async iterator
+	rl.setPrompt(session.promptText);
 	rl.prompt();
 
 	for await (const line of rl) {
@@ -125,6 +144,7 @@ async function main() {
 			await session.handle(trimmed, io);
 		}
 
+		rl.setPrompt(session.promptText);
 		rl.prompt();
 	}
 

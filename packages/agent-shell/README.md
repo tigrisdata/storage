@@ -177,16 +177,6 @@ List forks of a bucket.
 forks my-bucket
 ```
 
-### bundle
-
-Batch-download multiple files as a tar archive.
-
-```bash
-bundle file1.txt file2.txt                   # Download as tar
-bundle file1.txt file2.txt --gzip           # Download as gzip tar
-bundle file1.txt file2.txt --zstd           # Download as zstd tar
-```
-
 ## Multi-Bucket
 
 Mount multiple buckets at different paths:
@@ -289,7 +279,6 @@ new TigrisShell(config: TigrisConfig, shellOptions?: ShellOptions)
 | `createSnapshotCommand(config)`  | Create snapshot command only |
 | `createForkCommand(config)`      | Create fork command only     |
 | `createForksListCommand(config)` | Create forks command only    |
-| `createBundleCommand(config)`    | Create bundle command only   |
 
 ## Examples
 

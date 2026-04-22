@@ -3,7 +3,8 @@ import { ReplSession } from "@tigrisdata/agent-shell/repl";
 import type { Terminal } from "@xterm/xterm";
 import { browserLogin } from "./auth.js";
 
-const PROMPT = "\x1b[32m$ \x1b[0m";
+const GREEN = "\x1b[32m";
+const RESET = "\x1b[0m";
 
 /**
  * Thin xterm.js adapter over ReplSession.
@@ -24,6 +25,10 @@ export class ShellLoop {
 	constructor(terminal: Terminal) {
 		this.terminal = terminal;
 		this.session = new ReplSession({ loginFn: browserLogin });
+	}
+
+	private get promptStr(): string {
+		return `${GREEN}${this.session.promptText}${RESET}`;
 	}
 
 	start() {
@@ -49,7 +54,7 @@ export class ShellLoop {
 	}
 
 	private prompt() {
-		this.terminal.write(`\r\n${PROMPT}`);
+		this.terminal.write(`\r\n${this.promptStr}`);
 		this.currentLine = "";
 		this.cursorPos = 0;
 	}
@@ -116,7 +121,7 @@ export class ShellLoop {
 
 		if (data === "\x0c") {
 			this.terminal.clear();
-			const prefix = this.pendingPromptResolve ? this.pendingPromptText : PROMPT;
+			const prefix = this.pendingPromptResolve ? this.pendingPromptText : this.promptStr;
 			this.terminal.write(prefix + this.currentLine);
 			return;
 		}
@@ -170,7 +175,7 @@ export class ShellLoop {
 	}
 
 	private redrawLine() {
-		const prefix = this.pendingPromptResolve ? this.pendingPromptText : PROMPT;
+		const prefix = this.pendingPromptResolve ? this.pendingPromptText : this.promptStr;
 		this.terminal.write(`\r\x1b[K${prefix}${this.currentLine}`);
 		const back = this.currentLine.length - this.cursorPos;
 		if (back > 0) {
