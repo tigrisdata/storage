@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import * as readline from "node:readline";
+import { deviceLogin } from "./cli/auth.js";
 import type { ReplIO } from "./repl/index.js";
 import { ReplSession } from "./repl/index.js";
 
@@ -34,7 +35,7 @@ function parseArgs(args: string[]): {
 
 async function main() {
 	const args = parseArgs(process.argv.slice(2));
-	const session = new ReplSession();
+	const session = new ReplSession({ loginFn: deviceLogin });
 
 	const rl = readline.createInterface({
 		input: process.stdin,

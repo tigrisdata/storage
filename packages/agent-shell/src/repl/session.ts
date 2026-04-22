@@ -2,8 +2,13 @@ import { listBuckets } from "@tigrisdata/storage";
 import type { BashExecResult } from "just-bash";
 import { TigrisShell } from "../shell.js";
 import type { TigrisConfig } from "../types.js";
-import { deviceLogin } from "./auth.js";
+import type { LoginFn } from "./auth.js";
 import type { ReplIO } from "./io.js";
+
+export interface ReplSessionOptions {
+	/** Login function — device flow for CLI, Auth0 SDK for browser. */
+	loginFn?: LoginFn;
+}
 
 /**
  * REPL session — owns the TigrisShell lifecycle and handles
@@ -17,6 +22,11 @@ export class ReplSession {
 	private authMethod: "access-key" | "oauth" | null = null;
 	private email: string | undefined;
 	private cwd: string | undefined;
+	private loginFn: LoginFn | undefined;
+
+	constructor(options?: ReplSessionOptions) {
+		this.loginFn = options?.loginFn;
+	}
 
 	/** Handle a command line. Returns true if handled, false to pass to bash. */
 	async handle(line: string, io: ReplIO): Promise<void> {
@@ -158,8 +168,14 @@ export class ReplSession {
 	}
 
 	private async handleLogin(io: ReplIO): Promise<void> {
+		if (!this.loginFn) {
+			io.write("login: no login method configured.\n");
+			io.write("Use 'configure' with access keys instead.\n");
+			return;
+		}
+
 		try {
-			const result = await deviceLogin(io);
+			const result = await this.loginFn(io);
 
 			if (result.organizations.length === 0) {
 				io.write("No organizations found.\n");
@@ -200,12 +216,7 @@ export class ReplSession {
 			await this.listAndMountBuckets(newConfig, newShell, "oauth", io);
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
-			if (message.includes("fetch") || message.includes("CORS") || message.includes("network")) {
-				io.write("login: OAuth login is not supported in the browser.\n");
-				io.write("Use 'configure' with access keys instead.\n");
-			} else {
-				io.write(`login: ${message}\n`);
-			}
+			io.write(`login: ${message}\n`);
 		}
 	}
 
