@@ -9,7 +9,7 @@
 	},
 	"dependencies": {
 		"@auth0/auth0-spa-js": "^2.19.2",
-		"@tigrisdata/agent-shell": "^0.3.1",
+		"@tigrisdata/agent-shell": "^0.5.0",
 		"@xterm/addon-fit": "^0.11.0",
 		"@xterm/xterm": "^6.0.0"
 	},
