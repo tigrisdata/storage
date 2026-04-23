@@ -182,7 +182,6 @@ function printProgress(state: MigrationState, bucket: string): void {
   const line =
     `\rMigrating ${bucket}: ` +
     `${state.confirmed.toLocaleString()} / ${state.total.toLocaleString()} objects | ` +
-    `${formatSize(state.confirmedBytes)} / ${formatSize(state.totalBytes)} | ` +
     `In-flight: ${formatSize(state.inFlightBytes)} | ` +
     `${elapsed}`;
 
