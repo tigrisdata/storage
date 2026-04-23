@@ -73,3 +73,15 @@ export function parseBoolean(
   if (typeof value === 'boolean') return value;
   return value === 'true';
 }
+
+/**
+ * Read all of stdin as a UTF-8 string.
+ * Use when stdin is piped (i.e. `!process.stdin.isTTY`).
+ */
+export async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString('utf-8');
+}

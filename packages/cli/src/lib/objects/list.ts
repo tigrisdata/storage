@@ -25,6 +25,7 @@ export default async function listObjects(options: Record<string, unknown>) {
     'snapshotVersion',
     'snapshot',
   ]);
+  const source = getOption<'tigris' | 'shadow'>(options, ['source']);
   const { limit, pageToken } = getPaginationOptions(options);
 
   if (!bucketArg) {
@@ -40,6 +41,7 @@ export default async function listObjects(options: Record<string, unknown>) {
   const { data, error } = await list({
     prefix,
     ...(snapshotVersion ? { snapshotVersion } : {}),
+    ...(source ? { source } : {}),
     ...(limit !== undefined ? { limit } : {}),
     ...(pageToken ? { paginationToken: pageToken } : {}),
     config: {

@@ -297,6 +297,9 @@ commands:
       - name: page-token
         description: Pagination token from a previous request to fetch the next page
         alias: pt
+      - name: source
+        description: List objects from a specific storage source on buckets with shadow migration enabled
+        options: [tigris, shadow]
 
   # mk
   - name: mk
@@ -545,6 +548,40 @@ commands:
         type: flag
         alias: f
         description: Skip confirmation prompts (alias for --yes)
+
+  # bundle
+  - name: bundle
+    description: Download multiple objects as a streaming tar archive in a single request. Designed for batch workloads that need many objects without per-object HTTP overhead
+    examples:
+      - "tigris bundle my-bucket --keys key1.jpg,key2.jpg --output archive.tar"
+      - "tigris bundle my-bucket --keys keys.txt --output archive.tar"
+      - "tigris bundle t3://my-bucket --keys keys.txt --compression gzip -o archive.tar.gz"
+      - "cat keys.txt | tigris bundle my-bucket > archive.tar"
+    messages:
+      onStart: ''
+      onSuccess: ''
+      onFailure: 'Bundle failed. Verify the bucket exists and credentials have read access'
+    arguments:
+      - name: bucket
+        required: true
+        type: positional
+        description: Bucket name or t3:// path containing the objects to bundle
+        examples:
+          - my-bucket
+          - t3://my-bucket
+      - name: keys
+        description: "Comma-separated object keys, or path to a file with one key per line. If a local file matching the value exists, it is read as a keys file. If omitted, reads keys from stdin"
+        alias: k
+      - name: output
+        description: Output file path. Defaults to stdout (for piping)
+        alias: o
+      - name: compression
+        description: Compression algorithm for the archive. Auto-detected from output file extension when not specified
+        options: [none, gzip, zstd]
+      - name: on-error
+        description: How to handle missing objects. 'skip' omits them, 'fail' aborts the request
+        options: [skip, fail]
+        default: skip
 
   #########################
   # Manage organizations
@@ -906,6 +943,26 @@ commands:
           - name: disable
             description: Disable migration and clear all migration settings
             type: flag
+      # migrate
+      - name: migrate
+        description: Actively migrate all objects from a shadow bucket to Tigris by scheduling server-side migration for unmigrated objects
+        examples:
+          - "tigris buckets migrate my-bucket"
+          - "tigris buckets migrate my-bucket/images/"
+          - "tigris buckets migrate t3://my-bucket/prefix/"
+        messages:
+          onStart: ''
+          onSuccess: ''
+          onFailure: 'Migration failed'
+        arguments:
+          - name: path
+            description: Bucket name or path with optional prefix. Supports t3:// and tigris:// prefixes
+            type: positional
+            required: true
+            examples:
+              - my-bucket
+              - my-bucket/images/
+              - t3://my-bucket/prefix/
       # set-transition
       - name: set-transition
         description: Configure a lifecycle transition rule on a bucket. Automatically move objects to a different storage class after a number of days or on a specific date
@@ -1202,6 +1259,9 @@ commands:
           - name: page-token
             description: Pagination token from a previous request to fetch the next page
             alias: pt
+          - name: source
+            description: List objects from a specific storage source on buckets with shadow migration enabled
+            options: [tigris, shadow]
       # get
       - name: get
         description: Download an object by key. Prints to stdout by default, or saves to a file with --output

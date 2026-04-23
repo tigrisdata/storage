@@ -1,7 +1,8 @@
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import * as yaml from 'yaml';
+
 import type { CommandSpec } from '../src/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -226,7 +227,7 @@ function generateDocs(specs: Specs): string {
   lines.push('');
 
   // Core commands (Unix-style) - only implemented ones
-  const coreCommands = ['ls', 'mk', 'touch', 'cp', 'mv', 'rm', 'stat'].filter((c) => isImplemented(c));
+  const coreCommands = ['ls', 'mk', 'touch', 'cp', 'mv', 'rm', 'stat', 'presign', 'bundle'].filter((c) => isImplemented(c));
   lines.push('### Core Commands');
   lines.push('');
   for (const cmdName of coreCommands) {
@@ -253,6 +254,20 @@ function generateDocs(specs: Specs): string {
     }
   }
   lines.push('');
+
+  // Other commands (CLI management)
+  const otherCommands = ['update'].filter((c) => isImplemented(c));
+  if (otherCommands.length > 0) {
+    lines.push('### Other');
+    lines.push('');
+    for (const cmdName of otherCommands) {
+      const cmd = specs.commands.find((c) => c.name === cmdName);
+      if (cmd) {
+        lines.push(`- \`tigris ${cmd.name}\` - ${cmd.description}`);
+      }
+    }
+    lines.push('');
+  }
 
   // Resource management
   const resourceCommands = ['organizations', 'access-keys', 'credentials', 'buckets', 'forks', 'snapshots', 'objects', 'iam'];
@@ -356,6 +371,34 @@ function generateDocs(specs: Specs): string {
     if (iamCmd) {
       lines.push(generateResourceSection(iamCmd));
     }
+  }
+
+  // Other commands
+  if (otherCommands.length > 0) {
+    lines.push('## Other');
+    lines.push('');
+    for (const cmdName of otherCommands) {
+      const cmd = specs.commands.find((c) => c.name === cmdName);
+      if (cmd) {
+        lines.push(generateCommandSection(cmd));
+      }
+    }
+  }
+
+  // Warn about any specs commands that aren't in any category
+  const allCategorized = new Set([
+    ...coreCommands,
+    ...authCommandNames,
+    ...resourceCommands,
+    ...otherCommands,
+  ]);
+  const unhandled = specs.commands
+    .filter((c) => !allCategorized.has(c.name) && hasImplementation(c))
+    .map((c) => c.name);
+  if (unhandled.length > 0) {
+    console.warn(
+      `Warning: the following implemented commands are not in any docs category: ${unhandled.join(', ')}`
+    );
   }
 
   return lines.join('\n');

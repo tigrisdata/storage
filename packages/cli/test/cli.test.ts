@@ -4,9 +4,14 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { getTestPrefix, shouldSkipIntegrationTests } from './setup.js';
+import {
+  getTestPrefix,
+  shouldSkipIntegrationTests,
+  shouldSkipOAuthTests,
+} from './setup.js';
 
 const skipTests = shouldSkipIntegrationTests();
+const skipOAuth = shouldSkipOAuthTests();
 
 // Helper to run CLI commands with env vars for auth
 function runCli(args: string): {
@@ -124,6 +129,16 @@ describe('CLI Help Commands', () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('stat');
     expect(result.stdout).toContain('path');
+  });
+
+  it('should show bundle help', () => {
+    const result = runCli('bundle help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('bundle');
+    expect(result.stdout).toContain('--keys');
+    expect(result.stdout).toContain('--output');
+    expect(result.stdout).toContain('--compression');
+    expect(result.stdout).toContain('--on-error');
   });
 
   it('should show configure help', () => {
@@ -449,6 +464,129 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(`ls ${testBucket}`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).not.toContain(fileName);
+    });
+  });
+
+  describe('bundle command', () => {
+    const bundleDir = 'bundle-test';
+    const rootTxt = 'bundle-root.txt';
+    const rootJson = 'bundle-root.json';
+    const nestedTxt = `${bundleDir}/nested.txt`;
+    const nestedJson = `${bundleDir}/nested.json`;
+    const tmpDir = join(tmpdir(), `tigris-bundle-test-${Date.now()}`);
+
+    beforeAll(() => {
+      mkdirSync(tmpDir, { recursive: true });
+
+      // Create test files at bucket root
+      const txtFile = join(tmpDir, 'root.txt');
+      const jsonFile = join(tmpDir, 'root.json');
+      writeFileSync(txtFile, 'hello from txt');
+      writeFileSync(jsonFile, JSON.stringify({ hello: 'from json' }));
+
+      runCli(`objects put ${testBucket} ${rootTxt} ${txtFile}`);
+      runCli(`objects put ${testBucket} ${rootJson} ${jsonFile}`);
+
+      // Create test files in a folder
+      const nestedTxtFile = join(tmpDir, 'nested.txt');
+      const nestedJsonFile = join(tmpDir, 'nested.json');
+      writeFileSync(nestedTxtFile, 'nested txt content');
+      writeFileSync(nestedJsonFile, JSON.stringify({ nested: true }));
+
+      runCli(`mk ${testBucket}/${bundleDir}/`);
+      runCli(`objects put ${testBucket} ${nestedTxt} ${nestedTxtFile}`);
+      runCli(`objects put ${testBucket} ${nestedJson} ${nestedJsonFile}`);
+    });
+
+    afterAll(() => {
+      rmSync(tmpDir, { recursive: true, force: true });
+      runCli(`rm ${t3(testBucket)}/${bundleDir} -r -f`);
+      runCli(`rm ${t3(testBucket)}/${rootTxt} -f`);
+      runCli(`rm ${t3(testBucket)}/${rootJson} -f`);
+    });
+
+    it('should bundle root objects with inline keys', () => {
+      const output = join(tmpDir, 'root-bundle.tar');
+      const result = runCli(
+        `bundle ${testBucket} --keys ${rootTxt},${rootJson} --output ${output}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(existsSync(output)).toBe(true);
+
+      // Verify tar contents
+      const tarList = execSync(`tar tf ${output}`, { encoding: 'utf-8' });
+      expect(tarList).toContain(rootTxt);
+      expect(tarList).toContain(rootJson);
+    });
+
+    it('should bundle with keys from file', () => {
+      const keysFile = join(tmpDir, 'keys.txt');
+      writeFileSync(keysFile, `${rootTxt}\n${rootJson}\n`);
+
+      const output = join(tmpDir, 'from-file.tar');
+      const result = runCli(
+        `bundle ${testBucket} --keys ${keysFile} --output ${output}`
+      );
+      expect(result.exitCode).toBe(0);
+
+      const tarList = execSync(`tar tf ${output}`, { encoding: 'utf-8' });
+      expect(tarList).toContain(rootTxt);
+      expect(tarList).toContain(rootJson);
+    });
+
+    it('should bundle nested objects with path prefix', () => {
+      const output = join(tmpDir, 'nested-bundle.tar');
+      const result = runCli(
+        `bundle ${t3(testBucket)}/${bundleDir} --keys nested.txt,nested.json --output ${output}`
+      );
+      expect(result.exitCode).toBe(0);
+
+      const tarList = execSync(`tar tf ${output}`, { encoding: 'utf-8' });
+      expect(tarList).toContain('nested.txt');
+      expect(tarList).toContain('nested.json');
+    });
+
+    it('should bundle with gzip compression', () => {
+      const output = join(tmpDir, 'compressed.tar.gz');
+      const result = runCli(
+        `bundle ${testBucket} --keys ${rootTxt},${rootJson} --output ${output}`
+      );
+      expect(result.exitCode).toBe(0);
+
+      // tar should be able to decompress gzip
+      const tarList = execSync(`tar tzf ${output}`, { encoding: 'utf-8' });
+      expect(tarList).toContain(rootTxt);
+      expect(tarList).toContain(rootJson);
+    });
+
+    it('should bundle with explicit compression flag', () => {
+      const output = join(tmpDir, 'explicit-gzip.tar');
+      const result = runCli(
+        `bundle ${testBucket} --keys ${rootTxt} --compression gzip --output ${output}`
+      );
+      expect(result.exitCode).toBe(0);
+
+      // Despite .tar extension, content is gzip-compressed
+      const tarList = execSync(`tar tzf ${output}`, { encoding: 'utf-8' });
+      expect(tarList).toContain(rootTxt);
+    });
+
+    it('should output JSON with --json flag', () => {
+      const output = join(tmpDir, 'json-mode.tar');
+      const result = runCli(
+        `bundle ${testBucket} --keys ${rootTxt},${rootJson} --output ${output} --json`
+      );
+      expect(result.exitCode).toBe(0);
+
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(parsed.action).toBe('bundled');
+      expect(parsed.bucket).toBe(testBucket);
+      expect(parsed.keys).toBe(2);
+    });
+
+    it('should fail with no keys provided', () => {
+      const result = runCli(`bundle ${testBucket}`);
+      expect(result.exitCode).not.toBe(0);
     });
   });
 
@@ -1889,6 +2027,206 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(`credentials test --bucket ${testBucket}`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Access verified');
+    });
+  });
+
+  describe('access-keys lifecycle', () => {
+    let createdKeyId: string | undefined;
+    const keyName = `${testPrefix}-ak`;
+
+    afterAll(() => {
+      if (createdKeyId) {
+        runCli(`access-keys delete ${createdKeyId} --yes`);
+      }
+    });
+
+    it('should create an access key', () => {
+      const result = runCli(`access-keys create ${keyName} --format json`);
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      createdKeyId = parsed.id;
+      expect(parsed.name).toBe(keyName);
+      expect(parsed.secret).toBeTruthy();
+    });
+
+    it('should get the access key', () => {
+      if (!createdKeyId) return;
+      const result = runCli(`access-keys get ${createdKeyId} --format json`);
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(parsed.name).toBe(keyName);
+      expect(parsed.id).toBe(createdKeyId);
+    });
+
+    it('should list access keys and include the created one', () => {
+      if (!createdKeyId) return;
+      const result = runCli('access-keys list --format json');
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      const found = parsed.items.some(
+        (k: { id: string }) => k.id === createdKeyId
+      );
+      expect(found).toBe(true);
+    });
+
+    it('should assign bucket-specific role', () => {
+      if (!createdKeyId) return;
+      const result = runCli(
+        `access-keys assign ${createdKeyId} --bucket ${testBucket} --role Editor`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should assign admin role', () => {
+      if (!createdKeyId) return;
+      // Revoke bucket roles first, then assign admin
+      runCli(`access-keys assign ${createdKeyId} --revoke-roles`);
+      const result = runCli(`access-keys assign ${createdKeyId} --admin`);
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should revoke all roles', () => {
+      if (!createdKeyId) return;
+      const result = runCli(
+        `access-keys assign ${createdKeyId} --revoke-roles`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should rotate the access key', () => {
+      if (!createdKeyId) return;
+      const result = runCli(
+        `access-keys rotate ${createdKeyId} --yes --format json`
+      );
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(parsed.secret).toBeTruthy();
+    });
+
+    it('should delete the access key', () => {
+      if (!createdKeyId) return;
+      const result = runCli(`access-keys delete ${createdKeyId} --yes`);
+      expect(result.exitCode).toBe(0);
+      createdKeyId = undefined;
+    });
+  });
+
+  describe('access-keys error cases', () => {
+    it('should error on create without name', () => {
+      const result = runCli('access-keys create');
+      expect(result.exitCode).not.toBe(0);
+    });
+
+    it('should error on get without id', () => {
+      const result = runCli('access-keys get');
+      expect(result.exitCode).not.toBe(0);
+    });
+
+    it('should error on delete without --yes in non-TTY', () => {
+      const result = runCli('access-keys delete fake-id');
+      expect(result.exitCode).toBe(1);
+    });
+
+    it('should error on rotate without --yes in non-TTY', () => {
+      const result = runCli('access-keys rotate fake-id');
+      expect(result.exitCode).toBe(1);
+    });
+  });
+
+  describe('whoami command', () => {
+    it('should show auth info', () => {
+      const result = runCli('whoami');
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should show auth info with --format json', () => {
+      const result = runCli('whoami --format json');
+      expect(result.exitCode).toBe(0);
+      expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
+    });
+  });
+});
+
+describe.skipIf(skipTests || skipOAuth)('OAuth Integration Tests', () => {
+  const testPrefix = getTestPrefix();
+
+  describe('iam policies lifecycle', () => {
+    let policyArn: string | undefined;
+    const policyName = `${testPrefix}-policy`;
+
+    afterAll(() => {
+      if (policyArn) {
+        runCli(`iam policies delete --resource ${policyArn} --yes`);
+      }
+    });
+
+    it('should create a policy', () => {
+      const doc = JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          { Effect: 'Allow', Action: ['s3:GetObject'], Resource: ['*'] },
+        ],
+      });
+      const result = runCli(
+        `iam policies create --name ${policyName} --document '${doc}' --format json`
+      );
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      policyArn = parsed.arn;
+      expect(parsed.name).toBe(policyName);
+    });
+
+    it('should list policies and include the created one', () => {
+      if (!policyArn) return;
+      const result = runCli('iam policies list --format json');
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      const found = parsed.items.some(
+        (p: { resource: string }) => p.resource === policyArn
+      );
+      expect(found).toBe(true);
+    });
+
+    it('should get the policy', () => {
+      if (!policyArn) return;
+      const result = runCli(
+        `iam policies get --resource ${policyArn} --format json`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should delete the policy', () => {
+      if (!policyArn) return;
+      const result = runCli(
+        `iam policies delete --resource ${policyArn} --yes`
+      );
+      expect(result.exitCode).toBe(0);
+      policyArn = undefined;
+    });
+  });
+
+  describe('iam users', () => {
+    it('should list users', () => {
+      const result = runCli('iam users list --format json');
+      // May fail for Fly orgs — that's expected
+      if (result.exitCode === 0 && result.stdout.trim()) {
+        expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
+      }
+    });
+  });
+
+  describe('organizations', () => {
+    it('should list organizations with --format table', () => {
+      const result = runCli('organizations list --format table');
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should list organizations with --format json', () => {
+      const result = runCli('organizations list --format json');
+      expect(result.exitCode).toBe(0);
+      if (result.stdout.trim()) {
+        expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
+      }
     });
   });
 });

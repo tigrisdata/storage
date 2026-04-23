@@ -150,7 +150,7 @@ jobs:
 
   update-homebrew:
     needs: [release, build-binaries]
-    if: needs.release.outputs.new_release_published == 'true'
+    if: needs.release.outputs.new_release_published == 'true' && github.ref == 'refs/heads/release'
     runs-on: ubuntu-latest
 
     steps:

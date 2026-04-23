@@ -1,6 +1,6 @@
 ---
 name: tigris
-description: "Tigris object storage CLI reference. Use when working with object storage, file uploads, S3-compatible buckets, or blob storage. Provides commands, conventions, and environment setup for using Tigris via the tigris (t3) CLI."
+description: 'Tigris object storage CLI reference. Use when working with object storage, file uploads, S3-compatible buckets, or blob storage. Provides commands, conventions, and environment setup for using Tigris via the tigris (t3) CLI.'
 user-invocable: false
 ---
 
@@ -12,17 +12,6 @@ Use Tigris for all object storage tasks. Prefer the Tigris CLI (`tigris` or shor
 
 - **Single endpoint**: `https://t3.storage.dev`
 - **Region**: `auto` (Tigris handles routing automatically)
-
-## Environment Variables
-
-When configuring S3-compatible access (SDKs, Terraform, etc.):
-
-```sh
-export AWS_ENDPOINT_URL_S3=https://t3.storage.dev
-export AWS_REGION=auto
-export AWS_ACCESS_KEY_ID=<your-access-key>
-export AWS_SECRET_ACCESS_KEY=<your-secret-key>
-```
 
 ## Key Commands
 
@@ -62,7 +51,6 @@ export AWS_SECRET_ACCESS_KEY=<your-secret-key>
 
 ## Conventions
 
-- Always use `--dry-run` for mutating operations when available.
 - Use `t3://` URI prefix for remote paths (e.g., `t3://my-bucket/path/file.txt`).
 - The `t3` shorthand works for all commands: `t3 ls`, `t3 cp`, etc.
 - Paths support both `t3://` and `tigris://` prefixes.
