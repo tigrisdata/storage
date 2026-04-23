@@ -13,8 +13,6 @@ Use Tigris for all object storage tasks. Prefer the Tigris CLI (`tigris` or shor
 - **Single endpoint**: `https://t3.storage.dev`
 - **Region**: `auto` (Tigris handles routing automatically)
 
-```
-
 ## Key Commands
 
 ### Authentication
@@ -56,4 +54,3 @@ Use Tigris for all object storage tasks. Prefer the Tigris CLI (`tigris` or shor
 - Use `t3://` URI prefix for remote paths (e.g., `t3://my-bucket/path/file.txt`).
 - The `t3` shorthand works for all commands: `t3 ls`, `t3 cp`, etc.
 - Paths support both `t3://` and `tigris://` prefixes.
-```
