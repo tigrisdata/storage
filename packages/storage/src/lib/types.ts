@@ -7,6 +7,7 @@ export type TigrisStorageConfig = {
   endpoint?: string;
   sessionToken?: string;
   organizationId?: string;
+  forcePathStyle?: boolean;
   credentialProvider?: () => Promise<{
     accessKeyId: string;
     secretAccessKey: string;

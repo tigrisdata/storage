@@ -14,6 +14,7 @@ export function createTigrisClient(
   const secretAccessKey = options?.secretAccessKey ?? config.secretAccessKey;
   const endpoint = options?.endpoint ?? config.endpoint;
   const bucket = options?.bucket ?? config.bucket;
+  const forcePathStyle = options?.forcePathStyle ?? false;
 
   if (
     options?.credentialProvider !== undefined &&
@@ -59,6 +60,10 @@ export function createTigrisClient(
     key = `${options.sessionToken}-${options.organizationId}-${endpoint}`;
   }
 
+  if (forcePathStyle) {
+    key = `${key}-forcePathStyle`;
+  }
+
   if (key) {
     const cachedClient = cachedClients.get(key);
     if (cachedClient !== undefined) {
@@ -78,6 +83,7 @@ export function createTigrisClient(
     credentials,
     region: 'auto',
     endpoint: endpoint ?? 'https://t3.storage.dev',
+    forcePathStyle,
   });
 
   if (
