@@ -81,7 +81,7 @@ export class ReplSession {
 			});
 
 			if (result.env?.PWD) {
-				this.cwd = result.env.PWD;
+				this.cwd = result.env.PWD.replace(/\/\/+/g, "/");
 			}
 
 			if (result.stdout) io.write(result.stdout);
@@ -115,7 +115,7 @@ export class ReplSession {
 		}
 	}
 
-	/** Shared: list buckets, auto-mount first, commit session. */
+	/** Shared: list buckets, mount all, commit session. */
 	private async listAndMountBuckets(
 		newConfig: TigrisConfig,
 		authMethod: "access-key" | "oauth",
@@ -139,26 +139,15 @@ export class ReplSession {
 			return;
 		}
 
-		io.write("Available buckets:\n");
+		const newShell = new TigrisShell(newConfig, { cwd: "/" });
+		this.commitSession(newConfig, newShell, authMethod);
+		this.cwd = "/";
+
+		// Mount all buckets at /<name>
 		for (const name of bucketNames) {
-			io.write(`  ${name}\n`);
+			newShell.mount(name, `/${name}`);
 		}
-
-		const first = bucketNames[0];
-		if (first) {
-			// Create shell with the first bucket so commands get the right config
-			newConfig.bucket = first;
-			const mountPoint = `/${first}`;
-			const newShell = new TigrisShell(newConfig, { cwd: mountPoint });
-			this.commitSession(newConfig, newShell, authMethod);
-			this.cwd = mountPoint;
-			io.write(`\nMounted ${first} at ${mountPoint}\n`);
-		}
-
-		if (bucketNames.length > 1) {
-			io.write("\nTo mount additional buckets:\n");
-			io.write("  mount <bucket-name> <path>\n");
-		}
+		io.write(`Mounted ${bucketNames.length} bucket(s) at /. Run 'df' to list them.\n`);
 	}
 
 	/** Commit a new session — replace config, shell, reset cwd. */
@@ -350,9 +339,10 @@ export class ReplSession {
 			return;
 		}
 
-		io.write("Bucket                    Mounted on\n");
+		const col = Math.max("Bucket".length, ...mounts.map((m) => m.bucket.length)) + 2;
+		io.write(`${"Bucket".padEnd(col)}Mounted on\n`);
 		for (const m of mounts) {
-			io.write(`${m.bucket.padEnd(26)}${m.mountPoint}\n`);
+			io.write(`${m.bucket.padEnd(col)}${m.mountPoint}\n`);
 		}
 	}
 
@@ -411,19 +401,25 @@ export class ReplSession {
 	}
 
 	private handleHelp(io: ReplIO): void {
-		io.write("Commands:\n");
-		io.write("  login                                                   Login (OAuth)\n");
+		io.write("Session:\n");
+		io.write("  login                                         Login with Tigris (OAuth)\n");
 		io.write("  configure --key <id> --secret <key> [--bucket <name>] [--endpoint <url>]\n");
-		io.write("  mount <bucket> <path>                                   Mount a bucket\n");
-		io.write("  mount                                                   List mounts\n");
-		io.write("  umount <path>                                           Unmount a path\n");
-		io.write("  df                                                      List mounts\n");
-		io.write("  flush [path]                                            Flush to Tigris\n");
-		io.write("  whoami                                                  Show current session\n");
-		io.write("  logout                                                  Clear session\n");
-		io.write("  clear                                                   Clear screen\n");
-		io.write("  help                                                    Show this help\n");
-		io.write("\nAll other commands are executed as bash.\n");
+		io.write("  whoami                                        Show current session\n");
+		io.write("  logout                                        Clear session\n");
+		io.write("\nStorage:\n");
+		io.write("  mount <bucket> <path>                         Mount a bucket\n");
+		io.write("  umount <path>                                 Unmount a path\n");
+		io.write("  df                                            List mounts\n");
+		io.write("  flush [path]                                  Flush changes to Tigris\n");
+		io.write("  presign <path> [--expires N] [--put]          Generate a presigned URL\n");
+		io.write("  snapshot <bucket> [--name N] [--list]         Create or list snapshots\n");
+		io.write("  fork <source> <name> [--snapshot V]           Fork a bucket\n");
+		io.write("  forks <bucket>                                List forks\n");
+		io.write("\nShell:\n");
+		io.write("  clear                                         Clear screen\n");
+		io.write("  help                                          Show this help\n");
+		io.write("\nAll other input is executed as bash.\n");
+		io.write("Supported commands: https://github.com/vercel-labs/just-bash#supported-commands\n");
 	}
 
 	/** Whether a shell is configured and ready. */
