@@ -1,7 +1,7 @@
 import { listBuckets } from "@tigrisdata/storage";
 import type { BashExecResult } from "just-bash";
 import { TigrisShell } from "../shell.js";
-import type { TigrisConfig } from "../types.js";
+import { type TigrisConfig, withConfigDefaults } from "../types.js";
 import type { LoginFn } from "./auth.js";
 import type { ReplIO } from "./io.js";
 
@@ -121,7 +121,8 @@ export class ReplSession {
 		authMethod: "access-key" | "oauth",
 		io: ReplIO,
 	): Promise<void> {
-		const bucketsResult = await listBuckets({ config: newConfig });
+		const config = withConfigDefaults(newConfig);
+		const bucketsResult = await listBuckets({ config });
 		if ("error" in bucketsResult) {
 			const newShell = new TigrisShell(newConfig);
 			this.commitSession(newConfig, newShell, authMethod);
