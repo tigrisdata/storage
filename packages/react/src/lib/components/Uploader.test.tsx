@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Uploader } from './Uploader';
 
 // Mock the useUpload hook
@@ -92,7 +92,9 @@ describe('Uploader', () => {
   it('should trigger file input click on container click', () => {
     render(<Uploader url={mockUrl} />);
 
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement;
     const clickSpy = vi.spyOn(input, 'click');
 
     const container = document.querySelector('.tigris-uploader') as HTMLElement;
@@ -104,7 +106,9 @@ describe('Uploader', () => {
   it('should not trigger file input when disabled', () => {
     render(<Uploader url={mockUrl} disabled />);
 
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement;
     const clickSpy = vi.spyOn(input, 'click');
 
     const container = document.querySelector('.tigris-uploader') as HTMLElement;
@@ -116,14 +120,18 @@ describe('Uploader', () => {
   it('should set accept attribute on file input', () => {
     render(<Uploader url={mockUrl} accept="image/*" />);
 
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement;
     expect(input).toHaveAttribute('accept', 'image/*');
   });
 
   it('should set multiple attribute when multiple is true', () => {
     render(<Uploader url={mockUrl} multiple />);
 
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement;
     expect(input).toHaveAttribute('multiple');
   });
 
@@ -139,7 +147,9 @@ describe('Uploader', () => {
 
     render(<Uploader url={mockUrl} />);
 
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement;
     const file = new File(['test'], 'test.txt', { type: 'text/plain' });
 
     Object.defineProperty(input, 'files', {
@@ -163,7 +173,9 @@ describe('Uploader', () => {
 
     render(<Uploader url={mockUrl} multiple />);
 
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement;
     const file1 = new File(['test1'], 'test1.txt', { type: 'text/plain' });
     const file2 = new File(['test2'], 'test2.txt', { type: 'text/plain' });
 
@@ -178,10 +190,16 @@ describe('Uploader', () => {
 
   it('should call onUploadError when file exceeds maxSize', () => {
     const onUploadError = vi.fn();
-    render(<Uploader url={mockUrl} maxSize={100} onUploadError={onUploadError} />);
+    render(
+      <Uploader url={mockUrl} maxSize={100} onUploadError={onUploadError} />
+    );
 
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-    const largeFile = new File(['x'.repeat(200)], 'large.txt', { type: 'text/plain' });
+    const input = document.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement;
+    const largeFile = new File(['x'.repeat(200)], 'large.txt', {
+      type: 'text/plain',
+    });
 
     Object.defineProperty(input, 'files', {
       value: [largeFile],
@@ -199,9 +217,13 @@ describe('Uploader', () => {
 
   it('should reject all files when maxSize is 0', () => {
     const onUploadError = vi.fn();
-    render(<Uploader url={mockUrl} maxSize={0} onUploadError={onUploadError} />);
+    render(
+      <Uploader url={mockUrl} maxSize={0} onUploadError={onUploadError} />
+    );
 
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement;
     const file = new File(['test'], 'test.txt', { type: 'text/plain' });
 
     Object.defineProperty(input, 'files', {
@@ -308,7 +330,9 @@ describe('Uploader', () => {
     render(<Uploader url={mockUrl} />);
 
     expect(screen.getByText('test.txt')).toBeInTheDocument();
-    expect(document.querySelector('.tigris-uploader-progress')).toBeInTheDocument();
+    expect(
+      document.querySelector('.tigris-uploader-progress')
+    ).toBeInTheDocument();
   });
 
   it('should show success status for completed uploads', () => {
@@ -320,7 +344,12 @@ describe('Uploader', () => {
           file: mockFile,
           status: 'success' as const,
           progress: { loaded: 100, total: 100, percentage: 100 },
-          response: { name: 'test.txt', url: '', size: 100, modified: new Date() },
+          response: {
+            name: 'test.txt',
+            url: '',
+            size: 100,
+            modified: new Date(),
+          },
         },
       ],
     ]);
@@ -336,7 +365,9 @@ describe('Uploader', () => {
     render(<Uploader url={mockUrl} />);
 
     expect(screen.getByText('Uploaded')).toBeInTheDocument();
-    expect(document.querySelector('.tigris-uploader-file')).toHaveClass('is-success');
+    expect(document.querySelector('.tigris-uploader-file')).toHaveClass(
+      'is-success'
+    );
   });
 
   it('should show error status for failed uploads', () => {
@@ -364,7 +395,9 @@ describe('Uploader', () => {
     render(<Uploader url={mockUrl} />);
 
     expect(screen.getByText('Failed')).toBeInTheDocument();
-    expect(document.querySelector('.tigris-uploader-file')).toHaveClass('is-error');
+    expect(document.querySelector('.tigris-uploader-file')).toHaveClass(
+      'is-error'
+    );
   });
 
   it('should be accessible via keyboard', () => {
@@ -378,7 +411,9 @@ describe('Uploader', () => {
   it('should trigger click on Enter key', () => {
     render(<Uploader url={mockUrl} />);
 
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement;
     const clickSpy = vi.spyOn(input, 'click');
 
     const container = document.querySelector('.tigris-uploader') as HTMLElement;
@@ -390,7 +425,9 @@ describe('Uploader', () => {
   it('should trigger click on Space key', () => {
     render(<Uploader url={mockUrl} />);
 
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement;
     const clickSpy = vi.spyOn(input, 'click');
 
     const container = document.querySelector('.tigris-uploader') as HTMLElement;
@@ -401,7 +438,9 @@ describe('Uploader', () => {
 
   it('should reject dropped files that do not match accept pattern (MIME wildcard)', () => {
     const onUploadError = vi.fn();
-    render(<Uploader url={mockUrl} accept="image/*" onUploadError={onUploadError} />);
+    render(
+      <Uploader url={mockUrl} accept="image/*" onUploadError={onUploadError} />
+    );
 
     const container = document.querySelector('.tigris-uploader') as HTMLElement;
     const textFile = new File(['test'], 'test.txt', { type: 'text/plain' });
@@ -442,7 +481,13 @@ describe('Uploader', () => {
 
   it('should reject dropped files that do not match accept pattern (file extension)', () => {
     const onUploadError = vi.fn();
-    render(<Uploader url={mockUrl} accept=".pdf,.doc" onUploadError={onUploadError} />);
+    render(
+      <Uploader
+        url={mockUrl}
+        accept=".pdf,.doc"
+        onUploadError={onUploadError}
+      />
+    );
 
     const container = document.querySelector('.tigris-uploader') as HTMLElement;
     const textFile = new File(['test'], 'test.txt', { type: 'text/plain' });
@@ -472,7 +517,9 @@ describe('Uploader', () => {
     render(<Uploader url={mockUrl} accept=".pdf,.doc" />);
 
     const container = document.querySelector('.tigris-uploader') as HTMLElement;
-    const pdfFile = new File(['test'], 'document.pdf', { type: 'application/pdf' });
+    const pdfFile = new File(['test'], 'document.pdf', {
+      type: 'application/pdf',
+    });
 
     fireEvent.drop(container, {
       dataTransfer: { files: [pdfFile] },
@@ -494,7 +541,9 @@ describe('Uploader', () => {
     render(<Uploader url={mockUrl} accept="application/json" />);
 
     const container = document.querySelector('.tigris-uploader') as HTMLElement;
-    const jsonFile = new File(['{}'], 'data.json', { type: 'application/json' });
+    const jsonFile = new File(['{}'], 'data.json', {
+      type: 'application/json',
+    });
 
     fireEvent.drop(container, {
       dataTransfer: { files: [jsonFile] },

@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import type { BucketLifecycleRule, BucketTtl } from '../types';
 import { buildLifecycleRules } from './lifecycle';
-import type { BucketTtl, BucketLifecycleRule } from '../types';
 
 // Stable UUID for snapshot assertions
 vi.stubGlobal('crypto', {

@@ -45,12 +45,11 @@ export async function get(
     Bucket: options?.config?.bucket ?? config.bucket,
     Key: path,
     ResponseContentType: options?.contentType ?? undefined,
-    ResponseContentDisposition:
-      options && options.contentDisposition
-        ? options.contentDisposition === 'attachment'
-          ? `attachment; filename="${path}"`
-          : 'inline'
-        : undefined,
+    ResponseContentDisposition: options?.contentDisposition
+      ? options.contentDisposition === 'attachment'
+        ? `attachment; filename="${path}"`
+        : 'inline'
+      : undefined,
   });
 
   if (options?.snapshotVersion) {

@@ -16,7 +16,7 @@ export function validateAndFormatDate(
   date: string
 ): { value: string } | { error: string } {
   const parsed = new Date(date);
-  if (isNaN(parsed.getTime())) {
+  if (Number.isNaN(parsed.getTime())) {
     return { error: 'date must be a valid date' };
   }
 

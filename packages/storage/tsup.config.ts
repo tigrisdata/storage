@@ -1,5 +1,5 @@
+import path from 'node:path';
 import { defineConfig } from 'tsup';
-import path from 'path';
 
 const sharedConfig = {
   esbuildOptions(options: { alias?: Record<string, string> }) {

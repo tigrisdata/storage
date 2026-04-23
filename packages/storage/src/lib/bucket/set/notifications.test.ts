@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { setBucketNotifications } from './notifications';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BucketNotification } from '../types';
+import { setBucketNotifications } from './notifications';
 
 // -- Mocks --
 

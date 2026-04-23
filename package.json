@@ -15,10 +15,12 @@
     "build": "npm run build --workspaces --if-present",
     "dev": "npm run dev --workspaces --if-present",
     "publint": "npm run publint --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
-    "lint:fix": "npm run lint:fix --workspaces --if-present",
-    "format": "npm run format --workspaces --if-present",
-    "format:check": "npm run format:check --workspaces --if-present",
+    "lint": "biome lint",
+    "lint:fix": "biome lint --write",
+    "format": "biome format --write",
+    "format:check": "biome format",
+    "check": "biome check",
+    "check:fix": "biome check --write",
     "test": "npm run test --workspaces --if-present",
     "commit": "cz",
     "release": "./scripts/release.sh",
@@ -56,20 +58,17 @@
     }
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
-    "@eslint/js": "^10.0.1",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@types/node": "^20.0.0",
-    "eslint": "^10.2.0",
     "husky": "^9.1.7",
-    "prettier": "^3.8.3",
     "publint": "^0.3.18",
     "semantic-release": "^25.0.3",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.58.2",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.5"
   }
 }

@@ -1,6 +1,6 @@
-import { TigrisStorageResponse } from '../types';
-import { addRandomSuffix } from '../utils';
 import { executeWithConcurrency } from '@shared/utils';
+import type { TigrisStorageResponse } from '../types';
+import { addRandomSuffix } from '../utils';
 import { UploadAction } from './shared';
 
 export type UploadOptions = {

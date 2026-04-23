@@ -1,9 +1,9 @@
+import type { TigrisResponse } from '@shared/types';
 import {
   createBucket,
   createBucketSnapshot,
   listBucketSnapshots,
 } from '@tigrisdata/storage';
-import type { TigrisResponse } from '@shared/types';
 import type { TigrisAgentKitConfig } from './config';
 import { toStorageConfig } from './config';
 

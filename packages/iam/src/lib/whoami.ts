@@ -1,5 +1,5 @@
 import { createIAMClient, IAM_ENDPOINTS } from './http-client';
-import { TigrisIAMConfig, TigrisIAMResponse } from './types';
+import type { TigrisIAMConfig, TigrisIAMResponse } from './types';
 
 export type WhoamiOptions = {
   config?: TigrisIAMConfig;

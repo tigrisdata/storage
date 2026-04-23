@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useUpload } from './useUpload';
 
 // Mock the storage client
@@ -10,7 +10,9 @@ vi.mock('@tigrisdata/storage/client', () => ({
 import { upload as mockUpload } from '@tigrisdata/storage/client';
 
 describe('useUpload', () => {
-  const mockFile = new File(['test content'], 'test.txt', { type: 'text/plain' });
+  const mockFile = new File(['test content'], 'test.txt', {
+    type: 'text/plain',
+  });
   const mockUrl = '/api/upload';
 
   beforeEach(() => {
@@ -96,11 +98,13 @@ describe('useUpload', () => {
       data: { name: 'test.txt', url: '', size: 0, modified: new Date() },
     });
 
-    const largeFile = new File(['x'.repeat(1000)], 'large.txt', { type: 'text/plain' });
+    const largeFile = new File(['x'.repeat(1000)], 'large.txt', {
+      type: 'text/plain',
+    });
     Object.defineProperty(largeFile, 'size', { value: 20 * 1024 * 1024 }); // 20MB
 
-    const { result } = renderHook(() =>
-      useUpload({ url: mockUrl, multipartThreshold: 10 * 1024 * 1024 }) // 10MB threshold
+    const { result } = renderHook(
+      () => useUpload({ url: mockUrl, multipartThreshold: 10 * 1024 * 1024 }) // 10MB threshold
     );
 
     await act(async () => {
@@ -154,11 +158,19 @@ describe('useUpload', () => {
   });
 
   it('should track upload progress', async () => {
-    let progressCallback: ((progress: { loaded: number; total: number; percentage: number }) => void) | undefined;
+    let progressCallback:
+      | ((progress: {
+          loaded: number;
+          total: number;
+          percentage: number;
+        }) => void)
+      | undefined;
 
     vi.mocked(mockUpload).mockImplementation(async (_name, _data, options) => {
       progressCallback = options?.onUploadProgress;
-      return { data: { name: 'test.txt', url: '', size: 0, modified: new Date() } };
+      return {
+        data: { name: 'test.txt', url: '', size: 0, modified: new Date() },
+      };
     });
 
     const onUploadProgress = vi.fn();
@@ -241,11 +253,15 @@ describe('useUpload', () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       activeUploads--;
-      return { data: { name: 'test.txt', url: '', size: 0, modified: new Date() } };
+      return {
+        data: { name: 'test.txt', url: '', size: 0, modified: new Date() },
+      };
     });
 
-    const files = Array.from({ length: 6 }, (_, i) =>
-      new File([`content${i}`], `file${i}.txt`, { type: 'text/plain' })
+    const files = Array.from(
+      { length: 6 },
+      (_, i) =>
+        new File([`content${i}`], `file${i}.txt`, { type: 'text/plain' })
     );
 
     const { result } = renderHook(() =>
@@ -271,11 +287,15 @@ describe('useUpload', () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       activeUploads--;
-      return { data: { name: 'test.txt', url: '', size: 0, modified: new Date() } };
+      return {
+        data: { name: 'test.txt', url: '', size: 0, modified: new Date() },
+      };
     });
 
-    const files = Array.from({ length: 8 }, (_, i) =>
-      new File([`content${i}`], `file${i}.txt`, { type: 'text/plain' })
+    const files = Array.from(
+      { length: 8 },
+      (_, i) =>
+        new File([`content${i}`], `file${i}.txt`, { type: 'text/plain' })
     );
 
     const { result } = renderHook(() => useUpload({ url: mockUrl }));
@@ -293,15 +313,22 @@ describe('useUpload', () => {
 
     vi.mocked(mockUpload).mockImplementation(() => {
       return new Promise((resolve) => {
-        resolveUpload = () => resolve({ data: { name: 'test.txt', url: '', size: 0, modified: new Date() } });
+        resolveUpload = () =>
+          resolve({
+            data: { name: 'test.txt', url: '', size: 0, modified: new Date() },
+          });
       });
     });
 
-    const files = Array.from({ length: 4 }, (_, i) =>
-      new File([`content${i}`], `file${i}.txt`, { type: 'text/plain' })
+    const files = Array.from(
+      { length: 4 },
+      (_, i) =>
+        new File([`content${i}`], `file${i}.txt`, { type: 'text/plain' })
     );
 
-    const { result } = renderHook(() => useUpload({ url: mockUrl, concurrency: 1 }));
+    const { result } = renderHook(() =>
+      useUpload({ url: mockUrl, concurrency: 1 })
+    );
 
     let uploadPromise: Promise<unknown>;
     act(() => {
@@ -335,7 +362,11 @@ describe('useUpload', () => {
 
     vi.mocked(mockUpload).mockImplementation(() => {
       return new Promise((resolve) => {
-        uploadResolvers.push(() => resolve({ data: { name: 'test.txt', url: '', size: 0, modified: new Date() } }));
+        uploadResolvers.push(() =>
+          resolve({
+            data: { name: 'test.txt', url: '', size: 0, modified: new Date() },
+          })
+        );
       });
     });
 
@@ -344,7 +375,9 @@ describe('useUpload', () => {
       new File(['content2'], 'file2.txt', { type: 'text/plain' }),
     ];
 
-    const { result } = renderHook(() => useUpload({ url: mockUrl, concurrency: 1 }));
+    const { result } = renderHook(() =>
+      useUpload({ url: mockUrl, concurrency: 1 })
+    );
 
     let uploadPromise: Promise<unknown>;
     act(() => {
@@ -353,8 +386,12 @@ describe('useUpload', () => {
 
     // Initially: 1 uploading, 1 pending
     let states = Array.from(result.current.uploads.values());
-    expect(states.find((s) => s.file.name === 'file1.txt')?.status).toBe('uploading');
-    expect(states.find((s) => s.file.name === 'file2.txt')?.status).toBe('pending');
+    expect(states.find((s) => s.file.name === 'file1.txt')?.status).toBe(
+      'uploading'
+    );
+    expect(states.find((s) => s.file.name === 'file2.txt')?.status).toBe(
+      'pending'
+    );
 
     // Complete first upload
     await act(async () => {
@@ -364,8 +401,12 @@ describe('useUpload', () => {
 
     // Now: 1 success, 1 uploading
     states = Array.from(result.current.uploads.values());
-    expect(states.find((s) => s.file.name === 'file1.txt')?.status).toBe('success');
-    expect(states.find((s) => s.file.name === 'file2.txt')?.status).toBe('uploading');
+    expect(states.find((s) => s.file.name === 'file1.txt')?.status).toBe(
+      'success'
+    );
+    expect(states.find((s) => s.file.name === 'file2.txt')?.status).toBe(
+      'uploading'
+    );
 
     // Complete second upload
     await act(async () => {
@@ -375,7 +416,11 @@ describe('useUpload', () => {
 
     // Now: both success
     states = Array.from(result.current.uploads.values());
-    expect(states.find((s) => s.file.name === 'file1.txt')?.status).toBe('success');
-    expect(states.find((s) => s.file.name === 'file2.txt')?.status).toBe('success');
+    expect(states.find((s) => s.file.name === 'file1.txt')?.status).toBe(
+      'success'
+    );
+    expect(states.find((s) => s.file.name === 'file2.txt')?.status).toBe(
+      'success'
+    );
   });
 });

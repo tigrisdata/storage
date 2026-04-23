@@ -30,10 +30,6 @@
     "build": "tsc --noEmit && tsup",
     "dev": "tsc --noEmit && tsup --watch",
     "publint": "publint",
-    "lint": "eslint 'src/**/*.ts' 'test/**/*.ts'",
-    "lint:fix": "eslint 'src/**/*.ts' 'test/**/*.ts' --fix",
-    "format": "prettier --write 'src/**/*.ts' 'test/**/*.ts'",
-    "format:check": "prettier --check 'src/**/*.ts' 'test/**/*.ts'",
     "prepublishOnly": "npm run build",
     "test": "vitest run --config vitest.config.ts",
     "clean": "rm -rf dist"
@@ -54,7 +50,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@tigrisdata/storage": "^3.1.1",
+    "@tigrisdata/storage": "^3.2.0",
     "@tigrisdata/iam": "^2.1.0",
     "dotenv": "^17.4.2"
   }

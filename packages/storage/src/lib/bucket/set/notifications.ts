@@ -1,7 +1,7 @@
-import { TigrisStorageConfig, TigrisStorageResponse } from '../../types';
-import type { BucketNotification, UpdateBucketResponse } from '../types';
+import type { TigrisStorageConfig, TigrisStorageResponse } from '../../types';
 import { getBucketInfo } from '../info';
-import { setBucketSettings, SetBucketSettingsOptions } from './set';
+import type { BucketNotification, UpdateBucketResponse } from '../types';
+import { type SetBucketSettingsOptions, setBucketSettings } from './set';
 
 export type SetBucketNotificationsOptions = {
   config?: Omit<TigrisStorageConfig, 'bucket'>;

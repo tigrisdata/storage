@@ -1,12 +1,12 @@
+import { toError } from '@shared/utils';
 import {
   completeMultipartUpload,
   getPartsPresignedUrls,
   initMultipartUpload,
 } from '../object/multipart';
 import { getPresignedUrl } from '../object/presigned-url';
-import { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import { UploadAction } from './shared';
-import { toError } from '@shared/utils';
 
 export interface ClientUploadRequest {
   action: UploadAction;

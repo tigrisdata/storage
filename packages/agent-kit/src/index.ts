@@ -1,37 +1,34 @@
 // Forks — isolated copy-on-write forks for parallel agent work
-export { createForks, teardownForks } from './forks';
-export type {
-  CreateForksOptions,
-  Forks,
-  Fork,
-  TeardownForksOptions,
-} from './forks';
 
-// Workspace — single-agent working area with optional TTL and credentials
-export { createWorkspace, teardownWorkspace } from './workspace';
 export type {
-  CreateWorkspaceOptions,
-  Workspace,
-  TeardownWorkspaceOptions,
-} from './workspace';
-
-// Checkpoint — snapshot-based state management and restore via forks
-export { checkpoint, restore, listCheckpoints } from './checkpoint';
-export type {
-  CheckpointOptions,
   Checkpoint,
-  RestoreOptions,
-  RestoreResult,
+  CheckpointOptions,
   ListCheckpointsOptions,
   ListCheckpointsResponse,
+  RestoreOptions,
+  RestoreResult,
 } from './checkpoint';
-
-// Coordination — event-driven multi-agent pipelines via bucket notifications
-export { setupCoordination, teardownCoordination } from './coordination';
+// Checkpoint — snapshot-based state management and restore via forks
+export { checkpoint, listCheckpoints, restore } from './checkpoint';
+// Config
+export type { TigrisAgentKitConfig } from './config';
 export type {
   SetupCoordinationOptions,
   TeardownCoordinationOptions,
 } from './coordination';
-
-// Config
-export type { TigrisAgentKitConfig } from './config';
+// Coordination — event-driven multi-agent pipelines via bucket notifications
+export { setupCoordination, teardownCoordination } from './coordination';
+export type {
+  CreateForksOptions,
+  Fork,
+  Forks,
+  TeardownForksOptions,
+} from './forks';
+export { createForks, teardownForks } from './forks';
+export type {
+  CreateWorkspaceOptions,
+  TeardownWorkspaceOptions,
+  Workspace,
+} from './workspace';
+// Workspace — single-agent working area with optional TTL and credentials
+export { createWorkspace, teardownWorkspace } from './workspace';

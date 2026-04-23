@@ -1,7 +1,7 @@
-import { beforeAll, afterAll } from 'vitest';
-import { remove } from '../lib/object/remove';
-import { list } from '../lib/object/list';
+import { afterAll, beforeAll } from 'vitest';
 import { config } from '../lib/config';
+import { list } from '../lib/object/list';
+import { remove } from '../lib/object/remove';
 
 beforeAll(async () => {
   console.log('Setting up integration tests...');

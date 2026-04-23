@@ -1,5 +1,5 @@
-import dotenv from 'dotenv';
 import path from 'node:path';
+import dotenv from 'dotenv';
 
 // Load .env from the ai package root
 dotenv.config({ path: path.resolve(__dirname, '../.env') });

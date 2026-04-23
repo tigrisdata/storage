@@ -134,8 +134,8 @@ export async function completeMultipartUpload(
     MultipartUpload: {
       Parts: partIds.flatMap((parts) =>
         Object.keys(parts).map((partNumber) => ({
-          ETag: parts[parseInt(partNumber)],
-          PartNumber: parseInt(partNumber),
+          ETag: parts[parseInt(partNumber, 10)],
+          PartNumber: parseInt(partNumber, 10),
         }))
       ),
     },

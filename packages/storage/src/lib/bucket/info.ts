@@ -1,3 +1,4 @@
+import { createStorageClient } from '../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import type {
   BucketCorsRule,
@@ -8,7 +9,6 @@ import type {
   StorageClass,
 } from './types';
 import type { GetBucketInfoApiResponseBody } from './utils/api';
-import { createStorageClient } from '../http-client';
 
 export type GetBucketInfoOptions = {
   config?: TigrisStorageConfig;

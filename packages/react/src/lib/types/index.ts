@@ -1,8 +1,17 @@
-import type { UploadOptions, UploadProgress, UploadResponse } from '@tigrisdata/storage/client';
+import type {
+  UploadOptions,
+  UploadProgress,
+  UploadResponse,
+} from '@tigrisdata/storage/client';
 
 export type { UploadOptions, UploadProgress, UploadResponse };
 
-export type UploadStatus = 'idle' | 'pending' | 'uploading' | 'success' | 'error';
+export type UploadStatus =
+  | 'idle'
+  | 'pending'
+  | 'uploading'
+  | 'success'
+  | 'error';
 
 export interface FileUploadState {
   file: File;
@@ -87,7 +96,10 @@ export interface UploaderProps {
   /**
    * Additional upload options passed to the storage client
    */
-  uploadOptions?: Omit<UploadOptions, 'url' | 'onUploadProgress' | 'multipart' | 'partSize' | 'concurrency'>;
+  uploadOptions?: Omit<
+    UploadOptions,
+    'url' | 'onUploadProgress' | 'multipart' | 'partSize' | 'concurrency'
+  >;
 
   /**
    * Custom class name for the container
@@ -138,7 +150,10 @@ export interface UseUploadOptions {
   /**
    * Additional upload options
    */
-  uploadOptions?: Omit<UploadOptions, 'url' | 'onUploadProgress' | 'multipart' | 'partSize' | 'concurrency'>;
+  uploadOptions?: Omit<
+    UploadOptions,
+    'url' | 'onUploadProgress' | 'multipart' | 'partSize' | 'concurrency'
+  >;
 
   /**
    * Callback fired when upload starts

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, afterEach } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { bundle } from './bundle';
 
 describe('bundle', () => {
@@ -88,7 +88,7 @@ describe('bundle', () => {
     expect(headers['Content-Type']).toBe('application/json');
 
     // SigV4 should have added Authorization header.
-    expect(headers['authorization']).toBeDefined();
+    expect(headers.authorization).toBeDefined();
 
     expect(result.data?.contentType).toBe('application/x-tar');
   });
@@ -214,6 +214,6 @@ describe('bundle', () => {
     expect(headers['x-amz-security-token']).toBe('my-session-token');
     expect(headers['X-Tigris-Namespace']).toBe('my-org');
     // Should NOT have SigV4 Authorization.
-    expect(headers['authorization']).toBeUndefined();
+    expect(headers.authorization).toBeUndefined();
   });
 });

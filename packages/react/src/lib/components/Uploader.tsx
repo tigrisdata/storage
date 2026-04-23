@@ -1,12 +1,12 @@
 import {
+  type ChangeEvent,
+  type DragEvent,
   useCallback,
   useRef,
   useState,
-  type DragEvent,
-  type ChangeEvent,
 } from 'react';
 import { useUpload } from '../hooks/useUpload';
-import type { UploaderProps, FileUploadState } from '../types';
+import type { FileUploadState, UploaderProps } from '../types';
 
 function cn(...classes: (string | undefined | false)[]): string {
   return classes.filter(Boolean).join(' ');
@@ -104,7 +104,7 @@ export function Uploader({
           // Handle MIME type wildcards (e.g., "image/*")
           if (acceptedType.endsWith('/*')) {
             const baseType = acceptedType.slice(0, -2);
-            return fileType.startsWith(baseType + '/');
+            return fileType.startsWith(`${baseType}/`);
           }
           // Handle exact MIME types (e.g., "image/png")
           if (acceptedType.includes('/')) {

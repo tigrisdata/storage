@@ -12,7 +12,12 @@ export default mergeConfig(
       coverage: {
         provider: 'v8',
         reporter: ['text', 'json', 'html'],
-        exclude: ['node_modules/', 'dist/', '**/*.{test,spec}.{js,ts}', 'src/test/'],
+        exclude: [
+          'node_modules/',
+          'dist/',
+          '**/*.{test,spec}.{js,ts}',
+          'src/test/',
+        ],
       },
     },
   })

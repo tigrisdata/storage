@@ -1,7 +1,7 @@
 import { TigrisHeaders, toError } from '@shared/index';
 import { config, missingConfigError } from '../config';
-import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import { createStorageClient } from '../http-client';
+import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type BundleOptions = {
   config?: TigrisStorageConfig;

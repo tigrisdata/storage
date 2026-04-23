@@ -1,7 +1,7 @@
 import {
+  missingConfigError as baseMissingConfigError,
   isNode,
   loadEnv,
-  missingConfigError as baseMissingConfigError,
 } from '@shared/index';
 import type { TigrisStorageConfig } from './types';
 

@@ -1,4 +1,4 @@
-import { StorageClass } from '../types';
+import type { StorageClass } from '../types';
 
 type BucketApiNotifications =
   | Record<string, never>

@@ -1,12 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { put } from '../lib/object/put';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { config } from '../lib/config';
 import { get } from '../lib/object/get';
 import { head } from '../lib/object/head';
 import { list } from '../lib/object/list';
+import { put } from '../lib/object/put';
 import { remove } from '../lib/object/remove';
 import { updateObject } from '../lib/object/update';
 import { shouldSkipIntegrationTests } from './setup';
-import { config } from '../lib/config';
 
 const skipTests = shouldSkipIntegrationTests();
 

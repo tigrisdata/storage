@@ -1,6 +1,6 @@
-import * as test from 'vitest';
 import keyvTestSuite from '@keyv/test-suite';
 import Keyv from 'keyv';
+import * as test from 'vitest';
 import KeyvTigris from '../index';
 
 const store = () => new KeyvTigris();

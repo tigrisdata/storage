@@ -1,5 +1,5 @@
-import { defineConfig } from 'tsup';
 import path from 'node:path';
+import { defineConfig } from 'tsup';
 
 export default defineConfig({
   entry: ['src/index.ts', 'src/styles.css'],

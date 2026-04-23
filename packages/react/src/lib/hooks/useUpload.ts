@@ -1,11 +1,11 @@
-import { useState, useCallback, useRef } from 'react';
-import { upload as storageUpload } from '@tigrisdata/storage/client';
 import { executeWithConcurrency } from '@shared/utils';
+import { upload as storageUpload } from '@tigrisdata/storage/client';
+import { useCallback, useRef, useState } from 'react';
 import type {
-  UseUploadOptions,
-  UseUploadReturn,
   FileUploadState,
   UploadProgress,
+  UseUploadOptions,
+  UseUploadReturn,
 } from '../types';
 
 function generateFileKey(file: File): string {
@@ -26,20 +26,25 @@ export function useUpload(options: UseUploadOptions): UseUploadReturn {
     onUploadError,
   } = options;
 
-  const [uploads, setUploads] = useState<Map<string, FileUploadState>>(new Map());
+  const [uploads, setUploads] = useState<Map<string, FileUploadState>>(
+    new Map()
+  );
   const uploadsRef = useRef(uploads);
   uploadsRef.current = uploads;
 
-  const updateUpload = useCallback((key: string, update: Partial<FileUploadState>) => {
-    setUploads((prev) => {
-      const newMap = new Map(prev);
-      const existing = newMap.get(key);
-      if (existing) {
-        newMap.set(key, { ...existing, ...update });
-      }
-      return newMap;
-    });
-  }, []);
+  const updateUpload = useCallback(
+    (key: string, update: Partial<FileUploadState>) => {
+      setUploads((prev) => {
+        const newMap = new Map(prev);
+        const existing = newMap.get(key);
+        if (existing) {
+          newMap.set(key, { ...existing, ...update });
+        }
+        return newMap;
+      });
+    },
+    []
+  );
 
   const startUpload = useCallback(
     async (file: File) => {
@@ -50,7 +55,9 @@ export function useUpload(options: UseUploadOptions): UseUploadReturn {
       onUploadStart?.(file);
 
       // Determine if multipart should be used
-      const useMultipart = multipart || (multipartThreshold !== undefined && file.size > multipartThreshold);
+      const useMultipart =
+        multipart ||
+        (multipartThreshold !== undefined && file.size > multipartThreshold);
 
       const result = await storageUpload(file.name, file, {
         ...uploadOptions,
@@ -65,7 +72,10 @@ export function useUpload(options: UseUploadOptions): UseUploadReturn {
       });
 
       if (result.error) {
-        const error = result.error instanceof Error ? result.error : new Error(String(result.error));
+        const error =
+          result.error instanceof Error
+            ? result.error
+            : new Error(String(result.error));
         updateUpload(key, { status: 'error', error });
         onUploadError?.(file, error);
         return undefined;
@@ -79,7 +89,19 @@ export function useUpload(options: UseUploadOptions): UseUploadReturn {
       onUploadComplete?.(file, result.data);
       return result.data;
     },
-    [url, multipart, partSize, multipartThreshold, concurrency, uploadOptions, onUploadStart, onUploadProgress, onUploadComplete, onUploadError, updateUpload]
+    [
+      url,
+      multipart,
+      partSize,
+      multipartThreshold,
+      concurrency,
+      uploadOptions,
+      onUploadStart,
+      onUploadProgress,
+      onUploadComplete,
+      onUploadError,
+      updateUpload,
+    ]
   );
 
   const upload = useCallback(
@@ -102,7 +124,9 @@ export function useUpload(options: UseUploadOptions): UseUploadReturn {
       onUploadStart?.(file);
 
       // Determine if multipart should be used
-      const useMultipart = multipart || (multipartThreshold !== undefined && file.size > multipartThreshold);
+      const useMultipart =
+        multipart ||
+        (multipartThreshold !== undefined && file.size > multipartThreshold);
 
       const result = await storageUpload(file.name, file, {
         ...uploadOptions,
@@ -117,7 +141,10 @@ export function useUpload(options: UseUploadOptions): UseUploadReturn {
       });
 
       if (result.error) {
-        const error = result.error instanceof Error ? result.error : new Error(String(result.error));
+        const error =
+          result.error instanceof Error
+            ? result.error
+            : new Error(String(result.error));
         updateUpload(key, { status: 'error', error });
         onUploadError?.(file, error);
         return undefined;
@@ -131,7 +158,19 @@ export function useUpload(options: UseUploadOptions): UseUploadReturn {
       onUploadComplete?.(file, result.data);
       return result.data;
     },
-    [url, multipart, partSize, multipartThreshold, concurrency, uploadOptions, onUploadStart, onUploadProgress, onUploadComplete, onUploadError, updateUpload]
+    [
+      url,
+      multipart,
+      partSize,
+      multipartThreshold,
+      concurrency,
+      uploadOptions,
+      onUploadStart,
+      onUploadProgress,
+      onUploadComplete,
+      onUploadError,
+      updateUpload,
+    ]
   );
 
   const uploadMultiple = useCallback(
@@ -159,7 +198,9 @@ export function useUpload(options: UseUploadOptions): UseUploadReturn {
     [startUpload, concurrency]
   );
 
-  const isUploading = Array.from(uploads.values()).some((state) => state.status === 'uploading');
+  const isUploading = Array.from(uploads.values()).some(
+    (state) => state.status === 'uploading'
+  );
 
   const reset = useCallback(() => {
     setUploads(new Map());

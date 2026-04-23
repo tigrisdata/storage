@@ -1,9 +1,9 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { createBucket } from '../lib/bucket/create';
 import { listBuckets } from '../lib/bucket/list';
 import { removeBucket } from '../lib/bucket/remove';
-import { shouldSkipIntegrationTests } from './setup';
 import { config } from '../lib/config';
+import { shouldSkipIntegrationTests } from './setup';
 
 const skipTests = shouldSkipIntegrationTests();
 
