@@ -19,6 +19,8 @@ export interface TigrisConfig {
 	bucket?: string;
 	/** Tigris endpoint. Defaults to https://t3.storage.dev */
 	endpoint?: string;
+	/** Use path-style URLs (endpoint/bucket/key) instead of virtual-hosted (bucket.endpoint/key). */
+	forcePathStyle?: boolean;
 }
 
 /**
@@ -29,6 +31,14 @@ export interface ShellOptions {
 	cwd?: string;
 	/** Initial environment variables for the shell. */
 	env?: Record<string, string>;
+}
+
+/** Return a new config with defaults applied. */
+export function withConfigDefaults(config: TigrisConfig): TigrisConfig {
+	return {
+		forcePathStyle: true,
+		...config,
+	};
 }
 
 /**

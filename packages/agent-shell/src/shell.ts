@@ -5,7 +5,7 @@ import { createPresignCommand } from "./commands/presign.js";
 import { createSnapshotCommand } from "./commands/snapshot.js";
 import { TigrisAdapter } from "./fs/tigris-adapter.js";
 import type { ShellOptions, TigrisConfig } from "./types.js";
-import { validateConfig } from "./types.js";
+import { validateConfig, withConfigDefaults } from "./types.js";
 
 interface MountEntry {
 	bucket: string;
@@ -30,15 +30,16 @@ export class TigrisShell {
 
 	constructor(config: TigrisConfig, shellOptions?: ShellOptions) {
 		validateConfig(config);
-		this.tigrisConfig = config;
+		const resolvedConfig = withConfigDefaults(config);
+		this.tigrisConfig = resolvedConfig;
 
 		this.mountableFs = new MountableFs({ base: new InMemoryFs() });
 
 		const cwd = shellOptions?.cwd ?? "/workspace";
 
 		// Auto-mount if bucket is provided
-		if (config.bucket) {
-			this.mount(config.bucket, cwd);
+		if (resolvedConfig.bucket) {
+			this.mount(resolvedConfig.bucket, cwd);
 		}
 
 		this.bash = new Bash({
@@ -46,12 +47,12 @@ export class TigrisShell {
 			cwd,
 			...(shellOptions?.env !== undefined && { env: shellOptions.env }),
 			customCommands: [
-				createPresignCommand(config, {
+				createPresignCommand(resolvedConfig, {
 					resolveBucket: (path) => this.resolveBucketForPath(path),
 				}),
-				createSnapshotCommand(config),
-				createForkCommand(config),
-				createForksListCommand(config),
+				createSnapshotCommand(resolvedConfig),
+				createForkCommand(resolvedConfig),
+				createForksListCommand(resolvedConfig),
 			],
 		});
 	}
