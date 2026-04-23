@@ -60,7 +60,7 @@ export function createTigrisClient(
     key = `${options.sessionToken}-${options.organizationId}-${endpoint}`;
   }
 
-  if (forcePathStyle) {
+  if (key && forcePathStyle) {
     key = `${key}-forcePathStyle`;
   }
 
