@@ -27,10 +27,15 @@ function parsePresignArgs(args: string[]): {
 	return { expiresIn, operation };
 }
 
-export function createPresignCommand(config: TigrisConfig) {
-	return defineCommand("presign", async (args) => {
-		const path = args[0];
-		if (!path) {
+export interface PresignOptions {
+	/** Resolve an absolute path to bucket + key from the mount table. */
+	resolveBucket?: (path: string) => { bucket: string; key: string } | null;
+}
+
+export function createPresignCommand(config: TigrisConfig, options?: PresignOptions) {
+	return defineCommand("presign", async (args, ctx) => {
+		const rawPath = args[0];
+		if (!rawPath) {
 			return {
 				stdout: "",
 				stderr: "presign: missing path argument\nUsage: presign <path> [--expires N] [--put]\n",
@@ -46,12 +51,31 @@ export function createPresignCommand(config: TigrisConfig) {
 			};
 		}
 
+		let resolved: { bucket: string; key: string } | null;
+		if (config.bucket) {
+			// Single-bucket mode — rawPath is relative to the bucket root
+			const key = rawPath.startsWith("/") ? rawPath.slice(1) : rawPath;
+			resolved = { bucket: config.bucket, key };
+		} else {
+			// Multi-bucket — resolve against cwd to find the mount
+			const absolutePath = rawPath.startsWith("/")
+				? rawPath
+				: `${ctx.cwd.replace(/\/$/, "")}/${rawPath}`;
+			resolved = options?.resolveBucket?.(absolutePath) ?? null;
+		}
+		if (!resolved) {
+			return {
+				stdout: "",
+				stderr: "presign: cannot determine bucket. cd into a mounted bucket first.\n",
+				exitCode: 1,
+			};
+		}
+
 		const { expiresIn, operation } = parsePresignArgs(args.slice(1));
-		const key = path.startsWith("/") ? path.slice(1) : path;
-		const result = await getPresignedUrl(key, {
+		const result = await getPresignedUrl(resolved.key, {
 			operation,
 			expiresIn,
-			config,
+			config: { ...config, bucket: resolved.bucket },
 		});
 
 		if ("error" in result) {

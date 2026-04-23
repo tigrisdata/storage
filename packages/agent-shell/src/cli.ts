@@ -37,7 +37,7 @@ function printHelp() {
 	process.stdout.write(`Tigris Agent Shell — A virtual bash environment with a persistent filesystem backed by Tigris object storage
 
 Usage:
-  tigris-agent-shell [options]
+  npx @tigrisdata/agent-shell [options]
 
 Options:
   --key <id>        Access key ID

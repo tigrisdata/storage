@@ -49,19 +49,16 @@ Authenticate with access keys:
 
 ```
 $ configure --key tid_... --secret tsec_...
-Available buckets:
-  my-bucket
-  shared-data
+Mounted 2 bucket(s) at /. Run 'df' to list them.
 
-Mounted my-bucket at /workspace
-
-$ echo "hello" > greeting.txt
-$ cat greeting.txt
+/ $ ls
+my-bucket  shared-data
+/ $ cd my-bucket
+/my-bucket $ echo "hello" > greeting.txt
+/my-bucket $ cat greeting.txt
 hello
-$ ls
-greeting.txt
-$ flush
-Flushed 1 mount(s)
+/my-bucket $ flush
+Flushed 2 mount(s)
 ```
 
 Or login with your Tigris account:
@@ -74,7 +71,7 @@ Open this URL in your browser:
 Waiting for authorization... done!
 Logged in as you@example.com
 
-Mounted my-bucket at /workspace
+Mounted 2 bucket(s) at /. Run 'df' to list them.
 ```
 
 You can also pass credentials as flags:

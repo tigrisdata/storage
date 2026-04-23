@@ -1,6 +1,8 @@
 import type { BashExecResult } from "just-bash";
 import { Bash, InMemoryFs, MountableFs } from "just-bash";
-import { createTigrisCommands } from "./commands/index.js";
+import { createForkCommand, createForksListCommand } from "./commands/fork.js";
+import { createPresignCommand } from "./commands/presign.js";
+import { createSnapshotCommand } from "./commands/snapshot.js";
 import { TigrisAdapter } from "./fs/tigris-adapter.js";
 import type { ShellOptions, TigrisConfig } from "./types.js";
 import { validateConfig } from "./types.js";
@@ -39,15 +41,18 @@ export class TigrisShell {
 			this.mount(config.bucket, cwd);
 		}
 
-		const commandConfig = config.bucket
-			? { ...config, bucket: config.bucket }
-			: { ...config, bucket: "" };
-
 		this.bash = new Bash({
 			fs: this.mountableFs,
 			cwd,
 			...(shellOptions?.env !== undefined && { env: shellOptions.env }),
-			customCommands: createTigrisCommands(commandConfig),
+			customCommands: [
+				createPresignCommand(config, {
+					resolveBucket: (path) => this.resolveBucketForPath(path),
+				}),
+				createSnapshotCommand(config),
+				createForkCommand(config),
+				createForksListCommand(config),
+			],
 		});
 	}
 
@@ -108,6 +113,24 @@ export class TigrisShell {
 		if (errors.length > 0) {
 			throw new AggregateError(errors, `flush failed: ${errors.length} mount(s) failed`);
 		}
+	}
+
+	/** Resolve an absolute path to its bucket and object key. */
+	private resolveBucketForPath(absolutePath: string): { bucket: string; key: string } | null {
+		// Normalize double slashes (e.g. //bucket from cd ../bucket)
+		const normalized = absolutePath.replace(/\/\/+/g, "/");
+		// Find the longest matching mount point
+		let best: MountEntry | null = null;
+		for (const m of this.mounts) {
+			if (normalized === m.mountPoint || normalized.startsWith(`${m.mountPoint}/`)) {
+				if (!best || m.mountPoint.length > best.mountPoint.length) {
+					best = m;
+				}
+			}
+		}
+		if (!best) return null;
+		const key = normalized.slice(best.mountPoint.length + 1); // strip mount + "/"
+		return { bucket: best.bucket, key };
 	}
 
 	/** Access the underlying just-bash instance. */
