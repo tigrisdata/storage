@@ -1,7 +1,7 @@
 {
 	"name": "@tigrisdata/agent-shell",
 	"version": "0.0.2",
-	"description": "Persistent sandboxed storage for AI agents — a bash filesystem backed by Tigris object storage",
+	"description": "A virtual bash environment with a persistent filesystem — backed by Tigris object storage",
 	"type": "module",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
