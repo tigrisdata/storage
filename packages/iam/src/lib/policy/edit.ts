@@ -58,15 +58,14 @@ export async function editPolicy(
     Accept: 'application/json',
   };
 
-  const response = await client.request<
-    URLSearchParams,
-    EditPolicyApiResponse
-  >({
-    method: 'POST',
-    path: IAM_ENDPOINTS.editPolicy,
-    body: formData,
-    headers,
-  });
+  const response = await client.request<URLSearchParams, EditPolicyApiResponse>(
+    {
+      method: 'POST',
+      path: IAM_ENDPOINTS.editPolicy,
+      body: formData,
+      headers,
+    }
+  );
 
   if (response.error) {
     return handleError(response.error as Error);

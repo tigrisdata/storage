@@ -78,9 +78,7 @@ export async function updateUserRole(
 
   if (response.data.status === 'error') {
     return {
-      error: new Error(
-        response.data.message ?? 'Failed to update user roles'
-      ),
+      error: new Error(response.data.message ?? 'Failed to update user roles'),
     };
   }
 

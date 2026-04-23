@@ -23,7 +23,7 @@ export type HeadResponse = {
 export async function head(
   path: string,
   options?: HeadOptions
-): Promise<TigrisStorageResponse<HeadResponse | void, Error>> {
+): Promise<TigrisStorageResponse<HeadResponse | undefined, Error>> {
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
   if (error) {

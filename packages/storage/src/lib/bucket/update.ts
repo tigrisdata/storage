@@ -1,8 +1,7 @@
 import { TigrisHeaders } from '@shared/headers';
 import { createStorageClient } from '../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
-import type { UpdateBucketResponse } from './types';
-import { BucketLocations } from './types';
+import type { BucketLocations, UpdateBucketResponse } from './types';
 import { validateLocationValues } from './utils/regions';
 
 type AdditionalHeaders = { 'X-Content-Type-Options': 'nosniff' };

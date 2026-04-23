@@ -1,6 +1,6 @@
 import { config, missingConfigError } from '../config';
-import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import { createStorageClient } from '../http-client';
+import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type GetPresignedUrlOperation = 'get' | 'put';
 

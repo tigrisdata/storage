@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { executeWithConcurrency } from './utils';
 
 describe('executeWithConcurrency', () => {
@@ -41,10 +41,7 @@ describe('executeWithConcurrency', () => {
   });
 
   it('should handle concurrency greater than task count', async () => {
-    const tasks = [
-      () => Promise.resolve('a'),
-      () => Promise.resolve('b'),
-    ];
+    const tasks = [() => Promise.resolve('a'), () => Promise.resolve('b')];
 
     const results = await executeWithConcurrency(tasks, 10);
 
@@ -118,7 +115,9 @@ describe('executeWithConcurrency', () => {
       () => Promise.resolve(3),
     ];
 
-    await expect(executeWithConcurrency(tasks, 1)).rejects.toThrow('Task failed');
+    await expect(executeWithConcurrency(tasks, 1)).rejects.toThrow(
+      'Task failed'
+    );
   });
 
   it('should execute tasks sequentially when concurrency is 1', async () => {

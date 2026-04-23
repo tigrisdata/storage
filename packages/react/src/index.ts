@@ -6,10 +6,10 @@ export { useUpload } from './lib/hooks/useUpload';
 
 // Types
 export type {
+  FileUploadState,
   UploaderProps,
+  UploadProgress,
+  UploadStatus,
   UseUploadOptions,
   UseUploadReturn,
-  UploadStatus,
-  UploadProgress,
-  FileUploadState,
 } from './lib/types';

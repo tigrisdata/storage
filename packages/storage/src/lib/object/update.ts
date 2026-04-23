@@ -1,10 +1,10 @@
 import { PutObjectAclCommand } from '@aws-sdk/client-s3';
-import { createTigrisClient } from '../tigris-client';
 import { TigrisHeaders } from '@shared/headers';
-import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import { handleError } from '@shared/utils';
 import { config, missingConfigError } from '../config';
 import { createStorageClient } from '../http-client';
-import { handleError } from '@shared/utils';
+import { createTigrisClient } from '../tigris-client';
+import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type UpdateObjectOptions = {
   config?: TigrisStorageConfig;

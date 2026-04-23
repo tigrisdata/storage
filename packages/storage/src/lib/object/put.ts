@@ -67,12 +67,11 @@ export async function put(
     }
   }
 
-  const contentDisposition =
-    options && options.contentDisposition
-      ? options.contentDisposition === 'attachment'
-        ? `attachment; filename="${path}"`
-        : 'inline'
-      : undefined;
+  const contentDisposition = options?.contentDisposition
+    ? options.contentDisposition === 'attachment'
+      ? `attachment; filename="${path}"`
+      : 'inline'
+    : undefined;
 
   const access =
     options && options.access === 'public' ? 'public-read' : 'private';
@@ -89,7 +88,7 @@ export async function put(
     },
     partSize: options?.partSize ?? (options?.multipart ? 1024 * 1024 * 5 : 0),
     queueSize: options?.queueSize,
-    leavePartsOnError: options?.multipart || options?.partSize ? false : true,
+    leavePartsOnError: !(options?.multipart || options?.partSize),
     abortController: options?.abortController
       ? options.abortController
       : new AbortController(),

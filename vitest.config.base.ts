@@ -1,6 +1,6 @@
-import { defineConfig } from 'vitest/config';
 import path from 'node:path';
 import dotenv from 'dotenv';
+import { defineConfig } from 'vitest/config';
 
 // Load .env from repo root
 dotenv.config({ path: path.resolve(__dirname, '.env') });

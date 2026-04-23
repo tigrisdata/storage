@@ -1,12 +1,12 @@
+import type { TigrisResponse } from '@shared/types';
+import { createAccessKey, removeAccessKey } from '@tigrisdata/iam';
 import {
   createBucket,
   createBucketSnapshot,
   removeBucket,
 } from '@tigrisdata/storage';
-import { createAccessKey, removeAccessKey } from '@tigrisdata/iam';
-import type { TigrisResponse } from '@shared/types';
 import type { TigrisAgentKitConfig } from './config';
-import { toStorageConfig, toIAMConfig } from './config';
+import { toIAMConfig, toStorageConfig } from './config';
 
 // -- Types --
 

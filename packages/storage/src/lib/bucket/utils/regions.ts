@@ -1,7 +1,7 @@
 import {
+  type BucketLocations,
   multiRegions,
   singleOrDualRegions,
-  type BucketLocations,
 } from '../types';
 
 export function validateLocationValues(

@@ -3,8 +3,8 @@ import type { HttpRequest } from '@aws-sdk/types';
 import { TigrisHeaders } from '@shared/index';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
-import { validateLocationValues } from './utils/regions';
 import type { BucketLocations, StorageClass } from './types';
+import { validateLocationValues } from './utils/regions';
 
 export type CreateBucketOptions = {
   enableSnapshot?: boolean;

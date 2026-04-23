@@ -30,10 +30,6 @@
     "build": "tsc --noEmit && tsup",
     "dev": "tsc --noEmit && tsup --watch",
     "publint": "publint",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
-    "format": "prettier --write src/**/*.ts",
-    "format:check": "prettier --check src/**/*.ts",
     "prepublishOnly": "npm run build",
     "test": "echo 'No tests yet'",
     "clean": "rm -rf dist"

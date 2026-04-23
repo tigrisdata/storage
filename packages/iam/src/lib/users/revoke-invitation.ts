@@ -43,9 +43,7 @@ export async function revokeInvitation(
 
   if (response.data.status === 'error') {
     return {
-      error: new Error(
-        response.data.message ?? 'Failed to revoke invitation'
-      ),
+      error: new Error(response.data.message ?? 'Failed to revoke invitation'),
     };
   }
 

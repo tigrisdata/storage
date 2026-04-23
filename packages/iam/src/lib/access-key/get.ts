@@ -1,6 +1,6 @@
 import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
-import { TigrisIAMConfig, TigrisIAMResponse } from '../types';
-import { AccessKey, IAMAccessKeysResponse } from './list';
+import type { TigrisIAMConfig, TigrisIAMResponse } from '../types';
+import type { AccessKey, IAMAccessKeysResponse } from './list';
 
 export type GetAccessKeyOptions = {
   config?: TigrisIAMConfig;

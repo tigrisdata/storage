@@ -29,10 +29,7 @@ export async function inviteUser(
     return { error };
   }
 
-  const response = await client.request<
-    InviteUserBody,
-    InviteUserApiResponse
-  >({
+  const response = await client.request<InviteUserBody, InviteUserApiResponse>({
     method: 'POST',
     path: IAM_ENDPOINTS.inviteUser,
     body: { invitations },

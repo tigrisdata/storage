@@ -1,5 +1,5 @@
-import { SignatureV4 } from '@smithy/signature-v4';
 import { Sha256 } from '@aws-crypto/sha256-js';
+import { SignatureV4 } from '@smithy/signature-v4';
 import { TigrisHeaders } from './headers';
 import type { TigrisResponse } from './types';
 
@@ -75,7 +75,7 @@ async function generateSignatureHeaders(
     method,
     protocol: url.protocol,
     hostname: url.hostname,
-    port: url.port ? parseInt(url.port) : undefined,
+    port: url.port ? parseInt(url.port, 10) : undefined,
     path: url.pathname,
     ...(Object.keys(query).length > 0 && { query }),
     headers: {
@@ -214,7 +214,7 @@ export function createTigrisHttpClient(
         data = response.body as TResponse;
       } else {
         const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
+        if (contentType?.includes('application/json')) {
           data = (await response.json()) as TResponse;
         } else {
           data = (await response.text()) as TResponse;

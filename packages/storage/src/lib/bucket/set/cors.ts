@@ -1,8 +1,7 @@
-import { TigrisStorageConfig, TigrisStorageResponse } from '../../types';
-import type { UpdateBucketResponse } from '../types';
-import { setBucketSettings, type SetBucketSettingsOptions } from './set';
-import type { BucketCorsRule } from '../types';
+import type { TigrisStorageConfig, TigrisStorageResponse } from '../../types';
 import { getBucketInfo } from '../info';
+import type { BucketCorsRule, UpdateBucketResponse } from '../types';
+import { type SetBucketSettingsOptions, setBucketSettings } from './set';
 
 const validMethods = [
   'GET',

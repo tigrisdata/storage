@@ -1,5 +1,5 @@
+import { EventEmitter } from 'node:events';
 import { get, head, list, put, remove } from '@tigrisdata/storage';
-import { EventEmitter } from 'events';
 import type { KeyvStoreAdapter } from 'keyv';
 
 export interface KeyvTigrisOptions {
@@ -46,8 +46,7 @@ export class KeyvTigris extends EventEmitter implements KeyvStoreAdapter {
 
   // The ttl parameter is required by the KeyvStoreAdapter interface signature,
   // but Keyv handles TTL internally so we don't need to use it in our implementation.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async set<T>(key: string, value: T, ttl?: number): Promise<void> {
+  async set<T>(key: string, value: T, _ttl?: number): Promise<void> {
     const { error } = await put(key, value as string, {
       config: this.opts,
       contentType: 'application/json',

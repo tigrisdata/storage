@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
-import { TigrisIAMConfig, TigrisIAMResponse } from '../types';
-import { AccessKey } from './list';
+import type { TigrisIAMConfig, TigrisIAMResponse } from '../types';
+import type { AccessKey } from './list';
 
 export type CreateAccessKeyOptions = {
   config?: TigrisIAMConfig;
