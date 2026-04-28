@@ -13,6 +13,7 @@ module.exports = (packageName) => {
       [
         '@semantic-release/commit-analyzer',
         {
+          preset: 'conventionalcommits',
           releaseRules: [
             // Scoped rules: only match commits for this package
             { scope, type: 'feat', release: 'minor' },
@@ -32,7 +33,10 @@ module.exports = (packageName) => {
           ],
         },
       ],
-      '@semantic-release/release-notes-generator',
+      [
+        '@semantic-release/release-notes-generator',
+        { preset: 'conventionalcommits' },
+      ],
       '@semantic-release/github',
       '@semantic-release/npm',
     ],
