@@ -2,7 +2,6 @@ import type { TigrisResponse } from '@shared/types';
 import { createAccessKey, removeAccessKey } from '@tigrisdata/iam';
 import { createBucket, removeBucket, setBucketTtl } from '@tigrisdata/storage';
 import type { TigrisAgentKitConfig } from './config';
-import { toIAMConfig, toStorageConfig } from './config';
 
 // -- Types --
 
@@ -39,14 +38,12 @@ export async function createWorkspace(
   options?: CreateWorkspaceOptions
 ): Promise<TigrisResponse<Workspace>> {
   const { access, ttl, enableSnapshots, credentials, config } = options ?? {};
-  const storageConfig = toStorageConfig(config);
-  const iamConfig = toIAMConfig(config);
 
   // Step 1: Create the bucket
   const bucketResult = await createBucket(name, {
     access,
     enableSnapshot: enableSnapshots,
-    config: storageConfig,
+    config,
   });
 
   if (bucketResult.error) {
@@ -61,7 +58,7 @@ export async function createWorkspace(
   if (ttl) {
     const ttlResult = await setBucketTtl(name, {
       ttlConfig: { enabled: true, days: ttl.days },
-      config: storageConfig,
+      config,
     });
 
     if (ttlResult.error) {
@@ -76,7 +73,7 @@ export async function createWorkspace(
   if (credentials) {
     const keyResult = await createAccessKey(`${name}-key`, {
       bucketsRole: [{ bucket: name, role: credentials.role }],
-      config: iamConfig,
+      config,
     });
 
     if (keyResult.data?.secret) {
@@ -94,14 +91,13 @@ export async function teardownWorkspace(
   workspace: Workspace,
   options?: TeardownWorkspaceOptions
 ): Promise<TigrisResponse<void>> {
-  const storageConfig = toStorageConfig(options?.config);
-  const iamConfig = toIAMConfig(options?.config);
+  const config = options?.config;
   const errors: string[] = [];
 
   // Revoke credentials first
   if (workspace.credentials) {
     const keyResult = await removeAccessKey(workspace.credentials.accessKeyId, {
-      config: iamConfig,
+      config,
     });
     if (keyResult.error) {
       errors.push(
@@ -113,7 +109,7 @@ export async function teardownWorkspace(
   // Then delete the bucket
   const bucketResult = await removeBucket(workspace.bucket, {
     force: true,
-    config: storageConfig,
+    config,
   });
   if (bucketResult.error) {
     errors.push(

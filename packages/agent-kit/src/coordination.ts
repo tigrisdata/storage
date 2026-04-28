@@ -1,7 +1,6 @@
 import type { TigrisResponse } from '@shared/types';
 import { setBucketNotifications } from '@tigrisdata/storage';
 import type { TigrisAgentKitConfig } from './config';
-import { toStorageConfig } from './config';
 
 // -- Types --
 
@@ -28,7 +27,6 @@ export async function setupCoordination(
   options: SetupCoordinationOptions
 ): Promise<TigrisResponse<void>> {
   const { webhookUrl, filter, auth, config } = options;
-  const storageConfig = toStorageConfig(config);
 
   const result = await setBucketNotifications(bucket, {
     notificationConfig: {
@@ -37,7 +35,7 @@ export async function setupCoordination(
       filter,
       ...(auth && { auth }),
     },
-    config: storageConfig,
+    config,
   });
 
   if (result.error) {
@@ -56,11 +54,10 @@ export async function teardownCoordination(
   options?: TeardownCoordinationOptions
 ): Promise<TigrisResponse<void>> {
   const { config } = options ?? {};
-  const storageConfig = toStorageConfig(config);
 
   const result = await setBucketNotifications(bucket, {
     notificationConfig: {},
-    config: storageConfig,
+    config,
   });
 
   if (result.error) {

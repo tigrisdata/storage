@@ -5,7 +5,6 @@ import {
   listBucketSnapshots,
 } from '@tigrisdata/storage';
 import type { TigrisAgentKitConfig } from './config';
-import { toStorageConfig } from './config';
 
 // -- Types --
 
@@ -48,11 +47,9 @@ export async function checkpoint(
   bucket: string,
   options?: CheckpointOptions
 ): Promise<TigrisResponse<Checkpoint>> {
-  const storageConfig = toStorageConfig(options?.config);
-
   const result = await createBucketSnapshot(bucket, {
     name: options?.name,
-    config: storageConfig,
+    config: options?.config,
   });
 
   if (result.error) {
@@ -77,13 +74,12 @@ export async function restore(
   snapshotId: string,
   options?: RestoreOptions
 ): Promise<TigrisResponse<RestoreResult>> {
-  const storageConfig = toStorageConfig(options?.config);
   const forkName = options?.forkName ?? `${bucket}-restore-${Date.now()}`;
 
   const result = await createBucket(forkName, {
     sourceBucketName: bucket,
     sourceBucketSnapshot: snapshotId,
-    config: storageConfig,
+    config: options?.config,
   });
 
   if (result.error) {
@@ -103,12 +99,10 @@ export async function listCheckpoints(
   bucket: string,
   options?: ListCheckpointsOptions
 ): Promise<TigrisResponse<ListCheckpointsResponse>> {
-  const storageConfig = toStorageConfig(options?.config);
-
   const result = await listBucketSnapshots(bucket, {
     limit: options?.limit,
     paginationToken: options?.paginationToken,
-    config: storageConfig,
+    config: options?.config,
   });
 
   if (result.error) {
