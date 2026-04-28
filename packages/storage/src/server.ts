@@ -1,3 +1,4 @@
+export type { TigrisConfig } from '@shared/types';
 export {
   type CreateBucketOptions,
   type CreateBucketResponse,
