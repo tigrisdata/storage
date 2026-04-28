@@ -6,7 +6,6 @@ import {
   removeBucket,
 } from '@tigrisdata/storage';
 import type { TigrisAgentKitConfig } from './config';
-import { toIAMConfig, toStorageConfig } from './config';
 
 // -- Types --
 
@@ -46,12 +45,10 @@ export async function createForks(
   options?: CreateForksOptions
 ): Promise<TigrisResponse<Forks>> {
   const { prefix, credentials, config } = options ?? {};
-  const storageConfig = toStorageConfig(config);
-  const iamConfig = toIAMConfig(config);
 
   // Step 1: Snapshot the base bucket
   const snapshotResult = await createBucketSnapshot(baseBucket, {
-    config: storageConfig,
+    config,
   });
 
   if (snapshotResult.error) {
@@ -73,7 +70,7 @@ export async function createForks(
     const forkResult = await createBucket(forkName, {
       sourceBucketName: baseBucket,
       sourceBucketSnapshot: snapshotId,
-      config: storageConfig,
+      config,
     });
 
     if (forkResult.error) {
@@ -86,7 +83,7 @@ export async function createForks(
     if (credentials) {
       const keyResult = await createAccessKey(`${forkName}-key`, {
         bucketsRole: [{ bucket: forkName, role: credentials.role }],
-        config: iamConfig,
+        config,
       });
 
       if (keyResult.data?.secret) {
@@ -119,15 +116,14 @@ export async function teardownForks(
   forkSet: Forks,
   options?: TeardownForksOptions
 ): Promise<TigrisResponse<void>> {
-  const storageConfig = toStorageConfig(options?.config);
-  const iamConfig = toIAMConfig(options?.config);
+  const config = options?.config;
   const errors: string[] = [];
 
   for (const fork of forkSet.forks) {
     // Revoke credentials first
     if (fork.credentials) {
       const keyResult = await removeAccessKey(fork.credentials.accessKeyId, {
-        config: iamConfig,
+        config,
       });
       if (keyResult.error) {
         errors.push(
@@ -139,7 +135,7 @@ export async function teardownForks(
     // Then delete the fork bucket
     const bucketResult = await removeBucket(fork.bucket, {
       force: true,
-      config: storageConfig,
+      config,
     });
     if (bucketResult.error) {
       errors.push(
