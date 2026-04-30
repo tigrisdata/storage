@@ -50,6 +50,9 @@ export type {
   BucketMigration,
   BucketNotification,
   BucketTtl,
+  NotificationEvent,
+  NotificationEventName,
+  NotificationResponse,
   StorageClass,
   UpdateBucketResponse,
 } from './lib/bucket/types';
