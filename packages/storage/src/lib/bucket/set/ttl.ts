@@ -64,10 +64,32 @@ export async function setBucketTtl(
     return { error };
   }
 
+  const allExistingRules = data?.settings.lifecycleRules ?? [];
+  const existingTtlRule = allExistingRules.find(
+    (r) =>
+      r.expiration !== undefined &&
+      r.storageClass === undefined &&
+      r.filter === undefined
+  );
+  const existingTtl: BucketTtl | undefined = existingTtlRule
+    ? {
+        id: existingTtlRule.id,
+        enabled: existingTtlRule.enabled,
+        days: existingTtlRule.expiration?.days,
+        date: existingTtlRule.expiration?.date,
+      }
+    : undefined;
+  // Drop the TTL-shaped rule from the lifecycle list we hand off — it's
+  // emitted via the dedicated `ttlConfig` path and we don't want it
+  // duplicated. Match by reference so id-less rules dedupe correctly.
+  const otherExistingRules = existingTtlRule
+    ? allExistingRules.filter((r) => r !== existingTtlRule)
+    : allExistingRules;
+
   const { rules, error: lifecycleError } = buildLifecycleRules(
     {
-      ttlConfig: data?.settings.ttlConfig,
-      lifecycleRules: data?.settings.lifecycleRules,
+      ttlConfig: existingTtl,
+      lifecycleRules: otherExistingRules,
     },
     { ttlConfig: options.ttlConfig }
   );

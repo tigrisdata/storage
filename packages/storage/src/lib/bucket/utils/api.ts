@@ -59,6 +59,9 @@ type BucketApiSettings = {
       date?: string;
       days?: number;
     }[];
+    filter?: {
+      prefix?: string;
+    };
     status: 1 | 2; // 1: active, 2: disabled
   }[];
   cors?: {

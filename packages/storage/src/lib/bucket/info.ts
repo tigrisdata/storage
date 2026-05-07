@@ -32,6 +32,11 @@ export type BucketInfoResponse = {
     defaultTier: StorageClass;
     lifecycleRules?: BucketLifecycleRule[];
     dataMigration?: Omit<BucketMigration, 'enabled'>;
+    /**
+     * @deprecated Use `lifecycleRules` instead. This field is no longer
+     * populated — read the rule with only `expiration` (no transition,
+     * no filter) from `lifecycleRules` if you need the bucket-wide TTL.
+     */
     ttlConfig?: BucketTtl;
     customDomain?: string;
     deleteProtection: boolean;
@@ -95,9 +100,30 @@ export async function getBucketInfo(
       return { error: response.error };
     }
 
-    const ttlConfig = response.data.lifecycle_rules?.find(
-      (rule) => rule.expiration !== undefined
-    );
+    const lifecycleRules: BucketLifecycleRule[] =
+      response.data.lifecycle_rules?.map((rule) => {
+        const firstTransition = rule.transitions?.[0];
+        return {
+          id: rule.id,
+          enabled: rule.status === 1,
+          storageClass: firstTransition?.storage_class as
+            | Exclude<StorageClass, 'STANDARD'>
+            | undefined,
+          days: firstTransition?.days,
+          date: firstTransition?.date,
+          expiration:
+            rule.expiration !== undefined
+              ? {
+                  days: rule.expiration.days,
+                  date: rule.expiration.date,
+                }
+              : undefined,
+          filter:
+            rule.filter?.prefix !== undefined
+              ? { prefix: rule.filter.prefix }
+              : undefined,
+        };
+      }) ?? [];
 
     const data: BucketInfoResponse = {
       isSnapshotEnabled: response.data.type === 1,
@@ -129,27 +155,7 @@ export async function getBucketInfo(
               writeThrough: response.data.shadow_bucket.write_through,
             }
           : undefined,
-        ttlConfig: ttlConfig
-          ? {
-              enabled: ttlConfig.status === 1,
-              days: ttlConfig.expiration?.days,
-              date: ttlConfig.expiration?.date,
-              id: ttlConfig.id,
-            }
-          : undefined,
-        lifecycleRules:
-          response.data.lifecycle_rules
-            ?.filter((rule) => rule.expiration === undefined)
-            .map((rule) => ({
-              storageClass: rule.transitions?.[0]?.storage_class as Exclude<
-                StorageClass,
-                'STANDARD'
-              >,
-              days: rule.transitions?.[0]?.days,
-              date: rule.transitions?.[0]?.date,
-              enabled: rule.status === 1,
-              id: rule.id,
-            })) ?? undefined,
+        lifecycleRules: lifecycleRules.length > 0 ? lifecycleRules : undefined,
         corsRules:
           response.data.cors?.rules.map((rule) => ({
             allowedOrigins: rule.allowedOrigin,

@@ -45,6 +45,8 @@ export {
 } from './lib/bucket/snapshot';
 export type {
   BucketCorsRule,
+  BucketLifecycleExpiration,
+  BucketLifecycleFilter,
   BucketLifecycleRule,
   BucketLocations,
   BucketMigration,

@@ -619,8 +619,8 @@ In case of successful `getBucketInfo`, the `data` property will be set and conta
   - `defaultTier`: Default storage class (`STANDARD`, `STANDARD_IA`, `GLACIER`, `GLACIER_IR`)
   - `corsRules`: Array of CORS rules
   - `notifications`: Notification configuration
-  - `ttlConfig`: TTL/expiration configuration
-  - `lifecycleRules`: Array of lifecycle transition rules
+  - `lifecycleRules`: Complete array of lifecycle rules on the bucket. Each rule may carry a transition (`storageClass` + `days`/`date`), an `expiration`, and/or a `filter.prefix`. The bucket-wide TTL (if set) is the rule with only `expiration` and no transition or filter.
+  - `ttlConfig`: _Deprecated._ No longer populated — read the bucket-wide TTL from `lifecycleRules` instead.
   - `dataMigration`: Data migration (shadow bucket) configuration
   - `customDomain`: Custom domain name
   - `deleteProtection`: Whether delete protection is enabled
@@ -962,7 +962,7 @@ const result = await setBucketCors('my-bucket', { rules: [] });
 
 ## Setting bucket lifecycle
 
-`setBucketLifecycle` function can be used to configure lifecycle transition rules on a bucket. Only one lifecycle transition rule is allowed per bucket.
+`setBucketLifecycle` function can be used to configure lifecycle rules on a bucket. A rule can carry at most one transition and/or one expiration, optionally scoped to a key prefix via `filter.prefix`. Multiple rules per bucket are supported (e.g. one rule per prefix).
 
 ### `setBucketLifecycle`
 
@@ -979,17 +979,24 @@ setBucketLifecycle(bucketName: string, options?: SetBucketLifecycleOptions): Pro
 
 | **Parameter**  | **Required** | **Values**                                                                       |
 | -------------- | ------------ | -------------------------------------------------------------------------------- |
-| lifecycleRules | Yes          | An array with a single lifecycle rule. See below.                                |
+| lifecycleRules | Yes          | A non-empty array of lifecycle rules. See below.                                 |
 | config         | No           | A configuration object to override the [default configuration](#authentication). |
 
 Each lifecycle rule has the following properties:
 
-| **Property** | **Required** | **Values**                                                                              |
-| ------------ | ------------ | --------------------------------------------------------------------------------------- |
-| storageClass | No           | Target storage class: `STANDARD_IA`, `GLACIER`, or `GLACIER_IR`.                        |
-| days         | No           | Number of days after object creation to transition. Cannot be combined with `date`.     |
-| date         | No           | A specific date to transition objects. Cannot be combined with `days`.                  |
-| enabled      | No           | Whether the rule is enabled.                                                            |
+| **Property** | **Required** | **Values**                                                                                                                                |
+| ------------ | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| storageClass | No           | Transition target storage class: `STANDARD_IA`, `GLACIER`, or `GLACIER_IR`.                                                               |
+| days         | No           | Transition: days after object creation. Cannot be combined with `date`.                                                                   |
+| date         | No           | Transition: specific date to transition. Cannot be combined with `days`.                                                                  |
+| expiration   | No           | `{ days?: number; date?: string }` — when objects are deleted. `days` and `date` are mutually exclusive; one of them must be set.         |
+| filter       | No           | `{ prefix: string }` — scope the rule to objects whose key starts with `prefix`.                                                          |
+| enabled      | No           | Whether the rule is enabled. Defaults to `true`.                                                                                          |
+| id           | No           | Stable identifier. When updating, supply the existing rule's `id` to target it; otherwise the rule is created with a generated id.        |
+
+A rule must have at least one of a transition (`storageClass` + `days`/`date`) or an `expiration`. `filter` alone is not enough.
+
+When `setBucketLifecycle` runs, each input rule is matched to an existing rule on the bucket by `id`. As a back-compat convenience, if the bucket has exactly one existing transition rule and the update has exactly one rule with no `id`, they auto-match. Existing rules whose `id` is not referenced in the update are preserved unchanged.
 
 ### Examples
 
@@ -1002,6 +1009,43 @@ const result = await setBucketLifecycle('my-bucket', {
       storageClass: 'STANDARD_IA',
       days: 30,
       enabled: true,
+    },
+  ],
+});
+```
+
+#### Transition + expiration on the same rule, scoped to a prefix
+
+```ts
+const result = await setBucketLifecycle('my-bucket', {
+  lifecycleRules: [
+    {
+      storageClass: 'GLACIER',
+      days: 30,
+      expiration: { days: 365 },
+      filter: { prefix: 'logs/' },
+      enabled: true,
+    },
+  ],
+});
+```
+
+#### Multiple rules, one per prefix
+
+```ts
+const result = await setBucketLifecycle('my-bucket', {
+  lifecycleRules: [
+    {
+      filter: { prefix: 'logs/' },
+      storageClass: 'GLACIER',
+      days: 30,
+      expiration: { days: 30 },
+    },
+    {
+      filter: { prefix: 'logs-2/' },
+      storageClass: 'GLACIER_IR',
+      days: 30,
+      expiration: { days: 60 },
     },
   ],
 });

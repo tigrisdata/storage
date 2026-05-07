@@ -55,6 +55,13 @@ export type BucketMigration = {
   writeThrough?: boolean;
 };
 
+/**
+ * Bucket-wide TTL configuration. Kept for back-compat with `setBucketTtl`,
+ * which manages a lifecycle rule with only `expiration` (no transition,
+ * no filter). New code should configure expirations via
+ * `BucketLifecycleRule.expiration` on `setBucketLifecycle` instead. This
+ * shape is expected to be removed in the next major version.
+ */
 export type BucketTtl = {
   id?: string;
   enabled?: boolean;
@@ -62,12 +69,29 @@ export type BucketTtl = {
   date?: string;
 };
 
+export type BucketLifecycleFilter = {
+  prefix: string;
+};
+
+export type BucketLifecycleExpiration = {
+  days?: number;
+  date?: string;
+};
+
+/**
+ * A bucket lifecycle rule. A rule can have at most one transition
+ * (top-level `storageClass` + `days`/`date`) and/or one `expiration`,
+ * optionally scoped to a key prefix via `filter.prefix`. At least one
+ * of transition or expiration must be present.
+ */
 export type BucketLifecycleRule = {
   id?: string;
   enabled?: boolean;
   storageClass?: Exclude<StorageClass, 'STANDARD'>;
   days?: number;
   date?: string;
+  expiration?: BucketLifecycleExpiration;
+  filter?: BucketLifecycleFilter;
 };
 
 export type BucketCorsRule = {
