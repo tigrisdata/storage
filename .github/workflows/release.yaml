@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - next
 
 permissions:
   id-token: write
@@ -15,27 +14,35 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      NPM_CONFIG_PROVENANCE: 'true'
 
     steps:
-      # Checkout code with full history to get tags
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # Set up Node.js with npm provenance
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
 
-      # Install dependencies and build Node.js project
-      - run: npm ci
-      - run: npm run lint
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
 
       - name: Build packages
-        run: npm run build
+        run: pnpm -r --if-present run build
 
-      - name: Lint packages
-        run: npm run publint
+      - name: Publint
+        run: pnpm -r --if-present run publint
 
       - name: Test packages
         env:
@@ -43,12 +50,14 @@ jobs:
           TIGRIS_STORAGE_ACCESS_KEY_ID: ${{ secrets.TIGRIS_STORAGE_ACCESS_KEY_ID }}
           TIGRIS_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_STORAGE_SECRET_ACCESS_KEY }}
           TIGRIS_STORAGE_ENDPOINT: ${{ secrets.TIGRIS_STORAGE_ENDPOINT }}
-        run: npm run test
+        run: pnpm -r --if-present run test
 
-      - run: npm audit signatures
-
-      # Release packages in dependency order
-      - name: Release
+      - name: Create release PR or publish
+        uses: changesets/action@v1
+        with:
+          version: pnpm changeset version
+          publish: pnpm changeset publish
+          commit: 'chore: version packages'
+          title: 'chore: version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./scripts/release.sh
