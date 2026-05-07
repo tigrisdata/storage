@@ -436,7 +436,7 @@ describe('buildLifecycleRules', () => {
   });
 
   describe('combined TTL + transition', () => {
-    it('returns max 2 rules when both TTL and transition exist', () => {
+    it('returns both rules when TTL and a transition rule exist', () => {
       const { rules } = buildLifecycleRules(
         { ttlConfig: ttlConfig(), lifecycleRules: [lifecycleRule()] },
         {}
@@ -529,22 +529,6 @@ describe('buildLifecycleRules', () => {
     });
   });
 
-  describe('only first lifecycle rule is used', () => {
-    it('ignores additional lifecycle rules beyond the first', () => {
-      const { rules } = buildLifecycleRules(
-        {},
-        {
-          lifecycleRules: [
-            { storageClass: 'GLACIER', days: 90 },
-            { storageClass: 'STANDARD_IA', days: 30 },
-          ],
-        }
-      );
-      expect(rules).toHaveLength(1);
-      expect(rules![0].transitions![0].storage_class).toBe('GLACIER');
-    });
-  });
-
   describe('empty lifecycle rules array', () => {
     it('does not create a transition rule from empty array', () => {
       const { rules } = buildLifecycleRules(
@@ -563,6 +547,667 @@ describe('buildLifecycleRules', () => {
       );
       expect(rules).toHaveLength(1);
       expect(rules![0].expiration).toBeDefined();
+    });
+  });
+
+  describe('expiration on a lifecycle rule', () => {
+    it('emits transition + expiration on the same rule', () => {
+      const { rules } = buildLifecycleRules(
+        {},
+        {
+          lifecycleRules: [
+            {
+              storageClass: 'GLACIER',
+              days: 30,
+              expiration: { days: 365 },
+            },
+          ],
+        }
+      );
+      expect(rules![0]).toEqual({
+        id: 'test-uuid-0000',
+        transitions: [{ storage_class: 'GLACIER', days: 30 }],
+        expiration: { days: 365, enabled: true },
+        status: 1,
+      });
+    });
+
+    it('emits transition + expiration + filter on the same rule', () => {
+      const { rules } = buildLifecycleRules(
+        {},
+        {
+          lifecycleRules: [
+            {
+              storageClass: 'GLACIER',
+              days: 30,
+              expiration: { days: 365 },
+              filter: { prefix: 'logs/' },
+            },
+          ],
+        }
+      );
+      expect(rules![0]).toEqual({
+        id: 'test-uuid-0000',
+        transitions: [{ storage_class: 'GLACIER', days: 30 }],
+        expiration: { days: 365, enabled: true },
+        filter: { prefix: 'logs/' },
+        status: 1,
+      });
+    });
+
+    it('emits expiration-only rule (no transition)', () => {
+      const { rules } = buildLifecycleRules(
+        {},
+        {
+          lifecycleRules: [
+            {
+              expiration: { days: 90 },
+              filter: { prefix: 'tmp/' },
+            },
+          ],
+        }
+      );
+      expect(rules![0]).toEqual({
+        id: 'test-uuid-0000',
+        expiration: { days: 90, enabled: true },
+        filter: { prefix: 'tmp/' },
+        status: 1,
+      });
+      expect(rules![0]).not.toHaveProperty('transitions');
+    });
+
+    it('emits expiration with date instead of days', () => {
+      const { rules } = buildLifecycleRules(
+        {},
+        {
+          lifecycleRules: [
+            {
+              storageClass: 'GLACIER',
+              days: 30,
+              expiration: { date: '2026-12-31' },
+            },
+          ],
+        }
+      );
+      expect(rules![0].expiration).toEqual({
+        date: '2026-12-31',
+        enabled: true,
+      });
+    });
+
+    it('preserves existing expiration on toggle-only update', () => {
+      const existing: BucketLifecycleRule = {
+        id: 'rule-1',
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 30,
+        expiration: { days: 365 },
+      };
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [existing] },
+        { lifecycleRules: [{ enabled: false }] }
+      );
+      expect(rules![0]).toEqual({
+        id: 'rule-1',
+        transitions: [{ storage_class: 'GLACIER', days: 30 }],
+        expiration: { days: 365, enabled: false },
+        status: 2,
+      });
+    });
+
+    it('replaces expiration when update provides one', () => {
+      const existing: BucketLifecycleRule = {
+        id: 'rule-1',
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 30,
+        expiration: { days: 365 },
+      };
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [existing] },
+        { lifecycleRules: [{ expiration: { days: 30 } }] }
+      );
+      expect(rules![0].expiration).toEqual({ days: 30, enabled: true });
+    });
+
+    it('switches expiration from days to date', () => {
+      const existing: BucketLifecycleRule = {
+        id: 'rule-1',
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 30,
+        expiration: { days: 365 },
+      };
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [existing] },
+        { lifecycleRules: [{ expiration: { date: '2026-12-31' } }] }
+      );
+      expect(rules![0].expiration).toEqual({
+        date: '2026-12-31',
+        enabled: true,
+      });
+      expect(rules![0].expiration).not.toHaveProperty('days');
+    });
+
+    it('omits expiration when neither update nor existing has one', () => {
+      const { rules } = buildLifecycleRules(
+        {},
+        { lifecycleRules: [{ storageClass: 'GLACIER', days: 90 }] }
+      );
+      expect(rules![0]).not.toHaveProperty('expiration');
+    });
+  });
+
+  describe('filter (prefix)', () => {
+    it('emits filter.prefix on a new rule', () => {
+      const { rules } = buildLifecycleRules(
+        {},
+        {
+          lifecycleRules: [
+            {
+              storageClass: 'GLACIER',
+              days: 90,
+              filter: { prefix: 'logs/' },
+            },
+          ],
+        }
+      );
+      expect(rules![0]).toEqual({
+        id: 'test-uuid-0000',
+        transitions: [{ storage_class: 'GLACIER', days: 90 }],
+        filter: { prefix: 'logs/' },
+        status: 1,
+      });
+    });
+
+    it('preserves existing filter on toggle-only update', () => {
+      const existingFiltered: BucketLifecycleRule = {
+        id: 'filtered-existing',
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 90,
+        filter: { prefix: 'logs/' },
+      };
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [existingFiltered] },
+        { lifecycleRules: [{ enabled: false }] }
+      );
+      expect(rules![0]).toEqual({
+        id: 'filtered-existing',
+        transitions: [{ storage_class: 'GLACIER', days: 90 }],
+        filter: { prefix: 'logs/' },
+        status: 2,
+      });
+    });
+
+    it('updates filter while preserving existing transition', () => {
+      const existingFiltered: BucketLifecycleRule = {
+        id: 'filtered-existing',
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 90,
+        filter: { prefix: 'old/' },
+      };
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [existingFiltered] },
+        { lifecycleRules: [{ filter: { prefix: 'new/' } }] }
+      );
+      expect(rules![0].id).toBe('filtered-existing');
+      expect(rules![0].filter).toEqual({ prefix: 'new/' });
+      expect(rules![0].transitions).toEqual([
+        { storage_class: 'GLACIER', days: 90 },
+      ]);
+    });
+
+    it('omits filter when neither update nor existing has one', () => {
+      const { rules } = buildLifecycleRules(
+        {},
+        { lifecycleRules: [{ storageClass: 'GLACIER', days: 90 }] }
+      );
+      expect(rules![0]).not.toHaveProperty('filter');
+    });
+
+    it('returns error for filter-only update when no existing rule', () => {
+      const { rules, error } = buildLifecycleRules(
+        {},
+        { lifecycleRules: [{ filter: { prefix: 'logs/' } }] }
+      );
+      expect(error).toBeInstanceOf(Error);
+      expect(error!.message).toBe('No existing lifecycle rule found to update');
+      expect(rules).toBeUndefined();
+    });
+  });
+
+  describe('multiple lifecycle rules', () => {
+    it('emits all update rules when no existing rules', () => {
+      const { rules } = buildLifecycleRules(
+        {},
+        {
+          lifecycleRules: [
+            {
+              storageClass: 'GLACIER',
+              days: 30,
+              expiration: { days: 365 },
+              filter: { prefix: 'logs/' },
+            },
+            {
+              storageClass: 'GLACIER_IR',
+              days: 7,
+              filter: { prefix: 'tmp/' },
+            },
+          ],
+        }
+      );
+      expect(rules).toHaveLength(2);
+      expect(rules![0].filter).toEqual({ prefix: 'logs/' });
+      expect(rules![0].expiration).toEqual({ days: 365, enabled: true });
+      expect(rules![1].filter).toEqual({ prefix: 'tmp/' });
+      expect(rules![1]).not.toHaveProperty('expiration');
+    });
+
+    it('matches update rules to existing rules by id', () => {
+      const existingA: BucketLifecycleRule = {
+        id: 'rule-a',
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 90,
+        filter: { prefix: 'logs/' },
+      };
+      const existingB: BucketLifecycleRule = {
+        id: 'rule-b',
+        enabled: true,
+        storageClass: 'STANDARD_IA',
+        days: 30,
+        filter: { prefix: 'images/' },
+      };
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [existingA, existingB] },
+        {
+          lifecycleRules: [
+            { id: 'rule-b', enabled: false },
+            { id: 'rule-a', filter: { prefix: 'archive/' } },
+          ],
+        }
+      );
+      expect(rules).toHaveLength(2);
+
+      const a = rules!.find((r) => r.id === 'rule-a');
+      expect(a!.filter).toEqual({ prefix: 'archive/' });
+      expect(a!.transitions).toEqual([{ storage_class: 'GLACIER', days: 90 }]);
+      expect(a!.status).toBe(1);
+
+      const b = rules!.find((r) => r.id === 'rule-b');
+      expect(b!.filter).toEqual({ prefix: 'images/' });
+      expect(b!.transitions).toEqual([
+        { storage_class: 'STANDARD_IA', days: 30 },
+      ]);
+      expect(b!.status).toBe(2);
+    });
+
+    it('preserves existing rules whose id is not referenced in update', () => {
+      const existingA: BucketLifecycleRule = {
+        id: 'rule-a',
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 90,
+      };
+      const existingB: BucketLifecycleRule = {
+        id: 'rule-b',
+        enabled: true,
+        storageClass: 'STANDARD_IA',
+        days: 30,
+      };
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [existingA, existingB] },
+        { lifecycleRules: [{ id: 'rule-a', enabled: false }] }
+      );
+      expect(rules).toHaveLength(2);
+      expect(rules!.find((r) => r.id === 'rule-a')!.status).toBe(2);
+      expect(rules!.find((r) => r.id === 'rule-b')!.status).toBe(1);
+    });
+
+    it('treats a no-id update rule as new when multiple existing rules', () => {
+      const existingA: BucketLifecycleRule = {
+        id: 'rule-a',
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 90,
+      };
+      const existingB: BucketLifecycleRule = {
+        id: 'rule-b',
+        enabled: true,
+        storageClass: 'STANDARD_IA',
+        days: 30,
+      };
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [existingA, existingB] },
+        {
+          lifecycleRules: [
+            {
+              storageClass: 'GLACIER_IR',
+              days: 7,
+              filter: { prefix: 'tmp/' },
+            },
+          ],
+        }
+      );
+      expect(rules).toHaveLength(3);
+      const newRule = rules!.find(
+        (r) => r.transitions?.[0].storage_class === 'GLACIER_IR'
+      );
+      expect(newRule!.id).toBe('test-uuid-0000');
+      expect(newRule!.filter).toEqual({ prefix: 'tmp/' });
+    });
+
+    it('errors when a no-id update rule has no content and multiple existing rules', () => {
+      const existingA: BucketLifecycleRule = {
+        id: 'rule-a',
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 90,
+      };
+      const existingB: BucketLifecycleRule = {
+        id: 'rule-b',
+        enabled: true,
+        storageClass: 'STANDARD_IA',
+        days: 30,
+      };
+      const { rules, error } = buildLifecycleRules(
+        { lifecycleRules: [existingA, existingB] },
+        { lifecycleRules: [{ enabled: false }] }
+      );
+      expect(error).toBeInstanceOf(Error);
+      expect(error!.message).toBe('No existing lifecycle rule found to update');
+      expect(rules).toBeUndefined();
+    });
+
+    it('preserves all existing rules when no update provided', () => {
+      const existingA: BucketLifecycleRule = {
+        id: 'rule-a',
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 90,
+      };
+      const existingB: BucketLifecycleRule = {
+        id: 'rule-b',
+        enabled: false,
+        storageClass: 'STANDARD_IA',
+        days: 30,
+      };
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [existingA, existingB] },
+        {}
+      );
+      expect(rules).toHaveLength(2);
+      expect(rules!.find((r) => r.id === 'rule-a')!.status).toBe(1);
+      expect(rules!.find((r) => r.id === 'rule-b')!.status).toBe(2);
+    });
+
+    it('preserves TTL alongside multiple lifecycle rules', () => {
+      const existingA: BucketLifecycleRule = {
+        id: 'rule-a',
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 90,
+        filter: { prefix: 'logs/' },
+      };
+      const existingB: BucketLifecycleRule = {
+        id: 'rule-b',
+        enabled: true,
+        storageClass: 'STANDARD_IA',
+        days: 30,
+        filter: { prefix: 'images/' },
+      };
+      const { rules } = buildLifecycleRules(
+        {
+          ttlConfig: ttlConfig(),
+          lifecycleRules: [existingA, existingB],
+        },
+        { lifecycleRules: [{ id: 'rule-a', enabled: false }] }
+      );
+      expect(rules).toHaveLength(3);
+      expect(rules!.find((r) => r.expiration && !r.transitions)).toBeDefined();
+    });
+  });
+
+  describe('auto-match shape compatibility', () => {
+    it('does not auto-match a no-id transition update into a TTL-only existing rule', () => {
+      // Bucket has a single TTL-only rule. A no-id transition update
+      // must NOT silently merge into it; it should be emitted as a new rule.
+      const existingTtlOnly: BucketLifecycleRule = {
+        id: 'ttl-existing',
+        enabled: true,
+        expiration: { days: 30 },
+      };
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [existingTtlOnly] },
+        { lifecycleRules: [{ storageClass: 'GLACIER', days: 90 }] }
+      );
+      expect(rules).toHaveLength(2);
+
+      const ttl = rules!.find((r) => r.id === 'ttl-existing');
+      expect(ttl).toEqual({
+        id: 'ttl-existing',
+        expiration: { days: 30, enabled: true },
+        status: 1,
+      });
+      expect(ttl).not.toHaveProperty('transitions');
+
+      const transitionRule = rules!.find((r) => r.id !== 'ttl-existing');
+      expect(transitionRule!.transitions).toEqual([
+        { storage_class: 'GLACIER', days: 90 },
+      ]);
+      expect(transitionRule).not.toHaveProperty('expiration');
+    });
+
+    it('does not auto-match a no-id expiration update into a transition-only existing rule', () => {
+      const existingTransitionOnly: BucketLifecycleRule = {
+        id: 'transition-existing',
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 90,
+      };
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [existingTransitionOnly] },
+        { lifecycleRules: [{ expiration: { days: 365 } }] }
+      );
+      expect(rules).toHaveLength(2);
+      const original = rules!.find((r) => r.id === 'transition-existing');
+      expect(original).not.toHaveProperty('expiration');
+      const newRule = rules!.find((r) => r.id !== 'transition-existing');
+      expect(newRule!.expiration).toEqual({ days: 365, enabled: true });
+    });
+
+    it('still auto-matches a transition update when existing has a transition', () => {
+      // Back-compat: single transition update + single transition existing.
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [lifecycleRule()] },
+        { lifecycleRules: [{ storageClass: 'STANDARD_IA', days: 60 }] }
+      );
+      expect(rules).toHaveLength(1);
+      expect(rules![0].id).toBe('transition-existing');
+      expect(rules![0].transitions).toEqual([
+        { storage_class: 'STANDARD_IA', days: 60 },
+      ]);
+    });
+
+    it('still auto-matches a toggle-only update against any single existing rule', () => {
+      const existingTtlOnly: BucketLifecycleRule = {
+        id: 'ttl-existing',
+        enabled: true,
+        expiration: { days: 30 },
+      };
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [existingTtlOnly] },
+        { lifecycleRules: [{ enabled: false }] }
+      );
+      expect(rules).toHaveLength(1);
+      expect(rules![0]).toEqual({
+        id: 'ttl-existing',
+        expiration: { days: 30, enabled: false },
+        status: 2,
+      });
+    });
+
+    it('auto-matches a no-id transition update past a TTL-only sibling', () => {
+      // Bucket has [TTL-only, transition]. A no-id transition update
+      // should auto-match the only shape-compatible existing rule.
+      const ttl: BucketLifecycleRule = {
+        id: 'ttl-existing',
+        enabled: true,
+        expiration: { days: 30 },
+      };
+      const transition: BucketLifecycleRule = {
+        id: 'transition-existing',
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 90,
+      };
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [ttl, transition] },
+        { lifecycleRules: [{ storageClass: 'STANDARD_IA', days: 60 }] }
+      );
+      expect(rules).toHaveLength(2);
+      const merged = rules!.find((r) => r.id === 'transition-existing');
+      expect(merged!.transitions).toEqual([
+        { storage_class: 'STANDARD_IA', days: 60 },
+      ]);
+      expect(rules!.find((r) => r.id === 'ttl-existing')).toBeDefined();
+    });
+
+    it('skips auto-match when multiple shape-compatible existing rules exist', () => {
+      const a: BucketLifecycleRule = {
+        id: 'a',
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 90,
+      };
+      const b: BucketLifecycleRule = {
+        id: 'b',
+        enabled: true,
+        storageClass: 'STANDARD_IA',
+        days: 30,
+      };
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [a, b] },
+        { lifecycleRules: [{ storageClass: 'GLACIER_IR', days: 7 }] }
+      );
+      expect(rules).toHaveLength(3);
+      expect(rules!.find((r) => r.id === 'a')!.transitions).toEqual([
+        { storage_class: 'GLACIER', days: 90 },
+      ]);
+      expect(rules!.find((r) => r.id === 'b')!.transitions).toEqual([
+        { storage_class: 'STANDARD_IA', days: 30 },
+      ]);
+    });
+  });
+
+  describe('idless rule preservation', () => {
+    it('preserves an idless existing rule when an unrelated rule is updated', () => {
+      const idless: BucketLifecycleRule = {
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 90,
+        filter: { prefix: 'logs/' },
+      };
+      const withId: BucketLifecycleRule = {
+        id: 'rule-b',
+        enabled: true,
+        storageClass: 'STANDARD_IA',
+        days: 30,
+      };
+      const { rules } = buildLifecycleRules(
+        { lifecycleRules: [idless, withId] },
+        { lifecycleRules: [{ id: 'rule-b', enabled: false }] }
+      );
+      expect(rules).toHaveLength(2);
+      const preserved = rules!.find(
+        (r) => r.transitions?.[0].storage_class === 'GLACIER'
+      );
+      expect(preserved).toBeDefined();
+      expect(preserved!.filter).toEqual({ prefix: 'logs/' });
+    });
+  });
+
+  describe('built-rule completeness', () => {
+    it('errors when a transition update lacks a time field and no auto-match available', () => {
+      const { rules, error } = buildLifecycleRules(
+        {},
+        { lifecycleRules: [{ storageClass: 'GLACIER' }] }
+      );
+      expect(error).toBeInstanceOf(Error);
+      expect(error!.message).toBe(
+        'Lifecycle transition requires either `days` or `date`'
+      );
+      expect(rules).toBeUndefined();
+    });
+
+    it('errors when a no-id, no-storageClass update has no auto-match', () => {
+      // Two existing rules → no auto-match. Update has only `days`,
+      // no storageClass → resolveTransition returns undefined.
+      const a: BucketLifecycleRule = {
+        id: 'a',
+        enabled: true,
+        storageClass: 'GLACIER',
+        days: 90,
+      };
+      const b: BucketLifecycleRule = {
+        id: 'b',
+        enabled: true,
+        storageClass: 'STANDARD_IA',
+        days: 30,
+      };
+      const { rules, error } = buildLifecycleRules(
+        { lifecycleRules: [a, b] },
+        { lifecycleRules: [{ days: 7 }] }
+      );
+      expect(error).toBeInstanceOf(Error);
+      expect(error!.message).toBe(
+        'Lifecycle transition requires `storageClass`'
+      );
+      expect(rules).toBeUndefined();
+    });
+
+    it('errors when transition fields are set with expiration but no storageClass and no merge available', () => {
+      // Without this guard, `resolveTransition` would silently return
+      // undefined, the rule would pass `validateBuiltRule` on the strength
+      // of its expiration, and the caller's `days: 30` would be dropped.
+      const { rules, error } = buildLifecycleRules(
+        {},
+        {
+          lifecycleRules: [
+            {
+              days: 30,
+              expiration: { days: 365 },
+            },
+          ],
+        }
+      );
+      expect(error).toBeInstanceOf(Error);
+      expect(error!.message).toBe(
+        'Lifecycle transition requires `storageClass`'
+      );
+      expect(rules).toBeUndefined();
+    });
+
+    it('errors when expiration update has no days or date', () => {
+      const { rules, error } = buildLifecycleRules(
+        {},
+        {
+          lifecycleRules: [
+            {
+              storageClass: 'GLACIER',
+              days: 30,
+              expiration: {},
+            },
+          ],
+        }
+      );
+      expect(error).toBeInstanceOf(Error);
+      expect(error!.message).toBe(
+        'Lifecycle expiration requires either `days` or `date`'
+      );
+      expect(rules).toBeUndefined();
     });
   });
 });
