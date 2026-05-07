@@ -57,7 +57,7 @@ jobs:
         with:
           version: pnpm changeset version
           publish: pnpm changeset publish
-          commit: 'chore: version packages'
-          title: 'chore: version packages'
+          commit: 'chore(release): bump versions and update changelogs'
+          title: 'chore(release): bump versions and update changelogs'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
