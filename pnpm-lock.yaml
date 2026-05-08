@@ -121,6 +121,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.1038.0
         version: 3.1044.0
+      '@aws-sdk/types':
+        specifier: ^3.973.8
+        version: 3.973.8
       '@smithy/signature-v4':
         specifier: ^5.3.14
         version: 5.3.14
