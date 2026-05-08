@@ -342,7 +342,9 @@ async function moveObject(
     return {};
   }
 
-  // Get source object size for upload params and progress
+  // Get source object size and content-type for upload params and
+  // header propagation. Without this, a remote→remote move would
+  // strip the source's Content-Type.
   const { data: headData } = await head(srcKey, {
     config: {
       ...config,
@@ -350,6 +352,7 @@ async function moveObject(
     },
   });
   const fileSize = headData?.size;
+  const sourceContentType = headData?.contentType;
 
   // Get source object
   const { data, error: getError } = await get(srcKey, 'stream', {
@@ -366,6 +369,7 @@ async function moveObject(
   // Put to destination
   const { error: putError } = await put(destKey, data, {
     ...calculateUploadParams(fileSize),
+    ...(sourceContentType ? { contentType: sourceContentType } : {}),
     onUploadProgress: showProgress
       ? ({ loaded }) => {
           if (fileSize !== undefined && fileSize > 0) {

@@ -3,6 +3,7 @@ import { get, head, list, put } from '@tigrisdata/storage';
 import { executeWithConcurrency } from '@utils/concurrency.js';
 import { exitWithError } from '@utils/exit.js';
 import { formatSize } from '@utils/format.js';
+import { getContentType } from '@utils/mime.js';
 import { getFormat, getOption } from '@utils/options.js';
 import {
   globToRegex,
@@ -113,8 +114,11 @@ async function uploadFile(
   const fileStream = createReadStream(localPath);
   const body = Readable.toWeb(fileStream) as ReadableStream;
 
+  const contentType = getContentType(localPath);
+
   const { error: putError } = await put(key, body, {
     ...calculateUploadParams(fileSize),
+    ...(contentType ? { contentType } : {}),
     onUploadProgress: showProgress
       ? ({ loaded }) => {
           if (fileSize !== undefined && fileSize > 0) {
@@ -224,16 +228,17 @@ async function copyObject(
     return {};
   }
 
-  let fileSize: number | undefined;
-  if (showProgress) {
-    const { data: headData } = await head(srcKey, {
-      config: {
-        ...config,
-        bucket: srcBucket,
-      },
-    });
-    fileSize = headData?.size;
-  }
+  // head() is unconditional now: we need the source's Content-Type
+  // to propagate it to the destination so a remote→remote copy
+  // doesn't strip the header.
+  const { data: headData } = await head(srcKey, {
+    config: {
+      ...config,
+      bucket: srcBucket,
+    },
+  });
+  const fileSize = headData?.size;
+  const sourceContentType = headData?.contentType;
 
   const { data, error: getError } = await get(srcKey, 'stream', {
     config: {
@@ -248,6 +253,7 @@ async function copyObject(
 
   const { error: putError } = await put(destKey, data, {
     ...calculateUploadParams(fileSize),
+    ...(sourceContentType ? { contentType: sourceContentType } : {}),
     onUploadProgress: showProgress
       ? ({ loaded }) => {
           if (fileSize !== undefined && fileSize > 0) {
