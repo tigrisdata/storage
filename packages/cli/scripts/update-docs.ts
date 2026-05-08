@@ -23,8 +23,11 @@ function isImplemented(...parts: string[]): boolean {
   return paths.some((p) => existsSync(p) && !p.includes('/_'));
 }
 
-// Check if a command or any of its nested subcommands are implemented
+// Check if a command or any of its nested subcommands are implemented.
+// Removed commands are tombstones and never count as "implemented" for
+// docs purposes — they shouldn't appear in the rendered README.
 function hasImplementation(cmd: CommandSpec, ...parentParts: string[]): boolean {
+  if (cmd.removed) return false;
   const parts = [...parentParts, cmd.name];
   if (isImplemented(...parts)) return true;
   if (cmd.commands) {
@@ -49,7 +52,7 @@ function generateCommandSection(cmd: CommandSpec): string {
 
   lines.push(`### \`${cmd.name}\`${aliasStr}`);
   lines.push('');
-  lines.push(cmd.description);
+  lines.push(cmd.description ?? '');
   lines.push('');
   lines.push('```');
   const usage = getCommandUsage(cmd);
@@ -58,7 +61,8 @@ function generateCommandSection(cmd: CommandSpec): string {
   lines.push('```');
   lines.push('');
 
-  const flags = cmd.arguments?.filter((a) => a.type !== 'positional') || [];
+  const flags =
+    cmd.arguments?.filter((a) => a.type !== 'positional' && !a.removed) || [];
   if (flags.length > 0) {
     lines.push('| Flag | Description |');
     lines.push('|------|-------------|');
@@ -113,7 +117,7 @@ function generateResourceSection(
 
   lines.push(`${headerLevel} \`${fullName}\`${aliasStr}`);
   lines.push('');
-  lines.push(cmd.description);
+  lines.push(cmd.description ?? '');
   lines.push('');
 
   const subcommands = cmd.commands || [];
@@ -270,7 +274,7 @@ function generateDocs(specs: Specs): string {
   }
 
   // Resource management
-  const resourceCommands = ['organizations', 'access-keys', 'credentials', 'buckets', 'forks', 'snapshots', 'objects', 'iam'];
+  const resourceCommands = ['organizations', 'access-keys', 'credentials', 'buckets', 'snapshots', 'objects', 'iam'];
   const implementedResources = resourceCommands.filter((c) => {
     const cmd = specs.commands.find((s) => s.name === c);
     if (!cmd) return false;
@@ -341,12 +345,12 @@ function generateDocs(specs: Specs): string {
     }
   }
 
-  // Buckets section (buckets, forks, snapshots)
-  const bucketRelated = ['buckets', 'forks', 'snapshots'].filter((c) => implementedResources.includes(c));
+  // Buckets section (buckets, snapshots)
+  const bucketRelated = ['buckets', 'snapshots'].filter((c) => implementedResources.includes(c));
   if (bucketRelated.length > 0) {
     lines.push('### Buckets');
     lines.push('');
-    lines.push('Buckets are containers for objects. You can also create forks and snapshots of buckets.');
+    lines.push('Buckets are containers for objects. You can also create snapshots of buckets.');
     lines.push('');
 
     for (const cmdName of bucketRelated) {

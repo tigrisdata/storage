@@ -25,13 +25,13 @@ export interface Auth0Config {
 export function getAuth0Config(): Auth0Config {
   const isDev = process.env.TIGRIS_ENV === 'development';
   const domain = isDev
-    ? 'auth-dev.tigris.dev'
+    ? (process.env.AUTH0_DOMAIN ?? 'auth-storage.tigris.dev')
     : (process.env.AUTH0_DOMAIN ?? 'auth.storage.tigrisdata.io');
   const clientId = isDev
-    ? 'JdJVYIyw0O1uHi5L5OJH903qaWBgd3gF'
+    ? (process.env.AUTH0_CLIENT_ID ?? 'JdJVYIyw0O1uHi5L5OJH903qaWBgd3gF')
     : (process.env.AUTH0_CLIENT_ID ?? 'DMejqeM3CQ4IqTjEcd3oA9eEiT40hn8D');
   const audience = isDev
-    ? 'https://tigris-api-dev'
+    ? (process.env.AUTH0_AUDIENCE ?? 'https://tigris-api-dev')
     : (process.env.AUTH0_AUDIENCE ?? 'https://tigris-os-api');
   const claimsNamespace =
     process.env.TIGRIS_CLAIMS_NAMESPACE ?? 'https://tigris';

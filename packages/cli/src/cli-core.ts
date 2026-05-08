@@ -4,7 +4,7 @@
 
 import { exitWithError } from '@utils/exit.js';
 import { printDeprecated } from '@utils/messages.js';
-import { Command as CommanderCommand } from 'commander';
+import { Command as CommanderCommand, Option } from 'commander';
 
 import type { Argument, CommandSpec, Specs } from './types.js';
 
@@ -164,6 +164,12 @@ export function commandHasAnyImplementation(
   pathParts: string[],
   hasImplementation: ImplementationChecker
 ): boolean {
+  // Removed commands are still registered so we can intercept and
+  // redirect users to the replacement instead of "unknown command".
+  if (command.removed) {
+    return true;
+  }
+
   if (hasImplementation(pathParts)) {
     return true;
   }
@@ -181,6 +187,40 @@ export function commandHasAnyImplementation(
   return false;
 }
 
+/**
+ * Print a redirect message and exit. Used for hard-removed commands
+ * and arguments. `subject` is the human-readable thing the user invoked
+ * (e.g. `tigris buckets set-ttl` or `--region`).
+ */
+function printRemovedAndExit(
+  subject: string,
+  replacedBy: string | undefined
+): never {
+  const hint = replacedBy
+    ? ` Use ${replacedBy} instead.`
+    : ' See the changelog for migration guidance.';
+  console.error(`${subject} was removed in this version.${hint}`);
+  process.exit(1);
+}
+
+/**
+ * Inspect parsed options for any argument the spec marks as removed.
+ * If the user supplied one, print the redirect and exit.
+ */
+function checkRemovedArguments(
+  args: Argument[] | undefined,
+  options: Record<string, unknown>
+): void {
+  if (!args) return;
+  for (const arg of args) {
+    if (!arg.removed) continue;
+    const value = getOptionValue(options, arg.name, args);
+    if (value !== undefined) {
+      printRemovedAndExit(`--${arg.name}`, arg.replaced_by);
+    }
+  }
+}
+
 export function showCommandHelp(
   specs: Specs,
   command: CommandSpec,
@@ -188,15 +228,17 @@ export function showCommandHelp(
   hasImplementation: ImplementationChecker
 ) {
   const fullPath = pathParts.join(' ');
-  console.log(`\n${specs.name} ${fullPath} - ${command.description}\n`);
+  console.log(`\n${specs.name} ${fullPath} - ${command.description ?? ''}\n`);
 
   if (command.commands && command.commands.length > 0) {
-    const availableCmds = command.commands.filter((cmd) =>
-      commandHasAnyImplementation(
-        cmd,
-        [...pathParts, cmd.name],
-        hasImplementation
-      )
+    const availableCmds = command.commands.filter(
+      (cmd) =>
+        !cmd.removed &&
+        commandHasAnyImplementation(
+          cmd,
+          [...pathParts, cmd.name],
+          hasImplementation
+        )
     );
 
     if (availableCmds.length > 0) {
@@ -208,14 +250,17 @@ export function showCommandHelp(
           cmdPart += ` (${aliases.join(', ')})`;
         }
         const paddedCmdPart = cmdPart.padEnd(24);
-        console.log(`${paddedCmdPart}${cmd.description}`);
+        console.log(`${paddedCmdPart}${cmd.description ?? ''}`);
       });
       console.log();
     }
   }
 
   const globalArgs = specs.definitions?.global_arguments ?? [];
-  const effectiveArgs = getEffectiveArguments(globalArgs, command.arguments);
+  const effectiveArgs = getEffectiveArguments(
+    globalArgs,
+    command.arguments
+  ).filter((arg) => !arg.removed);
   if (effectiveArgs.length > 0) {
     console.log('Arguments:');
     effectiveArgs.forEach((arg) => {
@@ -248,8 +293,10 @@ export function showMainHelp(
   console.log('Usage: tigris [command] [options]\n');
   console.log('Commands:');
 
-  const availableCommands = specs.commands.filter((cmd) =>
-    commandHasAnyImplementation(cmd, [cmd.name], hasImplementation)
+  const availableCommands = specs.commands.filter(
+    (cmd) =>
+      !cmd.removed &&
+      commandHasAnyImplementation(cmd, [cmd.name], hasImplementation)
   );
 
   availableCommands.forEach((command: CommandSpec) => {
@@ -261,7 +308,7 @@ export function showMainHelp(
       commandPart += ` (${aliases.join(', ')})`;
     }
     const paddedCommandPart = commandPart.padEnd(24);
-    console.log(`${paddedCommandPart}${command.description}`);
+    console.log(`${paddedCommandPart}${command.description ?? ''}`);
   });
   console.log(
     `\nUse "${specs.name} <command> help" for more information about a command.`
@@ -319,7 +366,15 @@ export function addArgumentsToCommand(
           arg.required || arg['required-when'] ? ' <value>' : ' [value]';
       }
 
-      cmd.option(optionString, arg.description, arg.default);
+      if (arg.removed) {
+        // Register but hide from --help so commander still parses the
+        // value; the dispatch handler intercepts it post-parse.
+        cmd.addOption(
+          new Option(optionString, arg.description ?? '').hideHelp()
+        );
+      } else {
+        cmd.option(optionString, arg.description ?? '', arg.default);
+      }
     }
   });
 }
@@ -493,11 +548,27 @@ export function registerCommands(
       continue;
     }
 
-    const cmd = parent.command(spec.name).description(spec.description);
+    const cmd = parent
+      .command(spec.name, spec.removed ? { hidden: true } : undefined)
+      .description(spec.description ?? '');
 
     if (spec.alias) {
       const aliases = Array.isArray(spec.alias) ? spec.alias : [spec.alias];
       aliases.forEach((alias) => cmd.alias(alias));
+    }
+
+    // Removed commands: register a redirect-and-exit action; skip
+    // children, arguments, and help registration entirely.
+    if (spec.removed) {
+      cmd.allowUnknownOption(true);
+      cmd.allowExcessArguments(true);
+      cmd.action(() => {
+        printRemovedAndExit(
+          `${specs.name} ${currentPath.join(' ')}`,
+          spec.replaced_by
+        );
+      });
+      continue;
     }
 
     if (spec.commands && spec.commands.length > 0) {
@@ -524,15 +595,20 @@ export function registerCommands(
               hasImplementation
             );
 
+            const extracted = extractArgumentValues(
+              allArguments,
+              positionalArgs,
+              options
+            );
+
             if (
               allArguments.length > 0 &&
-              !validateRequiredWhen(
-                allArguments,
-                extractArgumentValues(allArguments, positionalArgs, options)
-              )
+              !validateRequiredWhen(allArguments, extracted)
             ) {
               return;
             }
+
+            checkRemovedArguments(allArguments, extracted);
 
             if (defaultCmd.deprecated && defaultCmd.messages?.onDeprecated) {
               printDeprecated(defaultCmd.messages.onDeprecated);
@@ -542,7 +618,7 @@ export function registerCommands(
               loadModule,
               [...currentPath, defaultCmd.name],
               positionalArgs,
-              extractArgumentValues(allArguments, positionalArgs, options)
+              extracted
             );
           });
         }
@@ -570,15 +646,20 @@ export function registerCommands(
         const options = args.pop();
         const positionalArgs = args;
 
+        const extracted = extractArgumentValues(
+          spec.arguments || [],
+          positionalArgs,
+          options
+        );
+
         if (
           spec.arguments &&
-          !validateRequiredWhen(
-            spec.arguments,
-            extractArgumentValues(spec.arguments, positionalArgs, options)
-          )
+          !validateRequiredWhen(spec.arguments, extracted)
         ) {
           return;
         }
+
+        checkRemovedArguments(spec.arguments, extracted);
 
         if (spec.deprecated && spec.messages?.onDeprecated) {
           printDeprecated(spec.messages.onDeprecated);
@@ -588,7 +669,7 @@ export function registerCommands(
           loadModule,
           currentPath,
           positionalArgs,
-          extractArgumentValues(spec.arguments || [], positionalArgs, options)
+          extracted
         );
       });
     }

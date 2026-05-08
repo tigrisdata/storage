@@ -1,6 +1,6 @@
 export interface Argument {
   name: string;
-  description: string;
+  description?: string;
   alias?: string;
   options?:
     | string[]
@@ -11,6 +11,10 @@ export interface Argument {
   type?: 'positional' | 'flag' | string;
   multiple?: boolean;
   examples?: string[];
+  /** Hard-removed: providing the flag exits with a redirect message. */
+  removed?: boolean;
+  /** Replacement to suggest when a removed argument or command is used. */
+  replaced_by?: string;
 }
 
 export interface NextAction {
@@ -32,19 +36,20 @@ export interface Messages {
 // Recursive command structure - supports nth level nesting
 export interface CommandSpec {
   name: string;
-  description: string;
+  description?: string;
   alias?: string | string[];
   arguments?: Argument[];
   examples?: string[];
   commands?: CommandSpec[]; // recursive - can nest infinitely
   default?: string;
   deprecated?: boolean;
+  /** Hard-removed: invoking the command exits with a redirect message. */
+  removed?: boolean;
+  /** Replacement to suggest when a removed argument or command is used. */
+  replaced_by?: string;
   message?: string;
   messages?: Messages;
 }
-
-// Backwards compatibility alias
-export type OperationSpec = CommandSpec;
 
 export interface Specs {
   name: string;
@@ -60,9 +65,4 @@ export interface Specs {
 export interface ParsedPath {
   bucket: string;
   path: string;
-}
-
-export interface ParsedPaths {
-  source: ParsedPath;
-  destination: ParsedPath;
 }

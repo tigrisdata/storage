@@ -3,7 +3,7 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import * as YAML from 'yaml';
 
-import type { Argument, CommandSpec, OperationSpec, Specs } from '../types.js';
+import type { Argument, CommandSpec, Specs } from '../types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -30,7 +30,7 @@ export function loadSpecs(): Specs {
 export function getCommandSpec(
   commandPath: string,
   operationName?: string
-): OperationSpec | CommandSpec | null {
+): CommandSpec | null {
   const specs = loadSpecs();
 
   // Split command path for nested commands (e.g., "iam policies" -> ["iam", "policies"])

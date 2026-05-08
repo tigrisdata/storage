@@ -148,61 +148,6 @@ describe('buildBucketInfo', () => {
     });
   });
 
-  describe('TTL config', () => {
-    it('does not add TTL when ttlConfig is undefined', () => {
-      const info = buildBucketInfo(makeResponse());
-      expect(findValue(info, 'TTL')).toBeUndefined();
-    });
-
-    it('shows Disabled when ttlConfig.enabled is false', () => {
-      const info = buildBucketInfo(
-        makeResponse({
-          settings: {
-            ...makeResponse().settings,
-            ttlConfig: { enabled: false },
-          },
-        })
-      );
-      expect(findValue(info, 'TTL')).toBe('Disabled');
-    });
-
-    it('shows days when enabled with days', () => {
-      const info = buildBucketInfo(
-        makeResponse({
-          settings: {
-            ...makeResponse().settings,
-            ttlConfig: { enabled: true, days: 30 },
-          },
-        })
-      );
-      expect(findValue(info, 'TTL')).toBe('30 days');
-    });
-
-    it('shows date when enabled without days', () => {
-      const info = buildBucketInfo(
-        makeResponse({
-          settings: {
-            ...makeResponse().settings,
-            ttlConfig: { enabled: true, date: '2025-12-31' },
-          },
-        })
-      );
-      expect(findValue(info, 'TTL')).toBe('2025-12-31');
-    });
-
-    it('shows Enabled when enabled without days or date', () => {
-      const info = buildBucketInfo(
-        makeResponse({
-          settings: {
-            ...makeResponse().settings,
-            ttlConfig: { enabled: true },
-          },
-        })
-      );
-      expect(findValue(info, 'TTL')).toBe('Enabled');
-    });
-  });
-
   describe('lifecycle rules', () => {
     it('does not add lifecycle rules when undefined', () => {
       const info = buildBucketInfo(makeResponse());
@@ -262,6 +207,29 @@ describe('buildBucketInfo', () => {
       );
       expect(findValue(info, 'Lifecycle Rules')).toBe(
         'STANDARD_IA after 30d, GLACIER after 90d'
+      );
+    });
+
+    it('renders TTL-shaped rules (expiration only) alongside transitions', () => {
+      const info = buildBucketInfo(
+        makeResponse({
+          settings: {
+            ...makeResponse().settings,
+            lifecycleRules: [
+              { id: 'ttl-1', expiration: { days: 7 }, enabled: true },
+              {
+                id: 'lc-1',
+                storageClass: 'GLACIER',
+                days: 90,
+                enabled: true,
+              },
+            ],
+          },
+        })
+      );
+      expect(findValue(info, 'TTL')).toBeUndefined();
+      expect(findValue(info, 'Lifecycle Rules')).toBe(
+        'expire after 7d, GLACIER after 90d'
       );
     });
   });
