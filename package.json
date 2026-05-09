@@ -4,29 +4,24 @@
   "description": "Tigris monorepo for storage SDK",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "packages/storage",
-    "packages/iam",
-    "packages/agent-kit",
-    "packages/keyv-tigris",
-    "packages/react"
-  ],
+  "packageManager": "pnpm@10.33.4",
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
-    "dev": "npm run dev --workspaces --if-present",
-    "publint": "npm run publint --workspaces --if-present",
+    "build": "pnpm -r --if-present run build",
+    "dev": "pnpm -r --if-present run dev",
+    "publint": "pnpm -r --if-present run publint",
     "lint": "biome lint",
     "lint:fix": "biome lint --write",
     "format": "biome format --write",
     "format:check": "biome format",
     "check": "biome check",
     "check:fix": "biome check --write",
-    "test": "npm run test --workspaces --if-present",
+    "test": "pnpm -r --if-present run test",
     "commit": "cz",
-    "release": "./scripts/release.sh",
-    "release:dry-run": "./scripts/release.sh --dry-run",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm -r --if-present run build && changeset publish",
     "prepare": "husky install",
-    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules/.cache"
+    "clean": "pnpm -r --if-present run clean && rm -rf node_modules/.cache"
   },
   "keywords": [
     "object",
@@ -57,16 +52,22 @@
       ]
     }
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sqlite3"
+    ]
+  },
   "devDependencies": {
     "@biomejs/biome": "^2.4.13",
+    "@changesets/changelog-github": "^0.7.0",
+    "@changesets/cli": "^2.31.0",
     "@commitlint/cli": "^20.5.2",
     "@commitlint/config-conventional": "^20.5.0",
-    "@semantic-release/changelog": "^6.0.3",
-    "@semantic-release/git": "^10.0.1",
     "@types/node": "^20.0.0",
+    "dotenv": "^17.4.2",
     "husky": "^9.1.7",
     "publint": "^0.3.18",
-    "semantic-release": "^25.0.3",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.5"

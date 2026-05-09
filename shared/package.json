@@ -1,0 +1,12 @@
+{
+  "name": "@tigrisdata/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Internal shared source for @tigrisdata/* packages. Consumed via the @shared/* TS path alias and tsup esbuild alias; never built or published.",
+  "type": "module",
+  "dependencies": {
+    "@aws-crypto/sha256-js": "^5.2.0",
+    "@smithy/signature-v4": "^5.3.14",
+    "dotenv": "^17.4.2"
+  }
+}

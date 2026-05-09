@@ -1,6 +1,6 @@
 {
   "name": "@tigrisdata/react",
-  "version": "0.0.1",
+  "version": "1.2.3",
   "description": "React components for Tigris Storage",
   "type": "module",
   "main": "./dist/index.js",
@@ -57,7 +57,7 @@
     "react-dom": ">=18.0.0"
   },
   "dependencies": {
-    "@tigrisdata/storage": "^3.2.1"
+    "@tigrisdata/storage": "workspace:^"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
