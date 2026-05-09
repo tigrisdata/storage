@@ -1,6 +1,105 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    ":semanticCommitScope(deps)",
+    ":maintainLockFilesWeekly",
+    "schedule:weekly"
+  ],
+  "prHourlyLimit": 4,
+  "prConcurrentLimit": 10,
+  "rebaseWhen": "behind-base-branch",
+  "dependencyDashboard": true,
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "schedule": ["at any time"]
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "postUpdateOptions": ["pnpmDedupe"],
+  "packageRules": [
+    {
+      "description": "Throttle major-version updates to every two weeks",
+      "matchUpdateTypes": ["major"],
+      "schedule": ["every 2 weeks on monday before 6am"]
+    },
+    {
+      "description": "Group AWS SDK + S3 + Smithy ecosystem into one PR",
+      "matchPackageNames": [
+        "/^@aws-sdk\\//",
+        "/^@aws-crypto\\//",
+        "/^@smithy\\//"
+      ],
+      "groupName": "aws-sdk"
+    },
+    {
+      "description": "Group Changesets tooling",
+      "matchPackageNames": ["/^@changesets\\//"],
+      "groupName": "changesets"
+    },
+    {
+      "description": "Group commitlint + commitizen",
+      "matchPackageNames": [
+        "commitizen",
+        "cz-conventional-changelog",
+        "/^@commitlint\\//"
+      ],
+      "groupName": "commitlint"
+    },
+    {
+      "description": "Group Biome",
+      "matchPackageNames": ["/^@biomejs\\//"],
+      "groupName": "biome"
+    },
+    {
+      "description": "Group React ecosystem (peer + test deps)",
+      "matchPackageNames": [
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom",
+        "@testing-library/react",
+        "@testing-library/jest-dom",
+        "jsdom"
+      ],
+      "groupName": "react"
+    },
+    {
+      "description": "Group Keyv",
+      "matchPackageNames": ["keyv", "/^@keyv\\//"],
+      "groupName": "keyv"
+    },
+    {
+      "description": "Group all GitHub Actions into one PR",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions"
+    },
+    {
+      "description": "Group pnpm bumps (packageManager field + workflows)",
+      "matchPackageNames": ["pnpm"],
+      "groupName": "pnpm"
+    },
+    {
+      "description": "Auto-merge devDependency patches and minors after CI passes",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Auto-merge GitHub Actions patches and minors",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Auto-merge weekly lockfile maintenance",
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "automerge": true,
+      "automergeType": "pr"
+    }
   ]
 }

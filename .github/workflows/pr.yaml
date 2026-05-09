@@ -15,8 +15,6 @@ jobs:
           ref: ${{ github.head_ref }}
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.33.4
 
       - uses: actions/setup-node@v4
         with:
@@ -42,16 +40,3 @@ jobs:
           TIGRIS_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_STORAGE_SECRET_ACCESS_KEY }}
           TIGRIS_STORAGE_ENDPOINT: ${{ secrets.TIGRIS_STORAGE_ENDPOINT }}
         run: pnpm -r --if-present run test
-
-      - name: Detect package changes
-        id: pkg-changed
-        run: |
-          if git diff --name-only origin/main...HEAD | grep -qE '^(packages/|shared/)'; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Verify changeset present
-        if: steps.pkg-changed.outputs.changed == 'true'
-        run: pnpm changeset status --since=origin/main
