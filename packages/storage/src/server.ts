@@ -92,6 +92,11 @@ export {
 export { type PutOptions, type PutResponse, put } from './lib/object/put';
 export { type RemoveOptions, remove } from './lib/object/remove';
 export {
+  type SetObjectAccessOptions,
+  type SetObjectAccessResponse,
+  setObjectAccess,
+} from './lib/object/set/access';
+export {
   type UpdateObjectOptions,
   type UpdateObjectResponse,
   updateObject,
