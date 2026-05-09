@@ -64,6 +64,7 @@ export {
   type BundleResponse,
   bundle,
 } from './lib/object/bundle';
+export { type CopyOptions, type CopyResponse, copy } from './lib/object/copy';
 export { type GetOptions, type GetResponse, get } from './lib/object/get';
 export { type HeadOptions, type HeadResponse, head } from './lib/object/head';
 export {
@@ -73,6 +74,7 @@ export {
   list,
 } from './lib/object/list';
 export { isMigrated, type MigrateOptions, migrate } from './lib/object/migrate';
+export { type MoveOptions, type MoveResponse, move } from './lib/object/move';
 export {
   type CompleteMultipartUploadOptions,
   type CompleteMultipartUploadResponse,

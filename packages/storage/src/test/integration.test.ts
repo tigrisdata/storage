@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { config } from '../lib/config';
+import { copy } from '../lib/object/copy';
 import { get } from '../lib/object/get';
 import { head } from '../lib/object/head';
 import { list } from '../lib/object/list';
+import { move } from '../lib/object/move';
 import { put } from '../lib/object/put';
 import { remove } from '../lib/object/remove';
-import { updateObject } from '../lib/object/update';
+import { setObjectAccess } from '../lib/object/set/access';
 import { shouldSkipIntegrationTests } from './setup';
 
 const skipTests = shouldSkipIntegrationTests();
@@ -242,76 +244,115 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
     });
   });
 
-  describe('updateObject', () => {
-    const updateFileName = `test-update-${Date.now()}.txt`;
+  describe('setObjectAccess', () => {
+    const accessFileName = `test-access-${Date.now()}.txt`;
 
     beforeEach(async () => {
-      await put(updateFileName, 'update test content', { config });
+      await put(accessFileName, 'access test content', { config });
     });
 
     afterEach(async () => {
-      // Clean up both old and potentially renamed files
-      await remove(updateFileName, { config });
+      await remove(accessFileName, { config });
     });
 
-    it('should return error when no options provided', async () => {
-      const result = await updateObject(updateFileName);
-      expect(result.error).toBeDefined();
-      expect(result.error?.message).toBe('No update options provided');
-    });
-
-    it('should rename an object', async () => {
-      const newKey = `test-renamed-${Date.now()}.txt`;
-      const result = await updateObject(updateFileName, {
-        key: newKey,
-        config,
-      });
-
-      expect(result.error).toBeUndefined();
-      expect(result.data?.path).toBe(newKey);
-
-      // Rename back so subsequent tests still find the original file
-      await updateObject(newKey, { key: updateFileName, config });
-    });
-
-    it('should update access to public', async () => {
-      const result = await updateObject(updateFileName, {
+    it('should set access to public', async () => {
+      const result = await setObjectAccess(accessFileName, {
         access: 'public',
         config,
       });
 
       expect(result.error).toBeUndefined();
-      expect(result.data?.path).toBe(updateFileName);
+      expect(result.data?.path).toBe(accessFileName);
     });
 
-    it('should update access to private', async () => {
-      const result = await updateObject(updateFileName, {
+    it('should set access to private', async () => {
+      const result = await setObjectAccess(accessFileName, {
         access: 'private',
         config,
       });
 
       expect(result.error).toBeUndefined();
-      expect(result.data?.path).toBe(updateFileName);
+      expect(result.data?.path).toBe(accessFileName);
+    });
+  });
+
+  describe('copy', () => {
+    const srcFileName = `test-copy-src-${Date.now()}.txt`;
+    const srcContent = 'copy test content';
+    const createdKeys: string[] = [];
+
+    beforeEach(async () => {
+      await put(srcFileName, srcContent, { config });
     });
 
-    it('should rename and update access together', async () => {
-      const newKey = `test-renamed-public-${Date.now()}.txt`;
+    afterEach(async () => {
+      await remove(srcFileName, { config });
+      await Promise.all(createdKeys.map((key) => remove(key, { config })));
+      createdKeys.length = 0;
+    });
 
-      const result = await updateObject(updateFileName, {
-        key: newKey,
-        access: 'public',
-        config,
-      });
+    it('should return error when src and dest are identical', async () => {
+      const result = await copy(srcFileName, srcFileName, { config });
+      expect(result.error?.message).toBe('src and dest must differ');
+    });
+
+    it('should copy an object and leave the source intact', async () => {
+      const destKey = `test-copy-dest-${Date.now()}.txt`;
+      createdKeys.push(destKey);
+
+      const result = await copy(srcFileName, destKey, { config });
 
       expect(result.error).toBeUndefined();
-      expect(result.data?.path).toBe(newKey);
+      expect(result.data?.src).toBe(`${config.bucket}/${srcFileName}`);
+      expect(result.data?.dest).toBe(`${config.bucket}/${destKey}`);
 
-      // Rename back so subsequent tests still find the original file
-      await updateObject(newKey, {
-        key: updateFileName,
-        access: 'private',
-        config,
-      });
+      // Source still exists.
+      const srcHead = await head(srcFileName, { config });
+      expect(srcHead.data).toBeDefined();
+
+      // Destination has the same content.
+      const destGet = await get(destKey, 'string', { config });
+      expect(destGet.data).toBe(srcContent);
+    });
+  });
+
+  describe('move', () => {
+    const srcFileName = `test-move-src-${Date.now()}.txt`;
+    const srcContent = 'move test content';
+    const createdKeys: string[] = [];
+
+    beforeEach(async () => {
+      await put(srcFileName, srcContent, { config });
+    });
+
+    afterEach(async () => {
+      await remove(srcFileName, { config });
+      await Promise.all(createdKeys.map((key) => remove(key, { config })));
+      createdKeys.length = 0;
+    });
+
+    it('should return error when src and dest are identical', async () => {
+      const result = await move(srcFileName, srcFileName, { config });
+      expect(result.error?.message).toBe('src and dest must differ');
+    });
+
+    it('should move an object and remove the source', async () => {
+      const destKey = `test-move-dest-${Date.now()}.txt`;
+      createdKeys.push(destKey);
+
+      const result = await move(srcFileName, destKey, { config });
+
+      expect(result.error).toBeUndefined();
+      expect(result.data?.src).toBe(`${config.bucket}/${srcFileName}`);
+      expect(result.data?.dest).toBe(`${config.bucket}/${destKey}`);
+
+      // Source no longer exists.
+      const srcHead = await head(srcFileName, { config });
+      expect(srcHead.data).toBeUndefined();
+
+      // Destination has the original content.
+      const destGet = await get(destKey, 'string', { config });
+      expect(destGet.data).toBe(srcContent);
     });
   });
 
