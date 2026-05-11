@@ -1,6 +1,6 @@
 import { PutObjectAclCommand } from '@aws-sdk/client-s3';
 import { TigrisHeaders } from '@shared/headers';
-import { handleError } from '@shared/utils';
+import { encodeObjectKey, handleError } from '@shared/utils';
 import { config, missingConfigError } from '../config';
 import { createStorageClient } from '../http-client';
 import { createTigrisClient } from '../tigris-client';
@@ -50,9 +50,9 @@ export async function updateObject(
     try {
       const response = await storageHttpClient.request({
         method: 'PUT',
-        path: `/${bucket}/${encodeURIComponent(key)}?x-id=CopyObject`,
+        path: `/${bucket}/${encodeObjectKey(key)}?x-id=CopyObject`,
         headers: {
-          [TigrisHeaders.COPY_SOURCE]: `${bucket}/${encodeURIComponent(path)}`,
+          [TigrisHeaders.COPY_SOURCE]: `${bucket}/${encodeObjectKey(path)}`,
           [TigrisHeaders.RENAME]: 'true',
         },
       });

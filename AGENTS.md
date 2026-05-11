@@ -108,3 +108,71 @@ Root-level scripts:
 - The project uses Husky for Git hooks (commitlint via `commit-msg`, Biome `check` via `pre-commit`).
 - Commitizen is configured for Conventional Commits (`pnpm commit`).
 - Biome handles linting and formatting (replaced ESLint and Prettier).
+
+## Known pitfalls
+
+### SigV4 path encoding for object keys
+
+Scope: this only applies to code that talks to the **custom HTTP
+client** in `shared/http-client.ts` (used by `copy`, `move`,
+`updateObject`, and the `setBucket*` family). Anything routed through
+the AWS SDK (`ListObjectsV2Command`, `PutObjectCommand`,
+`HeadObjectCommand`, `GetObjectCommand`, `RemoveObjectCommand`, etc.)
+handles its own SigV4 correctly — don't touch encoding there.
+
+**Rule for the custom client**: whenever you build a **request path**
+that embeds an object key, do **not** encode the whole key with
+`encodeURIComponent`. Use `encodeObjectKey` from `@shared/utils`
+instead.
+
+Why the path specifically: when the request is signed with SigV4 (the
+access-key auth branch), `SignatureV4.sign()` URI-escapes the request
+path *again* during canonical-request construction. If the key was
+already escaped with plain `encodeURIComponent`, every `/` becomes
+`%2F` and then `%252F`. The Tigris gateway decodes `%2F` back to `/`
+before computing its own canonical path, so the two canonical paths
+diverge and the server returns `403 SignatureDoesNotMatch`.
+
+**Other surfaces — not affected by the double-encode bug but worth
+knowing**:
+
+- **Query strings**: the HTTP client extracts query params via
+  `URL.searchParams.forEach`, which returns the **decoded** value
+  before handing it to the signer. The signer encodes once for the
+  canonical query string, the server canonicalizes the same way —
+  single encoding round-trip. Writing `?prefix=${encodeURIComponent(p)}`
+  is safe; so is writing the value raw and letting `URL` percent-encode
+  it.
+- **Header values**: SigV4's canonical-header construction does not
+  URL-escape header values (only trims and collapses whitespace), so
+  there's no double-encode mismatch. However, S3's
+  `X-Amz-Copy-Source` spec **requires** the value be URL-encoded; the
+  server URL-decodes it before treating it as a key. Use
+  `encodeObjectKey` there too — it gives you the spec-correct encoding
+  for free (special chars escaped, `/` separators preserved).
+
+Symptoms that point at this bug:
+
+- `403 Forbidden` with body `<Code>SignatureDoesNotMatch</Code>` for
+  requests that include a nested object key (key contains `/`).
+- Works fine in tests that mock the network or run with OAuth/session
+  tokens (those skip the SigV4 branch entirely — see
+  `shared/http-client.ts`), then fails the first time a real consumer
+  exercises the call with access keys.
+- A previously-fine flat key like `file.txt` succeeds, but
+  `folder/file.txt` 403s.
+
+Mitigation for new code:
+
+```ts
+import { encodeObjectKey } from '@shared/utils';
+
+path: `/${bucket}/${encodeObjectKey(key)}?x-id=...`,
+headers: {
+  [TigrisHeaders.COPY_SOURCE]: `${srcBucket}/${encodeObjectKey(src)}`,
+}
+```
+
+When adding tests for any function that hits the custom HTTP client,
+include at least one case with a key that contains `/`. It's the only
+way to catch this against the real gateway with access-key auth.
