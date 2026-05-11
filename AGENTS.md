@@ -125,13 +125,22 @@ that embeds an object key, do **not** encode the whole key with
 `encodeURIComponent`. Use `encodeObjectKey` from `@shared/utils`
 instead.
 
-Why the path specifically: when the request is signed with SigV4 (the
-access-key auth branch), `SignatureV4.sign()` URI-escapes the request
-path *again* during canonical-request construction. If the key was
-already escaped with plain `encodeURIComponent`, every `/` becomes
-`%2F` and then `%252F`. The Tigris gateway decodes `%2F` back to `/`
-before computing its own canonical path, so the two canonical paths
-diverge and the server returns `403 SignatureDoesNotMatch`.
+Why the path specifically: there are two encoding traps that compound.
+
+1. **Signer setting**: `@smithy/signature-v4`'s `SignatureV4`
+   constructor defaults `uriEscapePath: true` — the AWS-standard
+   double-encoding scheme. S3 uses single-encoding, so our custom HTTP
+   client passes `uriEscapePath: false`. If you ever build a second
+   signer instance, set the same flag. With the default, the signer
+   re-percent-encodes any sequence in the path during canonicalization
+   (`%20` → `%2520`), and Tigris gateway — which uses S3 single-encoding
+   — diverges from the client canonical and returns
+   `403 SignatureDoesNotMatch` for every key with a special char.
+2. **Pre-encoding**: even with `uriEscapePath: false`, the wire URL
+   must still be a valid URL — keys with `/`, spaces, `?`, etc. need
+   percent-encoding when serialized. Use `encodeObjectKey` (single
+   encode, per-segment, preserves `/`) so the on-wire path is valid
+   and matches what the signer signs.
 
 **Other surfaces — not affected by the double-encode bug but worth
 knowing**:
@@ -174,5 +183,12 @@ headers: {
 ```
 
 When adding tests for any function that hits the custom HTTP client,
-include at least one case with a key that contains `/`. It's the only
-way to catch this against the real gateway with access-key auth.
+exercise at least these two key shapes against the real gateway with
+access-key auth:
+
+- A key with `/` (e.g. `folder/file.txt`) — catches the per-segment
+  encoding regression.
+- A key with a character that requires percent-encoding (space, `?`,
+  `=`, `&`) — catches the `uriEscapePath` regression. Unit tests on
+  `encodeObjectKey` alone aren't enough; the bug only shows up when
+  the signer's canonicalization pass runs end-to-end.
