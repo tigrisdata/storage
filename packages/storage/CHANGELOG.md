@@ -1,5 +1,11 @@
 # @tigrisdata/storage
 
+## 3.5.1
+
+### Patch Changes
+
+- [#99](https://github.com/tigrisdata/storage/pull/99) [`aa03ea5`](https://github.com/tigrisdata/storage/commit/aa03ea53d5096dbfe67a969262b55ca58aa0b33e) Thanks [@designcode](https://github.com/designcode)! - `move` no longer accepts `srcBucket` / `destBucket` options — cross-bucket moves are not supported by the server. Use `copy` followed by `remove` to move objects between buckets.
+
 ## 3.5.0
 
 ### Minor Changes
