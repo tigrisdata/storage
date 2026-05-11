@@ -1,5 +1,5 @@
 import { getStorageConfig } from '@auth/provider.js';
-import { get, head, list, put } from '@tigrisdata/storage';
+import { copy, get, head, list, put } from '@tigrisdata/storage';
 import { executeWithConcurrency } from '@utils/concurrency.js';
 import { exitWithError } from '@utils/exit.js';
 import { formatSize } from '@utils/format.js';
@@ -210,9 +210,11 @@ async function copyObject(
   srcBucket: string,
   srcKey: string,
   destBucket: string,
-  destKey: string,
-  showProgress = false
+  destKey: string
 ): Promise<{ error?: string }> {
+  // Folder markers (zero-byte objects ending in `/`) are still
+  // created via put('') — CopyObject on a literal folder marker is
+  // ambiguous, and the marker has no payload to preserve.
   if (srcKey.endsWith('/')) {
     const { error: putError } = await put(destKey, '', {
       config: {
@@ -228,56 +230,19 @@ async function copyObject(
     return {};
   }
 
-  // head() is unconditional now: we need the source's Content-Type
-  // to propagate it to the destination so a remote→remote copy
-  // doesn't strip the header.
-  const { data: headData } = await head(srcKey, {
-    config: {
-      ...config,
-      bucket: srcBucket,
-    },
-  });
-  const fileSize = headData?.size;
-  const sourceContentType = headData?.contentType;
-
-  const { data, error: getError } = await get(srcKey, 'stream', {
-    config: {
-      ...config,
-      bucket: srcBucket,
-    },
-  });
-
-  if (getError) {
-    return { error: getError.message };
-  }
-
-  const { error: putError } = await put(destKey, data, {
-    ...calculateUploadParams(fileSize),
-    ...(sourceContentType ? { contentType: sourceContentType } : {}),
-    onUploadProgress: showProgress
-      ? ({ loaded }) => {
-          if (fileSize !== undefined && fileSize > 0) {
-            const pct = Math.round((loaded / fileSize) * 100);
-            process.stdout.write(
-              `\rCopying: ${formatSize(loaded)} / ${formatSize(fileSize)} (${pct}%)`
-            );
-          } else {
-            process.stdout.write(`\rCopying: ${formatSize(loaded)}`);
-          }
-        }
-      : undefined,
+  // Server-side CopyObject. No bytes flow through the client and the
+  // source's Content-Type / metadata are preserved automatically.
+  const { error: copyError } = await copy(srcKey, destKey, {
+    srcBucket,
+    destBucket,
     config: {
       ...config,
       bucket: destBucket,
     },
   });
 
-  if (showProgress) {
-    process.stdout.write('\r' + ' '.repeat(60) + '\r');
-  }
-
-  if (putError) {
-    return { error: putError.message };
+  if (copyError) {
+    return { error: copyError.message };
   }
 
   return {};
@@ -825,8 +790,7 @@ async function copyRemoteToRemote(
       srcParsed.bucket,
       srcParsed.path,
       destParsed.bucket,
-      destKey,
-      !_jsonMode
+      destKey
     );
 
     if (result.error) {

@@ -272,6 +272,9 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
   // Generate unique prefix for all test resources
   const testPrefix = getTestPrefix();
   const testBucket = testPrefix;
+  // Second bucket used by cross-bucket cp/mv tests; created and torn
+  // down alongside the primary bucket.
+  const otherBucket = `${testPrefix}-other`;
   const testContent = 'Hello from CLI test';
 
   /** Prefix a bucket/path with t3:// for commands that require remote paths (cp, mv, rm) */
@@ -315,6 +318,13 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       console.error('Failed to create test bucket:', result.stderr);
       throw new Error('Failed to create test bucket');
     }
+
+    console.log(`Creating second test bucket: ${otherBucket}`);
+    const otherResult = runCli(`mk ${otherBucket}`);
+    if (otherResult.exitCode !== 0) {
+      console.error('Failed to create second test bucket:', otherResult.stderr);
+      throw new Error('Failed to create second test bucket');
+    }
   });
 
   afterAll(async () => {
@@ -322,6 +332,10 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     // Force remove all objects and the bucket
     runCli(`rm ${t3(testBucket)}/* -f`);
     runCli(`rm ${t3(testBucket)} -f`);
+
+    console.log(`Cleaning up second test bucket: ${otherBucket}`);
+    runCli(`rm ${t3(otherBucket)}/* -f`);
+    runCli(`rm ${t3(otherBucket)} -f`);
   });
 
   describe('ls command', () => {
@@ -994,6 +1008,48 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       // Cleanup source wildcard files
       runCli(`rm ${t3(testBucket)}/cp-wc-a.txt -f`);
       runCli(`rm ${t3(testBucket)}/cp-wc-b.txt -f`);
+    });
+  });
+
+  describe('cross-bucket cp and mv', () => {
+    const cpFile = 'xb-cp-source.txt';
+    const mvFile = 'xb-mv-source.txt';
+
+    beforeAll(() => {
+      runCli(`touch ${testBucket}/${cpFile}`);
+      runCli(`touch ${testBucket}/${mvFile}`);
+    });
+
+    it('should cp across buckets via server-side CopyObject', () => {
+      const result = runCli(
+        `cp ${t3(testBucket)}/${cpFile} ${t3(otherBucket)}/${cpFile}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Copied');
+
+      // Source still present in original bucket
+      const lsSrc = runCli(`ls ${testBucket}`);
+      expect(lsSrc.stdout).toContain(cpFile);
+
+      // Destination present in other bucket
+      const lsDest = runCli(`ls ${otherBucket}`);
+      expect(lsDest.stdout).toContain(cpFile);
+    });
+
+    it('should mv across buckets via server-side copy + remove', () => {
+      const result = runCli(
+        `mv ${t3(testBucket)}/${mvFile} ${t3(otherBucket)}/${mvFile} -f`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Moved');
+
+      // Source gone from original bucket
+      const lsSrc = runCli(`ls ${testBucket}`);
+      expect(lsSrc.stdout).not.toContain(mvFile);
+
+      // Destination present in other bucket
+      const lsDest = runCli(`ls ${otherBucket}`);
+      expect(lsDest.stdout).toContain(mvFile);
     });
   });
 
@@ -1686,6 +1742,37 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       // Verify rename
       const ls = runCli(`ls ${testBucket}`);
       expect(ls.stdout).toContain('objset-renamed.txt');
+    });
+  });
+
+  describe('objects set-access command', () => {
+    const testFile = 'setaccess-test.txt';
+
+    beforeAll(() => {
+      runCli(`touch ${testBucket}/${testFile}`);
+    });
+
+    afterAll(() => {
+      runCli(`rm ${t3(testBucket)}/${testFile} -f`);
+    });
+
+    it('should set --access public', () => {
+      const result = runCli(
+        `objects set-access ${testBucket} ${testFile} --access public`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should set --access private', () => {
+      const result = runCli(
+        `objects set-access ${testBucket} ${testFile} --access private`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should error on missing --access', () => {
+      const result = runCli(`objects set-access ${testBucket} ${testFile}`);
+      expect(result.exitCode).toBe(1);
     });
   });
 

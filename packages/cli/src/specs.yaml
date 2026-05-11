@@ -1360,10 +1360,11 @@ commands:
           - name: force
             type: flag
             description: Skip confirmation prompts (alias for --yes)
-      # set
+      # set (deprecated)
       - name: set
-        description: Update settings on an existing object such as access level
+        description: (Deprecated) Update settings on an existing object such as access level. Use `tigris objects set-access` for ACL changes and `tigris mv` to rename
         alias: s
+        deprecated: true
         examples:
           - "tigris objects set my-bucket my-file.txt --access public"
           - "tigris objects set t3://my-bucket/my-file.txt --access public"
@@ -1372,6 +1373,7 @@ commands:
           onStart: 'Updating object...'
           onSuccess: "Object '{{key}}' updated successfully"
           onFailure: 'Failed to update object'
+          onDeprecated: 'tigris objects set is deprecated. Use `tigris objects set-access` for ACL changes and `tigris mv` to rename objects. This command will be removed in a future release.'
         arguments:
           - name: bucket
             description: Name of the bucket, or a full path (t3://bucket/key)
@@ -1388,6 +1390,34 @@ commands:
           - name: new-key
             description: Rename the object to a new key
             alias: n
+      # set-access
+      - name: set-access
+        description: Set the access level (public or private) on an existing object
+        alias: sa
+        examples:
+          - "tigris objects set-access my-bucket my-file.txt --access public"
+          - "tigris objects set-access t3://my-bucket/my-file.txt --access private"
+        messages:
+          onStart: 'Updating object access...'
+          onSuccess: "Access for '{{key}}' updated to {{access}}"
+          onFailure: 'Failed to update object access'
+        arguments:
+          - name: bucket
+            description: Name of the bucket, or a full path (t3://bucket/key)
+            type: positional
+            required: true
+          - name: key
+            description: Key of the object (omit if bucket contains the full path)
+            type: positional
+          - name: access
+            description: Access level
+            alias: a
+            options: *access_options
+            required: true
+          - name: format
+            description: Output format
+            options: [json, table, xml]
+            default: table
       # info
       - name: info
         description: Show metadata for an object (content type, size, modified date)
