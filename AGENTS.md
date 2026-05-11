@@ -2,6 +2,11 @@
 
 ## Code Quality & Security
 
+### Agent Behavior
+
+- **Never `git commit`, `git push`, or open a PR without an explicit, in-the-moment user instruction.** Treat each commit, push, and PR as a separate confirmation: approval for one does not extend to the next. When unsure, stop and ask.
+- Stage proposed changes and surface them in chat first; let the user decide when (and whether) to commit. The same rule applies to fixup commits, follow-up commits, and changeset commits — none are implied by an earlier "commit" instruction.
+
 ### Commit Guidelines
 
 Commit messages follow **Conventional Commits** format:

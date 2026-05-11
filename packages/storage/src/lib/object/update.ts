@@ -16,6 +16,11 @@ export type UpdateObjectResponse = {
   path: string;
 };
 
+/**
+ * @deprecated Use `setObjectAccess` to change object ACLs, or the dedicated
+ * rename helper to change an object's key. `updateObject` will be removed in
+ * a future major version.
+ */
 export async function updateObject(
   path: string,
   options?: UpdateObjectOptions
