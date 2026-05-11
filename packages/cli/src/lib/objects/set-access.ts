@@ -14,20 +14,30 @@ export default async function setAccess(options: Record<string, unknown>) {
 
   const bucketArg = getOption<string>(options, ['bucket']);
   const keyArg = getOption<string>(options, ['key']);
-  const access = getOption<string>(options, ['access', 'a', 'A']);
+  const accessArg = getOption<string>(options, ['access']);
 
   if (!bucketArg) {
     failWithError(context, 'Bucket name or path is required');
   }
 
-  const { bucket, key } = resolveObjectArgs(bucketArg, keyArg);
+  // When the user passes a full t3://bucket/key path as the first
+  // positional, the second positional slot is the access value and
+  // there is no third. Mirrors the resolution shape in objects put.
+  const combined = resolveObjectArgs(bucketArg);
+  const bucket = combined.bucket;
+  const key = combined.key || keyArg;
+  const access = combined.key ? keyArg : accessArg;
 
   if (!key) {
     failWithError(context, 'Object key is required');
   }
 
+  if (!access) {
+    failWithError(context, 'Access level is required (public or private)');
+  }
+
   if (access !== 'public' && access !== 'private') {
-    failWithError(context, '--access must be either "public" or "private"');
+    failWithError(context, 'Access level must be either "public" or "private"');
   }
 
   const config = await getStorageConfig();

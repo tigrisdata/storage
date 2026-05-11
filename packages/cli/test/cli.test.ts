@@ -1756,23 +1756,39 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       runCli(`rm ${t3(testBucket)}/${testFile} -f`);
     });
 
-    it('should set --access public', () => {
+    it('should set access to public via positional', () => {
       const result = runCli(
-        `objects set-access ${testBucket} ${testFile} --access public`
+        `objects set-access ${testBucket} ${testFile} public`
       );
       expect(result.exitCode).toBe(0);
     });
 
-    it('should set --access private', () => {
+    it('should set access to private via positional', () => {
       const result = runCli(
-        `objects set-access ${testBucket} ${testFile} --access private`
+        `objects set-access ${testBucket} ${testFile} private`
       );
       expect(result.exitCode).toBe(0);
     });
 
-    it('should error on missing --access', () => {
+    it('should accept t3:// path with access as second positional', () => {
+      const result = runCli(
+        `objects set-access ${t3(testBucket)}/${testFile} public`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should error when the access positional is missing', () => {
       const result = runCli(`objects set-access ${testBucket} ${testFile}`);
       expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Access level is required');
+    });
+
+    it('should error on invalid access value', () => {
+      const result = runCli(
+        `objects set-access ${testBucket} ${testFile} maybe`
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Access level must be either');
     });
   });
 
