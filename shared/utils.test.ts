@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { executeWithConcurrency } from './utils';
+import { encodeObjectKey, executeWithConcurrency } from './utils';
 
 describe('executeWithConcurrency', () => {
   it('should execute all tasks and return results in order', async () => {
@@ -134,5 +134,34 @@ describe('executeWithConcurrency', () => {
     await executeWithConcurrency(tasks, 1);
 
     expect(executionOrder).toEqual([1, 2, 3]);
+  });
+});
+
+describe('encodeObjectKey', () => {
+  it('encodes a flat key with no slashes', () => {
+    expect(encodeObjectKey('file.txt')).toBe('file.txt');
+  });
+
+  it('preserves slashes as path separators', () => {
+    // Regression: a plain `encodeURIComponent` turns `/` into `%2F`,
+    // which the SigV4 signer then double-encodes to `%252F` during
+    // canonical-request construction, producing SignatureDoesNotMatch.
+    expect(encodeObjectKey('folder/file.txt')).toBe('folder/file.txt');
+    expect(encodeObjectKey('a/b/c/d.txt')).toBe('a/b/c/d.txt');
+  });
+
+  it('encodes special characters within segments', () => {
+    expect(encodeObjectKey('folder/my file.txt')).toBe('folder/my%20file.txt');
+    expect(encodeObjectKey('folder/?weird=name.txt')).toBe(
+      'folder/%3Fweird%3Dname.txt'
+    );
+  });
+
+  it('preserves trailing slash (folder markers)', () => {
+    expect(encodeObjectKey('folder/')).toBe('folder/');
+  });
+
+  it('handles empty input', () => {
+    expect(encodeObjectKey('')).toBe('');
   });
 });

@@ -64,6 +64,11 @@ async function generateSignatureHeaders(
     region: 'auto',
     service: 's3',
     sha256: Sha256,
+    // S3 uses single-encoding for the canonical path; the default
+    // (`true`) is the AWS-standard double-encoding scheme and produces
+    // `SignatureDoesNotMatch` whenever a path segment contains
+    // characters that need percent-encoding (space, `?`, `=`, etc.).
+    uriEscapePath: false,
   });
 
   const query: Record<string, string> = {};

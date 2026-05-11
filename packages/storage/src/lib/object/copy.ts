@@ -1,5 +1,5 @@
 import { TigrisHeaders } from '@shared/headers';
-import { handleError } from '@shared/utils';
+import { encodeObjectKey, handleError } from '@shared/utils';
 import { config, missingConfigError } from '../config';
 import { createStorageClient } from '../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
@@ -56,7 +56,7 @@ export async function copyOrMove(
   }
 
   const headers: Record<string, string> = {
-    [TigrisHeaders.COPY_SOURCE]: `${srcBucket}/${encodeURIComponent(src)}`,
+    [TigrisHeaders.COPY_SOURCE]: `${srcBucket}/${encodeObjectKey(src)}`,
   };
 
   if (rename) {
@@ -66,7 +66,7 @@ export async function copyOrMove(
   try {
     const response = await storageHttpClient.request({
       method: 'PUT',
-      path: `/${destBucket}/${encodeURIComponent(dest)}?x-id=CopyObject`,
+      path: `/${destBucket}/${encodeObjectKey(dest)}?x-id=CopyObject`,
       headers,
     });
 
