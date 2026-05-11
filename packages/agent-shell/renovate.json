@@ -1,0 +1,29 @@
+{
+	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
+	"extends": ["config:recommended", ":semanticCommitTypeAll(chore)"],
+	"timezone": "UTC",
+	"schedule": ["* 0-8 * * 1"],
+	"prConcurrentLimit": 5,
+	"prHourlyLimit": 2,
+	"labels": ["dependencies"],
+	"packageRules": [
+		{
+			"description": "Bundle all minor and patch updates (npm, GitHub Actions, Docker) into a single weekly PR",
+			"matchUpdateTypes": ["minor", "patch", "digest", "pin"],
+			"groupName": "non-major dependencies"
+		},
+		{
+			"description": "Major dependency updates: bundled, only after 14 days of release age (~bi-weekly cadence)",
+			"matchUpdateTypes": ["major"],
+			"groupName": "major dependencies",
+			"minimumReleaseAge": "14 days"
+		},
+		{
+			"description": "TypeScript and @types/node major updates: held 60 days post-release (~every 2 months)",
+			"matchPackageNames": ["typescript", "@types/node"],
+			"matchUpdateTypes": ["major"],
+			"groupName": "typescript and node types (major)",
+			"minimumReleaseAge": "60 days"
+		}
+	]
+}
