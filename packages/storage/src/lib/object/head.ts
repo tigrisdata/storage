@@ -8,6 +8,7 @@ import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type HeadOptions = {
   snapshotVersion?: string;
+  versionId?: string;
   config?: TigrisStorageConfig;
 };
 
@@ -33,6 +34,7 @@ export async function head(
   const head = new HeadObjectCommand({
     Bucket: options?.config?.bucket ?? config.bucket,
     Key: path,
+    VersionId: options?.versionId,
   });
 
   if (options?.snapshotVersion) {
