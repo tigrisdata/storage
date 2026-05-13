@@ -9,13 +9,17 @@ export type ListVersionsOptions = {
   prefix?: string;
   limit?: number;
   keyMarker?: string;
+  /**
+   * Pagination position within a key's versions. S3 ignores this when
+   * `keyMarker` is not also set, so passing it alone returns an error.
+   */
   versionIdMarker?: string;
   config?: TigrisStorageConfig;
 };
 
 export type ObjectVersion = {
   name: string;
-  versionId: string;
+  versionId: string | undefined;
   isLatest: boolean;
   size: number;
   lastModified: Date;
@@ -23,7 +27,7 @@ export type ObjectVersion = {
 
 export type DeleteMarker = {
   name: string;
-  versionId: string;
+  versionId: string | undefined;
   isLatest: boolean;
   lastModified: Date;
 };
@@ -42,6 +46,12 @@ export async function listVersions(
 ): Promise<TigrisStorageResponse<ListVersionsResponse, Error>> {
   if (!options?.config?.bucket && !config.bucket) {
     return missingConfigError('bucket');
+  }
+
+  if (options?.versionIdMarker && !options?.keyMarker) {
+    return {
+      error: new Error('versionIdMarker requires keyMarker to also be set'),
+    };
   }
 
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
@@ -67,7 +77,7 @@ export async function listVersions(
           versions:
             res.Versions?.map((v) => ({
               name: v.Key ?? '',
-              versionId: v.VersionId ?? '',
+              versionId: v.VersionId,
               isLatest: v.IsLatest ?? false,
               size: v.Size ?? 0,
               lastModified: v.LastModified ?? new Date(),
@@ -75,7 +85,7 @@ export async function listVersions(
           deleteMarkers:
             res.DeleteMarkers?.map((m) => ({
               name: m.Key ?? '',
-              versionId: m.VersionId ?? '',
+              versionId: m.VersionId,
               isLatest: m.IsLatest ?? false,
               lastModified: m.LastModified ?? new Date(),
             })) ?? [],
