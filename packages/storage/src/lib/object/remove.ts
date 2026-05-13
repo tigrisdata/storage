@@ -6,6 +6,7 @@ import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type RemoveOptions = {
   config?: TigrisStorageConfig;
+  versionId?: string;
 };
 
 export async function remove(
@@ -20,6 +21,7 @@ export async function remove(
   const remove = new DeleteObjectCommand({
     Bucket: options?.config?.bucket ?? config.bucket,
     Key: path,
+    VersionId: options?.versionId,
   });
 
   try {

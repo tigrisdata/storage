@@ -73,6 +73,13 @@ export {
   type ListResponse,
   list,
 } from './lib/object/list';
+export {
+  type DeleteMarker,
+  type ListVersionsOptions,
+  type ListVersionsResponse,
+  listVersions,
+  type ObjectVersion,
+} from './lib/object/list-versions';
 export { isMigrated, type MigrateOptions, migrate } from './lib/object/migrate';
 export { type MoveOptions, type MoveResponse, move } from './lib/object/move';
 export {

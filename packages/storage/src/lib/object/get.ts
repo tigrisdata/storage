@@ -11,6 +11,7 @@ export type GetOptions = {
   contentType?: string;
   encoding?: string;
   snapshotVersion?: string;
+  versionId?: string;
 };
 
 export type GetResponse = string | File | ReadableStream;
@@ -44,6 +45,7 @@ export async function get(
   const get = new GetObjectCommand({
     Bucket: options?.config?.bucket ?? config.bucket,
     Key: path,
+    VersionId: options?.versionId,
     ResponseContentType: options?.contentType ?? undefined,
     ResponseContentDisposition: options?.contentDisposition
       ? options.contentDisposition === 'attachment'
