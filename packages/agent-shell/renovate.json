@@ -6,6 +6,10 @@
 	"prConcurrentLimit": 5,
 	"prHourlyLimit": 2,
 	"labels": ["dependencies"],
+	"osvVulnerabilityAlerts": true,
+	"vulnerabilityAlerts": {
+		"schedule": ["at any time"]
+	},
 	"packageRules": [
 		{
 			"description": "Bundle all minor and patch updates (npm, GitHub Actions, Docker) into a single weekly PR",
@@ -13,10 +17,11 @@
 			"groupName": "non-major dependencies"
 		},
 		{
-			"description": "Major dependency updates: bundled, only after 14 days of release age (~bi-weekly cadence)",
+			"description": "Major dependency updates: bundled, bi-weekly cadence (first and third Monday) with a 14-day staleness floor",
 			"matchUpdateTypes": ["major"],
 			"groupName": "major dependencies",
-			"minimumReleaseAge": "14 days"
+			"minimumReleaseAge": "14 days",
+			"schedule": ["* 0-5 1-7,15-21 * 1"]
 		},
 		{
 			"description": "TypeScript and @types/node major updates: held 60 days post-release (~every 2 months)",
