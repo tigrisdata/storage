@@ -3,9 +3,11 @@
   "extends": [
     "config:recommended",
     ":semanticCommitScope(deps)",
-    ":maintainLockFilesWeekly",
-    "schedule:weekly"
+    ":semanticCommitTypeAll(chore)",
+    ":maintainLockFilesWeekly"
   ],
+  "timezone": "UTC",
+  "schedule": ["* 5-23 * * 6"],
   "prHourlyLimit": 4,
   "prConcurrentLimit": 10,
   "rebaseWhen": "behind-base-branch",
@@ -16,14 +18,22 @@
   },
   "lockFileMaintenance": {
     "enabled": true,
-    "schedule": ["before 6am on monday"]
+    "schedule": ["* 0-5 * * 1"]
   },
   "postUpdateOptions": ["pnpmDedupe"],
   "packageRules": [
     {
-      "description": "Throttle major-version updates to every two weeks",
+      "description": "Throttle major-version updates: bi-weekly cadence (first and third Monday) with a 14-day staleness floor",
       "matchUpdateTypes": ["major"],
-      "schedule": ["every 2 weeks on monday before 6am"]
+      "minimumReleaseAge": "14 days",
+      "schedule": ["* 0-5 1-7,15-21 * 1"]
+    },
+    {
+      "description": "TypeScript and @types/node major updates: held 60 days post-release (~every 2 months)",
+      "matchPackageNames": ["typescript", "@types/node"],
+      "matchUpdateTypes": ["major"],
+      "groupName": "typescript and node types (major)",
+      "minimumReleaseAge": "60 days"
     },
     {
       "description": "Group AWS SDK + S3 + Smithy ecosystem into one PR",
@@ -80,26 +90,6 @@
       "description": "Group pnpm bumps (packageManager field + workflows)",
       "matchPackageNames": ["pnpm"],
       "groupName": "pnpm"
-    },
-    {
-      "description": "Auto-merge devDependency patches and minors after CI passes",
-      "matchDepTypes": ["devDependencies"],
-      "matchUpdateTypes": ["patch", "minor"],
-      "automerge": true,
-      "automergeType": "pr"
-    },
-    {
-      "description": "Auto-merge GitHub Actions patches and minors",
-      "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["patch", "minor"],
-      "automerge": true,
-      "automergeType": "pr"
-    },
-    {
-      "description": "Auto-merge weekly lockfile maintenance",
-      "matchUpdateTypes": ["lockFileMaintenance"],
-      "automerge": true,
-      "automergeType": "pr"
     }
   ]
 }
