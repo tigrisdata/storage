@@ -1,7 +1,6 @@
 import { getStorageConfig } from '@auth/provider.js';
-import { get, head, list, put, remove } from '@tigrisdata/storage';
+import { copy, list, move, put, remove } from '@tigrisdata/storage';
 import { exitWithError } from '@utils/exit.js';
-import { formatSize } from '@utils/format.js';
 import { confirm, requireInteractive } from '@utils/interactive.js';
 import { getFormat, getOption } from '@utils/options.js';
 import {
@@ -12,7 +11,6 @@ import {
   parseRemotePath,
   wildcardPrefix,
 } from '@utils/path.js';
-import { calculateUploadParams } from '@utils/upload.js';
 
 let _jsonMode = false;
 
@@ -277,8 +275,7 @@ export default async function mv(options: Record<string, unknown>) {
       srcPath.bucket,
       srcPath.path,
       destPath.bucket,
-      destKey,
-      !_jsonMode // show progress for single file (not in JSON mode)
+      destKey
     );
 
     if (result.error) {
@@ -308,12 +305,13 @@ async function moveObject(
   srcBucket: string,
   srcKey: string,
   destBucket: string,
-  destKey: string,
-  showProgress = false
+  destKey: string
 ): Promise<{ error?: string }> {
-  // Handle folder markers specially (empty objects ending with /)
+  // Folder markers (zero-byte objects ending in `/`) are still
+  // recreated via put('') + remove(). The server's rename header is
+  // not meaningful for the marker itself and we want to preserve the
+  // existing semantics here.
   if (srcKey.endsWith('/')) {
-    // Put empty string to destination (creates folder marker)
     const { error: putError } = await put(destKey, '', {
       config: {
         ...config,
@@ -325,7 +323,6 @@ async function moveObject(
       return { error: putError.message };
     }
 
-    // Delete source folder marker
     const { error: removeError } = await remove(srcKey, {
       config: {
         ...config,
@@ -342,57 +339,39 @@ async function moveObject(
     return {};
   }
 
-  // Get source object size for upload params and progress
-  const { data: headData } = await head(srcKey, {
-    config: {
-      ...config,
-      bucket: srcBucket,
-    },
-  });
-  const fileSize = headData?.size;
+  // Same-bucket: metadata-only rename via `X-Tigris-Rename: true`.
+  // One round-trip, no bytes through the client.
+  if (srcBucket === destBucket) {
+    const { error: moveError } = await move(srcKey, destKey, {
+      config: {
+        ...config,
+        bucket: srcBucket,
+      },
+    });
 
-  // Get source object
-  const { data, error: getError } = await get(srcKey, 'stream', {
-    config: {
-      ...config,
-      bucket: srcBucket,
-    },
-  });
+    if (moveError) {
+      return { error: moveError.message };
+    }
 
-  if (getError) {
-    return { error: getError.message };
+    return {};
   }
 
-  // Put to destination
-  const { error: putError } = await put(destKey, data, {
-    ...calculateUploadParams(fileSize),
-    onUploadProgress: showProgress
-      ? ({ loaded }) => {
-          if (fileSize !== undefined && fileSize > 0) {
-            const pct = Math.round((loaded / fileSize) * 100);
-            process.stdout.write(
-              `\rMoving: ${formatSize(loaded)} / ${formatSize(fileSize)} (${pct}%)`
-            );
-          } else {
-            process.stdout.write(`\rMoving: ${formatSize(loaded)}`);
-          }
-        }
-      : undefined,
+  // Cross-bucket: the server doesn't support move across buckets, so
+  // fall back to server-side CopyObject + DELETE. Still no bytes
+  // through the client.
+  const { error: copyError } = await copy(srcKey, destKey, {
+    srcBucket,
+    destBucket,
     config: {
       ...config,
       bucket: destBucket,
     },
   });
 
-  if (showProgress) {
-    process.stdout.write('\r' + ' '.repeat(60) + '\r');
+  if (copyError) {
+    return { error: copyError.message };
   }
 
-  if (putError) {
-    return { error: putError.message };
-  }
-
-  // Delete source
   const { error: removeError } = await remove(srcKey, {
     config: {
       ...config,

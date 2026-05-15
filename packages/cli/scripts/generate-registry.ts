@@ -13,20 +13,11 @@ import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import * as YAML from 'yaml';
 
+import type { CommandSpec, Specs } from '../src/types.js';
+
 const ROOT = process.cwd();
 const SPECS_PATH = join(ROOT, 'src/specs.yaml');
 const OUTPUT_PATH = join(ROOT, 'src/command-registry.ts');
-
-interface CommandSpec {
-  name: string;
-  alias?: string;
-  commands?: CommandSpec[];
-  default?: string;
-}
-
-interface Specs {
-  commands: CommandSpec[];
-}
 
 interface RegistryEntry {
   key: string;
@@ -88,6 +79,10 @@ function collectEntries(
   const entries: RegistryEntry[] = [];
 
   for (const cmd of commands) {
+    // Removed commands have no implementation file by design — the
+    // cli-core intercepts them and prints a redirect message.
+    if (cmd.removed) continue;
+
     const currentPath = [...parentPath, cmd.name];
 
     if (cmd.commands && cmd.commands.length > 0) {

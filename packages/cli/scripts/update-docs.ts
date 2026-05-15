@@ -16,15 +16,17 @@ interface Specs {
   commands: CommandSpec[];
 }
 
-// Check if a command is implemented (has a corresponding .ts file without underscore prefix)
 function isImplemented(...parts: string[]): boolean {
   const base = join(libDir, ...parts);
   const paths = [base + '.ts', join(base, 'index.ts')];
   return paths.some((p) => existsSync(p) && !p.includes('/_'));
 }
 
-// Check if a command or any of its nested subcommands are implemented
-function hasImplementation(cmd: CommandSpec, ...parentParts: string[]): boolean {
+function hasImplementation(
+  cmd: CommandSpec,
+  ...parentParts: string[]
+): boolean {
+  if (cmd.removed) return false;
   const parts = [...parentParts, cmd.name];
   if (isImplemented(...parts)) return true;
   if (cmd.commands) {
@@ -33,38 +35,65 @@ function hasImplementation(cmd: CommandSpec, ...parentParts: string[]): boolean 
   return false;
 }
 
-function getCommandUsage(cmd: CommandSpec): string {
-  if (!cmd.arguments) return `tigris ${cmd.name}`;
-
-  const positionals = cmd.arguments
-    .filter((a) => a.type === 'positional')
-    .map((a) => (a.required ? `<${a.name}>` : `[${a.name}]`));
-
-  return `tigris ${cmd.name}${positionals.length ? ' ' + positionals.join(' ') : ''}`;
+function aliasList(cmd: CommandSpec): string[] {
+  if (!cmd.alias) return [];
+  return Array.isArray(cmd.alias) ? cmd.alias : [cmd.alias];
 }
 
-function generateCommandSection(cmd: CommandSpec): string {
+function aliasSuffix(cmd: CommandSpec): string {
+  const aliases = aliasList(cmd);
+  return aliases.length ? ` (${aliases.join(', ')})` : '';
+}
+
+function getPositionalSuffix(cmd: CommandSpec): string {
+  const positionals = (cmd.arguments ?? [])
+    .filter((a) => a.type === 'positional' && !a.removed)
+    .map((a) => (a.required ? `<${a.name}>` : `[${a.name}]`));
+  return positionals.length ? ' ' + positionals.join(' ') : '';
+}
+
+function renderCommandTable(
+  commands: CommandSpec[],
+  parentPath: string[]
+): string[] {
   const lines: string[] = [];
-  const aliasStr = cmd.alias ? ` | \`${cmd.alias}\`` : '';
+  lines.push('| Command | Description |');
+  lines.push('|---------|-------------|');
+  for (const cmd of commands) {
+    const fullName = [...parentPath, cmd.name].join(' ');
+    lines.push(
+      `| \`tigris ${fullName}\`${aliasSuffix(cmd)} | ${cmd.description ?? ''} |`
+    );
+  }
+  lines.push('');
+  return lines;
+}
 
-  lines.push(`### \`${cmd.name}\`${aliasStr}`);
-  lines.push('');
-  lines.push(cmd.description);
-  lines.push('');
+function renderLeafDetail(cmd: CommandSpec, parentPath: string[]): string[] {
+  const lines: string[] = [];
+  const fullName = [...parentPath, cmd.name].join(' ');
+  const positionals = getPositionalSuffix(cmd);
+  const flags = (cmd.arguments ?? []).filter(
+    (a) => a.type !== 'positional' && !a.removed
+  );
+
   lines.push('```');
-  const usage = getCommandUsage(cmd);
-  const hasFlags = cmd.arguments?.some((a) => a.type !== 'positional');
-  lines.push(`${usage}${hasFlags ? ' [flags]' : ''}`);
+  lines.push(
+    `tigris ${fullName}${positionals}${flags.length ? ' [flags]' : ''}`
+  );
   lines.push('```');
   lines.push('');
 
-  const flags = cmd.arguments?.filter((a) => a.type !== 'positional') || [];
   if (flags.length > 0) {
     lines.push('| Flag | Description |');
     lines.push('|------|-------------|');
     for (const arg of flags) {
-      const flagName = arg.alias ? `-${arg.alias}, --${arg.name}` : `--${arg.name}`;
-      lines.push(`| \`${flagName}\` | ${arg.description} |`);
+      const flagName = arg.alias
+        ? `-${arg.alias}, --${arg.name}`
+        : `--${arg.name}`;
+      const defaultStr =
+        arg.default !== undefined ? ` (default: ${arg.default})` : '';
+      lines.push(`| \`${flagName}\` | ${arg.description ?? ''}${defaultStr} |`);
     }
     lines.push('');
   }
@@ -72,145 +101,44 @@ function generateCommandSection(cmd: CommandSpec): string {
   if (cmd.examples && cmd.examples.length > 0) {
     lines.push('**Examples:**');
     lines.push('```bash');
-    for (const ex of cmd.examples) {
-      lines.push(ex);
-    }
+    for (const ex of cmd.examples) lines.push(ex);
     lines.push('```');
     lines.push('');
-  } else {
-    const positionals = cmd.arguments?.filter((a) => a.type === 'positional') || [];
-    if (positionals.length > 0 && positionals.some((p) => p.examples?.length)) {
-      lines.push('**Examples:**');
-      lines.push('```bash');
-      if (positionals.length === 1 && positionals[0].examples) {
-        for (const ex of positionals[0].examples.slice(0, 3)) {
-          lines.push(`tigris ${cmd.name} ${ex}`);
-        }
-      } else if (positionals.length >= 2) {
-        if (cmd.name === 'cp' || cmd.name === 'mv') {
-          lines.push(`tigris ${cmd.name} bucket/file.txt bucket/copy.txt`);
-          lines.push(`tigris ${cmd.name} bucket/folder/ other-bucket/folder/`);
-        }
-      }
-      lines.push('```');
-      lines.push('');
-    }
   }
 
-  return lines.join('\n');
+  return lines;
 }
 
-function generateResourceSection(
+function renderCommand(
   cmd: CommandSpec,
-  parentPath: string[] = [],
-  headerLevel: string = '###'
-): string {
-  const lines: string[] = [];
-  const aliasStr = cmd.alias ? ` | \`${cmd.alias}\`` : '';
-  const commandPath = [...parentPath, cmd.name];
-  const fullName = commandPath.join(' ');
-  const subHeaderLevel = headerLevel === '###' ? '####' : '#####';
-
-  lines.push(`${headerLevel} \`${fullName}\`${aliasStr}`);
-  lines.push('');
-  lines.push(cmd.description);
-  lines.push('');
-
-  const subcommands = cmd.commands || [];
-
-  // Check if subcommands have their own nested subcommands (e.g. iam -> policies -> list)
-  const hasNestedSubcommands = subcommands.some((sub) => sub.commands && sub.commands.length > 0);
-
-  if (hasNestedSubcommands) {
-    // Parent resource (like iam) - recurse into sub-resources
-    const implementedSubs = subcommands.filter((sub) => hasImplementation(sub, ...commandPath));
-
-    if (implementedSubs.length > 0) {
-      lines.push('| Command | Description |');
-      lines.push('|---------|-------------|');
-      for (const sub of implementedSubs) {
-        const subAlias = sub.alias
-          ? ` (${Array.isArray(sub.alias) ? sub.alias[0] : sub.alias})`
-          : '';
-        lines.push(`| \`${fullName} ${sub.name}\`${subAlias} | ${sub.description} |`);
-      }
-      lines.push('');
-
-      for (const sub of implementedSubs) {
-        lines.push(generateResourceSection(sub, commandPath, subHeaderLevel));
-      }
-    }
-  } else {
-    // Leaf resource - show implemented operations
-    const implementedOps = subcommands.filter((op) => isImplemented(...commandPath, op.name));
-
-    if (implementedOps.length > 0) {
-      lines.push('| Command | Description |');
-      lines.push('|---------|-------------|');
-      for (const op of implementedOps) {
-        const opAlias = op.alias
-          ? ` (${Array.isArray(op.alias) ? op.alias[0] : op.alias})`
-          : '';
-        lines.push(`| \`${fullName} ${op.name}\`${opAlias} | ${op.description} |`);
-      }
-      lines.push('');
-
-      for (const op of implementedOps) {
-        lines.push(generateOperationSection(commandPath, op, subHeaderLevel));
-      }
-    }
-  }
-
-  return lines.join('\n');
-}
-
-function generateOperationSection(
   parentPath: string[],
-  op: CommandSpec,
-  headerLevel: string = '####'
+  level: number
 ): string {
   const lines: string[] = [];
-  const fullName = [...parentPath, op.name].join(' ');
+  const fullName = [...parentPath, cmd.name].join(' ');
+  const hash = '#'.repeat(Math.min(level, 6));
 
-  lines.push(`${headerLevel} \`${fullName}\``);
+  lines.push(`${hash} \`tigris ${fullName}\`${aliasSuffix(cmd)}`);
   lines.push('');
+  if (cmd.description) {
+    lines.push(cmd.description);
+    lines.push('');
+  }
 
-  const positionals =
-    op.arguments
-      ?.filter((a) => a.type === 'positional')
-      .map((a) => (a.required ? `<${a.name}>` : `[${a.name}]`)) || [];
-
-  const hasFlags = op.arguments?.some((a) => a.type !== 'positional');
-
-  lines.push('```');
-  lines.push(
-    `tigris ${fullName}${positionals.length ? ' ' + positionals.join(' ') : ''}${hasFlags ? ' [flags]' : ''}`
+  const childPath = [...parentPath, cmd.name];
+  const subcommands = (cmd.commands ?? []).filter((sub) =>
+    hasImplementation(sub, ...childPath)
   );
-  lines.push('```');
-  lines.push('');
 
-  const flags = op.arguments?.filter((a) => a.type !== 'positional') || [];
-  if (flags.length > 0) {
-    lines.push('| Flag | Description |');
-    lines.push('|------|-------------|');
-    for (const arg of flags) {
-      const flagName = arg.alias ? `-${arg.alias}, --${arg.name}` : `--${arg.name}`;
-      const defaultStr = arg.default !== undefined ? ` (default: ${arg.default})` : '';
-      lines.push(`| \`${flagName}\` | ${arg.description}${defaultStr} |`);
-    }
-    lines.push('');
+  if (subcommands.length === 0) {
+    lines.push(...renderLeafDetail(cmd, parentPath));
+    return lines.join('\n');
   }
 
-  if (op.examples && op.examples.length > 0) {
-    lines.push('**Examples:**');
-    lines.push('```bash');
-    for (const ex of op.examples) {
-      lines.push(ex);
-    }
-    lines.push('```');
-    lines.push('');
+  lines.push(...renderCommandTable(subcommands, childPath));
+  for (const sub of subcommands) {
+    lines.push(renderCommand(sub, childPath, level + 1));
   }
-
   return lines.join('\n');
 }
 
@@ -223,182 +151,21 @@ function generateDocs(specs: Specs): string {
   lines.push('tigris <command> [flags]');
   lines.push('```');
   lines.push('');
-  lines.push('Run `tigris help` to see all available commands, or `tigris <command> help` for details on a specific command.');
+  lines.push(
+    'Run `tigris help` to see all available commands, or `tigris <command> help` for details on a specific command.'
+  );
   lines.push('');
 
-  // Core commands (Unix-style) - only implemented ones
-  const coreCommands = ['ls', 'mk', 'touch', 'cp', 'mv', 'rm', 'stat', 'presign', 'bundle'].filter((c) => isImplemented(c));
-  lines.push('### Core Commands');
-  lines.push('');
-  for (const cmdName of coreCommands) {
-    const cmd = specs.commands.find((c) => c.name === cmdName);
-    if (cmd) {
-      lines.push(`- \`${getCommandUsage(cmd)}\` - ${cmd.description}`);
-    }
-  }
-  lines.push('');
+  const topLevel = specs.commands.filter((c) => hasImplementation(c));
 
-  // Auth commands - check both direct implementation and subcommands
-  const authCommandNames = ['login', 'logout', 'whoami', 'configure'];
-  const authCommands = authCommandNames.filter((c) => {
-    if (isImplemented(c)) return true;
-    const cmd = specs.commands.find((s) => s.name === c);
-    return cmd?.commands?.some((op) => isImplemented(c, op.name));
-  });
-  lines.push('### Authentication');
+  lines.push('### Commands');
   lines.push('');
-  for (const cmdName of authCommands) {
-    const cmd = specs.commands.find((c) => c.name === cmdName);
-    if (cmd) {
-      lines.push(`- \`tigris ${cmd.name}\` - ${cmd.description}`);
-    }
-  }
-  lines.push('');
-
-  // Other commands (CLI management)
-  const otherCommands = ['update'].filter((c) => isImplemented(c));
-  if (otherCommands.length > 0) {
-    lines.push('### Other');
-    lines.push('');
-    for (const cmdName of otherCommands) {
-      const cmd = specs.commands.find((c) => c.name === cmdName);
-      if (cmd) {
-        lines.push(`- \`tigris ${cmd.name}\` - ${cmd.description}`);
-      }
-    }
-    lines.push('');
-  }
-
-  // Resource management
-  const resourceCommands = ['organizations', 'access-keys', 'credentials', 'buckets', 'forks', 'snapshots', 'objects', 'iam'];
-  const implementedResources = resourceCommands.filter((c) => {
-    const cmd = specs.commands.find((s) => s.name === c);
-    if (!cmd) return false;
-    return hasImplementation(cmd);
-  });
-
-  lines.push('### Resources');
-  lines.push('');
-  for (const cmdName of implementedResources) {
-    const cmd = specs.commands.find((c) => c.name === cmdName);
-    if (cmd) {
-      lines.push(`- \`tigris ${cmd.name}\` - ${cmd.description}`);
-    }
-  }
-  lines.push('');
-
+  lines.push(...renderCommandTable(topLevel, []));
   lines.push('---');
   lines.push('');
 
-  // Detailed sections
-  lines.push('## Core Commands');
-  lines.push('');
-  for (const cmdName of coreCommands) {
-    const cmd = specs.commands.find((c) => c.name === cmdName);
-    if (cmd) {
-      lines.push(generateCommandSection(cmd));
-    }
-  }
-
-  lines.push('## Authentication');
-  lines.push('');
-  for (const cmdName of authCommands) {
-    const cmd = specs.commands.find((c) => c.name === cmdName);
-    if (cmd) {
-      // Commands with subcommands use resource-style docs
-      if (cmd.commands?.some((op) => isImplemented(cmdName, op.name))) {
-        lines.push(generateResourceSection(cmd));
-      } else {
-        lines.push(generateCommandSection(cmd));
-      }
-    }
-  }
-
-  lines.push('## Resources');
-  lines.push('');
-
-  // Organizations first
-  if (implementedResources.includes('organizations')) {
-    const orgsCmd = specs.commands.find((c) => c.name === 'organizations');
-    if (orgsCmd) {
-      lines.push(generateResourceSection(orgsCmd));
-    }
-  }
-
-  // Access Keys
-  if (implementedResources.includes('access-keys')) {
-    const accessKeysCmd = specs.commands.find((c) => c.name === 'access-keys');
-    if (accessKeysCmd) {
-      lines.push(generateResourceSection(accessKeysCmd));
-    }
-  }
-
-  // Credentials
-  if (implementedResources.includes('credentials')) {
-    const credentialsCmd = specs.commands.find((c) => c.name === 'credentials');
-    if (credentialsCmd) {
-      lines.push(generateResourceSection(credentialsCmd));
-    }
-  }
-
-  // Buckets section (buckets, forks, snapshots)
-  const bucketRelated = ['buckets', 'forks', 'snapshots'].filter((c) => implementedResources.includes(c));
-  if (bucketRelated.length > 0) {
-    lines.push('### Buckets');
-    lines.push('');
-    lines.push('Buckets are containers for objects. You can also create forks and snapshots of buckets.');
-    lines.push('');
-
-    for (const cmdName of bucketRelated) {
-      const cmd = specs.commands.find((c) => c.name === cmdName);
-      if (cmd) {
-        lines.push(generateResourceSection(cmd, [], '####'));
-      }
-    }
-  }
-
-  // Objects
-  if (implementedResources.includes('objects')) {
-    const objectsCmd = specs.commands.find((c) => c.name === 'objects');
-    if (objectsCmd) {
-      lines.push(generateResourceSection(objectsCmd));
-    }
-  }
-
-  // IAM
-  if (implementedResources.includes('iam')) {
-    const iamCmd = specs.commands.find((c) => c.name === 'iam');
-    if (iamCmd) {
-      lines.push(generateResourceSection(iamCmd));
-    }
-  }
-
-  // Other commands
-  if (otherCommands.length > 0) {
-    lines.push('## Other');
-    lines.push('');
-    for (const cmdName of otherCommands) {
-      const cmd = specs.commands.find((c) => c.name === cmdName);
-      if (cmd) {
-        lines.push(generateCommandSection(cmd));
-      }
-    }
-  }
-
-  // Warn about any specs commands that aren't in any category
-  const allCategorized = new Set([
-    ...coreCommands,
-    ...authCommandNames,
-    ...resourceCommands,
-    ...otherCommands,
-  ]);
-  const unhandled = specs.commands
-    .filter((c) => !allCategorized.has(c.name) && hasImplementation(c))
-    .map((c) => c.name);
-  if (unhandled.length > 0) {
-    console.warn(
-      `Warning: the following implemented commands are not in any docs category: ${unhandled.join(', ')}`
-    );
+  for (const cmd of topLevel) {
+    lines.push(renderCommand(cmd, [], 3));
   }
 
   return lines.join('\n');
@@ -417,13 +184,15 @@ function updateReadme(docsContent: string): void {
   }
 
   const newReadme =
-    readmeContent.slice(0, usageStart) + docsContent + '\n' + readmeContent.slice(licenseStart);
+    readmeContent.slice(0, usageStart) +
+    docsContent +
+    '\n' +
+    readmeContent.slice(licenseStart);
 
   writeFileSync(readmePath, newReadme);
   console.log('README.md updated successfully!');
 }
 
-// Main
 const specsPath = join(__dirname, '..', 'src', 'specs.yaml');
 const specsContent = readFileSync(specsPath, 'utf-8');
 const specs = yaml.parse(specsContent) as Specs;

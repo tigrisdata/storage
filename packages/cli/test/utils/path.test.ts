@@ -5,7 +5,6 @@ import {
   isRemotePath,
   parseAnyPath,
   parsePath,
-  parsePaths,
   parseRemotePath,
   resolveObjectArgs,
   wildcardPrefix,
@@ -46,27 +45,6 @@ describe('parsePath', () => {
     const result = parsePath('');
     expect(result.bucket).toBe('');
     expect(result.path).toBe('');
-  });
-});
-
-describe('parsePaths', () => {
-  it('should parse source and destination paths', () => {
-    const result = parsePaths(
-      'src-bucket/file.txt',
-      'dest-bucket/new-file.txt'
-    );
-    expect(result.source.bucket).toBe('src-bucket');
-    expect(result.source.path).toBe('file.txt');
-    expect(result.destination.bucket).toBe('dest-bucket');
-    expect(result.destination.path).toBe('new-file.txt');
-  });
-
-  it('should handle cross-bucket copy with same filename', () => {
-    const result = parsePaths('bucket-a/folder/file.txt', 'bucket-b');
-    expect(result.source.bucket).toBe('bucket-a');
-    expect(result.source.path).toBe('folder/file.txt');
-    expect(result.destination.bucket).toBe('bucket-b');
-    expect(result.destination.path).toBe('');
   });
 });
 

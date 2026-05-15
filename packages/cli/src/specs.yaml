@@ -30,16 +30,6 @@ definitions:
       value: GLACIER_IR
       description: Lowest-cost storage for long-lived data that is rarely accessed and requires retrieval in milliseconds.
 
-  consistency_options: &consistency_options
-    - name: Default
-      value: default
-      description: Strict read-after-write consistency in same region. Eventual consistency globally.
-    - name: Strict
-      value: strict
-      description: Strict read-after-write consistency globally. Latency will be higher than the default.
-
-  region_options: &region_options
-
   location_options: &location_options
     - name: Global
       value: 'global'
@@ -343,15 +333,13 @@ commands:
         options: *tier_options
         default: STANDARD
       - name: consistency
-        description: (Deprecated, use --locations) Consistency level (only applies when creating a bucket)
         alias: c
-        options: *consistency_options
-        deprecated: true
+        removed: true
+        replaced_by: --locations
       - name: region
-        description: (Deprecated, use --locations) Region (only applies when creating a bucket)
         alias: r
-        options: *region_options
-        deprecated: true
+        removed: true
+        replaced_by: --locations
       - name: locations
         description: Location for the bucket (only applies when creating a bucket)
         alias: l
@@ -408,6 +396,8 @@ commands:
       - name: snapshot-version
         description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
         alias: snapshot
+      - name: version-id
+        description: Object version id to stat (requires bucket versioning). Omit to stat the latest version
 
   # presign
   - name: presign
@@ -739,15 +729,13 @@ commands:
             options: *tier_options
             default: STANDARD
           - name: consistency
-            description: (Deprecated, use --locations) Choose the consistency level for the bucket
             alias: c
-            options: *consistency_options
-            deprecated: true
+            removed: true
+            replaced_by: --locations
           - name: region
-            description: (Deprecated, use --locations) Region
             alias: r
-            options: *region_options
-            deprecated: true
+            removed: true
+            replaced_by: --locations
           - name: locations
             description: Location for the bucket
             alias: l
@@ -828,10 +816,8 @@ commands:
             description: Bucket access level
             options: *access_options
           - name: region
-            description: (Deprecated, use --locations) Allowed regions (can specify multiple)
-            options: *region_options
-            multiple: true
-            deprecated: true
+            removed: true
+            replaced_by: --locations
           - name: locations
             description: Bucket location (see https://www.tigrisdata.com/docs/buckets/locations/ for more details)
             options: *location_options
@@ -854,33 +840,8 @@ commands:
             type: boolean
       # set-ttl
       - name: set-ttl
-        description: Configure object expiration (TTL) on a bucket. Objects expire after a number of days or on a specific date
-        examples:
-          - "tigris buckets set-ttl my-bucket --days 30"
-          - "tigris buckets set-ttl my-bucket --date 2026-06-01"
-          - "tigris buckets set-ttl my-bucket --disable"
-        messages:
-          onStart: 'Updating TTL settings...'
-          onSuccess: 'TTL settings updated for bucket {{name}}'
-          onFailure: 'Failed to update TTL settings'
-        arguments:
-          - name: name
-            description: Name of the bucket
-            type: positional
-            required: true
-            examples:
-              - my-bucket
-          - name: days
-            description: Expire objects after this many days
-            alias: d
-          - name: date
-            description: Expire objects on this date (ISO-8601, e.g. 2026-06-01)
-          - name: enable
-            description: Enable TTL on the bucket (uses existing lifecycle rules)
-            type: flag
-          - name: disable
-            description: Disable TTL on the bucket
-            type: flag
+        removed: true
+        replaced_by: 'tigris buckets lifecycle create <bucket> --expire-days <N>'
       # set-locations
       - name: set-locations
         description: Set the data locations for a bucket
@@ -965,38 +926,122 @@ commands:
               - t3://my-bucket/prefix/
       # set-transition
       - name: set-transition
-        description: Configure a lifecycle transition rule on a bucket. Automatically move objects to a different storage class after a number of days or on a specific date
+        removed: true
+        replaced_by: 'tigris buckets lifecycle create <bucket> --storage-class <class> --days <N>'
+      # lifecycle
+      - name: lifecycle
+        description: Manage bucket lifecycle rules. Each rule combines an optional storage-class transition and/or expiration (TTL), scoped to an optional key prefix
+        alias: lc
         examples:
-          - "tigris buckets set-transition my-bucket --storage-class STANDARD_IA --days 30"
-          - "tigris buckets set-transition my-bucket --storage-class GLACIER --date 2026-06-01"
-          - "tigris buckets set-transition my-bucket --enable"
-          - "tigris buckets set-transition my-bucket --disable"
-        messages:
-          onStart: 'Updating lifecycle transition rule...'
-          onSuccess: 'Lifecycle transition rule updated for bucket {{name}}'
-          onFailure: 'Failed to update lifecycle transition rule'
-        arguments:
-          - name: name
-            description: Name of the bucket
-            type: positional
-            required: true
+          - "tigris buckets lifecycle list my-bucket"
+          - "tigris buckets lifecycle create my-bucket --prefix logs/ --storage-class GLACIER --days 90"
+          - "tigris buckets lifecycle create my-bucket --prefix tmp/ --expire-days 7"
+          - "tigris buckets lifecycle edit my-bucket <id> --days 30"
+        commands:
+          - name: list
+            description: List lifecycle rules on a bucket
+            alias: l
             examples:
-              - my-bucket
-          - name: storage-class
-            description: Target storage class to transition objects to
-            alias: s
-            options: *transition_tier_options
-          - name: days
-            description: Transition objects after this many days
-            alias: d
-          - name: date
-            description: Transition objects on this date (ISO-8601, e.g. 2026-06-01)
-          - name: enable
-            description: Enable lifecycle transition rules on the bucket
-            type: flag
-          - name: disable
-            description: Disable lifecycle transition rules on the bucket
-            type: flag
+              - "tigris buckets lifecycle list my-bucket"
+              - "tigris buckets lifecycle list my-bucket --json"
+            messages:
+              onStart: ''
+              onSuccess: ''
+              onFailure: 'Failed to list lifecycle rules'
+              onEmpty: 'No lifecycle rules configured'
+            arguments:
+              - name: name
+                description: Name of the bucket
+                type: positional
+                required: true
+                examples:
+                  - my-bucket
+              - name: format
+                description: Output format
+                options: [json, table, xml]
+                default: table
+          - name: create
+            description: Create a new lifecycle rule. A rule must include a transition (--storage-class with --days or --date) and/or an expiration (--expire-days or --expire-date), and may optionally be scoped via --prefix
+            alias: c
+            examples:
+              - "tigris buckets lifecycle create my-bucket --storage-class STANDARD_IA --days 30"
+              - "tigris buckets lifecycle create my-bucket --prefix logs/ --storage-class GLACIER --days 90"
+              - "tigris buckets lifecycle create my-bucket --prefix tmp/ --expire-days 7"
+              - "tigris buckets lifecycle create my-bucket --prefix archive/ --storage-class GLACIER --days 30 --expire-days 365"
+            messages:
+              onStart: 'Creating lifecycle rule...'
+              onSuccess: 'Lifecycle rule created on bucket {{name}} (id: {{id}})'
+              onFailure: 'Failed to create lifecycle rule'
+            arguments:
+              - name: name
+                description: Name of the bucket
+                type: positional
+                required: true
+                examples:
+                  - my-bucket
+              - name: prefix
+                description: Key prefix to scope the rule to. Omit for a bucket-wide rule
+                alias: p
+              - name: storage-class
+                description: Target storage class for the transition
+                alias: s
+                options: *transition_tier_options
+              - name: days
+                description: Transition objects after this many days (used with --storage-class)
+                alias: d
+              - name: date
+                description: Transition objects on this date (ISO-8601, e.g. 2026-06-01) (used with --storage-class)
+              - name: expire-days
+                description: Expire (delete) objects after this many days
+              - name: expire-date
+                description: Expire (delete) objects on this date (ISO-8601, e.g. 2026-06-01)
+              - name: disable
+                description: Create the rule in a disabled state
+                type: flag
+          - name: edit
+            description: Edit an existing lifecycle rule by its id. Only specified fields are changed
+            alias: e
+            examples:
+              - "tigris buckets lifecycle edit my-bucket abc123 --days 60"
+              - "tigris buckets lifecycle edit my-bucket abc123 --expire-days 90"
+              - "tigris buckets lifecycle edit my-bucket abc123 --enable"
+            messages:
+              onStart: 'Updating lifecycle rule...'
+              onSuccess: 'Lifecycle rule {{id}} updated on bucket {{name}}'
+              onFailure: 'Failed to update lifecycle rule'
+            arguments:
+              - name: name
+                description: Name of the bucket
+                type: positional
+                required: true
+                examples:
+                  - my-bucket
+              - name: id
+                description: Lifecycle rule id (run `tigris buckets lifecycle list` to see ids)
+                type: positional
+                required: true
+              - name: prefix
+                description: Replace the rule's key prefix
+                alias: p
+              - name: storage-class
+                description: Replace the rule's transition target
+                alias: s
+                options: *transition_tier_options
+              - name: days
+                description: Replace the rule's transition days
+                alias: d
+              - name: date
+                description: Replace the rule's transition date (ISO-8601)
+              - name: expire-days
+                description: Replace the rule's expiration days
+              - name: expire-date
+                description: Replace the rule's expiration date (ISO-8601)
+              - name: enable
+                description: Enable the rule
+                type: flag
+              - name: disable
+                description: Disable the rule (does not remove it)
+                type: flag
       # set-notifications
       - name: set-notifications
         description: Configure object event notifications on a bucket. Sends webhook requests to a URL when objects are created, updated, or deleted
@@ -1080,69 +1125,12 @@ commands:
             type: flag
 
   #########################
-  # Manage forks
+  # Manage forks (removed)
   #########################
   - name: forks
-    description: (Deprecated, use "buckets create --fork-of" and "buckets list --forks-of") List and create forks
     alias: f
-    examples:
-      - "tigris forks list my-bucket"
-      - "tigris forks create my-bucket my-fork"
-    commands:
-      # list
-      - name: list
-        description: (Deprecated, use "buckets list --forks-of") List all forks created from the given source bucket
-        deprecated: true
-        alias: l
-        examples:
-          - "tigris forks list my-bucket"
-          - "tigris forks list my-bucket --format json"
-        messages:
-          onStart: 'Listing forks...'
-          onSuccess: 'Found {{count}} fork(s)'
-          onFailure: 'Failed to list forks'
-          onEmpty: 'No forks found for this bucket'
-          onDeprecated: 'Use "tigris buckets list --forks-of <bucket>" instead'
-        arguments:
-          - name: name
-            description: Name of the source bucket
-            type: positional
-            required: true
-            examples:
-              - my-bucket
-          - name: format
-            description: Output format
-            options: [json, table, xml]
-            default: table
-      # create
-      - name: create
-        description: (Deprecated, use "buckets create --fork-of") Create a new fork (copy-on-write clone) of the source bucket
-        deprecated: true
-        alias: c
-        examples:
-          - "tigris forks create my-bucket my-fork"
-          - "tigris forks create my-bucket my-fork --snapshot 1765889000501544464"
-        messages:
-          onStart: 'Creating fork...'
-          onSuccess: "Fork '{{forkName}}' created from '{{name}}'"
-          onFailure: 'Failed to create fork'
-          onDeprecated: 'Use "tigris buckets create <name> --fork-of <bucket>" instead'
-        arguments:
-          - name: name
-            description: Name of the source bucket
-            type: positional
-            required: true
-            examples:
-              - my-bucket
-          - name: fork-name
-            description: Name for the new fork
-            type: positional
-            required: true
-            examples:
-              - my-fork
-          - name: snapshot
-            description: Create fork from a specific snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
-            alias: s
+    removed: true
+    replaced_by: 'tigris buckets create --fork-of and tigris buckets list --forks-of'
 
   #########################
   # Manage snapshots
@@ -1262,6 +1250,44 @@ commands:
           - name: source
             description: List objects from a specific storage source on buckets with shadow migration enabled
             options: [tigris, shadow]
+      # list-versions
+      - name: list-versions
+        description: List object versions and delete markers in a bucket (requires bucket versioning). Returns both arrays separately to match the S3 ListObjectVersions response
+        alias: lv
+        examples:
+          - "tigris objects list-versions my-bucket"
+          - "tigris objects list-versions t3://my-bucket/logs/"
+          - "tigris objects list-versions my-bucket --prefix images/"
+          - "tigris objects list-versions my-bucket --format json"
+        messages:
+          onStart: 'Listing object versions...'
+          onSuccess: 'Found {{versions}} version(s) and {{deleteMarkers}} delete marker(s)'
+          onFailure: 'Failed to list object versions'
+          onEmpty: 'No versions or delete markers found'
+        arguments:
+          - name: bucket
+            description: Name of the bucket, or a path with optional prefix (t3://bucket/prefix/)
+            type: positional
+            required: true
+            examples:
+              - my-bucket
+              - t3://my-bucket/images/
+          - name: prefix
+            description: Filter by key prefix
+            alias: p
+          - name: delimiter
+            description: Group keys sharing a common prefix up to the delimiter (e.g. "/" for folder-style grouping)
+            alias: d
+          - name: format
+            description: Output format
+            options: [json, table, xml]
+            default: table
+          - name: limit
+            description: Maximum number of items to return per page
+          - name: key-marker
+            description: Pagination marker — the key to start listing from (from a prior nextKeyMarker)
+          - name: version-id-marker
+            description: Pagination marker — the version id to start listing from (from a prior nextVersionIdMarker)
       # get
       - name: get
         description: Download an object by key. Prints to stdout by default, or saves to a file with --output
@@ -1297,6 +1323,8 @@ commands:
           - name: snapshot-version
             description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
             alias: snapshot
+          - name: version-id
+            description: Object version id to download (requires bucket versioning). Omit to download the latest version
       # put
       - name: put
         description: Upload a local file as an object. Content-type is auto-detected from extension unless overridden
@@ -1344,12 +1372,14 @@ commands:
             default: table
       # delete
       - name: delete
-        description: Delete one or more objects by key from the given bucket
+        description: Delete one or more objects by key from the given bucket. On a versioned bucket, the default creates a delete marker; use --version-id or --all-versions to hard-delete versions
         alias: d
         examples:
           - "tigris objects delete my-bucket old-file.txt --yes"
           - "tigris objects delete t3://my-bucket/old-file.txt --yes"
           - "tigris objects delete my-bucket file-a.txt,file-b.txt --yes"
+          - "tigris objects delete my-bucket old-file.txt --version-id abc123 --yes"
+          - "tigris objects delete my-bucket old-file.txt --all-versions --yes"
         messages:
           onStart: 'Deleting object...'
           onSuccess: "Object '{{key}}' deleted successfully"
@@ -1371,13 +1401,19 @@ commands:
             multiple: true
             examples:
               - my-file.txt
+          - name: version-id
+            description: Hard-delete a specific object version (requires bucket versioning). Targets a single key
+          - name: all-versions
+            description: Hard-delete every version and delete marker for the given key(s). Mutually exclusive with --version-id
+            type: flag
           - name: force
             type: flag
             description: Skip confirmation prompts (alias for --yes)
-      # set
+      # set (deprecated)
       - name: set
-        description: Update settings on an existing object such as access level
+        description: (Deprecated) Update settings on an existing object such as access level. Use `tigris objects set-access` for ACL changes and `tigris mv` to rename
         alias: s
+        deprecated: true
         examples:
           - "tigris objects set my-bucket my-file.txt --access public"
           - "tigris objects set t3://my-bucket/my-file.txt --access public"
@@ -1386,6 +1422,7 @@ commands:
           onStart: 'Updating object...'
           onSuccess: "Object '{{key}}' updated successfully"
           onFailure: 'Failed to update object'
+          onDeprecated: 'tigris objects set is deprecated. Use `tigris objects set-access` for ACL changes and `tigris mv` to rename objects. This command will be removed in a future release.'
         arguments:
           - name: bucket
             description: Name of the bucket, or a full path (t3://bucket/key)
@@ -1402,6 +1439,33 @@ commands:
           - name: new-key
             description: Rename the object to a new key
             alias: n
+      # set-access
+      - name: set-access
+        description: Set the access level (public or private) on an existing object
+        alias: sa
+        examples:
+          - "tigris objects set-access my-bucket my-file.txt public"
+          - "tigris objects set-access t3://my-bucket/my-file.txt private"
+        messages:
+          onStart: 'Updating object access...'
+          onSuccess: "Access for '{{key}}' updated to {{access}}"
+          onFailure: 'Failed to update object access'
+        arguments:
+          - name: bucket
+            description: Name of the bucket, or a full path (t3://bucket/key)
+            type: positional
+            required: true
+          - name: key
+            description: Key of the object (omit if bucket contains the full path)
+            type: positional
+          - name: access
+            description: Access level (public or private)
+            type: positional
+            options: *access_options
+          - name: format
+            description: Output format
+            options: [json, table, xml]
+            default: table
       # info
       - name: info
         description: Show metadata for an object (content type, size, modified date)
@@ -1410,6 +1474,7 @@ commands:
           - "tigris objects info my-bucket report.pdf"
           - "tigris objects info t3://my-bucket/report.pdf"
           - "tigris objects info my-bucket report.pdf --format json"
+          - "tigris objects info my-bucket report.pdf --version-id abc123"
         messages:
           onStart: ''
           onSuccess: ''
@@ -1429,6 +1494,8 @@ commands:
           - name: snapshot-version
             description: Read from a specific bucket snapshot
             alias: snapshot
+          - name: version-id
+            description: Object version id (requires bucket versioning). Omit to read the latest version
 
   #########################
   # Manage access keys

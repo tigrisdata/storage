@@ -1,5 +1,5 @@
 import { getStorageConfig } from '@auth/provider.js';
-import { updateObject } from '@tigrisdata/storage';
+import { move, setObjectAccess } from '@tigrisdata/storage';
 import { failWithError } from '@utils/exit.js';
 import { msg, printStart, printSuccess } from '@utils/messages.js';
 import { getFormat, getOption } from '@utils/options.js';
@@ -35,14 +35,23 @@ export default async function setObject(options: Record<string, unknown>) {
   }
 
   const config = await getStorageConfig();
+  const finalConfig = { ...config, bucket };
 
-  const { error } = await updateObject(key, {
+  // Rename first so the access update targets the renamed object.
+  let currentKey = key;
+  if (newKey) {
+    const { error: moveError } = await move(key, newKey, {
+      config: finalConfig,
+    });
+    if (moveError) {
+      failWithError(context, moveError);
+    }
+    currentKey = newKey;
+  }
+
+  const { error } = await setObjectAccess(currentKey, {
     access: access === 'public' ? 'public' : 'private',
-    ...(newKey && { key: newKey }),
-    config: {
-      ...config,
-      bucket,
-    },
+    config: finalConfig,
   });
 
   if (error) {
@@ -54,12 +63,12 @@ export default async function setObject(options: Record<string, unknown>) {
       JSON.stringify({
         action: 'updated',
         bucket,
-        key,
+        key: currentKey,
         access,
         ...(newKey ? { newKey } : {}),
       })
     );
   }
 
-  printSuccess(context, { key, bucket });
+  printSuccess(context, { key: currentKey, bucket });
 }

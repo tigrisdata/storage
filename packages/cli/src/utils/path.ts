@@ -1,7 +1,7 @@
 import type { TigrisStorageConfig } from '@auth/provider.js';
 import { list } from '@tigrisdata/storage';
 
-import type { ParsedPath, ParsedPaths } from '../types.js';
+import type { ParsedPath } from '../types.js';
 
 const REMOTE_PREFIXES = ['t3://', 'tigris://'];
 
@@ -57,19 +57,6 @@ export async function isPathFolder(
   });
 
   return !!(data?.items && data.items.length > 0);
-}
-
-/**
- * Parses source and destination paths
- * @param src - Source path string
- * @param dest - Destination path string
- * @returns Object with parsed source and destination
- */
-export function parsePaths(src: string, dest: string): ParsedPaths {
-  return {
-    source: parsePath(src),
-    destination: parsePath(dest),
-  };
 }
 
 /**

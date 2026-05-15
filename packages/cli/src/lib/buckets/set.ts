@@ -14,18 +14,7 @@ export default async function set(options: Record<string, unknown>) {
 
   const name = getOption<string>(options, ['name']);
   const access = getOption<string>(options, ['access']);
-  let locations = getOption<string | string[]>(options, ['locations']);
-
-  // Handle deprecated --region option
-  const deprecatedRegion = getOption<string | string[]>(options, ['region']);
-  if (deprecatedRegion !== undefined) {
-    console.warn(
-      'Warning: --region is deprecated, use --locations instead. See https://www.tigrisdata.com/docs/buckets/locations/'
-    );
-    if (locations === undefined) {
-      locations = deprecatedRegion;
-    }
-  }
+  const locations = getOption<string | string[]>(options, ['locations']);
   const allowObjectAcl = getOption<string | boolean>(options, [
     'allow-object-acl',
     'allowObjectAcl',

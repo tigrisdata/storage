@@ -23,6 +23,9 @@ function collectLeaves(
   const leaves: LeafCommand[] = [];
 
   for (const cmd of commands) {
+    // Removed commands are tombstones — no handler, no messages block.
+    if (cmd.removed) continue;
+
     const currentPath = [...parentPath, cmd.name];
 
     if (!cmd.commands || cmd.commands.length === 0) {

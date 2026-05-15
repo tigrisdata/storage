@@ -192,12 +192,11 @@ describe('CLI Help Commands', () => {
     expect(result.stdout).toContain('Commands:');
   });
 
-  it('should show forks help', () => {
-    const result = runCli('forks help');
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('Commands:');
-    expect(result.stdout).toContain('list');
-    expect(result.stdout).toContain('create');
+  it('should print a redirect message for the removed forks command', () => {
+    const result = runCli('forks');
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('removed');
+    expect(result.stderr).toContain('--fork-of');
   });
 
   it('should show snapshots help', () => {
@@ -273,6 +272,9 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
   // Generate unique prefix for all test resources
   const testPrefix = getTestPrefix();
   const testBucket = testPrefix;
+  // Second bucket used by cross-bucket cp/mv tests; created and torn
+  // down alongside the primary bucket.
+  const otherBucket = `${testPrefix}-other`;
   const testContent = 'Hello from CLI test';
 
   /** Prefix a bucket/path with t3:// for commands that require remote paths (cp, mv, rm) */
@@ -316,6 +318,13 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       console.error('Failed to create test bucket:', result.stderr);
       throw new Error('Failed to create test bucket');
     }
+
+    console.log(`Creating second test bucket: ${otherBucket}`);
+    const otherResult = runCli(`mk ${otherBucket}`);
+    if (otherResult.exitCode !== 0) {
+      console.error('Failed to create second test bucket:', otherResult.stderr);
+      throw new Error('Failed to create second test bucket');
+    }
   });
 
   afterAll(async () => {
@@ -323,6 +332,10 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     // Force remove all objects and the bucket
     runCli(`rm ${t3(testBucket)}/* -f`);
     runCli(`rm ${t3(testBucket)} -f`);
+
+    console.log(`Cleaning up second test bucket: ${otherBucket}`);
+    runCli(`rm ${t3(otherBucket)}/* -f`);
+    runCli(`rm ${t3(otherBucket)} -f`);
   });
 
   describe('ls command', () => {
@@ -998,6 +1011,48 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
   });
 
+  describe('cross-bucket cp and mv', () => {
+    const cpFile = 'xb-cp-source.txt';
+    const mvFile = 'xb-mv-source.txt';
+
+    beforeAll(() => {
+      runCli(`touch ${testBucket}/${cpFile}`);
+      runCli(`touch ${testBucket}/${mvFile}`);
+    });
+
+    it('should cp across buckets via server-side CopyObject', () => {
+      const result = runCli(
+        `cp ${t3(testBucket)}/${cpFile} ${t3(otherBucket)}/${cpFile}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Copied');
+
+      // Source still present in original bucket
+      const lsSrc = runCli(`ls ${testBucket}`);
+      expect(lsSrc.stdout).toContain(cpFile);
+
+      // Destination present in other bucket
+      const lsDest = runCli(`ls ${otherBucket}`);
+      expect(lsDest.stdout).toContain(cpFile);
+    });
+
+    it('should mv across buckets via server-side copy + remove', () => {
+      const result = runCli(
+        `mv ${t3(testBucket)}/${mvFile} ${t3(otherBucket)}/${mvFile} -f`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Moved');
+
+      // Source gone from original bucket
+      const lsSrc = runCli(`ls ${testBucket}`);
+      expect(lsSrc.stdout).not.toContain(mvFile);
+
+      // Destination present in other bucket
+      const lsDest = runCli(`ls ${otherBucket}`);
+      expect(lsDest.stdout).toContain(mvFile);
+    });
+  });
+
   describe('mv command - additional branches', () => {
     it('should move objects matching wildcard with -f', () => {
       runCli(`touch ${testBucket}/mv-wc-a.txt`);
@@ -1438,65 +1493,12 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       });
     });
 
-    describe('buckets set-ttl', () => {
-      it('should set TTL with --days 30', () => {
+    describe('buckets set-ttl (removed in v3)', () => {
+      it('should print a redirect message pointing at lifecycle', () => {
         const result = runCli(`buckets set-ttl ${setBucket} --days 30`);
-        expect(result.exitCode).toBe(0);
-      });
-
-      it('should set TTL with --date 2027-01-01', () => {
-        const result = runCli(`buckets set-ttl ${setBucket} --date 2027-01-01`);
-        expect(result.exitCode).toBe(0);
-      });
-
-      it('should enable with --enable', () => {
-        const result = runCli(`buckets set-ttl ${setBucket} --enable`);
-        expect(result.exitCode).toBe(0);
-      });
-
-      it('should disable with --disable', () => {
-        const result = runCli(`buckets set-ttl ${setBucket} --disable`);
-        expect(result.exitCode).toBe(0);
-      });
-
-      it('should error when using both --enable and --disable', () => {
-        const result = runCli(
-          `buckets set-ttl ${setBucket} --enable --disable`
-        );
         expect(result.exitCode).toBe(1);
-        expect(result.stderr).toContain(
-          'Cannot use both --enable and --disable'
-        );
-      });
-
-      it('should error when using --disable with --days', () => {
-        const result = runCli(
-          `buckets set-ttl ${setBucket} --disable --days 30`
-        );
-        expect(result.exitCode).toBe(1);
-        expect(result.stderr).toContain(
-          'Cannot use --disable with --days or --date'
-        );
-      });
-
-      it('should error on invalid --days', () => {
-        const result = runCli(`buckets set-ttl ${setBucket} --days -5`);
-        expect(result.exitCode).toBe(1);
-        expect(result.stderr).toContain('--days must be a positive number');
-      });
-
-      it('should error on invalid --date', () => {
-        const result = runCli(`buckets set-ttl ${setBucket} --date not-a-date`);
-        expect(result.exitCode).toBe(1);
-        expect(result.stderr).toContain('--date must be a valid ISO-8601 date');
-      });
-
-      it('should error when no action provided', () => {
-        const result = runCli(`buckets set-ttl ${setBucket}`);
-        expect(result.exitCode).toBe(1);
-        expect(result.stderr).toContain(
-          'Provide --days, --date, --enable, or --disable'
-        );
+        expect(result.stderr).toContain('removed');
+        expect(result.stderr).toContain('lifecycle');
       });
     });
 
@@ -1534,83 +1536,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       });
     });
 
-    describe('buckets set-transition', () => {
-      it('should set with --days 30 --storage-class GLACIER', () => {
+    describe('buckets set-transition (removed in v3)', () => {
+      it('should print a redirect message pointing at lifecycle', () => {
         const result = runCli(
           `buckets set-transition ${setBucket} --days 30 --storage-class GLACIER`
         );
-        expect(result.exitCode).toBe(0);
-      });
-
-      it('should set with --date 2027-01-01 --storage-class GLACIER_IR', () => {
-        const result = runCli(
-          `buckets set-transition ${setBucket} --date 2027-01-01 --storage-class GLACIER_IR`
-        );
-        expect(result.exitCode).toBe(0);
-      });
-
-      it('should enable with --enable', () => {
-        const result = runCli(`buckets set-transition ${setBucket} --enable`);
-        expect(result.exitCode).toBe(0);
-      });
-
-      it('should disable with --disable', () => {
-        const result = runCli(`buckets set-transition ${setBucket} --disable`);
-        expect(result.exitCode).toBe(0);
-      });
-
-      it('should error on invalid storage class STANDARD', () => {
-        const result = runCli(
-          `buckets set-transition ${setBucket} --days 30 --storage-class STANDARD`
-        );
         expect(result.exitCode).toBe(1);
-        expect(result.stderr).toContain(
-          'STANDARD is not a valid transition target'
-        );
-      });
-
-      it('should error on --days without --storage-class', () => {
-        const result = runCli(`buckets set-transition ${setBucket} --days 30`);
-        expect(result.exitCode).toBe(1);
-        expect(result.stderr).toContain(
-          '--storage-class is required when setting --days or --date'
-        );
-      });
-
-      it('should error when using both --enable and --disable', () => {
-        const result = runCli(
-          `buckets set-transition ${setBucket} --enable --disable`
-        );
-        expect(result.exitCode).toBe(1);
-        expect(result.stderr).toContain(
-          'Cannot use both --enable and --disable'
-        );
-      });
-
-      it('should error on --disable with --days', () => {
-        const result = runCli(
-          `buckets set-transition ${setBucket} --disable --days 30`
-        );
-        expect(result.exitCode).toBe(1);
-        expect(result.stderr).toContain(
-          'Cannot use --disable with --days, --date, or --storage-class'
-        );
-      });
-
-      it('should error when no action provided', () => {
-        const result = runCli(`buckets set-transition ${setBucket}`);
-        expect(result.exitCode).toBe(1);
-        expect(result.stderr).toContain(
-          'Provide --days, --date, --enable, or --disable'
-        );
-      });
-
-      it('should error on invalid --days', () => {
-        const result = runCli(
-          `buckets set-transition ${setBucket} --days -1 --storage-class GLACIER`
-        );
-        expect(result.exitCode).toBe(1);
-        expect(result.stderr).toContain('--days must be a positive number');
+        expect(result.stderr).toContain('removed');
+        expect(result.stderr).toContain('lifecycle');
       });
     });
 
@@ -1812,6 +1745,53 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
   });
 
+  describe('objects set-access command', () => {
+    const testFile = 'setaccess-test.txt';
+
+    beforeAll(() => {
+      runCli(`touch ${testBucket}/${testFile}`);
+    });
+
+    afterAll(() => {
+      runCli(`rm ${t3(testBucket)}/${testFile} -f`);
+    });
+
+    it('should set access to public via positional', () => {
+      const result = runCli(
+        `objects set-access ${testBucket} ${testFile} public`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should set access to private via positional', () => {
+      const result = runCli(
+        `objects set-access ${testBucket} ${testFile} private`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should accept t3:// path with access as second positional', () => {
+      const result = runCli(
+        `objects set-access ${t3(testBucket)}/${testFile} public`
+      );
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should error when the access positional is missing', () => {
+      const result = runCli(`objects set-access ${testBucket} ${testFile}`);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Access level is required');
+    });
+
+    it('should error on invalid access value', () => {
+      const result = runCli(
+        `objects set-access ${testBucket} ${testFile} maybe`
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Access level must be either');
+    });
+  });
+
   describe('objects commands with t3:// paths', () => {
     const tmpBase = join(tmpdir(), `cli-test-t3path-${testPrefix}`);
 
@@ -1977,27 +1957,18 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       expect(result.stdout).toContain('Size');
     });
 
-    it('should create a fork via forks create', () => {
-      const result = runCli(`forks create ${snapBucket} ${forkBucket}`);
+    it('should create a fork via buckets create --fork-of', () => {
+      const result = runCli(
+        `buckets create ${forkBucket} --fork-of ${snapBucket}`
+      );
       expect(result.exitCode).toBe(0);
     });
 
-    it('should list forks', () => {
-      // Retry — fork visibility is eventually consistent
-      let result = { stdout: '', stderr: '', exitCode: 1 };
-      for (let i = 0; i < 3; i++) {
-        result = runCli(`forks list ${snapBucket}`);
-        if (result.exitCode === 0 && result.stdout.includes(forkBucket)) break;
-        if (i < 2) execSync('sleep 5');
-      }
+    it('should list forks via buckets list --forks-of (json)', () => {
+      const result = runCli(
+        `buckets list --forks-of ${snapBucket} --format json`
+      );
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain(forkBucket);
-    }, 120_000);
-
-    it('should list forks with --format json', () => {
-      const result = runCli(`forks list ${snapBucket} --format json`);
-      expect(result.exitCode).toBe(0);
-      // May return JSON array or empty (printEmpty is TTY-gated)
       if (result.stdout.trim()) {
         expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
       }

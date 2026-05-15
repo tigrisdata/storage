@@ -19,6 +19,7 @@ export default async function objectInfo(options: Record<string, unknown>) {
     'snapshotVersion',
     'snapshot',
   ]);
+  const versionId = getOption<string>(options, ['version-id', 'versionId']);
 
   if (!bucketArg) {
     failWithError(context, 'Bucket name or path is required');
@@ -34,6 +35,7 @@ export default async function objectInfo(options: Record<string, unknown>) {
 
   const { data, error } = await head(key, {
     ...(snapshotVersion ? { snapshotVersion } : {}),
+    ...(versionId ? { versionId } : {}),
     config: {
       ...config,
       bucket,

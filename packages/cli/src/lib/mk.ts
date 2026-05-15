@@ -39,34 +39,13 @@ export default async function mk(options: Record<string, unknown>) {
       't',
       'T',
     ]);
-    let locations = getOption<string>(options, ['locations', 'l', 'L']);
+    const locations = getOption<string>(options, ['locations', 'l', 'L']);
     const forkOf = getOption<string>(options, ['fork-of', 'forkOf', 'fork']);
     const sourceSnapshot = getOption<string>(options, [
       'source-snapshot',
       'sourceSnapshot',
       'source-snap',
     ]);
-
-    // Handle deprecated --region and --consistency options
-    const deprecatedRegion = getOption<string>(options, ['region', 'r', 'R']);
-    const deprecatedConsistency = getOption<string>(options, [
-      'consistency',
-      'c',
-      'C',
-    ]);
-    if (deprecatedRegion !== undefined) {
-      console.warn(
-        'Warning: --region is deprecated, use --locations instead. See https://www.tigrisdata.com/docs/buckets/locations/'
-      );
-      if (locations === undefined) {
-        locations = deprecatedRegion;
-      }
-    }
-    if (deprecatedConsistency !== undefined) {
-      console.warn(
-        'Warning: --consistency is deprecated, use --locations instead. See https://www.tigrisdata.com/docs/buckets/locations/'
-      );
-    }
 
     if (sourceSnapshot && !forkOf) {
       exitWithError('--source-snapshot requires --fork-of');

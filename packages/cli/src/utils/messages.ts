@@ -1,4 +1,4 @@
-import type { CommandSpec, Messages, OperationSpec } from '../types.js';
+import type { CommandSpec, Messages } from '../types.js';
 import { getCommandSpec } from './specs.js';
 
 export type MessageVariables = Record<
@@ -33,7 +33,7 @@ function isJsonMode(): boolean {
 function getMessages(context: MessageContext): Messages | undefined {
   const spec = getCommandSpec(context.command, context.operation);
   if (!spec) return undefined;
-  return (spec as CommandSpec | OperationSpec).messages;
+  return (spec as CommandSpec).messages;
 }
 
 /**

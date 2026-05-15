@@ -19,6 +19,7 @@ export default async function stat(options: Record<string, unknown>) {
     'snapshotVersion',
     'snapshot',
   ]);
+  const versionId = getOption<string>(options, ['version-id', 'versionId']);
   const config = await getStorageConfig();
 
   // No path: show overall stats
@@ -84,6 +85,7 @@ export default async function stat(options: Record<string, unknown>) {
   // Object path: show object metadata
   const { data, error } = await head(path, {
     ...(snapshotVersion ? { snapshotVersion } : {}),
+    ...(versionId ? { versionId } : {}),
     config: {
       ...config,
       bucket,

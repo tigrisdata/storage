@@ -3,6 +3,7 @@ import { put } from '@tigrisdata/storage';
 import { failWithError, printNextActions } from '@utils/exit.js';
 import { formatOutput, formatSize } from '@utils/format.js';
 import { msg, printStart, printSuccess } from '@utils/messages.js';
+import { getContentType } from '@utils/mime.js';
 import { getFormat, getOption } from '@utils/options.js';
 import { resolveObjectArgs } from '@utils/path.js';
 import { calculateUploadParams } from '@utils/upload.js';
@@ -71,9 +72,15 @@ export default async function putObject(options: Record<string, unknown>) {
     ? calculateUploadParams(fileSize)
     : { multipart: true, partSize: 5 * 1024 * 1024, queueSize: 8 };
 
+  // --content-type wins; otherwise infer from the file extension when
+  // we have a path. Stdin uploads have no extension to infer from, so
+  // we leave it unset and let the server default apply.
+  const resolvedContentType =
+    contentType ?? (file ? getContentType(file) : undefined);
+
   const { data, error } = await put(key, body, {
     access: access === 'public' ? 'public' : 'private',
-    contentType,
+    contentType: resolvedContentType,
     ...uploadParams,
     onUploadProgress: ({ loaded, percentage }) => {
       if (fileSize !== undefined && fileSize > 0) {
