@@ -116,6 +116,7 @@ export default async function getObject(options: Record<string, unknown>) {
     'snapshotVersion',
     'snapshot',
   ]);
+  const versionId = getOption<string>(options, ['version-id', 'versionId']);
 
   if (!bucketArg) {
     failWithError(context, 'Bucket name or path is required');
@@ -135,6 +136,7 @@ export default async function getObject(options: Record<string, unknown>) {
   if (mode === 'stream') {
     const { data, error } = await get(key, 'stream', {
       ...(snapshotVersion ? { snapshotVersion } : {}),
+      ...(versionId ? { versionId } : {}),
       config: {
         ...config,
         bucket,
@@ -162,6 +164,7 @@ export default async function getObject(options: Record<string, unknown>) {
   } else {
     const { data, error } = await get(key, 'string', {
       ...(snapshotVersion ? { snapshotVersion } : {}),
+      ...(versionId ? { versionId } : {}),
       config: {
         ...config,
         bucket,

@@ -396,6 +396,8 @@ commands:
       - name: snapshot-version
         description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
         alias: snapshot
+      - name: version-id
+        description: Object version id to stat (requires bucket versioning). Omit to stat the latest version
 
   # presign
   - name: presign
@@ -1248,6 +1250,44 @@ commands:
           - name: source
             description: List objects from a specific storage source on buckets with shadow migration enabled
             options: [tigris, shadow]
+      # list-versions
+      - name: list-versions
+        description: List object versions and delete markers in a bucket (requires bucket versioning). Returns both arrays separately to match the S3 ListObjectVersions response
+        alias: lv
+        examples:
+          - "tigris objects list-versions my-bucket"
+          - "tigris objects list-versions t3://my-bucket/logs/"
+          - "tigris objects list-versions my-bucket --prefix images/"
+          - "tigris objects list-versions my-bucket --format json"
+        messages:
+          onStart: 'Listing object versions...'
+          onSuccess: 'Found {{versions}} version(s) and {{deleteMarkers}} delete marker(s)'
+          onFailure: 'Failed to list object versions'
+          onEmpty: 'No versions or delete markers found'
+        arguments:
+          - name: bucket
+            description: Name of the bucket, or a path with optional prefix (t3://bucket/prefix/)
+            type: positional
+            required: true
+            examples:
+              - my-bucket
+              - t3://my-bucket/images/
+          - name: prefix
+            description: Filter by key prefix
+            alias: p
+          - name: delimiter
+            description: Group keys sharing a common prefix up to the delimiter (e.g. "/" for folder-style grouping)
+            alias: d
+          - name: format
+            description: Output format
+            options: [json, table, xml]
+            default: table
+          - name: limit
+            description: Maximum number of items to return per page
+          - name: key-marker
+            description: Pagination marker — the key to start listing from (from a prior nextKeyMarker)
+          - name: version-id-marker
+            description: Pagination marker — the version id to start listing from (from a prior nextVersionIdMarker)
       # get
       - name: get
         description: Download an object by key. Prints to stdout by default, or saves to a file with --output
@@ -1283,6 +1323,8 @@ commands:
           - name: snapshot-version
             description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
             alias: snapshot
+          - name: version-id
+            description: Object version id to download (requires bucket versioning). Omit to download the latest version
       # put
       - name: put
         description: Upload a local file as an object. Content-type is auto-detected from extension unless overridden
@@ -1330,12 +1372,14 @@ commands:
             default: table
       # delete
       - name: delete
-        description: Delete one or more objects by key from the given bucket
+        description: Delete one or more objects by key from the given bucket. On a versioned bucket, the default creates a delete marker; use --version-id or --all-versions to hard-delete versions
         alias: d
         examples:
           - "tigris objects delete my-bucket old-file.txt --yes"
           - "tigris objects delete t3://my-bucket/old-file.txt --yes"
           - "tigris objects delete my-bucket file-a.txt,file-b.txt --yes"
+          - "tigris objects delete my-bucket old-file.txt --version-id abc123 --yes"
+          - "tigris objects delete my-bucket old-file.txt --all-versions --yes"
         messages:
           onStart: 'Deleting object...'
           onSuccess: "Object '{{key}}' deleted successfully"
@@ -1357,6 +1401,11 @@ commands:
             multiple: true
             examples:
               - my-file.txt
+          - name: version-id
+            description: Hard-delete a specific object version (requires bucket versioning). Targets a single key
+          - name: all-versions
+            description: Hard-delete every version and delete marker for the given key(s). Mutually exclusive with --version-id
+            type: flag
           - name: force
             type: flag
             description: Skip confirmation prompts (alias for --yes)
@@ -1425,6 +1474,7 @@ commands:
           - "tigris objects info my-bucket report.pdf"
           - "tigris objects info t3://my-bucket/report.pdf"
           - "tigris objects info my-bucket report.pdf --format json"
+          - "tigris objects info my-bucket report.pdf --version-id abc123"
         messages:
           onStart: ''
           onSuccess: ''
@@ -1444,6 +1494,8 @@ commands:
           - name: snapshot-version
             description: Read from a specific bucket snapshot
             alias: snapshot
+          - name: version-id
+            description: Object version id (requires bucket versioning). Omit to read the latest version
 
   #########################
   # Manage access keys
