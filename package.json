@@ -64,7 +64,7 @@
     "@changesets/cli": "^2.31.0",
     "@commitlint/cli": "^20.5.2",
     "@commitlint/config-conventional": "^20.5.0",
-    "@types/node": "^20.0.0",
+    "@types/node": "^24.0.0",
     "dotenv": "^17.4.2",
     "husky": "^9.1.7",
     "publint": "^0.3.18",
