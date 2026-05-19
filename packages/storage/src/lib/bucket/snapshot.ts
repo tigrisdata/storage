@@ -1,4 +1,8 @@
-import { CreateBucketCommand, ListBucketsCommand } from '@aws-sdk/client-s3';
+import {
+  CreateBucketCommand,
+  DeleteBucketCommand,
+  ListBucketsCommand,
+} from '@aws-sdk/client-s3';
 import type { HttpRequest, HttpResponse } from '@aws-sdk/types';
 import { TigrisHeaders } from '@shared/index';
 import { config } from '../config';
@@ -177,5 +181,59 @@ export async function createBucketSnapshot(
       });
   } catch {
     return { error: new Error('Unable to create bucket snapshot') };
+  }
+}
+
+export type DeleteBucketSnapshotOptions = {
+  config?: Omit<TigrisStorageConfig, 'bucket'>;
+};
+
+export type DeleteBucketSnapshotResponse = {
+  snapshotVersion: string;
+};
+
+export async function deleteBucketSnapshot(
+  sourceBucketName: string,
+  snapshotVersion: string,
+  options?: DeleteBucketSnapshotOptions
+): Promise<TigrisStorageResponse<DeleteBucketSnapshotResponse, Error>> {
+  const { data: tigrisClient, error } = createTigrisClient(
+    options?.config,
+    true
+  );
+
+  if (error) {
+    return { error };
+  }
+
+  if (!sourceBucketName || !snapshotVersion) {
+    return {
+      error: new Error('Source bucket name and snapshot version are required'),
+    };
+  }
+
+  const command = new DeleteBucketCommand({ Bucket: sourceBucketName });
+  command.middlewareStack.add(
+    (next) => async (args) => {
+      (args.request as HttpRequest).headers[TigrisHeaders.SNAPSHOT_VERSION] =
+        `${snapshotVersion}`;
+      return next(args);
+    },
+    { step: 'build' }
+  );
+
+  try {
+    return tigrisClient
+      .send(command)
+      .then(() => {
+        return { data: { snapshotVersion: snapshotVersion } };
+      })
+      .catch((error) => {
+        return {
+          error: new Error(`Unable to delete bucket snapshot ${error.message}`),
+        };
+      });
+  } catch {
+    return { error: new Error('Unable to delete bucket snapshot') };
   }
 }
