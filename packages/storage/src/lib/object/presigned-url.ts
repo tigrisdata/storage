@@ -25,6 +25,12 @@ export type GetPresignedUrlOptions = {
    * Default is 3600 seconds (1 hour).
    */
   expiresIn?: number;
+  /**
+   * TODO: Implement this.
+   * The snapshot version to use for the presigned URL.
+   * If not provided, the source bucket name from the config will be used.
+   */
+  snapshotVersion?: string;
   config?: TigrisStorageConfig;
 } & MethodOrOperation;
 
