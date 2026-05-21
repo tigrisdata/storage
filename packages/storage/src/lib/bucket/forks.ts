@@ -1,17 +1,10 @@
 import { config } from '../config';
-import { getStats } from '../stats';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import { fetchBucketListing } from './listing';
+import type { ForkedBucket } from './types';
 
 export type ListForksOptions = {
   config?: TigrisStorageConfig;
-};
-
-export type ForkedBucket = {
-  name: string;
-  creationDate: Date;
-  forkCreatedAt: Date;
-  snapshot: string;
-  snapshotCreatedAt: Date;
 };
 
 export type ListForksResponse = {
@@ -44,7 +37,8 @@ export async function listForks(
   let paginationToken: string | undefined;
 
   do {
-    const { data, error } = await getStats({
+    const { data, error } = await fetchBucketListing({
+      flags: { includeForkInfo: true },
       paginationToken,
       config: options?.config,
     });

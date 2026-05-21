@@ -5,7 +5,6 @@ export {
   createBucket,
 } from './lib/bucket/create';
 export {
-  type ForkedBucket,
   type ListForksOptions,
   type ListForksResponse,
   listForks,
@@ -16,8 +15,6 @@ export {
   getBucketInfo,
 } from './lib/bucket/info';
 export {
-  type Bucket,
-  type BucketOwner,
   type ListBucketsOptions,
   type ListBucketsResponse,
   listBuckets,
@@ -53,6 +50,7 @@ export {
   listBucketSnapshots,
 } from './lib/bucket/snapshot';
 export type {
+  Bucket,
   BucketCorsRule,
   BucketLifecycleExpiration,
   BucketLifecycleFilter,
@@ -60,7 +58,12 @@ export type {
   BucketLocations,
   BucketMigration,
   BucketNotification,
+  BucketOwner,
+  BucketsStats,
   BucketTtl,
+  BucketType,
+  BucketVisibility,
+  ForkedBucket,
   NotificationEvent,
   NotificationEventName,
   NotificationResponse,
