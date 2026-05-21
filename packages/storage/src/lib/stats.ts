@@ -2,6 +2,7 @@ import { createStorageClient } from './http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
 export type GetStatsOptions = {
+  paginationToken?: string;
   config?: TigrisStorageConfig;
 };
 
@@ -9,6 +10,7 @@ type BucketType = 'Regular' | 'Snapshot';
 type BucketVisibility = 'public' | 'private';
 
 export type StatsResponse = {
+  paginationToken?: string;
   stats: {
     activeBuckets: number;
     totalObjects: number;
@@ -36,6 +38,7 @@ export type StatsResponse = {
 };
 
 type StatsApiResponse = {
+  ContinuationToken?: string;
   Stats: {
     ActiveBuckets: number;
     TotalObjects: number;
@@ -74,11 +77,23 @@ export async function getStats(
     return { error: storageHttpClientError };
   }
 
+  const query = new URLSearchParams({
+    IncludeVisibility: 'true',
+    IncludeOwnerInfo: 'true',
+    IncludeRegionsInfo: 'true',
+    IncludeTypeInfo: 'true',
+    IncludeForkInfo: 'true',
+    IncludeStats: 'true',
+  });
+  if (options?.paginationToken) {
+    query.set('ContinuationToken', options.paginationToken);
+  }
+
   try {
     const response = await storageHttpClient.request<unknown, StatsApiResponse>(
       {
         method: 'GET',
-        path: `/?IncludeVisibility=true&IncludeOwnerInfo=true&IncludeRegionsInfo=true&IncludeTypeInfo=true&IncludeForkInfo=true&IncludeStats=true`,
+        path: `/?${query.toString()}`,
         headers: {
           Accept: 'application/json',
         },
@@ -90,6 +105,7 @@ export async function getStats(
     }
 
     const data = {
+      paginationToken: response.data.ContinuationToken,
       stats: {
         activeBuckets: response.data.Stats.ActiveBuckets,
         totalObjects: response.data.Stats.TotalObjects,

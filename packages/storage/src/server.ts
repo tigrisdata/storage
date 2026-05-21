@@ -5,6 +5,12 @@ export {
   createBucket,
 } from './lib/bucket/create';
 export {
+  type ForkedBucket,
+  type ListForksOptions,
+  type ListForksResponse,
+  listForks,
+} from './lib/bucket/forks';
+export {
   type BucketInfoResponse,
   type GetBucketInfoOptions,
   getBucketInfo,

@@ -8,6 +8,7 @@ import {
   it,
 } from 'vitest';
 import { createBucket } from '../lib/bucket/create';
+import { listForks } from '../lib/bucket/forks';
 import { removeBucket } from '../lib/bucket/remove';
 import {
   createBucketSnapshot,
@@ -490,6 +491,95 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       expect(result.error?.message).toContain(
         'Unable to delete bucket snapshot'
       );
+    });
+  });
+
+  describe('listForks', () => {
+    const ts = Date.now();
+    const sourceBucket = `test-fork-src-${ts}`.toLowerCase();
+    const unrelatedBucket = `test-fork-unrelated-${ts}`.toLowerCase();
+    const forkA = `test-fork-a-${ts}`.toLowerCase();
+    const forkB = `test-fork-b-${ts}`.toLowerCase();
+    const bucketsToCleanup: string[] = [];
+
+    beforeAll(async () => {
+      const src = await createBucket(sourceBucket, {
+        enableSnapshot: true,
+        config,
+      });
+      expect(
+        src.error,
+        `source bucket create failed: ${src.error?.message}`
+      ).toBeUndefined();
+      bucketsToCleanup.push(sourceBucket);
+
+      const unrelated = await createBucket(unrelatedBucket, {
+        enableSnapshot: true,
+        config,
+      });
+      expect(unrelated.error).toBeUndefined();
+      bucketsToCleanup.push(unrelatedBucket);
+
+      const a = await createBucket(forkA, {
+        sourceBucketName: sourceBucket,
+        config,
+      });
+      expect(a.error).toBeUndefined();
+      bucketsToCleanup.push(forkA);
+
+      const b = await createBucket(forkB, {
+        sourceBucketName: sourceBucket,
+        config,
+      });
+      expect(b.error).toBeUndefined();
+      bucketsToCleanup.push(forkB);
+    });
+
+    afterAll(async () => {
+      // Remove forks before parents so the source bucket can be deleted.
+      const order = [forkA, forkB, sourceBucket, unrelatedBucket].filter((b) =>
+        bucketsToCleanup.includes(b)
+      );
+      for (const bucket of order) {
+        await removeBucket(bucket, { force: true, config });
+      }
+    });
+
+    it('should list all forks of a source bucket', async () => {
+      const result = await listForks(sourceBucket, { config });
+
+      expect(result.error).toBeUndefined();
+      expect(result.data).toBeDefined();
+
+      const names = result.data?.forks.map((f) => f.name) ?? [];
+      expect(names).toContain(forkA);
+      expect(names).toContain(forkB);
+    });
+
+    it('should not include buckets forked from a different source', async () => {
+      const result = await listForks(sourceBucket, { config });
+
+      const names = result.data?.forks.map((f) => f.name) ?? [];
+      expect(names).not.toContain(unrelatedBucket);
+      expect(names).not.toContain(sourceBucket);
+    });
+
+    it('should populate fork metadata for each returned bucket', async () => {
+      const result = await listForks(sourceBucket, { config });
+
+      const fork = result.data?.forks.find((f) => f.name === forkA);
+      expect(fork).toBeDefined();
+      expect(fork?.creationDate).toBeInstanceOf(Date);
+      expect(fork?.forkCreatedAt).toBeInstanceOf(Date);
+      expect(fork?.snapshotCreatedAt).toBeInstanceOf(Date);
+      expect(typeof fork?.snapshot).toBe('string');
+    });
+
+    it('should return an empty list when the source has no forks', async () => {
+      const result = await listForks(unrelatedBucket, { config });
+
+      expect(result.error).toBeUndefined();
+      expect(result.data?.forks).toEqual([]);
     });
   });
 
