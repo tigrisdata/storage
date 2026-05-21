@@ -26,7 +26,8 @@ type FetchBucketListingResponse = {
 };
 
 type ListingApiResponse = {
-  ContinuationToken?: string;
+  NextContinuationToken?: string;
+  IsTruncated?: boolean;
   Owner?: {
     DisplayName?: string;
     ID?: string;
@@ -135,7 +136,9 @@ export async function fetchBucketListing(
       }) ?? [];
 
     const data: FetchBucketListingResponse = {
-      paginationToken: response.data.ContinuationToken,
+      paginationToken: response.data.IsTruncated
+        ? response.data.NextContinuationToken
+        : undefined,
       buckets,
     };
 
