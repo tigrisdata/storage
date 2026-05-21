@@ -3,6 +3,7 @@ import type { BashExecResult } from "just-bash";
 import { TigrisShell } from "../shell.js";
 import { type TigrisConfig, withConfigDefaults } from "../types.js";
 import type { LoginFn } from "./auth.js";
+import { computeCompletions } from "./complete.js";
 import type { ReplIO } from "./io.js";
 
 export interface ReplSessionOptions {
@@ -412,10 +413,10 @@ export class ReplSession {
 		io.write("  umount <path>                                 Unmount a path\n");
 		io.write("  df                                            List mounts\n");
 		io.write("  flush [path]                                  Flush changes to Tigris\n");
-		io.write("  presign <path> [--expires N] [--put]          Generate a presigned URL\n");
-		io.write("  snapshot <bucket> [--name N] [--list]         Create or list snapshots\n");
-		io.write("  fork <source> <name> [--snapshot V]           Fork a bucket\n");
-		io.write("  forks <bucket>                                List forks\n");
+		io.write("  presign <path> [--expires N] [--put] [--key]  Generate a presigned URL\n");
+		io.write("  snapshot [<bucket>] [--name N] [--list]       Create or list snapshots\n");
+		io.write("  fork [<source>] --name <name> [--snapshot V]  Fork a bucket\n");
+		io.write("  fork [<source>] --list                        List forks\n");
 		io.write("\nShell:\n");
 		io.write("  clear                                         Clear screen\n");
 		io.write("  help                                          Show this help\n");
@@ -426,6 +427,14 @@ export class ReplSession {
 	/** Whether a shell is configured and ready. */
 	get isConfigured(): boolean {
 		return this.shell !== null;
+	}
+
+	/**
+	 * Tab-completion entry point. Returns `[hits, completedToken]` in the
+	 * shape that node:readline expects.
+	 */
+	async complete(line: string): Promise<[string[], string]> {
+		return computeCompletions(line, { shell: this.shell, cwd: this.cwd });
 	}
 
 	/** Get the current prompt string (e.g. "/my-bucket $ "). */

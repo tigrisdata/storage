@@ -70,27 +70,18 @@ async function main() {
 	const args = parseArgs(rawArgs);
 	const session = new ReplSession({ loginFn: deviceLogin });
 
-	const REPL_COMMANDS = [
-		"login",
-		"configure",
-		"mount",
-		"umount",
-		"df",
-		"flush",
-		"whoami",
-		"logout",
-		"clear",
-		"help",
-		"exit",
-	];
-
 	const rl = readline.createInterface({
 		input: process.stdin,
 		output: process.stdout,
 		prompt: "$ ",
-		completer: (line: string) => {
-			const hits = REPL_COMMANDS.filter((cmd) => cmd.startsWith(line));
-			return [hits.length ? hits : REPL_COMMANDS, line];
+		completer: (
+			line: string,
+			callback: (err: Error | null, result?: [string[], string]) => void,
+		) => {
+			session.complete(line).then(
+				(result) => callback(null, result),
+				(err) => callback(err instanceof Error ? err : new Error(String(err))),
+			);
 		},
 	});
 
