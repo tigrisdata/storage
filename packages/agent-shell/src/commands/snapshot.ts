@@ -1,72 +1,81 @@
 import { createBucketSnapshot, listBucketSnapshots } from "@tigrisdata/storage";
-import { defineCommand } from "just-bash";
+import { defineCommand, type ExecResult } from "just-bash";
 import type { TigrisConfig } from "../types.js";
+import { argError, type FlagSchema, parseFlags, sdkError } from "./args.js";
 
-/**
- * snapshot <bucket> [--name label] [--list]
- *
- * Create or list point-in-time bucket snapshots.
- */
-function parseSnapshotArgs(args: string[]): {
-	isList: boolean;
+const USAGE = "snapshot [<bucket>] [--name label] [--list]";
+const SCHEMA: FlagSchema = {
+	"--name": "value",
+	"--list": "boolean",
+};
+
+export interface SnapshotOptions {
+	/** Resolve cwd to a mounted bucket so <bucket> can be omitted. */
+	resolveBucket?: (path: string) => { bucket: string; key: string } | null;
+}
+
+interface SnapshotInput {
+	bucket: string;
+	mode: "list" | "create";
 	name: string | undefined;
-} {
-	let isList = false;
-	let name: string | undefined;
+}
 
-	for (let i = 0; i < args.length; i++) {
-		if (args[i] === "--list") {
-			isList = true;
-		} else if (args[i] === "--name" && args[i + 1]) {
-			name = args[i + 1];
-			i++;
-		}
+export function createSnapshotCommand(config: TigrisConfig, options?: SnapshotOptions) {
+	return defineCommand("snapshot", async (args, ctx) => {
+		const input = parseInput(args, ctx.cwd, options);
+		if ("stderr" in input) return input;
+
+		if (input.mode === "list") return listSnapshots(input.bucket, config);
+
+		const result = await createBucketSnapshot(input.bucket, {
+			...(input.name !== undefined && { name: input.name }),
+			config,
+		});
+		if ("error" in result) return sdkError("snapshot", result.error);
+
+		return { stdout: `${result.data.snapshotVersion}\n`, stderr: "", exitCode: 0 };
+	});
+}
+
+function parseInput(
+	args: string[],
+	cwd: string,
+	options: SnapshotOptions | undefined,
+): SnapshotInput | ExecResult {
+	const parsed = parseFlags(args, SCHEMA);
+	if ("error" in parsed) return argError("snapshot", parsed.error, USAGE);
+	const { flags, positional } = parsed;
+
+	if (positional.length > 1) {
+		return argError("snapshot", `unexpected argument: ${positional[1]}`, USAGE);
 	}
 
-	return { isList, name };
+	const isList = flags["--list"] === true;
+	const name = typeof flags["--name"] === "string" ? flags["--name"] : undefined;
+	if (isList && name !== undefined) {
+		return argError("snapshot", "--name and --list cannot be combined", USAGE);
+	}
+
+	const bucket = positional[0] ?? options?.resolveBucket?.(cwd)?.bucket;
+	if (!bucket) {
+		return argError("snapshot", "missing <bucket> (cwd not in a mounted bucket)", USAGE);
+	}
+
+	return { bucket, mode: isList ? "list" : "create", name };
 }
 
 async function listSnapshots(bucket: string, config: TigrisConfig) {
 	const result = await listBucketSnapshots(bucket, { config });
-	if ("error" in result) {
-		return { stdout: "", stderr: `snapshot: ${result.error.message}\n`, exitCode: 1 };
+	if ("error" in result) return sdkError("snapshot", result.error);
+
+	const snapshots = result.data.snapshots;
+	if (snapshots.length === 0) {
+		return { stdout: "No snapshots.\n", stderr: "", exitCode: 0 };
 	}
-	const lines = result.data.snapshots
-		.map((s) => {
-			const label = s.name ? ` (${s.name})` : "";
-			const date = s.creationDate?.toISOString() ?? "unknown";
-			return `${s.version}${label}  ${date}`;
-		})
-		.join("\n");
-	return { stdout: lines ? `${lines}\n` : "", stderr: "", exitCode: 0 };
-}
-
-export function createSnapshotCommand(config: TigrisConfig) {
-	return defineCommand("snapshot", async (args) => {
-		const bucket = args[0];
-		if (!bucket) {
-			return {
-				stdout: "",
-				stderr:
-					"snapshot: missing bucket argument\nUsage: snapshot <bucket> [--name label] [--list]\n",
-				exitCode: 1,
-			};
-		}
-
-		const { isList, name } = parseSnapshotArgs(args.slice(1));
-
-		if (isList) {
-			return listSnapshots(bucket, config);
-		}
-
-		const result = await createBucketSnapshot(bucket, {
-			...(name !== undefined && { name }),
-			config,
-		});
-		if ("error" in result) {
-			return { stdout: "", stderr: `snapshot: ${result.error.message}\n`, exitCode: 1 };
-		}
-
-		return { stdout: `${result.data.snapshotVersion}\n`, stderr: "", exitCode: 0 };
+	const lines = snapshots.map((s) => {
+		const label = s.name ? ` (${s.name})` : "";
+		const date = s.creationDate?.toISOString() ?? "unknown";
+		return `${s.version}${label}  ${date}`;
 	});
+	return { stdout: `${lines.join("\n")}\n`, stderr: "", exitCode: 0 };
 }

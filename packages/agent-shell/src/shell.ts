@@ -1,6 +1,6 @@
 import type { BashExecResult } from "just-bash";
 import { Bash, InMemoryFs, MountableFs } from "just-bash";
-import { createForkCommand, createForksListCommand } from "./commands/fork.js";
+import { createForkCommand } from "./commands/fork.js";
 import { createPresignCommand } from "./commands/presign.js";
 import { createSnapshotCommand } from "./commands/snapshot.js";
 import { TigrisAdapter } from "./fs/tigris-adapter.js";
@@ -45,14 +45,23 @@ export class TigrisShell {
 		this.bash = new Bash({
 			fs: this.mountableFs,
 			cwd,
+			// just-bash v3 enables defense-in-depth by default, which blocks
+			// process.env reads. The Tigris/AWS SDK reads env eagerly (e.g.
+			// AWS_PROFILE) from inside the TigrisAdapter, so we disable the
+			// sandbox here. We don't enable js-exec / python / node, so the
+			// sandbox provides no real value in our setup.
+			defenseInDepth: false,
 			...(shellOptions?.env !== undefined && { env: shellOptions.env }),
 			customCommands: [
 				createPresignCommand(resolvedConfig, {
 					resolveBucket: (path) => this.resolveBucketForPath(path),
 				}),
-				createSnapshotCommand(resolvedConfig),
-				createForkCommand(resolvedConfig),
-				createForksListCommand(resolvedConfig),
+				createSnapshotCommand(resolvedConfig, {
+					resolveBucket: (path) => this.resolveBucketForPath(path),
+				}),
+				createForkCommand(resolvedConfig, {
+					resolveBucket: (path) => this.resolveBucketForPath(path),
+				}),
 			],
 		});
 	}

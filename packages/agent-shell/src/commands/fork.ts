@@ -1,84 +1,94 @@
-import { createBucket, listBuckets } from "@tigrisdata/storage";
-import { defineCommand } from "just-bash";
+import { createBucket, listForks } from "@tigrisdata/storage";
+import { defineCommand, type ExecResult } from "just-bash";
 import type { TigrisConfig } from "../types.js";
+import { argError, type FlagSchema, parseFlags, sdkError } from "./args.js";
 
-/**
- * fork <source-bucket> <fork-name> [--snapshot version]
- *
- * Create a fork of a bucket, optionally from a specific snapshot.
- */
-export function createForkCommand(config: TigrisConfig) {
-	return defineCommand("fork", async (args) => {
-		const sourceBucket = args[0];
-		const forkName = args[1];
+const USAGE =
+	"fork [<source-bucket>] --name <fork-name> [--snapshot version] | fork [<source-bucket>] --list";
+const SCHEMA: FlagSchema = {
+	"--name": "value",
+	"--snapshot": "value",
+	"--list": "boolean",
+};
 
-		if (!sourceBucket || !forkName) {
-			return {
-				stdout: "",
-				stderr:
-					"fork: missing arguments\nUsage: fork <source-bucket> <fork-name> [--snapshot version]\n",
-				exitCode: 1,
-			};
-		}
+export interface ForkOptions {
+	/** Resolve cwd to a mounted bucket so <source-bucket> can be omitted. */
+	resolveBucket?: (path: string) => { bucket: string; key: string } | null;
+}
 
-		let snapshotVersion: string | undefined;
-		for (let i = 2; i < args.length; i++) {
-			if (args[i] === "--snapshot" && args[i + 1]) {
-				snapshotVersion = args[i + 1];
-				i++;
-			}
-		}
+type ForkInput =
+	| { mode: "create"; sourceBucket: string; forkName: string; snapshotVersion: string | undefined }
+	| { mode: "list"; sourceBucket: string };
 
-		const result = await createBucket(forkName, {
-			sourceBucketName: sourceBucket,
-			...(snapshotVersion !== undefined && { sourceBucketSnapshot: snapshotVersion }),
+export function createForkCommand(config: TigrisConfig, options?: ForkOptions) {
+	return defineCommand("fork", async (args, ctx) => {
+		const input = parseInput(args, ctx.cwd, options);
+		if ("stderr" in input) return input;
+
+		if (input.mode === "list") return listForksOf(input.sourceBucket, config);
+
+		const result = await createBucket(input.forkName, {
+			sourceBucketName: input.sourceBucket,
+			...(input.snapshotVersion !== undefined && {
+				sourceBucketSnapshot: input.snapshotVersion,
+			}),
 			config,
 		});
+		if ("error" in result) return sdkError("fork", result.error);
 
-		if ("error" in result) {
-			return {
-				stdout: "",
-				stderr: `fork: ${result.error.message}\n`,
-				exitCode: 1,
-			};
-		}
-
-		return {
-			stdout: `${forkName}\n`,
-			stderr: "",
-			exitCode: 0,
-		};
+		return { stdout: `${input.forkName}\n`, stderr: "", exitCode: 0 };
 	});
 }
 
-/**
- * forks <bucket> — list all forks of a bucket.
- */
-export function createForksListCommand(config: TigrisConfig) {
-	return defineCommand("forks", async (args) => {
-		const bucket = args[0];
-		if (!bucket) {
-			return {
-				stdout: "",
-				stderr: "forks: missing bucket argument\nUsage: forks <bucket>\n",
-				exitCode: 1,
-			};
-		}
+function parseInput(
+	args: string[],
+	cwd: string,
+	options: ForkOptions | undefined,
+): ForkInput | ExecResult {
+	const parsed = parseFlags(args, SCHEMA);
+	if ("error" in parsed) return argError("fork", parsed.error, USAGE);
+	const { flags, positional } = parsed;
 
-		const result = await listBuckets({ config });
-		if ("error" in result) {
-			return {
-				stdout: "",
-				stderr: `forks: ${result.error.message}\n`,
-				exitCode: 1,
-			};
-		}
+	if (positional.length > 1) {
+		return argError("fork", `unexpected argument: ${positional[1]}`, USAGE);
+	}
 
-		const lines = result.data.buckets.map((b) => b.name).join("\n");
-		return {
-			stdout: lines ? `${lines}\n` : "",
-			stderr: "",
-			exitCode: 0,
-		};
-	});
+	const isList = flags["--list"] === true;
+	const forkName = typeof flags["--name"] === "string" ? flags["--name"] : undefined;
+	const snapshotVersion = typeof flags["--snapshot"] === "string" ? flags["--snapshot"] : undefined;
+
+	if (isList && forkName !== undefined) {
+		return argError("fork", "--name and --list cannot be combined", USAGE);
+	}
+	if (isList && snapshotVersion !== undefined) {
+		return argError("fork", "--snapshot and --list cannot be combined", USAGE);
+	}
+	if (!isList && forkName === undefined) {
+		return argError("fork", "either --name or --list is required", USAGE);
+	}
+
+	const sourceBucket = positional[0] ?? options?.resolveBucket?.(cwd)?.bucket;
+	if (!sourceBucket) {
+		return argError("fork", "missing <source-bucket> (cwd not in a mounted bucket)", USAGE);
+	}
+
+	if (isList) return { mode: "list", sourceBucket };
+
+	if (sourceBucket === forkName) {
+		return argError("fork", "<source-bucket> and --name must differ");
+	}
+
+	return { mode: "create", sourceBucket, forkName: forkName as string, snapshotVersion };
+}
+
+async function listForksOf(bucket: string, config: TigrisConfig) {
+	const result = await listForks(bucket, { config });
+	if ("error" in result) return sdkError("fork", result.error);
+
+	const forks = result.data.forks;
+	if (forks.length === 0) {
+		return { stdout: "No forks.\n", stderr: "", exitCode: 0 };
+	}
+	const lines = forks.map((b) => b.name).join("\n");
+	return { stdout: `${lines}\n`, stderr: "", exitCode: 0 };
 }
