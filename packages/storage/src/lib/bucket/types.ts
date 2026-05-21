@@ -189,3 +189,43 @@ export type UpdateBucketResponse = {
   bucket: string;
   updated: boolean;
 };
+
+export type BucketType = 'Regular' | 'Snapshot';
+export type BucketVisibility = 'public' | 'private';
+
+export type Bucket = {
+  name: string;
+  creationDate: Date;
+  regions?: string[];
+  type?: BucketType;
+  visibility?: BucketVisibility;
+  forkInfo?: {
+    hasChildren: boolean;
+    parents: Array<{
+      bucketName: string;
+      forkCreatedAt: Date;
+      snapshot: string;
+      snapshotCreatedAt: Date;
+    }>;
+  };
+};
+
+export type BucketOwner = {
+  name: string;
+  id: string;
+};
+
+export type ForkedBucket = {
+  name: string;
+  creationDate: Date;
+  forkCreatedAt: Date;
+  snapshot: string;
+  snapshotCreatedAt: Date;
+};
+
+export type BucketsStats = {
+  activeBuckets: number;
+  totalObjects: number;
+  totalStorageBytes: number;
+  totalUniqueObjects: number;
+};

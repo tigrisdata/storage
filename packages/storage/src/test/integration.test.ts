@@ -1,4 +1,20 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
+import { createBucket } from '../lib/bucket/create';
+import { listForks } from '../lib/bucket/forks';
+import { removeBucket } from '../lib/bucket/remove';
+import {
+  createBucketSnapshot,
+  deleteBucketSnapshot,
+  listBucketSnapshots,
+} from '../lib/bucket/snapshot';
 import { config } from '../lib/config';
 import { copy } from '../lib/object/copy';
 import { get } from '../lib/object/get';
@@ -353,6 +369,217 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       // Destination has the original content.
       const destGet = await get(destKey, 'string', { config });
       expect(destGet.data).toBe(srcContent);
+    });
+  });
+
+  describe('deleteBucketSnapshot', () => {
+    const snapshotBucket = `test-snap-delete-${Date.now()}`.toLowerCase();
+
+    beforeAll(async () => {
+      const result = await createBucket(snapshotBucket, {
+        enableSnapshot: true,
+        config,
+      });
+      expect(
+        result.error,
+        `bucket create failed: ${result.error?.message}`
+      ).toBeUndefined();
+    });
+
+    afterAll(async () => {
+      await removeBucket(snapshotBucket, { force: true, config });
+    });
+
+    it('should delete an existing snapshot and remove it from the list', async () => {
+      const created = await createBucketSnapshot(snapshotBucket, {
+        name: `delete-me-${Date.now()}`,
+        config,
+      });
+      expect(created.error).toBeUndefined();
+      expect(created.data?.snapshotVersion).toBeTruthy();
+
+      const version = created.data?.snapshotVersion as string;
+
+      const before = await listBucketSnapshots(snapshotBucket, { config });
+      expect(before.error).toBeUndefined();
+      expect(before.data?.snapshots.some((s) => s.version === version)).toBe(
+        true
+      );
+
+      const result = await deleteBucketSnapshot(snapshotBucket, version, {
+        config,
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(result.data?.snapshotVersion).toBe(version);
+
+      const after = await listBucketSnapshots(snapshotBucket, { config });
+      expect(after.error).toBeUndefined();
+      expect(after.data?.snapshots.some((s) => s.version === version)).toBe(
+        false
+      );
+    });
+
+    it('should only delete the targeted snapshot when multiple exist', async () => {
+      const keep = await createBucketSnapshot(snapshotBucket, {
+        name: `keep-${Date.now()}`,
+        config,
+      });
+      const drop = await createBucketSnapshot(snapshotBucket, {
+        name: `drop-${Date.now()}`,
+        config,
+      });
+      expect(keep.error).toBeUndefined();
+      expect(drop.error).toBeUndefined();
+
+      const keepVersion = keep.data?.snapshotVersion as string;
+      const dropVersion = drop.data?.snapshotVersion as string;
+
+      const result = await deleteBucketSnapshot(snapshotBucket, dropVersion, {
+        config,
+      });
+      expect(result.error).toBeUndefined();
+
+      const after = await listBucketSnapshots(snapshotBucket, { config });
+      const versions = after.data?.snapshots.map((s) => s.version) ?? [];
+      expect(versions).toContain(keepVersion);
+      expect(versions).not.toContain(dropVersion);
+
+      // Cleanup the survivor so it doesn't accumulate.
+      await deleteBucketSnapshot(snapshotBucket, keepVersion, { config });
+    });
+
+    it('should return error when sourceBucketName is missing', async () => {
+      const result = await deleteBucketSnapshot('', 'some-version', { config });
+
+      expect(result.error).toBeDefined();
+      expect(result.error?.message).toBe(
+        'Source bucket name and snapshot version are required'
+      );
+    });
+
+    it('should return error when snapshotVersion is missing', async () => {
+      const result = await deleteBucketSnapshot(snapshotBucket, '', { config });
+
+      expect(result.error).toBeDefined();
+      expect(result.error?.message).toBe(
+        'Source bucket name and snapshot version are required'
+      );
+    });
+
+    it('should return error for a non-existent snapshot version', async () => {
+      const result = await deleteBucketSnapshot(
+        snapshotBucket,
+        'does-not-exist-0000000000',
+        { config }
+      );
+
+      expect(result.error).toBeDefined();
+      expect(result.error?.message).toContain(
+        'Unable to delete bucket snapshot'
+      );
+    });
+
+    it('should return error when the bucket does not exist', async () => {
+      const result = await deleteBucketSnapshot(
+        `test-snap-missing-${Date.now()}`.toLowerCase(),
+        'any-version',
+        { config }
+      );
+
+      expect(result.error).toBeDefined();
+      expect(result.error?.message).toContain(
+        'Unable to delete bucket snapshot'
+      );
+    });
+  });
+
+  describe('listForks', () => {
+    const ts = Date.now();
+    const sourceBucket = `test-fork-src-${ts}`.toLowerCase();
+    const unrelatedBucket = `test-fork-unrelated-${ts}`.toLowerCase();
+    const forkA = `test-fork-a-${ts}`.toLowerCase();
+    const forkB = `test-fork-b-${ts}`.toLowerCase();
+    const bucketsToCleanup: string[] = [];
+
+    beforeAll(async () => {
+      const src = await createBucket(sourceBucket, {
+        enableSnapshot: true,
+        config,
+      });
+      expect(
+        src.error,
+        `source bucket create failed: ${src.error?.message}`
+      ).toBeUndefined();
+      bucketsToCleanup.push(sourceBucket);
+
+      const unrelated = await createBucket(unrelatedBucket, {
+        enableSnapshot: true,
+        config,
+      });
+      expect(unrelated.error).toBeUndefined();
+      bucketsToCleanup.push(unrelatedBucket);
+
+      const a = await createBucket(forkA, {
+        sourceBucketName: sourceBucket,
+        config,
+      });
+      expect(a.error).toBeUndefined();
+      bucketsToCleanup.push(forkA);
+
+      const b = await createBucket(forkB, {
+        sourceBucketName: sourceBucket,
+        config,
+      });
+      expect(b.error).toBeUndefined();
+      bucketsToCleanup.push(forkB);
+    });
+
+    afterAll(async () => {
+      // Remove forks before parents so the source bucket can be deleted.
+      const order = [forkA, forkB, sourceBucket, unrelatedBucket].filter((b) =>
+        bucketsToCleanup.includes(b)
+      );
+      for (const bucket of order) {
+        await removeBucket(bucket, { force: true, config });
+      }
+    });
+
+    it('should list all forks of a source bucket', async () => {
+      const result = await listForks(sourceBucket, { config });
+
+      expect(result.error).toBeUndefined();
+      expect(result.data).toBeDefined();
+
+      const names = result.data?.forks.map((f) => f.name) ?? [];
+      expect(names).toContain(forkA);
+      expect(names).toContain(forkB);
+    });
+
+    it('should not include buckets forked from a different source', async () => {
+      const result = await listForks(sourceBucket, { config });
+
+      const names = result.data?.forks.map((f) => f.name) ?? [];
+      expect(names).not.toContain(unrelatedBucket);
+      expect(names).not.toContain(sourceBucket);
+    });
+
+    it('should populate fork metadata for each returned bucket', async () => {
+      const result = await listForks(sourceBucket, { config });
+
+      const fork = result.data?.forks.find((f) => f.name === forkA);
+      expect(fork).toBeDefined();
+      expect(fork?.creationDate).toBeInstanceOf(Date);
+      expect(fork?.forkCreatedAt).toBeInstanceOf(Date);
+      expect(fork?.snapshotCreatedAt).toBeInstanceOf(Date);
+      expect(typeof fork?.snapshot).toBe('string');
+    });
+
+    it('should return an empty list when the source has no forks', async () => {
+      const result = await listForks(unrelatedBucket, { config });
+
+      expect(result.error).toBeUndefined();
+      expect(result.data?.forks).toEqual([]);
     });
   });
 

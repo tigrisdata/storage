@@ -1,6 +1,6 @@
-import { ListBucketsCommand } from '@aws-sdk/client-s3';
-import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import { fetchBucketListing } from './listing';
+import type { Bucket, BucketOwner } from './types';
 
 export type ListBucketsOptions = {
   config?: TigrisStorageConfig;
@@ -14,59 +14,30 @@ export type ListBucketsResponse = {
   paginationToken?: string;
 };
 
-export type Bucket = {
-  name: string;
-  creationDate: Date;
-};
-
-export type BucketOwner = {
-  name: string;
-  id: string;
-};
-
 export async function listBuckets(
   options?: ListBucketsOptions
 ): Promise<TigrisStorageResponse<ListBucketsResponse, Error>> {
-  const { data: tigrisClient, error } = createTigrisClient(
-    options?.config,
-    true
-  );
-
-  if (error) {
-    return { error };
-  }
-
-  const command = new ListBucketsCommand({
-    ContinuationToken: options?.paginationToken,
-    MaxBuckets: options?.limit,
+  const { data, error } = await fetchBucketListing({
+    flags: {
+      includeOwnerInfo: true,
+      includeRegionsInfo: true,
+      includeTypeInfo: true,
+      includeVisibility: true,
+    },
+    paginationToken: options?.paginationToken,
+    limit: options?.limit,
+    config: options?.config,
   });
 
-  try {
-    return await tigrisClient
-      .send(command)
-      .then((res) => {
-        if (!res.Buckets) {
-          return { data: { buckets: [] } };
-        }
-
-        return {
-          data: {
-            buckets: res.Buckets.map((bucket) => ({
-              name: bucket.Name!,
-              creationDate: bucket.CreationDate!,
-            })),
-            owner: {
-              name: res.Owner?.DisplayName ?? '',
-              id: res.Owner?.ID ?? '',
-            },
-            paginationToken: res.ContinuationToken,
-          },
-        };
-      })
-      .catch((error) => {
-        return { error: new Error(`Unable to list buckets ${error.message}`) };
-      });
-  } catch {
-    return { error: new Error('Unable to list buckets') };
+  if (error) {
+    return { error: new Error(`Unable to list buckets ${error.message}`) };
   }
+
+  return {
+    data: {
+      buckets: data.buckets,
+      owner: data.owner,
+      paginationToken: data.paginationToken,
+    },
+  };
 }

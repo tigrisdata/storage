@@ -13,6 +13,7 @@ export enum TigrisHeaders {
 
   REGIONS = 'X-Tigris-Regions',
   SNAPSHOT = 'X-Tigris-Snapshot',
+  FORK = 'X-Tigris-Fork',
   SNAPSHOT_VERSION = 'X-Tigris-Snapshot-Version',
   SNAPSHOT_ENABLED = 'X-Tigris-Enable-Snapshot',
   HAS_FORKS = 'X-Tigris-Is-Fork-Parent',
