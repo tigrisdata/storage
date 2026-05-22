@@ -157,6 +157,25 @@ describe('encodeObjectKey', () => {
     );
   });
 
+  it("encodes sub-delims !'()* that encodeURIComponent leaves alone", () => {
+    // Regression: AWS's SigV4 canonical URI encodes every byte outside
+    // A-Za-z0-9-._~, including these sub-delims. `encodeURIComponent`
+    // does not, so leaving them literal in the wire path causes the
+    // server's recomputed canonical to diverge → SignatureDoesNotMatch.
+    expect(encodeObjectKey('photos/holiday (2024).jpg')).toBe(
+      'photos/holiday%20%282024%29.jpg'
+    );
+    expect(encodeObjectKey("it's a *test! file.txt")).toBe(
+      'it%27s%20a%20%2Atest%21%20file.txt'
+    );
+  });
+
+  it('encodes multi-byte UTF-8 sequences', () => {
+    expect(encodeObjectKey('photos/holiday ☀️.jpg')).toBe(
+      'photos/holiday%20%E2%98%80%EF%B8%8F.jpg'
+    );
+  });
+
   it('preserves trailing slash (folder markers)', () => {
     expect(encodeObjectKey('folder/')).toBe('folder/');
   });

@@ -24,6 +24,7 @@ export type PutOptions = {
   allowOverwrite?: boolean;
   contentType?: string;
   contentDisposition?: 'attachment' | 'inline';
+  metadata?: Record<string, string>;
   multipart?: boolean;
   partSize?: number;
   queueSize?: number;
@@ -35,6 +36,7 @@ export type PutOptions = {
 export type PutResponse = {
   contentDisposition: string | undefined;
   contentType: string | undefined;
+  metadata: Record<string, string> | undefined;
   modified: Date;
   path: string;
   size: number;
@@ -84,6 +86,7 @@ export async function put(
       Body: body,
       ContentType: options?.contentType ?? undefined,
       ContentDisposition: contentDisposition,
+      Metadata: options?.metadata,
       ACL: access,
     },
     partSize: options?.partSize ?? (options?.multipart ? 1024 * 1024 * 5 : 0),
@@ -153,6 +156,17 @@ export async function put(
     data: {
       contentDisposition: options?.contentDisposition ?? undefined,
       contentType: options?.contentType ?? undefined,
+      // S3 lowercases x-amz-meta-* header names on write; mirror that
+      // here so PutResponse.metadata matches what a subsequent head()
+      // will return.
+      metadata: options?.metadata
+        ? Object.fromEntries(
+            Object.entries(options.metadata).map(([k, v]) => [
+              k.toLowerCase(),
+              v,
+            ])
+          )
+        : undefined,
       modified: new Date(),
       size: contentSize,
       path,

@@ -164,6 +164,7 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       expect(result.data?.url).toBeDefined();
       expect(result.data?.contentType).toBeDefined();
       expect(result.data?.contentDisposition).toBeDefined();
+      expect(result.data?.metadata).toEqual({});
     });
 
     it('should return undefined data for non-existent files', async () => {
@@ -173,6 +174,32 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
 
       expect(result.error).toBeUndefined();
       expect(result.data).toBeUndefined();
+    });
+
+    it('should round-trip user metadata from put to head', async () => {
+      const metaFileName = `test-meta-${Date.now()}.txt`;
+      // Mixed-case keys to assert S3-style lowercasing on both sides.
+      const putResult = await put(metaFileName, testFileContent, {
+        config,
+        metadata: {
+          Author: 'tigris',
+          'Project-Id': 'abc-123',
+        },
+      });
+      expect(putResult.error).toBeUndefined();
+      expect(putResult.data?.metadata).toEqual({
+        author: 'tigris',
+        'project-id': 'abc-123',
+      });
+
+      const headResult = await head(metaFileName, { config });
+      expect(headResult.error).toBeUndefined();
+      expect(headResult.data?.metadata).toEqual({
+        author: 'tigris',
+        'project-id': 'abc-123',
+      });
+
+      await remove(metaFileName, { config });
     });
   });
 

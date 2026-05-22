@@ -34,18 +34,31 @@ export async function executeWithConcurrency<T>(
 /**
  * Encode an object key for use in an S3-style request path or
  * `X-Amz-Copy-Source` header. Encodes each path segment with
- * `encodeURIComponent` and rejoins with `/`, so the slash separators
- * survive verbatim.
+ * AWS-compatible URI escaping and rejoins with `/`, so the slash
+ * separators survive verbatim.
  *
- * Why this matters: when the request is signed with SigV4 (access-key
- * auth path), the signer URI-escapes the path again during canonical
- * request construction. If the key was already escaped with a plain
- * `encodeURIComponent`, the `/` becomes `%2F` and then `%252F` —
- * mismatch against the server's canonical (which decodes `%2F`
- * back to `/` first). Result: `SignatureDoesNotMatch`.
+ * Why not bare `encodeURIComponent`: AWS's SigV4 canonical-URI scheme
+ * (and the S3 gateway's server-side canonicalization) percent-encode
+ * every byte except `A-Za-z0-9-._~` — that includes the sub-delims
+ * `!'()*`, which `encodeURIComponent` leaves alone. If we sign and
+ * send a path with literal `(` but the server canonicalizes it to
+ * `%28` before checking, we get `SignatureDoesNotMatch` on keys that
+ * contain those characters (e.g. `holiday (2024).jpg`).
+ *
+ * The slash-preserving split also matters: a single `encodeURIComponent`
+ * on the whole key would turn `/` into `%2F`, which the signer or server
+ * would then encode again to `%252F` — same divergence symptom.
  */
 export function encodeObjectKey(key: string): string {
-  return key.split('/').map(encodeURIComponent).join('/');
+  return key.split('/').map(escapeUriSegment).join('/');
+}
+
+/** AWS-compatible URI escape for a single path segment. */
+function escapeUriSegment(segment: string): string {
+  return encodeURIComponent(segment).replace(
+    /[!'()*]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`
+  );
 }
 
 export function toError(value: unknown): Error {
