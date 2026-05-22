@@ -1,5 +1,11 @@
 # @tigrisdata/storage
 
+## 3.8.1
+
+### Patch Changes
+
+- [#120](https://github.com/tigrisdata/storage/pull/120) [`91e3391`](https://github.com/tigrisdata/storage/commit/91e33919e9537b07fbba2f94fc921d2019f24a51) Thanks [@designcode](https://github.com/designcode)! - Expose object ETag on `PutResponse`, `HeadResponse`, and `ListItem` (`etag: string`). Populated from the underlying S3 PUT, HEAD, and ListObjectsV2 responses.
+
 ## 3.8.0
 
 ### Minor Changes
