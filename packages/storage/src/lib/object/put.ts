@@ -156,7 +156,17 @@ export async function put(
     data: {
       contentDisposition: options?.contentDisposition ?? undefined,
       contentType: options?.contentType ?? undefined,
-      metadata: options?.metadata,
+      // S3 lowercases x-amz-meta-* header names on write; mirror that
+      // here so PutResponse.metadata matches what a subsequent head()
+      // will return.
+      metadata: options?.metadata
+        ? Object.fromEntries(
+            Object.entries(options.metadata).map(([k, v]) => [
+              k.toLowerCase(),
+              v,
+            ])
+          )
+        : undefined,
       modified: new Date(),
       size: contentSize,
       path,
