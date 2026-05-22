@@ -164,6 +164,7 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       expect(result.data?.url).toBeDefined();
       expect(result.data?.contentType).toBeDefined();
       expect(result.data?.contentDisposition).toBeDefined();
+      expect(result.data?.metadata).toEqual({});
     });
 
     it('should return undefined data for non-existent files', async () => {
@@ -173,6 +174,31 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
 
       expect(result.error).toBeUndefined();
       expect(result.data).toBeUndefined();
+    });
+
+    it('should round-trip user metadata from put to head', async () => {
+      const metaFileName = `test-meta-${Date.now()}.txt`;
+      const metadata = {
+        author: 'tigris',
+        'project-id': 'abc-123',
+      };
+
+      const putResult = await put(metaFileName, testFileContent, {
+        config,
+        metadata,
+      });
+      expect(putResult.error).toBeUndefined();
+      expect(putResult.data?.metadata).toEqual(metadata);
+
+      const headResult = await head(metaFileName, { config });
+      expect(headResult.error).toBeUndefined();
+      // S3 lowercases metadata keys on retrieval.
+      expect(headResult.data?.metadata).toEqual({
+        author: 'tigris',
+        'project-id': 'abc-123',
+      });
+
+      await remove(metaFileName, { config });
     });
   });
 
