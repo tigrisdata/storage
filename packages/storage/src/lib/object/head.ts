@@ -15,6 +15,7 @@ export type HeadOptions = {
 export type HeadResponse = {
   contentDisposition: string;
   contentType: string;
+  etag: string;
   metadata: Record<string, string>;
   modified: Date;
   path: string;
@@ -65,6 +66,7 @@ export async function head(
             modified: res.LastModified ?? new Date(),
             contentType: res.ContentType ?? '',
             contentDisposition: res.ContentDisposition ?? '',
+            etag: res.ETag ?? '',
             metadata: res.Metadata ?? {},
             url: await getSignedUrl(tigrisClient, head, {
               expiresIn: 3600,

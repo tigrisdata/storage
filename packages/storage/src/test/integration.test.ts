@@ -49,6 +49,7 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       expect(result.data?.size).toBeGreaterThan(0);
       expect(result.data?.url).toBeDefined();
       expect(result.data?.modified).toBeInstanceOf(Date);
+      expect(result.data?.etag).toMatch(/^".+"$/);
     });
 
     it('should not prevent overwriting by default', async () => {
@@ -165,6 +166,31 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       expect(result.data?.contentType).toBeDefined();
       expect(result.data?.contentDisposition).toBeDefined();
       expect(result.data?.metadata).toEqual({});
+      expect(result.data?.etag).toMatch(/^".+"$/);
+    });
+
+    it('should expose the same etag across put, head, and list', async () => {
+      const etagFileName = `test-etag-${Date.now()}.txt`;
+
+      const putResult = await put(etagFileName, testFileContent, { config });
+      expect(putResult.error).toBeUndefined();
+      // Guard against a vacuous comparison if put returned an empty etag.
+      expect(putResult.data?.etag).toMatch(/^".+"$/);
+      const expectedEtag = putResult.data?.etag;
+
+      const headResult = await head(etagFileName, { config });
+      expect(headResult.error).toBeUndefined();
+      expect(headResult.data?.etag).toBe(expectedEtag);
+
+      const listResult = await list({ prefix: etagFileName, config });
+      expect(listResult.error).toBeUndefined();
+      const listed = listResult.data?.items.find(
+        (i) => i.name === etagFileName
+      );
+      expect(listed).toBeDefined();
+      expect(listed?.etag).toBe(expectedEtag);
+
+      await remove(etagFileName, { config });
     });
 
     it('should return undefined data for non-existent files', async () => {
