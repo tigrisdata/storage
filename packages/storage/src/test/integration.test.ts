@@ -49,6 +49,7 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       expect(result.data?.size).toBeGreaterThan(0);
       expect(result.data?.url).toBeDefined();
       expect(result.data?.modified).toBeInstanceOf(Date);
+      expect(result.data?.etag).toMatch(/^".+"$/);
     });
 
     it('should not prevent overwriting by default', async () => {
@@ -165,6 +166,25 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       expect(result.data?.contentType).toBeDefined();
       expect(result.data?.contentDisposition).toBeDefined();
       expect(result.data?.metadata).toEqual({});
+      expect(result.data?.etag).toMatch(/^".+"$/);
+    });
+
+    it('should expose the same etag across put, head, and list', async () => {
+      const etagFileName = `test-etag-${Date.now()}.txt`;
+
+      const putResult = await put(etagFileName, testFileContent, { config });
+      expect(putResult.error).toBeUndefined();
+
+      const headResult = await head(etagFileName, { config });
+      expect(headResult.data?.etag).toBe(putResult.data?.etag);
+
+      const listResult = await list({ prefix: etagFileName, config });
+      const listed = listResult.data?.items.find(
+        (i) => i.name === etagFileName
+      );
+      expect(listed?.etag).toBe(putResult.data?.etag);
+
+      await remove(etagFileName, { config });
     });
 
     it('should return undefined data for non-existent files', async () => {

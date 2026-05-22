@@ -20,6 +20,7 @@ export type ListItem = {
   name: string;
   size: number;
   lastModified: Date;
+  etag: string;
 };
 
 export type ListResponse = {
@@ -91,6 +92,7 @@ export async function list(
                 name: item.Key ?? '',
                 size: item.Size ?? 0,
                 lastModified: item.LastModified ?? new Date(),
+                etag: item.ETag ?? '',
               })) ?? [],
             commonPrefixes:
               res.CommonPrefixes?.map((p) => p.Prefix ?? '').filter(Boolean) ??

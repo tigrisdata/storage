@@ -36,6 +36,7 @@ export type PutOptions = {
 export type PutResponse = {
   contentDisposition: string | undefined;
   contentType: string | undefined;
+  etag: string;
   metadata: Record<string, string> | undefined;
   modified: Date;
   path: string;
@@ -116,8 +117,10 @@ export async function put(
     }
   });
 
+  let etag = '';
   try {
-    await upload.done();
+    const result = await upload.done();
+    etag = result.ETag ?? '';
   } catch (error) {
     return { error: toError(error) };
   }
@@ -156,6 +159,7 @@ export async function put(
     data: {
       contentDisposition: options?.contentDisposition ?? undefined,
       contentType: options?.contentType ?? undefined,
+      etag,
       // S3 lowercases x-amz-meta-* header names on write; mirror that
       // here so PutResponse.metadata matches what a subsequent head()
       // will return.
