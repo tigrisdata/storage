@@ -6,6 +6,18 @@ import { browserLogin } from "./auth.js";
 const GREEN = "\x1b[32m";
 const RESET = "\x1b[0m";
 
+function longestCommonPrefix(strs: string[]): string {
+	if (strs.length === 0) return "";
+	let prefix = strs[0] ?? "";
+	for (let i = 1; i < strs.length; i++) {
+		while (!strs[i]?.startsWith(prefix)) {
+			prefix = prefix.slice(0, -1);
+			if (!prefix) return "";
+		}
+	}
+	return prefix;
+}
+
 /**
  * Thin xterm.js adapter over ReplSession.
  * Handles keyboard input, history, and line editing.
@@ -126,6 +138,11 @@ export class ShellLoop {
 			return;
 		}
 
+		if (data === "\t" && !this.pendingPromptResolve) {
+			await this.handleTab();
+			return;
+		}
+
 		// Arrow keys only when not in prompt mode
 		if (!this.pendingPromptResolve) {
 			if (data === "\x1b[A") {
@@ -166,6 +183,35 @@ export class ShellLoop {
 			this.currentLine.slice(0, this.cursorPos) + data + this.currentLine.slice(this.cursorPos);
 		this.cursorPos += data.length;
 		this.redrawLine();
+	}
+
+	private async handleTab() {
+		this.busy = true;
+		try {
+			const [hits, token] = await this.session.complete(this.currentLine.slice(0, this.cursorPos));
+			if (hits.length === 0) return;
+
+			const common = hits.length === 1 ? (hits[0] ?? "") : longestCommonPrefix(hits);
+			if (common.length > token.length) {
+				const suffix = common.slice(token.length);
+				this.currentLine =
+					this.currentLine.slice(0, this.cursorPos) +
+					suffix +
+					this.currentLine.slice(this.cursorPos);
+				this.cursorPos += suffix.length;
+				this.redrawLine();
+				return;
+			}
+
+			if (hits.length > 1) {
+				this.terminal.write(`\r\n${hits.join("  ")}\r\n`);
+				this.terminal.write(this.promptStr + this.currentLine);
+				const back = this.currentLine.length - this.cursorPos;
+				if (back > 0) this.terminal.write(`\x1b[${back}D`);
+			}
+		} finally {
+			this.busy = false;
+		}
 	}
 
 	private setLine(line: string) {
