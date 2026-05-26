@@ -1,7 +1,7 @@
 import { executeWithConcurrency } from '@shared/utils';
 import type { TigrisStorageResponse } from '../types';
 import { addRandomSuffix } from '../utils';
-import { UploadAction } from './shared';
+import { type SignedUploadUrlResponse, UploadAction } from './shared';
 
 export type UploadOptions = {
   access?: 'public' | 'private';
@@ -349,4 +349,165 @@ async function uploadMultipart(
       ),
     };
   }
+}
+
+export type UploadToSignedUrlOptions = {
+  contentType?: string;
+  onUploadProgress?: (progress: UploadProgress) => void;
+};
+
+/**
+ * Uploads a file using the contract returned by `getSignedUploadUrl`.
+ * Branches on `signed.method`: PUT sends the body as the request payload
+ * (applying any required headers), POST submits a multipart/form-data
+ * body with the policy `fields` followed by the `file` input.
+ */
+export async function uploadToSignedUrl(
+  name: string,
+  data: File | Blob,
+  signed: SignedUploadUrlResponse,
+  options?: UploadToSignedUrlOptions
+): Promise<TigrisStorageResponse<UploadResponse, Error>> {
+  if (signed.method === 'PUT') {
+    return uploadToPutUrl(name, data, signed, options);
+  }
+  return uploadToPostUrl(name, data, signed, options);
+}
+
+function trackProgress(
+  xhr: XMLHttpRequest,
+  total: number,
+  onUploadProgress?: (progress: UploadProgress) => void
+): void {
+  if (!onUploadProgress) return;
+  xhr.upload.addEventListener('progress', (event) => {
+    if (event.lengthComputable) {
+      onUploadProgress({
+        loaded: event.loaded,
+        total: event.total,
+        percentage: Math.round((event.loaded / event.total) * 100),
+      });
+    } else {
+      onUploadProgress({
+        loaded: event.loaded,
+        total,
+        percentage: total > 0 ? Math.round((event.loaded / total) * 100) : 0,
+      });
+    }
+  });
+}
+
+async function uploadToPutUrl(
+  name: string,
+  data: File | Blob,
+  signed: Extract<SignedUploadUrlResponse, { method: 'PUT' }>,
+  options?: UploadToSignedUrlOptions
+): Promise<TigrisStorageResponse<UploadResponse, Error>> {
+  const contentType =
+    options?.contentType ?? signed.headers?.['Content-Type'] ?? data.type;
+
+  return new Promise<TigrisStorageResponse<UploadResponse, Error>>(
+    (resolve) => {
+      const xhr = new XMLHttpRequest();
+      trackProgress(xhr, data.size, options?.onUploadProgress);
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve({
+            data: {
+              contentType,
+              modified: new Date(),
+              name,
+              size: data.size,
+              url: signed.url.replace('x-id=PutObject', 'x-id=GetObject'),
+            },
+          });
+        } else {
+          resolve({
+            error: new Error(`Upload failed with status: ${xhr.status}`),
+          });
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        resolve({ error: new Error('Upload failed due to network error') });
+      });
+
+      xhr.open('PUT', signed.url);
+
+      // XHR's setRequestHeader merges repeated calls for the same name
+      // (per spec), which would produce `Content-Type: a, b` and break
+      // the SigV4 check. Set Content-Type exactly once.
+      if (signed.headers) {
+        for (const [k, v] of Object.entries(signed.headers)) {
+          if (k.toLowerCase() === 'content-type') continue;
+          xhr.setRequestHeader(k, v);
+        }
+      }
+      const resolvedContentType =
+        options?.contentType ?? signed.headers?.['Content-Type'] ?? data.type;
+      if (resolvedContentType) {
+        xhr.setRequestHeader('Content-Type', resolvedContentType);
+      }
+
+      xhr.send(data);
+    }
+  );
+}
+
+async function uploadToPostUrl(
+  name: string,
+  data: File | Blob,
+  signed: Extract<SignedUploadUrlResponse, { method: 'POST' }>,
+  options?: UploadToSignedUrlOptions
+): Promise<TigrisStorageResponse<UploadResponse, Error>> {
+  const form = new FormData();
+  for (const [k, v] of Object.entries(signed.fields)) {
+    form.append(k, v);
+  }
+  // `file` must be appended last per S3 POST policy semantics.
+  form.append('file', data);
+
+  return new Promise<TigrisStorageResponse<UploadResponse, Error>>(
+    (resolve) => {
+      const xhr = new XMLHttpRequest();
+      trackProgress(xhr, data.size, options?.onUploadProgress);
+
+      xhr.addEventListener('load', () => {
+        // POST policy returns 204 by default, or 3xx when
+        // success_action_redirect is set. XHR normally follows the
+        // redirect, but accept 2xx-3xx defensively for implementations
+        // that don't (and so a redirect target's status doesn't get
+        // mis-reported as an S3 rejection).
+        if (xhr.status >= 200 && xhr.status < 400) {
+          resolve({
+            data: {
+              contentType:
+                options?.contentType ??
+                signed.fields['Content-Type'] ??
+                data.type,
+              modified: new Date(),
+              name,
+              size: data.size,
+              // Object location. POST policy has no signed-GET equivalent,
+              // so callers wanting auth-bearing reads should use
+              // `getPresignedUrl({ operation: 'get' })`.
+              url: new URL(signed.fields.key ?? name, signed.url).toString(),
+            },
+          });
+        } else {
+          resolve({
+            error: new Error(`Upload failed with status: ${xhr.status}`),
+          });
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        resolve({ error: new Error('Upload failed due to network error') });
+      });
+
+      xhr.open('POST', signed.url);
+      xhr.send(form);
+    }
+  );
 }

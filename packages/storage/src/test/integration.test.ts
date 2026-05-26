@@ -24,6 +24,7 @@ import { move } from '../lib/object/move';
 import { put } from '../lib/object/put';
 import { remove } from '../lib/object/remove';
 import { setObjectAccess } from '../lib/object/set/access';
+import { getSignedUploadUrl } from '../lib/object/signed-upload-url';
 import { shouldSkipIntegrationTests } from './setup';
 
 const skipTests = shouldSkipIntegrationTests();
@@ -633,6 +634,103 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
 
       expect(result.error).toBeUndefined();
       expect(result.data?.forks).toEqual([]);
+    });
+  });
+
+  describe('getSignedUploadUrl', () => {
+    const createdKeys: string[] = [];
+
+    afterEach(async () => {
+      await Promise.all(createdKeys.map((k) => remove(k, { config })));
+      createdKeys.length = 0;
+    });
+
+    it('returns a PUT contract by default and lets the client upload', async () => {
+      const key = `test-signed-put-${Date.now()}.txt`;
+      createdKeys.push(key);
+
+      const signed = await getSignedUploadUrl(key, {
+        config,
+        contentType: 'text/plain',
+      });
+      expect(signed.error).toBeUndefined();
+      expect(signed.data?.method).toBe('PUT');
+      if (signed.data?.method !== 'PUT') return;
+      expect(signed.data.url).toMatch(/^https:\/\//);
+      expect(signed.data.headers?.['Content-Type']).toBe('text/plain');
+
+      const res = await fetch(signed.data.url, {
+        method: 'PUT',
+        body: 'hello from put',
+        headers: signed.data.headers,
+      });
+      expect(res.status).toBeGreaterThanOrEqual(200);
+      expect(res.status).toBeLessThan(300);
+
+      const got = await get(key, 'string', { config });
+      expect(got.data).toBe('hello from put');
+    });
+
+    it('returns a POST contract when a size bound is set', async () => {
+      const key = `test-signed-post-${Date.now()}.txt`;
+      createdKeys.push(key);
+      const body = 'hello from post';
+
+      const signed = await getSignedUploadUrl(key, {
+        config,
+        contentType: 'text/plain',
+        maxSize: 1024,
+      });
+      expect(signed.error).toBeUndefined();
+      expect(signed.data?.method).toBe('POST');
+      if (signed.data?.method !== 'POST') return;
+      expect(signed.data.url).toMatch(/^https:\/\//);
+      expect(signed.data.fields.key).toBe(key);
+      expect(signed.data.fields['Content-Type']).toBe('text/plain');
+
+      const form = new FormData();
+      for (const [k, v] of Object.entries(signed.data.fields)) {
+        form.append(k, v);
+      }
+      form.append('file', new Blob([body], { type: 'text/plain' }), key);
+
+      const res = await fetch(signed.data.url, { method: 'POST', body: form });
+      expect(res.status).toBeGreaterThanOrEqual(200);
+      expect(res.status).toBeLessThan(300);
+
+      const got = await get(key, 'string', { config });
+      expect(got.data).toBe(body);
+    });
+
+    it('round-trips metadata via the PUT contract', async () => {
+      const key = `test-signed-put-meta-${Date.now()}.txt`;
+      createdKeys.push(key);
+
+      const signed = await getSignedUploadUrl(key, {
+        config,
+        contentType: 'text/plain',
+        metadata: { Author: 'tigris', 'Project-Id': 'abc-123' },
+      });
+      expect(signed.data?.method).toBe('PUT');
+      if (signed.data?.method !== 'PUT') return;
+      // Required headers — caller must send them verbatim or the signature
+      // check fails. Keys are lowercased to match what HEAD returns.
+      expect(signed.data.headers?.['x-amz-meta-author']).toBe('tigris');
+      expect(signed.data.headers?.['x-amz-meta-project-id']).toBe('abc-123');
+
+      const res = await fetch(signed.data.url, {
+        method: 'PUT',
+        body: 'meta via put',
+        headers: signed.data.headers,
+      });
+      expect(res.status).toBeGreaterThanOrEqual(200);
+      expect(res.status).toBeLessThan(300);
+
+      const headResult = await head(key, { config });
+      expect(headResult.data?.metadata).toEqual({
+        author: 'tigris',
+        'project-id': 'abc-123',
+      });
     });
   });
 
