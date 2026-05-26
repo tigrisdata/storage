@@ -435,16 +435,19 @@ async function uploadToPutUrl(
 
       xhr.open('PUT', signed.url);
 
+      // XHR's setRequestHeader merges repeated calls for the same name
+      // (per spec), which would produce `Content-Type: a, b` and break
+      // the SigV4 check. Set Content-Type exactly once.
       if (signed.headers) {
         for (const [k, v] of Object.entries(signed.headers)) {
+          if (k.toLowerCase() === 'content-type') continue;
           xhr.setRequestHeader(k, v);
         }
       }
-      // Caller override wins over signed headers.
-      if (options?.contentType) {
-        xhr.setRequestHeader('Content-Type', options.contentType);
-      } else if (!signed.headers?.['Content-Type'] && data.type) {
-        xhr.setRequestHeader('Content-Type', data.type);
+      const resolvedContentType =
+        options?.contentType ?? signed.headers?.['Content-Type'] ?? data.type;
+      if (resolvedContentType) {
+        xhr.setRequestHeader('Content-Type', resolvedContentType);
       }
 
       xhr.send(data);

@@ -10,6 +10,13 @@ import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import type { SignedUploadUrlResponse } from '../upload/shared';
 
+/**
+ * S3's single-part PUT size limit (5 GiB). Used as the upper bound of a
+ * POST policy `content-length-range` when only `minSize` is supplied —
+ * some S3-compatible servers reject ranges with a larger maximum.
+ */
+const S3_MAX_SINGLE_PART_PUT_BYTES = 5 * 1024 * 1024 * 1024;
+
 export type GetSignedUploadUrlOptions = {
   config?: TigrisStorageConfig;
   /** Seconds until expiration. Default 3600. */
@@ -143,7 +150,7 @@ async function createPostContract(
 
   if (options.maxSize !== undefined || options.minSize !== undefined) {
     const min = options.minSize ?? 0;
-    const max = options.maxSize ?? Number.MAX_SAFE_INTEGER;
+    const max = options.maxSize ?? S3_MAX_SINGLE_PART_PUT_BYTES;
     conditions.push(['content-length-range', min, max]);
   }
 
