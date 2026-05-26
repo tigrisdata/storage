@@ -474,7 +474,12 @@ async function uploadToPostUrl(
       trackProgress(xhr, data.size, options?.onUploadProgress);
 
       xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
+        // POST policy returns 204 by default, or 3xx when
+        // success_action_redirect is set. XHR normally follows the
+        // redirect, but accept 2xx-3xx defensively for implementations
+        // that don't (and so a redirect target's status doesn't get
+        // mis-reported as an S3 rejection).
+        if (xhr.status >= 200 && xhr.status < 400) {
           resolve({
             data: {
               contentType:
