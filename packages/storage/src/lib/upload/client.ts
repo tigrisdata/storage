@@ -481,7 +481,10 @@ async function uploadToPostUrl(
               modified: new Date(),
               name,
               size: data.size,
-              url: `${signed.url}${signed.fields.key ?? name}`,
+              // Object location. POST policy has no signed-GET equivalent,
+              // so callers wanting auth-bearing reads should use
+              // `getPresignedUrl({ operation: 'get' })`.
+              url: new URL(signed.fields.key ?? name, signed.url).toString(),
             },
           });
         } else {
