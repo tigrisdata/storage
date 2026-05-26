@@ -118,6 +118,10 @@ export {
   setObjectAccess,
 } from './lib/object/set/access';
 export {
+  type GetSignedUploadUrlOptions,
+  getSignedUploadUrl,
+} from './lib/object/signed-upload-url';
+export {
   type UpdateObjectOptions,
   type UpdateObjectResponse,
   updateObject,
@@ -131,4 +135,7 @@ export {
   type ClientUploadRequest,
   handleClientUpload,
 } from './lib/upload/server';
-export { UploadAction } from './lib/upload/shared';
+export {
+  type SignedUploadUrlResponse,
+  UploadAction,
+} from './lib/upload/shared';
