@@ -4,6 +4,7 @@ import {
   type PresignedPostOptions,
 } from '@aws-sdk/s3-presigned-post';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { TigrisHeaders } from '@shared/headers';
 import { handleError } from '@shared/utils';
 import { config, missingConfigError } from '../config';
 import { createTigrisClient } from '../tigris-client';
@@ -112,11 +113,11 @@ async function createPutContract(
       headers['Content-Type'] = options.contentType;
     }
     if (acl) {
-      headers['x-amz-acl'] = acl;
+      headers[TigrisHeaders.ACL] = acl;
     }
     if (normalizedMetadata) {
       for (const [k, v] of Object.entries(normalizedMetadata)) {
-        headers[`x-amz-meta-${k}`] = v;
+        headers[`${TigrisHeaders.META_PREFIX}${k}`] = v;
       }
     }
 
@@ -169,7 +170,7 @@ async function createPostContract(
 
   if (options.metadata) {
     for (const [k, v] of Object.entries(options.metadata)) {
-      const headerName = `x-amz-meta-${k.toLowerCase()}`;
+      const headerName = `${TigrisHeaders.META_PREFIX}${k.toLowerCase()}`;
       fields[headerName] = v;
       conditions.push({ [headerName]: v });
     }
