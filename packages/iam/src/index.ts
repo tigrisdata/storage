@@ -1,4 +1,11 @@
-export type { TigrisConfig } from '@shared/types';
+export type {
+  TigrisAuth,
+  TigrisConfig,
+  TigrisCredentials,
+  TigrisEndpoints,
+  TigrisInit,
+  TigrisSession,
+} from '@shared/types';
 export {
   type AssignBucketRolesOptions,
   assignBucketRoles,
@@ -65,6 +72,7 @@ export type {
   PolicyDocument,
   PolicyStatement,
 } from './lib/policy/types';
+export { TigrisIAM } from './lib/tigris-iam';
 export { type InviteUserOptions, inviteUser } from './lib/users/invite';
 export {
   type ListUsersOptions,

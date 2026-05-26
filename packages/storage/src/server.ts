@@ -1,4 +1,11 @@
-export type { TigrisConfig } from '@shared/types';
+export type {
+  TigrisAuth,
+  TigrisConfig,
+  TigrisCredentials,
+  TigrisEndpoints,
+  TigrisInit,
+  TigrisSession,
+} from '@shared/types';
 export {
   type CreateBucketOptions,
   type CreateBucketResponse,
@@ -151,6 +158,7 @@ export {
   getStats,
   type StatsResponse,
 } from './lib/stats';
+export { Tigris } from './lib/tigris';
 export {
   type ClientUploadRequest,
   handleClientUpload,

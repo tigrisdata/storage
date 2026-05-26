@@ -5,6 +5,10 @@ import {
 } from '@shared/index';
 import type { TigrisStorageConfig } from './types';
 
+export const DEFAULT_ENDPOINTS = {
+  storage: 'https://t3.storage.dev',
+};
+
 const configMap: Partial<Record<keyof TigrisStorageConfig, string>> = {
   endpoint: 'TIGRIS_STORAGE_ENDPOINT',
   bucket: 'TIGRIS_STORAGE_BUCKET',
@@ -21,7 +25,7 @@ function loadStorageConfig(): TigrisStorageConfig {
   loadEnv();
 
   const config: TigrisStorageConfig = {
-    endpoint: 'https://t3.storage.dev',
+    endpoint: DEFAULT_ENDPOINTS.storage,
   };
 
   if (isNode()) {
@@ -29,7 +33,7 @@ function loadStorageConfig(): TigrisStorageConfig {
     config.accessKeyId = process.env.TIGRIS_STORAGE_ACCESS_KEY_ID ?? '';
     config.secretAccessKey = process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY ?? '';
     config.endpoint =
-      process.env.TIGRIS_STORAGE_ENDPOINT ?? 'https://t3.storage.dev';
+      process.env.TIGRIS_STORAGE_ENDPOINT ?? DEFAULT_ENDPOINTS.storage;
     config.sessionToken = process.env.TIGRIS_SESSION_TOKEN;
     config.organizationId = process.env.TIGRIS_ORGANIZATION_ID;
   }
