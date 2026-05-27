@@ -3,19 +3,28 @@ import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import type {
   BucketCorsRule,
   BucketLifecycleRule,
+  BucketLocations,
   BucketMigration,
   BucketNotification,
   BucketTtl,
   StorageClass,
 } from './types';
 import type { GetBucketInfoApiResponseBody } from './utils/api';
+import { parseBucketLocations } from './utils/regions';
 
 export type GetBucketInfoOptions = {
   config?: TigrisStorageConfig;
 };
 
 export type BucketInfoResponse = {
+  /**
+   * @deprecated Use `locations` instead — it carries the same data with
+   * a structured `BucketLocations` shape that distinguishes `global` /
+   * `multi` / `single` / `dual`. `regions` will be removed in the next
+   * major version.
+   */
   regions: string[];
+  locations: BucketLocations;
   isSnapshotEnabled: boolean;
   forkInfo:
     | {
@@ -126,6 +135,7 @@ export async function getBucketInfo(
         };
       }) ?? [];
 
+    const locations = parseBucketLocations(response.data.object_regions);
     const data: BucketInfoResponse = {
       regions:
         response.data.object_regions && response.data.object_regions !== ''
@@ -134,6 +144,7 @@ export async function getBucketInfo(
               .map((r) => r.trim())
               .filter(Boolean)
           : ['global'],
+      locations,
       isSnapshotEnabled: response.data.type === 1,
       forkInfo: response.data.ForkInfo
         ? {

@@ -1,8 +1,65 @@
 import {
+  type BucketLocationDualOrSingle,
+  type BucketLocationMulti,
   type BucketLocations,
   multiRegions,
   singleOrDualRegions,
 } from '../types';
+
+/**
+ * Map the wire `object_regions` string (comma-separated region codes)
+ * back to a `BucketLocations` value.
+ *
+ * Note on the single-vs-dual ambiguity: when the wire carries exactly
+ * one value from `singleOrDualRegions`, both `{ type: 'single' }` and
+ * `{ type: 'dual', values: <one> }` are valid representations — the
+ * server stores the same string for both. This function prefers
+ * `single`, which is the more common and natural reading. Callers who
+ * originally created the bucket with a one-value `dual` config will
+ * read back as `single`; the underlying region selection is unchanged.
+ *
+ * Unrecognized values fall back to `{ type: 'global' }` so a future
+ * server-side region addition doesn't crash the SDK on read.
+ */
+export function parseBucketLocations(
+  objectRegions: string | undefined
+): BucketLocations {
+  if (!objectRegions || objectRegions === '') {
+    return { type: 'global' };
+  }
+
+  const values = objectRegions
+    .split(',')
+    .map((r) => r.trim())
+    .filter(Boolean);
+
+  if (values.length === 0) {
+    return { type: 'global' };
+  }
+
+  if (values.length === 1) {
+    const v = values[0];
+    if ((multiRegions as readonly string[]).includes(v)) {
+      return { type: 'multi', values: v as BucketLocationMulti };
+    }
+    if ((singleOrDualRegions as readonly string[]).includes(v)) {
+      return { type: 'single', values: v as BucketLocationDualOrSingle };
+    }
+    return { type: 'global' };
+  }
+
+  const allDualOrSingle = values.every((v) =>
+    (singleOrDualRegions as readonly string[]).includes(v)
+  );
+  if (allDualOrSingle) {
+    return {
+      type: 'dual',
+      values: values as BucketLocationDualOrSingle[],
+    };
+  }
+
+  return { type: 'global' };
+}
 
 export function validateLocationValues(
   locations: BucketLocations
