@@ -1,5 +1,15 @@
 # @tigrisdata/storage
 
+## 3.10.0
+
+### Minor Changes
+
+- [#130](https://github.com/tigrisdata/storage/pull/130) [`3757d70`](https://github.com/tigrisdata/storage/commit/3757d70166c62ace2fb3e9562ae08d289bdfe952) Thanks [@designcode](https://github.com/designcode)! - Add `BucketInfoResponse.locations: BucketLocations` to `getBucketInfo` — a structured discriminated-union view of the bucket's region configuration that aligns with the `BucketLocations` type used by `createBucket` and `updateBucket`. Distinguishes `global` / `multi` / `single` / `dual` configurations.
+
+  The legacy `BucketInfoResponse.regions: string[]` field is now deprecated; use `locations` instead. `regions` will be removed in the next major version.
+
+  Note on single-vs-dual readback: the wire format stores a single region identically for `{ type: 'single' }` and `{ type: 'dual', values: <one> }`. Parsing prefers `single` for one-value cases — the underlying region selection is unchanged, only the type tag differs.
+
 ## 3.9.1
 
 ### Patch Changes
