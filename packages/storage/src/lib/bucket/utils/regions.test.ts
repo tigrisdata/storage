@@ -45,4 +45,12 @@ describe('parseBucketLocations', () => {
     expect(parseBucketLocations('mars')).toEqual({ type: 'global' });
     expect(parseBucketLocations('ams,mars')).toEqual({ type: 'global' });
   });
+
+  it('falls back to global for multiple multi-region values', () => {
+    // `usa` and `eur` are valid as a single `multi` value but not combinable
+    // — multi-region codes aren't in `singleOrDualRegions`, so the dual
+    // branch rejects them. Documents the fallback rather than asserting
+    // a different semantic for unsupported combinations.
+    expect(parseBucketLocations('usa,eur')).toEqual({ type: 'global' });
+  });
 });

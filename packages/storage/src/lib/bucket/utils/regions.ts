@@ -38,7 +38,9 @@ export function parseBucketLocations(
   }
 
   if (values.length === 1) {
-    const v = values[0];
+    // Non-null asserted: guarded by the `length === 1` check above, but
+    // marked explicitly so `noUncheckedIndexedAccess` would still compile.
+    const v = values[0]!;
     if ((multiRegions as readonly string[]).includes(v)) {
       return { type: 'multi', values: v as BucketLocationMulti };
     }

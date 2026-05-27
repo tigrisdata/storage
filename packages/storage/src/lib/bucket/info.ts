@@ -22,6 +22,11 @@ export type BucketInfoResponse = {
    * a structured `BucketLocations` shape that distinguishes `global` /
    * `multi` / `single` / `dual`. `regions` will be removed in the next
    * major version.
+   *
+   * Note: for region codes the SDK does not recognize, `regions` passes
+   * the raw value through (e.g. `['mars']`) while `locations` falls back
+   * defensively to `{ type: 'global' }`. The two fields can therefore
+   * disagree when the gateway returns a region code newer than the SDK.
    */
   regions: string[];
   locations: BucketLocations;
