@@ -15,6 +15,7 @@ export type GetBucketInfoOptions = {
 };
 
 export type BucketInfoResponse = {
+  regions: string[];
   isSnapshotEnabled: boolean;
   forkInfo:
     | {
@@ -126,6 +127,13 @@ export async function getBucketInfo(
       }) ?? [];
 
     const data: BucketInfoResponse = {
+      regions:
+        response.data.object_regions && response.data.object_regions !== ''
+          ? response.data.object_regions
+              .split(',')
+              .map((r) => r.trim())
+              .filter(Boolean)
+          : ['global'],
       isSnapshotEnabled: response.data.type === 1,
       forkInfo: response.data.ForkInfo
         ? {
