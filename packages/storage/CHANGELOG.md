@@ -1,5 +1,11 @@
 # @tigrisdata/storage
 
+## 3.9.1
+
+### Patch Changes
+
+- [#128](https://github.com/tigrisdata/storage/pull/128) [`d87fadc`](https://github.com/tigrisdata/storage/commit/d87fadc621c6e8c73a1700e2f9bd15328a14b67d) Thanks [@designcode](https://github.com/designcode)! - add regions in getBucketInfo response
+
 ## 3.9.0
 
 ### Minor Changes
