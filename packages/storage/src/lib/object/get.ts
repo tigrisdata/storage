@@ -34,12 +34,38 @@ export type GetMetadata = {
   contentType: string;
   etag: string;
   modified: Date;
+  /**
+   * Number of bytes in this response body. For a full read this equals
+   * the object size; for a range read this is the length of the partial
+   * content. See `totalSize` for the full object size on range reads.
+   */
   size: number;
+  /**
+   * Full object size in bytes. Always set for full reads (same as `size`);
+   * for range reads, parsed from `Content-Range` (`bytes start-end/total`).
+   * `undefined` if the gateway omits or malforms the header.
+   */
+  totalSize?: number;
   /** User metadata baked into the object via `x-amz-meta-*`. */
   userMetadata: Record<string, string>;
   /** Populated when `range` was used; e.g. `"bytes 0-99/1024"`. */
   contentRange?: string;
 };
+
+/**
+ * Parse the total-size suffix out of a `Content-Range: bytes start-end/total`
+ * value. Returns `undefined` when the header is missing or malformed (S3
+ * may return `*` for unknown length).
+ */
+function parseTotalSizeFromContentRange(
+  contentRange: string | undefined
+): number | undefined {
+  if (!contentRange) return undefined;
+  const match = /\/(\d+)\s*$/.exec(contentRange);
+  if (!match) return undefined;
+  const total = Number(match[1]);
+  return Number.isFinite(total) ? total : undefined;
+}
 
 export type GetResponseWithMetadata<T> = {
   body: T;
@@ -181,6 +207,10 @@ export async function get(
           return { data: body };
         }
 
+        const size = res.ContentLength ?? 0;
+        const totalSize = res.ContentRange
+          ? parseTotalSizeFromContentRange(res.ContentRange)
+          : size;
         return {
           data: {
             body,
@@ -189,7 +219,8 @@ export async function get(
               contentType: res.ContentType ?? '',
               etag: res.ETag ?? '',
               modified: res.LastModified ?? new Date(),
-              size: res.ContentLength ?? 0,
+              size,
+              totalSize,
               userMetadata: res.Metadata ?? {},
               contentRange: res.ContentRange,
             },

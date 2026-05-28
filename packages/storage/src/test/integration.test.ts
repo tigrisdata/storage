@@ -201,24 +201,29 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
         metadata: { Author: 'tigris' },
       });
 
-      const result = await get(metaFileName, 'string', {
-        config,
-        includeMetadata: true,
-      });
-      expect(result.error).toBeUndefined();
-      expect(result.data?.body).toBe(testFileContent);
-      expect(result.data?.metadata.contentType).toBe('text/plain');
-      expect(result.data?.metadata.size).toBe(testFileContent.length);
-      expect(result.data?.metadata.etag).toMatch(/^".+"$/);
-      expect(result.data?.metadata.modified).toBeInstanceOf(Date);
-      expect(result.data?.metadata.userMetadata).toEqual({ author: 'tigris' });
-      // Full reads don't get a Content-Range.
-      expect(result.data?.metadata.contentRange).toBeUndefined();
-
-      await remove(metaFileName, { config });
+      try {
+        const result = await get(metaFileName, 'string', {
+          config,
+          includeMetadata: true,
+        });
+        expect(result.error).toBeUndefined();
+        expect(result.data?.body).toBe(testFileContent);
+        expect(result.data?.metadata.contentType).toBe('text/plain');
+        expect(result.data?.metadata.size).toBe(testFileContent.length);
+        // Full reads: totalSize matches size (no Content-Range header).
+        expect(result.data?.metadata.totalSize).toBe(testFileContent.length);
+        expect(result.data?.metadata.etag).toMatch(/^".+"$/);
+        expect(result.data?.metadata.modified).toBeInstanceOf(Date);
+        expect(result.data?.metadata.userMetadata).toEqual({
+          author: 'tigris',
+        });
+        expect(result.data?.metadata.contentRange).toBeUndefined();
+      } finally {
+        await remove(metaFileName, { config });
+      }
     });
 
-    it('should expose contentRange when a range is used with includeMetadata', async () => {
+    it('should expose contentRange and totalSize when range + includeMetadata are combined', async () => {
       const result = await get(testFileName, 'string', {
         config,
         includeMetadata: true,
@@ -226,6 +231,10 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       });
       expect(result.error).toBeUndefined();
       expect(result.data?.body).toBe('Hello');
+      // size is the partial body length…
+      expect(result.data?.metadata.size).toBe(5);
+      // …while totalSize is the full object size parsed from Content-Range.
+      expect(result.data?.metadata.totalSize).toBe(testFileContent.length);
       expect(result.data?.metadata.contentRange).toMatch(/^bytes 0-4\/\d+$/);
     });
   });
