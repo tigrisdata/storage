@@ -11,6 +11,13 @@ export type GetOptions = {
   contentType?: string;
   encoding?: string;
   /**
+   * When true, `get` returns `{ body, metadata }` instead of the bare
+   * body, surfacing the object's etag, content metadata, user metadata,
+   * and (when `range` is used) `Content-Range` — all read from the same
+   * S3 response, no extra round-trip.
+   */
+  includeMetadata?: boolean;
+  /**
    * Byte range to read. Both bounds are inclusive and 0-based, matching
    * the HTTP `Range: bytes=…` semantics. Omit `end` to read from `start`
    * to the end of the object. A range that falls entirely outside the
@@ -20,6 +27,23 @@ export type GetOptions = {
   range?: { start: number; end?: number };
   snapshotVersion?: string;
   versionId?: string;
+};
+
+export type GetMetadata = {
+  contentDisposition: string;
+  contentType: string;
+  etag: string;
+  modified: Date;
+  size: number;
+  /** User metadata baked into the object via `x-amz-meta-*`. */
+  userMetadata: Record<string, string>;
+  /** Populated when `range` was used; e.g. `"bytes 0-99/1024"`. */
+  contentRange?: string;
+};
+
+export type GetResponseWithMetadata<T> = {
+  body: T;
+  metadata: GetMetadata;
 };
 
 function formatRange(range: NonNullable<GetOptions['range']>): string | Error {
@@ -40,6 +64,27 @@ function formatRange(range: NonNullable<GetOptions['range']>): string | Error {
 
 export type GetResponse = string | File | ReadableStream;
 
+// Wrapped overloads first so TS resolves the literal `includeMetadata: true`
+// before falling through to the bare branch.
+export async function get(
+  path: string,
+  format: 'string',
+  options: GetOptions & { includeMetadata: true }
+): Promise<TigrisStorageResponse<GetResponseWithMetadata<string>, Error>>;
+export async function get(
+  path: string,
+  format: 'file',
+  options: GetOptions & { includeMetadata: true }
+): Promise<TigrisStorageResponse<GetResponseWithMetadata<File>, Error>>;
+export async function get(
+  path: string,
+  format: 'stream',
+  options: GetOptions & { includeMetadata: true }
+): Promise<
+  TigrisStorageResponse<GetResponseWithMetadata<ReadableStream>, Error>
+>;
+// Bare overloads accept any GetOptions — including ones where the
+// `includeMetadata` flag is statically widened to `boolean | undefined`.
 export async function get(
   path: string,
   format: 'string',
@@ -59,7 +104,12 @@ export async function get(
   path: string,
   format: 'string' | 'file' | 'stream',
   options?: GetOptions
-): Promise<TigrisStorageResponse<GetResponse, Error>> {
+): Promise<
+  TigrisStorageResponse<
+    GetResponse | GetResponseWithMetadata<GetResponse>,
+    Error
+  >
+> {
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
   if (error) {
@@ -115,23 +165,35 @@ export async function get(
           };
         }
 
+        let body: GetResponse;
         if (format === 'stream') {
-          return {
-            data: res.Body.transformToWebStream(),
-          };
+          body = res.Body.transformToWebStream();
+        } else if (format === 'file') {
+          const bytes = await res.Body.transformToByteArray();
+          body = new File([bytes as BlobPart], path, {
+            type: res.ContentType ?? options?.contentType ?? '',
+          });
+        } else {
+          body = await res.Body.transformToString(options?.encoding);
         }
 
-        if (format === 'file') {
-          const bytes = await res.Body.transformToByteArray();
-          return {
-            data: new File([bytes as BlobPart], path, {
-              type: res.ContentType ?? options?.contentType ?? '',
-            }),
-          };
+        if (!options?.includeMetadata) {
+          return { data: body };
         }
 
         return {
-          data: await res.Body.transformToString(options?.encoding),
+          data: {
+            body,
+            metadata: {
+              contentDisposition: res.ContentDisposition ?? '',
+              contentType: res.ContentType ?? '',
+              etag: res.ETag ?? '',
+              modified: res.LastModified ?? new Date(),
+              size: res.ContentLength ?? 0,
+              userMetadata: res.Metadata ?? {},
+              contentRange: res.ContentRange,
+            },
+          },
         };
       })
       .catch(handleError);

@@ -192,6 +192,42 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       expect(result.data).toBeUndefined();
       expect(result.error?.message).toMatch(/range\.end/);
     });
+
+    it('should return body + metadata when includeMetadata is true', async () => {
+      const metaFileName = `test-get-meta-${Date.now()}.txt`;
+      await put(metaFileName, testFileContent, {
+        config,
+        contentType: 'text/plain',
+        metadata: { Author: 'tigris' },
+      });
+
+      const result = await get(metaFileName, 'string', {
+        config,
+        includeMetadata: true,
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.data?.body).toBe(testFileContent);
+      expect(result.data?.metadata.contentType).toBe('text/plain');
+      expect(result.data?.metadata.size).toBe(testFileContent.length);
+      expect(result.data?.metadata.etag).toMatch(/^".+"$/);
+      expect(result.data?.metadata.modified).toBeInstanceOf(Date);
+      expect(result.data?.metadata.userMetadata).toEqual({ author: 'tigris' });
+      // Full reads don't get a Content-Range.
+      expect(result.data?.metadata.contentRange).toBeUndefined();
+
+      await remove(metaFileName, { config });
+    });
+
+    it('should expose contentRange when a range is used with includeMetadata', async () => {
+      const result = await get(testFileName, 'string', {
+        config,
+        includeMetadata: true,
+        range: { start: 0, end: 4 },
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.data?.body).toBe('Hello');
+      expect(result.data?.metadata.contentRange).toMatch(/^bytes 0-4\/\d+$/);
+    });
   });
 
   describe('head', () => {
