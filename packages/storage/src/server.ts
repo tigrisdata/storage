@@ -77,7 +77,13 @@ export {
   bundle,
 } from './lib/object/bundle';
 export { type CopyOptions, type CopyResponse, copy } from './lib/object/copy';
-export { type GetOptions, type GetResponse, get } from './lib/object/get';
+export {
+  type GetMetadata,
+  type GetOptions,
+  type GetResponse,
+  type GetResponseWithMetadata,
+  get,
+} from './lib/object/get';
 export { type HeadOptions, type HeadResponse, head } from './lib/object/head';
 export {
   type ListItem,

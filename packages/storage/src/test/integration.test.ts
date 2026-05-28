@@ -145,6 +145,98 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
         expect(error).toBeDefined();
       }
     });
+
+    it('should read a byte range as string (start and end inclusive)', async () => {
+      // testFileContent = 'Hello, Tigris Storage!' (22 bytes)
+      const result = await get(testFileName, 'string', {
+        config,
+        range: { start: 0, end: 4 },
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.data).toBe('Hello');
+    });
+
+    it('should read a byte range as string (start through EOF)', async () => {
+      const result = await get(testFileName, 'string', {
+        config,
+        range: { start: 7 },
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.data).toBe('Tigris Storage!');
+    });
+
+    it('should read a byte range as a stream', async () => {
+      const result = await get(testFileName, 'stream', {
+        config,
+        range: { start: 0, end: 4 },
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.data).toBeInstanceOf(ReadableStream);
+
+      const reader = (result.data as ReadableStream).getReader();
+      const chunks: Uint8Array[] = [];
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) chunks.push(value);
+      }
+      const total = chunks.reduce((n, c) => n + c.byteLength, 0);
+      expect(total).toBe(5);
+    });
+
+    it('should reject an invalid range with a client-side error', async () => {
+      const result = await get(testFileName, 'string', {
+        config,
+        range: { start: 5, end: 2 },
+      });
+      expect(result.data).toBeUndefined();
+      expect(result.error?.message).toMatch(/range\.end/);
+    });
+
+    it('should return body + metadata when includeMetadata is true', async () => {
+      const metaFileName = `test-get-meta-${Date.now()}.txt`;
+      await put(metaFileName, testFileContent, {
+        config,
+        contentType: 'text/plain',
+        metadata: { Author: 'tigris' },
+      });
+
+      try {
+        const result = await get(metaFileName, 'string', {
+          config,
+          includeMetadata: true,
+        });
+        expect(result.error).toBeUndefined();
+        expect(result.data?.body).toBe(testFileContent);
+        expect(result.data?.metadata.contentType).toBe('text/plain');
+        expect(result.data?.metadata.size).toBe(testFileContent.length);
+        // Full reads: totalSize matches size (no Content-Range header).
+        expect(result.data?.metadata.totalSize).toBe(testFileContent.length);
+        expect(result.data?.metadata.etag).toMatch(/^".+"$/);
+        expect(result.data?.metadata.modified).toBeInstanceOf(Date);
+        expect(result.data?.metadata.userMetadata).toEqual({
+          author: 'tigris',
+        });
+        expect(result.data?.metadata.contentRange).toBeUndefined();
+      } finally {
+        await remove(metaFileName, { config });
+      }
+    });
+
+    it('should expose contentRange and totalSize when range + includeMetadata are combined', async () => {
+      const result = await get(testFileName, 'string', {
+        config,
+        includeMetadata: true,
+        range: { start: 0, end: 4 },
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.data?.body).toBe('Hello');
+      // size is the partial body length…
+      expect(result.data?.metadata.size).toBe(5);
+      // …while totalSize is the full object size parsed from Content-Range.
+      expect(result.data?.metadata.totalSize).toBe(testFileContent.length);
+      expect(result.data?.metadata.contentRange).toMatch(/^bytes 0-4\/\d+$/);
+    });
   });
 
   describe('head', () => {
