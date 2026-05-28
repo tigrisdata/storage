@@ -145,6 +145,53 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
         expect(error).toBeDefined();
       }
     });
+
+    it('should read a byte range as string (start and end inclusive)', async () => {
+      // testFileContent = 'Hello, Tigris Storage!' (22 bytes)
+      const result = await get(testFileName, 'string', {
+        config,
+        range: { start: 0, end: 4 },
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.data).toBe('Hello');
+    });
+
+    it('should read a byte range as string (start through EOF)', async () => {
+      const result = await get(testFileName, 'string', {
+        config,
+        range: { start: 7 },
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.data).toBe('Tigris Storage!');
+    });
+
+    it('should read a byte range as a stream', async () => {
+      const result = await get(testFileName, 'stream', {
+        config,
+        range: { start: 0, end: 4 },
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.data).toBeInstanceOf(ReadableStream);
+
+      const reader = (result.data as ReadableStream).getReader();
+      const chunks: Uint8Array[] = [];
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) chunks.push(value);
+      }
+      const total = chunks.reduce((n, c) => n + c.byteLength, 0);
+      expect(total).toBe(5);
+    });
+
+    it('should reject an invalid range with a client-side error', async () => {
+      const result = await get(testFileName, 'string', {
+        config,
+        range: { start: 5, end: 2 },
+      });
+      expect(result.data).toBeUndefined();
+      expect(result.error?.message).toMatch(/range\.end/);
+    });
   });
 
   describe('head', () => {

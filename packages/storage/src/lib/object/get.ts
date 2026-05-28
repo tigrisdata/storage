@@ -10,9 +10,33 @@ export type GetOptions = {
   contentDisposition?: 'attachment' | 'inline';
   contentType?: string;
   encoding?: string;
+  /**
+   * Byte range to read. Both bounds are inclusive and 0-based, matching
+   * the HTTP `Range: bytes=…` semantics. Omit `end` to read from `start`
+   * to the end of the object. A range that falls entirely outside the
+   * object returns an error (HTTP 416). The returned body is the partial
+   * content only.
+   */
+  range?: { start: number; end?: number };
   snapshotVersion?: string;
   versionId?: string;
 };
+
+function formatRange(range: NonNullable<GetOptions['range']>): string | Error {
+  const { start, end } = range;
+  if (!Number.isInteger(start) || start < 0) {
+    return new Error('range.start must be a non-negative integer');
+  }
+  if (end !== undefined) {
+    if (!Number.isInteger(end) || end < start) {
+      return new Error(
+        'range.end must be an integer greater than or equal to range.start'
+      );
+    }
+    return `bytes=${start}-${end}`;
+  }
+  return `bytes=${start}-`;
+}
 
 export type GetResponse = string | File | ReadableStream;
 
@@ -42,10 +66,20 @@ export async function get(
     return { error };
   }
 
+  let rangeHeader: string | undefined;
+  if (options?.range) {
+    const formatted = formatRange(options.range);
+    if (formatted instanceof Error) {
+      return { error: formatted };
+    }
+    rangeHeader = formatted;
+  }
+
   const get = new GetObjectCommand({
     Bucket: options?.config?.bucket ?? config.bucket,
     Key: path,
     VersionId: options?.versionId,
+    Range: rangeHeader,
     ResponseContentType: options?.contentType ?? undefined,
     ResponseContentDisposition: options?.contentDisposition
       ? options.contentDisposition === 'attachment'
