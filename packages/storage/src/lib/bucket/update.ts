@@ -2,18 +2,19 @@ import { TigrisHeaders } from '@shared/headers';
 import { createStorageClient } from '../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import type { BucketLocations, UpdateBucketResponse } from './types';
+import type { UpdateBucketBody } from './utils/api';
 import { validateLocationValues } from './utils/regions';
 
-type AdditionalHeaders = { 'X-Content-Type-Options': 'nosniff' };
-
-type UpdateBucketRequestBody = {
-  acl_settings?: { allow_object_acl: boolean };
-  object_regions?: string;
-  cache_control?: string;
-  website?: { domain_name: string };
-  protection?: { protected: boolean };
-  additional_http_headers?: AdditionalHeaders | null;
-};
+type UpdateBucketRequestBody = Pick<
+  UpdateBucketBody,
+  | 'acl_settings'
+  | 'object_regions'
+  | 'cache_control'
+  | 'website'
+  | 'protection'
+  | 'additional_http_headers'
+  | 'soft_delete'
+>;
 
 export type UpdateBucketOptions = {
   // access and sharing settings
@@ -25,6 +26,10 @@ export type UpdateBucketOptions = {
   cacheControl?: string;
   customDomain?: string;
   enableAdditionalHeaders?: boolean;
+  softDelete?: { enabled: true; retentionDays: number } | { enabled: false };
+  /**
+   * @deprecated Use `softDelete` instead.
+   */
   enableDeleteProtection?: boolean;
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
@@ -86,6 +91,20 @@ export async function updateBucket(
   // deletion settings
   if (options?.enableDeleteProtection !== undefined) {
     body.protection = { protected: options.enableDeleteProtection };
+  }
+
+  // soft delete
+  if (options?.softDelete !== undefined) {
+    if (options.softDelete.enabled === true) {
+      body.soft_delete = {
+        enabled: true,
+        retention_days: options.softDelete.retentionDays,
+      };
+    } else {
+      body.soft_delete = {
+        enabled: false,
+      };
+    }
   }
 
   // additional headers

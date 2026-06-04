@@ -70,10 +70,11 @@ type BucketApiSettings = {
   website?: { domain_name: string };
   protection?: { protected: boolean };
   object_notifications?: BucketApiNotifications;
+  soft_delete?: { enabled: true; retention_days: number } | { enabled: false };
+  additional_http_headers?: { 'X-Content-Type-Options': 'nosniff' } | null;
 };
 
 export type GetBucketInfoApiResponseBody = BucketApiSettings & {
-  additional_http_headers?: Record<string, string>;
   ForkInfo?: {
     HasChildren: boolean;
     Parents: Array<{

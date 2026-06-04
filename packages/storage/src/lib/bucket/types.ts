@@ -199,6 +199,10 @@ export type Bucket = {
   regions?: string[];
   type?: BucketType;
   visibility?: BucketVisibility;
+  softDeleteInfo?: {
+    enabled: boolean;
+    retentionDays: number;
+  };
   forkInfo?: {
     hasChildren: boolean;
     parents: Array<{

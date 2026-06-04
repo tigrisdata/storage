@@ -54,9 +54,15 @@ export type BucketInfoResponse = {
      */
     ttlConfig?: BucketTtl;
     customDomain?: string;
+    softDelete:
+      | { enabled: boolean; retentionDays: number }
+      | { enabled: false };
+    /**
+     * @deprecated Use `softDelete` instead.
+     */
     deleteProtection: boolean;
     corsRules: BucketCorsRule[];
-    additionalHeaders?: Record<string, string>;
+    additionalHeaders?: GetBucketInfoApiResponseBody['additional_http_headers'];
     notifications?: BucketNotification;
   };
   sizeInfo: {
@@ -168,7 +174,17 @@ export async function getBucketInfo(
         allowObjectAcl: response.data.acl_settings?.allow_object_acl ?? false,
         defaultTier: response.data.storage_class as StorageClass,
         customDomain: response.data.website?.domain_name,
+        /**
+         * @deprecated Use `softDelete` instead.
+         */
         deleteProtection: response.data.protection?.protected ?? false,
+        softDelete:
+          response.data.soft_delete?.enabled === true
+            ? {
+                enabled: true,
+                retentionDays: response.data.soft_delete.retention_days,
+              }
+            : { enabled: false },
         dataMigration: response.data.shadow_bucket
           ? {
               accessKey: response.data.shadow_bucket.access_key,
