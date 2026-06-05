@@ -54,9 +54,7 @@ export type BucketInfoResponse = {
      */
     ttlConfig?: BucketTtl;
     customDomain?: string;
-    softDelete:
-      | { enabled: boolean; retentionDays: number }
-      | { enabled: false };
+    softDelete: { enabled: true; retentionDays: number } | { enabled: false };
     /**
      * @deprecated Use `softDelete` instead.
      */
