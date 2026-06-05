@@ -12,6 +12,7 @@ import { listForks } from '../lib/bucket/forks';
 import { getBucketInfo } from '../lib/bucket/info';
 import { listBuckets } from '../lib/bucket/list';
 import { removeBucket } from '../lib/bucket/remove';
+import { restoreBucket } from '../lib/bucket/restore';
 import {
   createBucketSnapshot,
   deleteBucketSnapshot,
@@ -943,6 +944,57 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
           return result.data?.buckets.map((b) => b.name) ?? [];
         }, POLL)
         .not.toContain(deletedBucket);
+    });
+
+    it('should restore a soft-deleted bucket', async () => {
+      const bucket = `test-soft-restore-${ts}`.toLowerCase();
+      bucketsToCleanup.push(bucket);
+
+      const created = await createBucket(bucket, { config });
+      expect(created.error).toBeUndefined();
+
+      const enabled = await updateBucket(bucket, {
+        softDelete: { enabled: true, retentionDays: 7 },
+        config,
+      });
+      expect(enabled.error).toBeUndefined();
+
+      // Soft delete (no force) so the bucket can be restored.
+      const removed = await removeBucket(bucket, { config });
+      expect(
+        removed.error,
+        `soft delete failed: ${removed.error?.message}`
+      ).toBeUndefined();
+
+      await expect
+        .poll(async () => {
+          const result = await listBuckets({ deleted: true, config });
+          return result.data?.buckets.map((b) => b.name) ?? [];
+        }, POLL)
+        .toContain(bucket);
+
+      const restored = await restoreBucket(bucket, { config });
+      expect(
+        restored.error,
+        `restore failed: ${restored.error?.message}`
+      ).toBeUndefined();
+      expect(restored.data).toEqual({ bucket, restored: true });
+
+      // It should return to the live listing...
+      await expect
+        .poll(async () => {
+          const result = await listBuckets({ config });
+          return result.data?.buckets.map((b) => b.name) ?? [];
+        }, POLL)
+        .toContain(bucket);
+
+      // ...and no longer appear among deleted buckets.
+      await expect
+        .poll(async () => {
+          const result = await listBuckets({ deleted: true, config });
+          return result.data?.buckets.map((b) => b.name) ?? [];
+        }, POLL)
+        .not.toContain(bucket);
     });
   });
 
