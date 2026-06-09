@@ -6,6 +6,8 @@ function makeResponse(overrides: Record<string, unknown> = {}) {
   return {
     isSnapshotEnabled: false,
     forkInfo: undefined,
+    regions: [],
+    locations: { type: 'global' },
     sizeInfo: {
       numberOfObjects: 10,
       size: 1024,
@@ -14,9 +16,11 @@ function makeResponse(overrides: Record<string, unknown> = {}) {
     settings: {
       defaultTier: 'STANDARD',
       deleteProtection: false,
+      softDelete: { enabled: false },
       allowObjectAcl: false,
       corsRules: [],
       customDomain: undefined,
+      additionalHeaders: undefined,
       lifecycleRules: undefined,
       ttlConfig: undefined,
       notifications: undefined,
@@ -42,8 +46,10 @@ describe('buildBucketInfo', () => {
       expect(labels).toContain('Total Size');
       expect(labels).toContain('All Versions Count');
       expect(labels).toContain('Default Tier');
+      expect(labels).toContain('Locations');
       expect(labels).toContain('Snapshots Enabled');
       expect(labels).toContain('Delete Protection');
+      expect(labels).toContain('Soft Delete');
       expect(labels).toContain('Allow Object ACL');
       expect(labels).toContain('Custom Domain');
       expect(labels).toContain('Has Forks');
@@ -111,6 +117,74 @@ describe('buildBucketInfo', () => {
       expect(findValue(info, 'Snapshots Enabled')).toBe('Yes');
       expect(findValue(info, 'Delete Protection')).toBe('Yes');
       expect(findValue(info, 'Allow Object ACL')).toBe('Yes');
+    });
+  });
+
+  describe('locations', () => {
+    it('shows Global for a global bucket', () => {
+      const info = buildBucketInfo(makeResponse());
+      expect(findValue(info, 'Locations')).toBe('Global');
+    });
+
+    it('shows the region code for a single-region bucket', () => {
+      const info = buildBucketInfo(
+        makeResponse({ locations: { type: 'single', values: 'iad' } })
+      );
+      expect(findValue(info, 'Locations')).toBe('iad');
+    });
+
+    it('labels a multi-region bucket', () => {
+      const info = buildBucketInfo(
+        makeResponse({ locations: { type: 'multi', values: 'usa' } })
+      );
+      expect(findValue(info, 'Locations')).toBe('Multi-region (usa)');
+    });
+
+    it('joins values for a dual-region bucket', () => {
+      const info = buildBucketInfo(
+        makeResponse({ locations: { type: 'dual', values: ['ams', 'fra'] } })
+      );
+      expect(findValue(info, 'Locations')).toBe('Dual region (ams, fra)');
+    });
+  });
+
+  describe('soft delete', () => {
+    it('shows Disabled when soft delete is off', () => {
+      const info = buildBucketInfo(makeResponse());
+      expect(findValue(info, 'Soft Delete')).toBe('Disabled');
+    });
+
+    it('shows retention days when soft delete is enabled', () => {
+      const info = buildBucketInfo(
+        makeResponse({
+          settings: {
+            ...makeResponse().settings,
+            softDelete: { enabled: true, retentionDays: 30 },
+          },
+        })
+      );
+      expect(findValue(info, 'Soft Delete')).toBe('Enabled (30 day retention)');
+    });
+  });
+
+  describe('additional headers', () => {
+    it('does not add the row when undefined', () => {
+      const info = buildBucketInfo(makeResponse());
+      expect(findValue(info, 'Additional Headers')).toBeUndefined();
+    });
+
+    it('formats the header when present', () => {
+      const info = buildBucketInfo(
+        makeResponse({
+          settings: {
+            ...makeResponse().settings,
+            additionalHeaders: { 'X-Content-Type-Options': 'nosniff' },
+          },
+        })
+      );
+      expect(findValue(info, 'Additional Headers')).toBe(
+        'X-Content-Type-Options: nosniff'
+      );
     });
   });
 

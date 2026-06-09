@@ -13,7 +13,9 @@ export interface Argument {
   examples?: string[];
   /** Hard-removed: providing the flag exits with a redirect message. */
   removed?: boolean;
-  /** Replacement to suggest when a removed argument or command is used. */
+  /** Soft-deprecated: still works, but flagged in help and superseded by `replaced_by`. */
+  deprecated?: boolean;
+  /** Replacement to suggest when a removed or deprecated argument or command is used. */
   replaced_by?: string;
 }
 

@@ -1404,6 +1404,19 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
   });
 
+  describe('buckets restore command', () => {
+    it('should error without bucket name', () => {
+      const result = runCli('buckets restore');
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("missing required argument 'name'");
+    });
+
+    it('should fail for a bucket that is not soft-deleted', () => {
+      const result = runCli(`buckets restore ${testPrefix}-restore-missing`);
+      expect(result.exitCode).toBe(1);
+    });
+  });
+
   describe('buckets create command (non-interactive)', () => {
     const bcBuckets: string[] = [];
 
@@ -1473,6 +1486,61 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
         expect(result.exitCode).toBe(0);
         // Disable for cleanup
         runCli(`buckets set ${setBucket} --enable-delete-protection false`);
+      });
+
+      it('should set --soft-delete enable --retention-days 30', () => {
+        const result = runCli(
+          `buckets set ${setBucket} --soft-delete enable --retention-days 30`
+        );
+        expect(result.exitCode).toBe(0);
+        // Disable for cleanup
+        runCli(`buckets set ${setBucket} --soft-delete disable`);
+      });
+
+      it('should set --soft-delete disable', () => {
+        const result = runCli(`buckets set ${setBucket} --soft-delete disable`);
+        expect(result.exitCode).toBe(0);
+      });
+
+      it('should error when enabling soft delete without --retention-days', () => {
+        const result = runCli(`buckets set ${setBucket} --soft-delete enable`);
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain('--retention-days is required');
+      });
+
+      it('should error on invalid --retention-days', () => {
+        const result = runCli(
+          `buckets set ${setBucket} --soft-delete enable --retention-days 0`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          '--retention-days must be a positive integer'
+        );
+      });
+
+      it('should error on invalid --soft-delete value', () => {
+        const result = runCli(`buckets set ${setBucket} --soft-delete yes`);
+        expect(result.exitCode).toBe(1);
+      });
+
+      it('should report the soft-delete error when value is invalid and --retention-days is set', () => {
+        const result = runCli(
+          `buckets set ${setBucket} --soft-delete yes --retention-days 30`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          '--soft-delete must be "enable" or "disable"'
+        );
+      });
+
+      it('should error on --retention-days without --soft-delete enable', () => {
+        const result = runCli(
+          `buckets set ${setBucket} --access public --retention-days 30`
+        );
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          '--retention-days can only be used with --soft-delete enable'
+        );
       });
 
       it('should set --locations usa', () => {

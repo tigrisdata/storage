@@ -667,6 +667,7 @@ commands:
           - "tigris buckets list"
           - "tigris buckets list --format json"
           - "tigris buckets list --forks-of my-bucket"
+          - "tigris buckets list --deleted"
         messages:
           onStart: 'Listing buckets...'
           onSuccess: 'Found {{count}} bucket(s)'
@@ -679,6 +680,9 @@ commands:
             default: table
           - name: forks-of
             description: Only list buckets that are forks of the named source bucket
+          - name: deleted
+            description: Only list soft-deleted buckets
+            type: flag
           - name: limit
             description: Maximum number of items to return per page
           - name: page-token
@@ -793,6 +797,25 @@ commands:
           - name: force
             type: flag
             description: Skip confirmation prompts (alias for --yes)
+      # restore
+      - name: restore
+        description: Restore a soft-deleted bucket within its retention window. List recoverable buckets with "tigris buckets list --deleted"
+        examples:
+          - "tigris buckets restore my-bucket"
+        messages:
+          onStart: 'Restoring bucket...'
+          onSuccess: "Bucket '{{name}}' restored successfully"
+          onFailure: "Failed to restore bucket '{{name}}'"
+          nextActions:
+            - command: 'tigris buckets get {{name}}'
+              description: 'Inspect the restored bucket'
+        arguments:
+          - name: name
+            description: Name of the soft-deleted bucket to restore
+            type: positional
+            required: true
+            examples:
+              - my-bucket
       # set
       - name: set
         description: Update settings on an existing bucket such as access level, location, caching, or custom domain
@@ -801,6 +824,8 @@ commands:
           - "tigris buckets set my-bucket --access public"
           - "tigris buckets set my-bucket --locations iad,fra --cache-control 'max-age=3600'"
           - "tigris buckets set my-bucket --custom-domain assets.example.com"
+          - "tigris buckets set my-bucket --soft-delete enable --retention-days 30"
+          - "tigris buckets set my-bucket --soft-delete disable"
         messages:
           onStart: 'Updating bucket...'
           onSuccess: 'Bucket {{name}} updated successfully'
@@ -835,6 +860,13 @@ commands:
           - name: enable-delete-protection
             description: Enable delete protection
             type: boolean
+            deprecated: true
+            replaced_by: --soft-delete
+          - name: soft-delete
+            description: Enable or disable soft delete (recoverable deletes). Requires --retention-days when enabling
+            options: [enable, disable]
+          - name: retention-days
+            description: Number of days to retain soft-deleted objects (required when enabling --soft-delete)
           - name: enable-additional-headers
             description: Enable additional HTTP headers (X-Content-Type-Options nosniff)
             type: boolean

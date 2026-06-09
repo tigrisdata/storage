@@ -116,6 +116,27 @@ export async function promptLocations(): Promise<BucketLocations> {
   return result ?? promptLocations();
 }
 
+/**
+ * Human-readable rendering of a bucket's structured locations, for display
+ * in `buckets get`. Inverse of {@link parseLocations}.
+ */
+export function formatLocations(locations: BucketLocations): string {
+  switch (locations.type) {
+    case 'global':
+      return 'Global';
+    case 'multi':
+      return `Multi-region (${locations.values})`;
+    case 'single':
+      return locations.values;
+    case 'dual':
+      return `Dual region (${
+        Array.isArray(locations.values)
+          ? locations.values.join(', ')
+          : locations.values
+      })`;
+  }
+}
+
 export function parseLocations(input: string | string[]): BucketLocations {
   const values = (Array.isArray(input) ? input : [input])
     .flatMap((v) => v.split(','))
