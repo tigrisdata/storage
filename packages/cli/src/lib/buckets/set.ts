@@ -35,6 +35,11 @@ export default async function set(options: Record<string, unknown>) {
     'enable-delete-protection',
     'enableDeleteProtection',
   ]);
+  const softDelete = getOption<string>(options, ['soft-delete', 'softDelete']);
+  const retentionDays = getOption<string | number>(options, [
+    'retention-days',
+    'retentionDays',
+  ]);
   const enableAdditionalHeaders = getOption<string | boolean>(options, [
     'enable-additional-headers',
     'enableAdditionalHeaders',
@@ -53,6 +58,7 @@ export default async function set(options: Record<string, unknown>) {
     cacheControl === undefined &&
     customDomain === undefined &&
     enableDeleteProtection === undefined &&
+    softDelete === undefined &&
     enableAdditionalHeaders === undefined
   ) {
     failWithError(context, 'At least one setting is required');
@@ -89,6 +95,37 @@ export default async function set(options: Record<string, unknown>) {
 
   if (enableDeleteProtection !== undefined) {
     updateOptions.enableDeleteProtection = parseBoolean(enableDeleteProtection);
+  }
+
+  if (
+    softDelete !== undefined &&
+    softDelete !== 'enable' &&
+    softDelete !== 'disable'
+  ) {
+    failWithError(context, '--soft-delete must be "enable" or "disable"');
+  }
+
+  if (retentionDays !== undefined && softDelete !== 'enable') {
+    failWithError(
+      context,
+      '--retention-days can only be used with --soft-delete enable'
+    );
+  }
+
+  if (softDelete === 'enable') {
+    if (retentionDays === undefined) {
+      failWithError(
+        context,
+        '--retention-days is required when enabling soft delete'
+      );
+    }
+    const days = Number(retentionDays);
+    if (!Number.isInteger(days) || days <= 0) {
+      failWithError(context, '--retention-days must be a positive integer');
+    }
+    updateOptions.softDelete = { enabled: true, retentionDays: days };
+  } else if (softDelete === 'disable') {
+    updateOptions.softDelete = { enabled: false };
   }
 
   if (enableAdditionalHeaders !== undefined) {

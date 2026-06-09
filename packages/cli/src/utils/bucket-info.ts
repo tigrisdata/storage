@@ -4,6 +4,7 @@ import type {
 } from '@tigrisdata/storage';
 
 import { formatSize } from './format.js';
+import { formatLocations } from './locations.js';
 
 /**
  * Human-readable description of a rule's transition, or undefined if
@@ -78,13 +79,22 @@ export function buildBucketInfo(data: BucketInfoResponse) {
       value: data.sizeInfo.numberOfObjectsAllVersions?.toString() ?? 'N/A',
     },
     { label: 'Default Tier', value: data.settings.defaultTier },
+    { label: 'Locations', value: formatLocations(data.locations) },
     {
       label: 'Snapshots Enabled',
       value: data.isSnapshotEnabled ? 'Yes' : 'No',
     },
     {
       label: 'Delete Protection',
+      // deleteProtection is deprecated in favor of softDelete (shown below),
+      // but kept here so existing output isn't dropped.
       value: data.settings.deleteProtection ? 'Yes' : 'No',
+    },
+    {
+      label: 'Soft Delete',
+      value: data.settings.softDelete.enabled
+        ? `Enabled (${data.settings.softDelete.retentionDays} day retention)`
+        : 'Disabled',
     },
     {
       label: 'Allow Object ACL',
@@ -116,6 +126,15 @@ export function buildBucketInfo(data: BucketInfoResponse) {
       label: 'Lifecycle Rules',
       value: data.settings.lifecycleRules
         .map((r) => formatLifecycleRule(r))
+        .join(', '),
+    });
+  }
+
+  if (data.settings.additionalHeaders) {
+    info.push({
+      label: 'Additional Headers',
+      value: Object.entries(data.settings.additionalHeaders)
+        .map(([key, val]) => `${key}: ${val}`)
         .join(', '),
     });
   }

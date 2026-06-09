@@ -1,5 +1,5 @@
 import { getStorageConfig } from '@auth/provider.js';
-import { getBucketInfo, listBuckets } from '@tigrisdata/storage';
+import { listBuckets, listForks } from '@tigrisdata/storage';
 import { failWithError } from '@utils/exit.js';
 import { formatOutput, formatPaginatedOutput } from '@utils/format.js';
 import {
@@ -18,6 +18,7 @@ export default async function list(options: Record<string, unknown>) {
 
   const format = getFormat(options);
   const forksOf = getOption<string>(options, ['forks-of', 'forksOf']);
+  const deleted = getOption<boolean>(options, ['deleted']);
   const { limit, pageToken, isPaginated } = getPaginationOptions(options);
   const config = await getStorageConfig();
 
@@ -27,57 +28,29 @@ export default async function list(options: Record<string, unknown>) {
     );
   }
 
-  const { data, error } = await listBuckets({
-    ...(forksOf
-      ? {}
-      : {
-          ...(limit !== undefined ? { limit } : {}),
-          ...(pageToken ? { paginationToken: pageToken } : {}),
-        }),
-    config,
-  });
-
-  if (error) {
-    failWithError(context, error);
-  }
-
-  if (!data.buckets || data.buckets.length === 0) {
-    printEmpty(context);
-    return;
+  if (forksOf && deleted) {
+    console.warn(
+      '⚠ --deleted is ignored when --forks-of is used; use --deleted on its own to list soft-deleted buckets'
+    );
   }
 
   if (forksOf) {
     // Filter for forks of the named source bucket
-    const { data: bucketInfo, error: infoError } = await getBucketInfo(
-      forksOf,
-      { config }
-    );
+    const { data, error: infoError } = await listForks(forksOf, { config });
 
     if (infoError) {
       failWithError(context, infoError);
     }
 
-    if (!bucketInfo.forkInfo?.hasChildren) {
+    if (!data.forks || data.forks.length === 0) {
       printEmpty(context);
       return;
     }
 
     const forks: Array<{ name: string; created: Date }> = [];
 
-    for (const bucket of data.buckets) {
-      if (bucket.name === forksOf) continue;
-      const { data: info } = await getBucketInfo(bucket.name, { config });
-      const isChildOf = info?.forkInfo?.parents?.some(
-        (p) => p.bucketName === forksOf
-      );
-      if (isChildOf) {
-        forks.push({ name: bucket.name, created: bucket.creationDate });
-      }
-    }
-
-    if (forks.length === 0) {
-      printEmpty(context);
-      return;
+    for (const bucket of data.forks) {
+      forks.push({ name: bucket.name, created: bucket.creationDate });
     }
 
     const output = formatOutput(forks, format!, 'forks', 'fork', [
@@ -87,6 +60,22 @@ export default async function list(options: Record<string, unknown>) {
 
     console.log(output);
     printSuccess(context, { count: forks.length });
+    return;
+  }
+
+  const { data, error } = await listBuckets({
+    ...(limit !== undefined ? { limit } : {}),
+    ...(pageToken ? { paginationToken: pageToken } : {}),
+    ...(deleted ? { deleted } : {}),
+    config,
+  });
+
+  if (error) {
+    failWithError(context, error);
+  }
+
+  if (!data.buckets || data.buckets.length === 0) {
+    printEmpty(context);
     return;
   }
 
