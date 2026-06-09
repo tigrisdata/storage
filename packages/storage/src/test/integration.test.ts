@@ -9,12 +9,16 @@ import {
 } from 'vitest';
 import { createBucket } from '../lib/bucket/create';
 import { listForks } from '../lib/bucket/forks';
+import { getBucketInfo } from '../lib/bucket/info';
+import { listBuckets } from '../lib/bucket/list';
 import { removeBucket } from '../lib/bucket/remove';
+import { restoreBucket } from '../lib/bucket/restore';
 import {
   createBucketSnapshot,
   deleteBucketSnapshot,
   listBucketSnapshots,
 } from '../lib/bucket/snapshot';
+import { updateBucket } from '../lib/bucket/update';
 import { config } from '../lib/config';
 import { copy } from '../lib/object/copy';
 import { get } from '../lib/object/get';
@@ -823,6 +827,174 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
         author: 'tigris',
         'project-id': 'abc-123',
       });
+    });
+  });
+
+  describe('softDelete', () => {
+    const ts = Date.now();
+    const softDeleteBucket = `test-soft-delete-${ts}`.toLowerCase();
+    const bucketsToCleanup: string[] = [];
+
+    beforeAll(async () => {
+      const created = await createBucket(softDeleteBucket, { config });
+      expect(
+        created.error,
+        `soft-delete bucket create failed: ${created.error?.message}`
+      ).toBeUndefined();
+      bucketsToCleanup.push(softDeleteBucket);
+    });
+
+    afterAll(async () => {
+      for (const bucket of bucketsToCleanup) {
+        await removeBucket(bucket, { force: true, config });
+      }
+    });
+
+    // Soft-delete settings are eventually consistent: a read immediately
+    // after updateBucket can still report the previous state, so the
+    // round-trip assertions poll getBucketInfo/listBuckets until the change
+    // propagates rather than reading once.
+    const POLL = { timeout: 15000, interval: 1000 };
+
+    it('should enable soft delete and round-trip via getBucketInfo', async () => {
+      const updated = await updateBucket(softDeleteBucket, {
+        softDelete: { enabled: true, retentionDays: 7 },
+        config,
+      });
+      expect(
+        updated.error,
+        `enable soft delete failed: ${updated.error?.message}`
+      ).toBeUndefined();
+
+      await expect
+        .poll(async () => {
+          const info = await getBucketInfo(softDeleteBucket, { config });
+          return info.data?.settings.softDelete;
+        }, POLL)
+        .toEqual({ enabled: true, retentionDays: 7 });
+    });
+
+    it('should report enabled soft delete in listBuckets', async () => {
+      // Ensure soft delete is enabled before listing.
+      const updated = await updateBucket(softDeleteBucket, {
+        softDelete: { enabled: true, retentionDays: 7 },
+        config,
+      });
+      expect(updated.error).toBeUndefined();
+
+      await expect
+        .poll(async () => {
+          const result = await listBuckets({ config });
+          return result.data?.buckets.find((b) => b.name === softDeleteBucket)
+            ?.softDeleteInfo;
+        }, POLL)
+        .toEqual({ enabled: true, retentionDays: 7 });
+    });
+
+    it('should disable soft delete and round-trip via getBucketInfo', async () => {
+      const updated = await updateBucket(softDeleteBucket, {
+        softDelete: { enabled: false },
+        config,
+      });
+      expect(
+        updated.error,
+        `disable soft delete failed: ${updated.error?.message}`
+      ).toBeUndefined();
+
+      await expect
+        .poll(async () => {
+          const info = await getBucketInfo(softDeleteBucket, { config });
+          return info.data?.settings.softDelete;
+        }, POLL)
+        .toEqual({ enabled: false });
+    });
+
+    it('should list a soft-deleted bucket only when deleted is true', async () => {
+      const deletedBucket = `test-soft-deleted-${ts}`.toLowerCase();
+      bucketsToCleanup.push(deletedBucket);
+
+      const created = await createBucket(deletedBucket, { config });
+      expect(created.error).toBeUndefined();
+
+      const enabled = await updateBucket(deletedBucket, {
+        softDelete: { enabled: true, retentionDays: 7 },
+        config,
+      });
+      expect(enabled.error).toBeUndefined();
+
+      // Soft delete (no force) so the bucket is recoverable, not purged.
+      const removed = await removeBucket(deletedBucket, { config });
+      expect(
+        removed.error,
+        `soft delete failed: ${removed.error?.message}`
+      ).toBeUndefined();
+
+      // It should appear when listing deleted buckets...
+      await expect
+        .poll(async () => {
+          const result = await listBuckets({ deleted: true, config });
+          return result.data?.buckets.map((b) => b.name) ?? [];
+        }, POLL)
+        .toContain(deletedBucket);
+
+      // ...and be absent from the default (live-only) listing.
+      await expect
+        .poll(async () => {
+          const result = await listBuckets({ config });
+          return result.data?.buckets.map((b) => b.name) ?? [];
+        }, POLL)
+        .not.toContain(deletedBucket);
+    });
+
+    it('should restore a soft-deleted bucket', async () => {
+      const bucket = `test-soft-restore-${ts}`.toLowerCase();
+      bucketsToCleanup.push(bucket);
+
+      const created = await createBucket(bucket, { config });
+      expect(created.error).toBeUndefined();
+
+      const enabled = await updateBucket(bucket, {
+        softDelete: { enabled: true, retentionDays: 7 },
+        config,
+      });
+      expect(enabled.error).toBeUndefined();
+
+      // Soft delete (no force) so the bucket can be restored.
+      const removed = await removeBucket(bucket, { config });
+      expect(
+        removed.error,
+        `soft delete failed: ${removed.error?.message}`
+      ).toBeUndefined();
+
+      await expect
+        .poll(async () => {
+          const result = await listBuckets({ deleted: true, config });
+          return result.data?.buckets.map((b) => b.name) ?? [];
+        }, POLL)
+        .toContain(bucket);
+
+      const restored = await restoreBucket(bucket, { config });
+      expect(
+        restored.error,
+        `restore failed: ${restored.error?.message}`
+      ).toBeUndefined();
+      expect(restored.data).toEqual({ bucket, restored: true });
+
+      // It should return to the live listing...
+      await expect
+        .poll(async () => {
+          const result = await listBuckets({ config });
+          return result.data?.buckets.map((b) => b.name) ?? [];
+        }, POLL)
+        .toContain(bucket);
+
+      // ...and no longer appear among deleted buckets.
+      await expect
+        .poll(async () => {
+          const result = await listBuckets({ deleted: true, config });
+          return result.data?.buckets.map((b) => b.name) ?? [];
+        }, POLL)
+        .not.toContain(bucket);
     });
   });
 

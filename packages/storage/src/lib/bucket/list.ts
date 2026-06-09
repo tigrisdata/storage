@@ -6,6 +6,7 @@ export type ListBucketsOptions = {
   config?: TigrisStorageConfig;
   paginationToken?: string;
   limit?: number;
+  deleted?: boolean;
 };
 
 export type ListBucketsResponse = {
@@ -23,6 +24,7 @@ export async function listBuckets(
       includeRegionsInfo: true,
       includeTypeInfo: true,
       includeVisibility: true,
+      onlyDeleted: options?.deleted,
     },
     paginationToken: options?.paginationToken,
     limit: options?.limit,

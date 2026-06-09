@@ -9,6 +9,7 @@ type ListingFlags = {
   includeTypeInfo?: boolean;
   includeForkInfo?: boolean;
   includeStats?: boolean;
+  onlyDeleted?: boolean;
 };
 
 type FetchBucketListingOptions = {
@@ -40,6 +41,10 @@ type ListingApiResponse = {
   };
   Buckets?: {
     Bucket?: Array<{
+      SoftDeleteInfo?: {
+        Enabled: boolean;
+        RetentionDays: number;
+      };
       CreationDate: string;
       ForkInfo?: {
         HasChildren: boolean;
@@ -78,6 +83,7 @@ export async function fetchBucketListing(
   if (flags.includeTypeInfo) query.set('IncludeTypeInfo', 'true');
   if (flags.includeForkInfo) query.set('IncludeForkInfo', 'true');
   if (flags.includeStats) query.set('IncludeStats', 'true');
+  if (flags.onlyDeleted) query.set('OnlyDeleted', 'true');
   if (options?.paginationToken) {
     query.set('ContinuationToken', options.paginationToken);
   }
@@ -107,6 +113,12 @@ export async function fetchBucketListing(
           name: bucket.Name,
           creationDate: new Date(bucket.CreationDate),
         };
+        if (bucket.SoftDeleteInfo) {
+          mapped.softDeleteInfo = {
+            enabled: bucket.SoftDeleteInfo.Enabled,
+            retentionDays: bucket.SoftDeleteInfo.RetentionDays,
+          };
+        }
         if (flags.includeRegionsInfo) {
           mapped.regions = bucket.Regions
             ? bucket.Regions.split(',')

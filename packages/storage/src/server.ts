@@ -21,6 +21,11 @@ export {
 } from './lib/bucket/list';
 export { type RemoveBucketOptions, removeBucket } from './lib/bucket/remove';
 export {
+  type RestoreBucketOptions,
+  type RestoreBucketResponse,
+  restoreBucket,
+} from './lib/bucket/restore';
+export {
   type SetBucketCorsOptions,
   setBucketCors,
 } from './lib/bucket/set/cors';
