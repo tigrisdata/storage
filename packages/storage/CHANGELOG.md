@@ -1,5 +1,30 @@
 # @tigrisdata/storage
 
+## 3.13.0
+
+### Minor Changes
+
+- [#155](https://github.com/tigrisdata/storage/pull/155) [`ac3e0b1`](https://github.com/tigrisdata/storage/commit/ac3e0b11517226012924dc68cb9a06150f5ad7dc) Thanks [@designcode](https://github.com/designcode)! - Rework `listForks` to resolve forks server-side and add pagination.
+
+  `listForks` now lists a source bucket's forks with a single fork-scoped `ListBuckets` request (via the `X-Tigris-Fork` header) instead of paging the entire bucket listing and filtering by parent client-side. This avoids scanning every bucket in the account.
+
+  - Forks are now returned as `BucketFork` (`{ name, creationDate }`), replacing `ForkedBucket`.
+  - `ListForksOptions` accepts `limit` and `paginationToken`, and `ListForksResponse` returns a `paginationToken`, so callers can page through forks.
+
+  ```ts
+  const { data } = await listForks("source-bucket", { limit: 50 });
+  // data.forks: { name: string; creationDate: Date }[]
+  // data.paginationToken?: string — pass back via options to fetch the next page
+  ```
+
+### Patch Changes
+
+- [#140](https://github.com/tigrisdata/storage/pull/140) [`493223d`](https://github.com/tigrisdata/storage/commit/493223d0c6a3dd2a20ed4e522a44834cb9e56abc) Thanks [@designcode](https://github.com/designcode)! - Implement `snapshotVersion` support on `getPresignedUrl`. When set, the returned URL is pinned to the version of the object that was current at the time of the snapshot.
+
+  Implemented as a client-side workaround since the gateway's `/?func=presign` endpoint doesn't honor `versionId`: lists the key's versions, finds the latest `versionId <= snapshotVersion` (compared as `BigInt` ns-epoch timestamps), then signs a `GetObject` URL through the AWS SDK presigner with that explicit `VersionId`. The gateway is S3-compatible and honors `versionId` baked into the signed URL.
+
+  Only valid with `operation: 'get'`. Returns an error when the object did not exist at the snapshot time, or when `snapshotVersion` is combined with `operation: 'put'`. Paginates `listVersions` to handle keys with many versions, and filters by exact key match so prefix-colliding siblings (e.g. `foo.txt` vs `foo.txt.bak`) don't pollute the candidate set.
+
 ## 3.12.0
 
 ### Minor Changes
