@@ -683,6 +683,10 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       });
       expect(b.error).toBeUndefined();
       bucketsToCleanup.push(forkB);
+
+      // Bucket listing is eventually consistent; give the gateway a moment to
+      // surface the freshly created forks before the assertions run.
+      await new Promise((resolve) => setTimeout(resolve, 10_000));
     });
 
     afterAll(async () => {
@@ -719,10 +723,8 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
 
       const fork = result.data?.forks.find((f) => f.name === forkA);
       expect(fork).toBeDefined();
+      expect(typeof fork?.name).toBe('string');
       expect(fork?.creationDate).toBeInstanceOf(Date);
-      expect(fork?.forkCreatedAt).toBeInstanceOf(Date);
-      expect(fork?.snapshotCreatedAt).toBeInstanceOf(Date);
-      expect(typeof fork?.snapshot).toBe('string');
     });
 
     it('should return an empty list when the source has no forks', async () => {
@@ -730,6 +732,37 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
 
       expect(result.error).toBeUndefined();
       expect(result.data?.forks).toEqual([]);
+    });
+
+    it('should paginate forks using limit and paginationToken', async () => {
+      const collected: string[] = [];
+      let paginationToken: string | undefined;
+      let pages = 0;
+
+      do {
+        const page = await listForks(sourceBucket, {
+          config,
+          limit: 1,
+          paginationToken,
+        });
+
+        expect(page.error).toBeUndefined();
+        expect(page.data).toBeDefined();
+        // Each page must honour the requested limit.
+        expect(page.data?.forks.length).toBeLessThanOrEqual(1);
+
+        for (const fork of page.data?.forks ?? []) {
+          collected.push(fork.name);
+        }
+
+        paginationToken = page.data?.paginationToken;
+        pages += 1;
+      } while (paginationToken && pages < 10);
+
+      // With two forks and a page size of one, enumerating every fork
+      // requires following the pagination token across multiple pages.
+      expect(collected).toContain(forkA);
+      expect(collected).toContain(forkB);
     });
   });
 

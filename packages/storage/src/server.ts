@@ -5,6 +5,7 @@ export {
   createBucket,
 } from './lib/bucket/create';
 export {
+  type BucketFork,
   type ListForksOptions,
   type ListForksResponse,
   listForks,
@@ -68,7 +69,6 @@ export type {
   BucketTtl,
   BucketType,
   BucketVisibility,
-  ForkedBucket,
   NotificationEvent,
   NotificationEventName,
   NotificationResponse,
