@@ -1,4 +1,6 @@
+import { handleError, TigrisHeaders } from '@shared/index';
 import { config } from '../config';
+import { createStorageClient } from '../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import { listForksLegacy } from './_fork';
 import { fetchBucketListing } from './listing';
@@ -89,4 +91,118 @@ export async function listForks(
       paginationToken: data.paginationToken,
     },
   };
+}
+
+export type MergeForkOptions = {
+  /**
+   * Merge from a specific snapshot of the fork (the merge source) rather than
+   * its current state. Maps to `X-Tigris-Merge-Source-Bucket-Snapshot`.
+   */
+  forkSnapshot?: string;
+  config?: TigrisStorageConfig;
+};
+
+export type MergeForkResponse = {
+  snapshotVersion: string;
+};
+
+export async function mergeFork(
+  forkName: string,
+  sourceBucketName: string,
+  options?: MergeForkOptions
+): Promise<TigrisStorageResponse<MergeForkResponse, Error>> {
+  if (!forkName || !sourceBucketName) {
+    return {
+      error: new Error('Fork name and source bucket name are required'),
+    };
+  }
+
+  const { data: storageHttpClient, error: storageHttpClientError } =
+    createStorageClient(options?.config);
+
+  if (storageHttpClientError) {
+    return { error: storageHttpClientError };
+  }
+
+  try {
+    // The gateway merges a fork back into its parent: the request targets the
+    // parent (`sourceBucketName`) and names the fork as the merge source. The
+    // merge source must be a direct fork of the target, otherwise the gateway
+    // returns `400 InvalidArgument`.
+    const response = await storageHttpClient.request<unknown, unknown>({
+      method: 'PUT',
+      path: `/${sourceBucketName}`,
+      headers: {
+        [TigrisHeaders.FORK_MERGE_SOURCE_BUCKET]: forkName,
+        ...(options?.forkSnapshot
+          ? {
+              [TigrisHeaders.FORK_MERGE_SOURCE_BUCKET_SNAPSHOT]:
+                options?.forkSnapshot,
+            }
+          : {}),
+      },
+    });
+
+    if (response.error) {
+      return { error: response.error };
+    }
+
+    return {
+      data: {
+        snapshotVersion:
+          response.headers.get(TigrisHeaders.SNAPSHOT_VERSION) ?? '',
+      },
+    };
+  } catch (error) {
+    return handleError(error as Error);
+  }
+}
+
+export type RebaseForkOptions = {
+  config?: TigrisStorageConfig;
+};
+
+export type RebaseForkResponse = {
+  snapshotVersion: string;
+};
+
+export async function rebaseFork(
+  forkName: string,
+  options?: RebaseForkOptions
+): Promise<TigrisStorageResponse<RebaseForkResponse, Error>> {
+  if (!forkName) {
+    return {
+      error: new Error('Fork name is required'),
+    };
+  }
+
+  const { data: storageHttpClient, error: storageHttpClientError } =
+    createStorageClient(options?.config);
+
+  if (storageHttpClientError) {
+    return { error: storageHttpClientError };
+  }
+
+  try {
+    const response = await storageHttpClient.request<unknown, unknown>({
+      method: 'PUT',
+      path: `/${forkName}`,
+      headers: {
+        [TigrisHeaders.REBASE]: 'true',
+      },
+    });
+
+    if (response.error) {
+      return { error: response.error };
+    }
+
+    return {
+      data: {
+        snapshotVersion:
+          response.headers.get(TigrisHeaders.SNAPSHOT_VERSION) ?? '',
+      },
+    };
+  } catch (error) {
+    return handleError(error as Error);
+  }
 }
