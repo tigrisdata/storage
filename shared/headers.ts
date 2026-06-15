@@ -14,6 +14,7 @@ export enum TigrisHeaders {
   READ_SOURCE = 'X-Tigris-Read-Source',
 
   REGIONS = 'X-Tigris-Regions',
+
   SNAPSHOT = 'X-Tigris-Snapshot',
   FORK = 'X-Tigris-Fork',
   SNAPSHOT_VERSION = 'X-Tigris-Snapshot-Version',
@@ -21,6 +22,11 @@ export enum TigrisHeaders {
   HAS_FORKS = 'X-Tigris-Is-Fork-Parent',
   FORK_SOURCE_BUCKET = 'X-Tigris-Fork-Source-Bucket',
   FORK_SOURCE_BUCKET_SNAPSHOT = 'X-Tigris-Fork-Source-Bucket-Snapshot',
+
+  FORK_MERGE_SOURCE_BUCKET = 'X-Tigris-Merge-Source-Bucket',
+  FORK_MERGE_SOURCE_BUCKET_SNAPSHOT = 'X-Tigris-Merge-Source-Bucket-Snapshot',
+
+  REBASE = 'X-Tigris-Rebase',
 
   RENAME = 'X-Tigris-Rename',
   COPY_SOURCE = 'X-Amz-Copy-Source',
