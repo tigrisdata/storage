@@ -219,14 +219,6 @@ export type BucketOwner = {
   id: string;
 };
 
-export type ForkedBucket = {
-  name: string;
-  creationDate: Date;
-  forkCreatedAt: Date;
-  snapshot: string;
-  snapshotCreatedAt: Date;
-};
-
 export type BucketsStats = {
   activeBuckets: number;
   totalObjects: number;

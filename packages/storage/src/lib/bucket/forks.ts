@@ -1,14 +1,24 @@
+import { ListBucketsCommand } from '@aws-sdk/client-s3';
+import type { HttpRequest } from '@aws-sdk/types';
+import { TigrisHeaders } from '@shared/index';
 import { config } from '../config';
+import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
-import { fetchBucketListing } from './listing';
-import type { ForkedBucket } from './types';
 
 export type ListForksOptions = {
   config?: TigrisStorageConfig;
+  paginationToken?: string;
+  limit?: number;
+};
+
+export type BucketFork = {
+  name: string;
+  creationDate: Date;
 };
 
 export type ListForksResponse = {
-  forks: ForkedBucket[];
+  forks: BucketFork[];
+  paginationToken?: string;
 };
 
 export async function listForks(
@@ -33,37 +43,48 @@ export async function listForks(
     return { error: new Error('Source bucket name is required') };
   }
 
-  const forks: ForkedBucket[] = [];
-  let paginationToken: string | undefined;
+  const { data: tigrisClient, error } = createTigrisClient(
+    options?.config,
+    true
+  );
 
-  do {
-    const { data, error } = await fetchBucketListing({
-      flags: { includeForkInfo: true },
-      paginationToken,
-      config: options?.config,
-    });
+  if (error) {
+    return { error };
+  }
 
-    if (error) {
-      return { error };
-    }
+  const command = new ListBucketsCommand({
+    ContinuationToken: options?.paginationToken,
+    MaxBuckets: options?.limit,
+  });
+  command.middlewareStack.add(
+    (next) => async (args) => {
+      (args.request as HttpRequest).headers[TigrisHeaders.FORK] = sourceBucket;
+      return next(args);
+    },
+    { step: 'build' }
+  );
 
-    for (const bucket of data.buckets) {
-      const parent = bucket.forkInfo?.parents.find(
-        (p) => p.bucketName === sourceBucket
-      );
-      if (parent) {
-        forks.push({
-          name: bucket.name,
-          creationDate: bucket.creationDate,
-          forkCreatedAt: parent.forkCreatedAt,
-          snapshot: parent.snapshot,
-          snapshotCreatedAt: parent.snapshotCreatedAt,
-        });
-      }
-    }
-
-    paginationToken = data.paginationToken;
-  } while (paginationToken);
-
-  return { data: { forks } };
+  try {
+    return tigrisClient
+      .send(command)
+      .then((res) => {
+        return {
+          data: {
+            forks:
+              res.Buckets?.map((bucket) => ({
+                name: bucket.Name!,
+                creationDate: new Date(bucket.CreationDate!),
+              })) ?? [],
+            paginationToken: res.ContinuationToken,
+          },
+        };
+      })
+      .catch((error) => {
+        return {
+          error: new Error(`Unable to list bucket forks: ${error.message}`),
+        };
+      });
+  } catch {
+    return { error: new Error('Unable to list bucket forks') };
+  }
 }
