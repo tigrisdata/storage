@@ -4,6 +4,15 @@ on:
   push:
     branches:
       - main
+  # Manual pre-release: run this workflow from the branch you want to ship a
+  # beta from (pick it in the "Run workflow" dropdown).
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "npm dist-tag to publish a beta snapshot under"
+        required: true
+        default: "beta"
+        type: string
 
 permissions:
   id-token: write
@@ -15,7 +24,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     env:
-      NPM_CONFIG_PROVENANCE: 'true'
+      NPM_CONFIG_PROVENANCE: "true"
 
     steps:
       - uses: actions/checkout@v4
@@ -26,8 +35,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: 'pnpm'
+          node-version: "24"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -49,12 +58,35 @@ jobs:
           TIGRIS_STORAGE_ENDPOINT: ${{ secrets.TIGRIS_STORAGE_ENDPOINT }}
         run: pnpm -r --if-present run test
 
+      # Stable release (push to main): open/update the Version Packages PR, or
+      # publish to the `latest` tag when that PR merges.
       - name: Create release PR or publish
+        if: ${{ github.event_name == 'push' }}
         uses: changesets/action@v1
         with:
           version: pnpm changeset version
           publish: pnpm changeset publish
-          commit: 'chore(release): bump versions and update changelogs'
-          title: 'chore(release): bump versions and update changelogs'
+          commit: "chore(release): bump versions and update changelogs"
+          title: "chore(release): bump versions and update changelogs"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Beta pre-release (manual dispatch from any branch): apply pending
+      # changesets as an ephemeral snapshot version (e.g. 3.13.0-beta-<timestamp>)
+      # and publish it under the chosen dist-tag, without moving `latest`. The
+      # version bump stays in the runner's working tree and is never committed.
+      # `inputs.tag` is bound to an env var and referenced as "$TAG" rather than
+      # interpolated into the shell command, per GitHub's hardening guide
+      # (avoids script injection from a crafted dispatch input).
+      - name: Version (snapshot)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          TAG: ${{ inputs.tag }}
+        run: pnpm changeset version --snapshot "$TAG"
+
+      - name: Publish snapshot to npm
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          TAG: ${{ inputs.tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm changeset publish --tag "$TAG" --no-git-tag
