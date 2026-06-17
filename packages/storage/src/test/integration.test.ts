@@ -727,6 +727,36 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       expect(fork?.creationDate).toBeInstanceOf(Date);
     });
 
+    it('should expose fork info pointing back at the source bucket', async () => {
+      const result = await listForks(sourceBucket, { config });
+
+      const fork = result.data?.forks.find((f) => f.name === forkA);
+      expect(fork?.forkInfo).toBeDefined();
+
+      const parent = fork?.forkInfo?.parents.find(
+        (p) => p.bucketName === sourceBucket
+      );
+      expect(parent, 'fork should list its source as a parent').toBeDefined();
+      expect(parent?.forkCreatedAt).toBeInstanceOf(Date);
+      expect(parent?.snapshotCreatedAt).toBeInstanceOf(Date);
+      expect(typeof parent?.snapshot).toBe('string');
+    });
+
+    it('should carry backward-compatible ForkedBucket fields', async () => {
+      const result = await listForks(sourceBucket, { config });
+
+      const fork = result.data?.forks.find((f) => f.name === forkA);
+      expect(fork).toBeDefined();
+      // Deprecated aliases retained for pre-pagination-rework consumers.
+      expect(fork?.forkCreatedAt).toBeInstanceOf(Date);
+      expect(fork?.snapshotCreatedAt).toBeInstanceOf(Date);
+      expect(typeof fork?.snapshot).toBe('string');
+      // forkCreatedAt mirrors the fork bucket's own creation date.
+      expect(fork?.forkCreatedAt?.getTime()).toBe(
+        fork?.forkInfo?.parents[0].forkCreatedAt?.getTime()
+      );
+    });
+
     it('should return an empty list when the source has no forks', async () => {
       const result = await listForks(unrelatedBucket, { config });
 
