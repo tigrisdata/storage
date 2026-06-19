@@ -1335,6 +1335,32 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('Object key is required');
     });
+
+    it('should generate presigned GET URL with --snapshot-version', () => {
+      const result = runCli(
+        `presign ${testBucket}/presign-test.txt --snapshot-version 1765889000501544464 --access-key ${accessKey}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.trim()).toMatch(/^https:\/\//);
+    });
+
+    it('should accept the --snapshot alias for GET', () => {
+      const result = runCli(
+        `presign ${testBucket}/presign-test.txt --snapshot 1765889000501544464 --access-key ${accessKey}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.trim()).toMatch(/^https:\/\//);
+    });
+
+    it('should reject --snapshot-version with --method put', () => {
+      const result = runCli(
+        `presign ${testBucket}/presign-test.txt --method put --snapshot-version 1765889000501544464 --access-key ${accessKey}`
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain(
+        'Snapshot version is only supported for GET requests'
+      );
+    });
   });
 
   describe('buckets list command', () => {

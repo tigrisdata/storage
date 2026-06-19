@@ -37,6 +37,16 @@ export default async function presign(options: Record<string, unknown>) {
   const accessKeyFlag = getOption<string>(options, ['access-key', 'accessKey']);
   const selectFlag = getOption<boolean>(options, ['select']);
 
+  const snapshotVersion = getOption<string>(options, [
+    'snapshot-version',
+    'snapshotVersion',
+    'snapshot',
+  ]);
+
+  if (snapshotVersion && method !== 'get') {
+    exitWithError('Snapshot version is only supported for GET requests');
+  }
+
   const config = await getStorageConfig();
 
   // Resolve access key ID
@@ -75,6 +85,7 @@ export default async function presign(options: Record<string, unknown>) {
     method: method as 'get' | 'put',
     expiresIn,
     accessKeyId,
+    ...(snapshotVersion ? { snapshotVersion } : {}),
     config: {
       ...config,
       bucket,

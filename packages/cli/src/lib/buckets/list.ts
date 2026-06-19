@@ -1,7 +1,7 @@
 import { getStorageConfig } from '@auth/provider.js';
 import { listBuckets, listForks } from '@tigrisdata/storage';
 import { failWithError } from '@utils/exit.js';
-import { formatOutput, formatPaginatedOutput } from '@utils/format.js';
+import { formatPaginatedOutput } from '@utils/format.js';
 import {
   msg,
   printEmpty,
@@ -19,14 +19,8 @@ export default async function list(options: Record<string, unknown>) {
   const format = getFormat(options);
   const forksOf = getOption<string>(options, ['forks-of', 'forksOf']);
   const deleted = getOption<boolean>(options, ['deleted']);
-  const { limit, pageToken, isPaginated } = getPaginationOptions(options);
+  const { limit, pageToken } = getPaginationOptions(options);
   const config = await getStorageConfig();
-
-  if (forksOf && isPaginated) {
-    console.warn(
-      '⚠ Pagination flags are ignored when --forks-of is used (all buckets are fetched for filtering)'
-    );
-  }
 
   if (forksOf && deleted) {
     console.warn(
@@ -34,9 +28,18 @@ export default async function list(options: Record<string, unknown>) {
     );
   }
 
+  const columns = [
+    { key: 'name', header: 'Name' },
+    { key: 'created', header: 'Created' },
+  ];
+
   if (forksOf) {
     // Filter for forks of the named source bucket
-    const { data, error: infoError } = await listForks(forksOf, { config });
+    const { data, error: infoError } = await listForks(forksOf, {
+      ...(limit !== undefined ? { limit } : {}),
+      ...(pageToken ? { paginationToken: pageToken } : {}),
+      config,
+    });
 
     if (infoError) {
       failWithError(context, infoError);
@@ -50,15 +53,26 @@ export default async function list(options: Record<string, unknown>) {
     const forks: Array<{ name: string; created: Date }> = [];
 
     for (const bucket of data.forks) {
-      forks.push({ name: bucket.name, created: bucket.creationDate });
+      forks.push({ name: bucket.name!, created: bucket.creationDate! });
     }
 
-    const output = formatOutput(forks, format!, 'forks', 'fork', [
-      { key: 'name', header: 'Name' },
-      { key: 'created', header: 'Created' },
-    ]);
+    const nextToken = data.paginationToken || undefined;
+
+    const output = formatPaginatedOutput(
+      forks,
+      format!,
+      'forks',
+      'fork',
+      columns,
+      { paginationToken: nextToken }
+    );
 
     console.log(output);
+
+    if (format !== 'json' && format !== 'xml') {
+      printPaginationHint(nextToken);
+    }
+
     printSuccess(context, { count: forks.length });
     return;
   }
@@ -83,11 +97,6 @@ export default async function list(options: Record<string, unknown>) {
     name: bucket.name,
     created: bucket.creationDate,
   }));
-
-  const columns = [
-    { key: 'name', header: 'Name' },
-    { key: 'created', header: 'Created' },
-  ];
 
   const nextToken = data.paginationToken || undefined;
 

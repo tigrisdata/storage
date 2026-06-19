@@ -437,6 +437,9 @@ commands:
         description: Output format
         options: [url, json]
         default: url
+      - name: snapshot-version
+        description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Only supported for GET requests.
+        alias: snapshot
 
   # cp
   - name: cp
