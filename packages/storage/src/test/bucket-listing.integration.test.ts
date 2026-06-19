@@ -28,7 +28,7 @@ describe.skipIf(skipTests)('listBuckets pagination', () => {
     }
     // Bucket listing is eventually consistent.
     await new Promise((resolve) => setTimeout(resolve, 10_000));
-  }, 60_000);
+  });
 
   afterAll(async () => {
     for (const name of created) {
