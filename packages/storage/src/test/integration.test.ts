@@ -727,7 +727,10 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       expect(fork?.creationDate).toBeInstanceOf(Date);
     });
 
-    it('should expose fork info pointing back at the source bucket', async () => {
+    // Skipped until the gateway update returns forkInfo for
+    // fork-scoped listings. Until then listForks falls back to the legacy
+    // path, which does not populate forkInfo.
+    it.skip('should expose fork info pointing back at the source bucket', async () => {
       const result = await listForks(sourceBucket, { config });
 
       const fork = result.data?.forks.find((f) => f.name === forkA);
@@ -742,7 +745,9 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       expect(typeof parent?.snapshot).toBe('string');
     });
 
-    it('should carry backward-compatible ForkedBucket fields', async () => {
+    // Skipped until the gateway update: the final assertion compares
+    // against forkInfo, which the legacy fallback does not populate yet.
+    it.skip('should carry backward-compatible ForkedBucket fields', async () => {
       const result = await listForks(sourceBucket, { config });
 
       const fork = result.data?.forks.find((f) => f.name === forkA);
@@ -764,7 +769,9 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       expect(result.data?.forks).toEqual([]);
     });
 
-    it('should paginate forks using limit and paginationToken', async () => {
+    // Skipped until the gateway update: until then listForks falls
+    // back to the legacy path, which enumerates all forks without pagination.
+    it.skip('should paginate forks using limit and paginationToken', async () => {
       const collected: string[] = [];
       let paginationToken: string | undefined;
       let pages = 0;

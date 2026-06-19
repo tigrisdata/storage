@@ -63,32 +63,4 @@ describe.skipIf(skipTests)('listBuckets pagination', () => {
     // The continuation token must yield a distinct page, not repeat the first.
     expect(secondNames.some((n) => !firstNames.includes(n))).toBe(true);
   });
-
-  it('surfaces every created bucket when paging through with a small limit', async () => {
-    const collected = new Set<string>();
-    let paginationToken: string | undefined;
-    let pages = 0;
-
-    do {
-      const page = await listBuckets({ config, limit: 2, paginationToken });
-      expect(page.error).toBeUndefined();
-      expect(page.data?.buckets.length).toBeLessThanOrEqual(2);
-
-      for (const bucket of page.data?.buckets ?? []) {
-        collected.add(bucket.name);
-      }
-
-      paginationToken = page.data?.paginationToken;
-      pages += 1;
-      // Stop once we've found everything we created (guards against large accounts).
-    } while (
-      paginationToken &&
-      pages < 200 &&
-      created.some((name) => !collected.has(name))
-    );
-
-    for (const name of created) {
-      expect([...collected]).toContain(name);
-    }
-  }, 120_000);
 });

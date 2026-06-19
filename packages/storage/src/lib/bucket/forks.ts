@@ -1,5 +1,6 @@
 import { config } from '../config';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import { listForksLegacy } from './_fork';
 import { fetchBucketListing } from './listing';
 import type { Bucket } from './types';
 
@@ -67,6 +68,10 @@ export async function listForks(
 
   if (error) {
     return { error: new Error(`Unable to list buckets ${error.message}`) };
+  }
+
+  if (data.buckets.every((bucket) => bucket.forkInfo === undefined)) {
+    return listForksLegacy(sourceBucket, options);
   }
 
   return {
