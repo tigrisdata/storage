@@ -6,6 +6,7 @@ export {
 } from './lib/bucket/create';
 export {
   type BucketFork,
+  type ForkedBucket,
   type ListForksOptions,
   type ListForksResponse,
   listForks,

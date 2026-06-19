@@ -1,3 +1,4 @@
+import { TigrisHeaders } from '@shared/index';
 import { createStorageClient } from '../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import type { Bucket, BucketOwner, BucketsStats, BucketType } from './types';
@@ -10,6 +11,7 @@ type ListingFlags = {
   includeForkInfo?: boolean;
   includeStats?: boolean;
   onlyDeleted?: boolean;
+  forksOf?: string;
 };
 
 type FetchBucketListingOptions = {
@@ -27,8 +29,7 @@ type FetchBucketListingResponse = {
 };
 
 type ListingApiResponse = {
-  NextContinuationToken?: string;
-  IsTruncated?: boolean;
+  ContinuationToken?: string;
   Owner?: {
     DisplayName?: string;
     ID?: string;
@@ -85,10 +86,10 @@ export async function fetchBucketListing(
   if (flags.includeStats) query.set('IncludeStats', 'true');
   if (flags.onlyDeleted) query.set('OnlyDeleted', 'true');
   if (options?.paginationToken) {
-    query.set('ContinuationToken', options.paginationToken);
+    query.set('continuation-token', options.paginationToken);
   }
   if (options?.limit !== undefined) {
-    query.set('MaxBuckets', String(options.limit));
+    query.set('max-buckets', String(options.limit));
   }
 
   try {
@@ -100,6 +101,7 @@ export async function fetchBucketListing(
       path: `/?${query.toString()}`,
       headers: {
         Accept: 'application/json',
+        ...(flags.forksOf ? { [TigrisHeaders.FORK]: flags.forksOf } : {}),
       },
     });
 
@@ -130,7 +132,7 @@ export async function fetchBucketListing(
         if (flags.includeVisibility && bucket.Visibility) {
           mapped.visibility = bucket.Visibility.IsPublic ? 'public' : 'private';
         }
-        if (flags.includeForkInfo) {
+        if (flags.includeForkInfo || flags.forksOf !== undefined) {
           mapped.forkInfo = bucket.ForkInfo
             ? {
                 hasChildren: bucket.ForkInfo.HasChildren,
@@ -148,8 +150,8 @@ export async function fetchBucketListing(
       }) ?? [];
 
     const data: FetchBucketListingResponse = {
-      paginationToken: response.data.IsTruncated
-        ? response.data.NextContinuationToken
+      paginationToken: response.data.ContinuationToken
+        ? response.data.ContinuationToken
         : undefined,
       buckets,
     };
