@@ -926,6 +926,27 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
     // propagates rather than reading once.
     const POLL = { timeout: 15000, interval: 1000 };
 
+    // The account can hold more buckets than a single listing page returns, so
+    // page through the whole listing to reliably find (or confirm the absence
+    // of) a specific bucket instead of checking only the first page.
+    async function listAllBuckets(opts?: { deleted?: boolean }) {
+      const first = await listBuckets({ config, deleted: opts?.deleted });
+      if (first.error) throw first.error;
+      const all = [...(first.data?.buckets ?? [])];
+      let paginationToken = first.data?.paginationToken;
+      while (paginationToken) {
+        const result = await listBuckets({
+          config,
+          deleted: opts?.deleted,
+          paginationToken,
+        });
+        if (result.error) throw result.error;
+        all.push(...(result.data?.buckets ?? []));
+        paginationToken = result.data?.paginationToken;
+      }
+      return all;
+    }
+
     it('should enable soft delete and round-trip via getBucketInfo', async () => {
       const updated = await updateBucket(softDeleteBucket, {
         softDelete: { enabled: true, retentionDays: 7 },
@@ -954,8 +975,8 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
 
       await expect
         .poll(async () => {
-          const result = await listBuckets({ config });
-          return result.data?.buckets.find((b) => b.name === softDeleteBucket)
+          const buckets = await listAllBuckets();
+          return buckets.find((b) => b.name === softDeleteBucket)
             ?.softDeleteInfo;
         }, POLL)
         .toEqual({ enabled: true, retentionDays: 7 });
@@ -1002,16 +1023,16 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       // It should appear when listing deleted buckets...
       await expect
         .poll(async () => {
-          const result = await listBuckets({ deleted: true, config });
-          return result.data?.buckets.map((b) => b.name) ?? [];
+          const buckets = await listAllBuckets({ deleted: true });
+          return buckets.map((b) => b.name);
         }, POLL)
         .toContain(deletedBucket);
 
       // ...and be absent from the default (live-only) listing.
       await expect
         .poll(async () => {
-          const result = await listBuckets({ config });
-          return result.data?.buckets.map((b) => b.name) ?? [];
+          const buckets = await listAllBuckets();
+          return buckets.map((b) => b.name);
         }, POLL)
         .not.toContain(deletedBucket);
     });
@@ -1038,8 +1059,8 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
 
       await expect
         .poll(async () => {
-          const result = await listBuckets({ deleted: true, config });
-          return result.data?.buckets.map((b) => b.name) ?? [];
+          const buckets = await listAllBuckets({ deleted: true });
+          return buckets.map((b) => b.name);
         }, POLL)
         .toContain(bucket);
 
@@ -1053,16 +1074,16 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       // It should return to the live listing...
       await expect
         .poll(async () => {
-          const result = await listBuckets({ config });
-          return result.data?.buckets.map((b) => b.name) ?? [];
+          const buckets = await listAllBuckets();
+          return buckets.map((b) => b.name);
         }, POLL)
         .toContain(bucket);
 
       // ...and no longer appear among deleted buckets.
       await expect
         .poll(async () => {
-          const result = await listBuckets({ deleted: true, config });
-          return result.data?.buckets.map((b) => b.name) ?? [];
+          const buckets = await listAllBuckets({ deleted: true });
+          return buckets.map((b) => b.name);
         }, POLL)
         .not.toContain(bucket);
     });

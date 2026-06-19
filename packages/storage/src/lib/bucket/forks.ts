@@ -70,7 +70,10 @@ export async function listForks(
     return { error: new Error(`Unable to list buckets ${error.message}`) };
   }
 
-  if (data.buckets.every((bucket) => bucket.forkInfo === undefined)) {
+  if (
+    data.buckets.length > 0 &&
+    data.buckets.every((bucket) => bucket.forkInfo === undefined)
+  ) {
     return listForksLegacy(sourceBucket, options);
   }
 
