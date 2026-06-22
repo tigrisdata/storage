@@ -651,6 +651,9 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
     const forkA = `test-fork-a-${ts}`.toLowerCase();
     const forkB = `test-fork-b-${ts}`.toLowerCase();
     const bucketsToCleanup: string[] = [];
+    // Fork listing is eventually consistent and can lag, so tests poll for the
+    // forks to surface instead of reading once.
+    const POLL = { timeout: 45_000, interval: 2000 };
 
     beforeAll(async () => {
       const src = await createBucket(sourceBucket, {
@@ -683,10 +686,6 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       });
       expect(b.error).toBeUndefined();
       bucketsToCleanup.push(forkB);
-
-      // Bucket listing is eventually consistent; give the gateway a moment to
-      // surface the freshly created forks before the assertions run.
-      await new Promise((resolve) => setTimeout(resolve, 10_000));
     });
 
     afterAll(async () => {
@@ -700,31 +699,43 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
     });
 
     it('should list all forks of a source bucket', async () => {
-      const result = await listForks(sourceBucket, { config });
-
-      expect(result.error).toBeUndefined();
-      expect(result.data).toBeDefined();
-
-      const names = result.data?.forks.map((f) => f.name) ?? [];
-      expect(names).toContain(forkA);
-      expect(names).toContain(forkB);
+      await expect
+        .poll(async () => {
+          const result = await listForks(sourceBucket, { config });
+          const names = result.data?.forks.map((f) => f.name) ?? [];
+          return names.includes(forkA) && names.includes(forkB);
+        }, POLL)
+        .toBe(true);
     });
 
     it('should not include buckets forked from a different source', async () => {
-      const result = await listForks(sourceBucket, { config });
-
-      const names = result.data?.forks.map((f) => f.name) ?? [];
-      expect(names).not.toContain(unrelatedBucket);
-      expect(names).not.toContain(sourceBucket);
+      await expect
+        .poll(async () => {
+          const result = await listForks(sourceBucket, { config });
+          const names = result.data?.forks.map((f) => f.name) ?? [];
+          // Wait for the forks to surface, then confirm the unrelated bucket
+          // and the source itself are absent.
+          return (
+            names.includes(forkA) &&
+            !names.includes(unrelatedBucket) &&
+            !names.includes(sourceBucket)
+          );
+        }, POLL)
+        .toBe(true);
     });
 
     it('should populate fork metadata for each returned bucket', async () => {
-      const result = await listForks(sourceBucket, { config });
-
-      const fork = result.data?.forks.find((f) => f.name === forkA);
-      expect(fork).toBeDefined();
-      expect(typeof fork?.name).toBe('string');
-      expect(fork?.creationDate).toBeInstanceOf(Date);
+      await expect
+        .poll(async () => {
+          const result = await listForks(sourceBucket, { config });
+          const fork = result.data?.forks.find((f) => f.name === forkA);
+          return (
+            fork !== undefined &&
+            typeof fork.name === 'string' &&
+            fork.creationDate instanceof Date
+          );
+        }, POLL)
+        .toBe(true);
     });
 
     // Skipped until the gateway update returns forkInfo for
