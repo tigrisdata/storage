@@ -2104,14 +2104,19 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
   describe('bucket snapshot toggle', () => {
     const toggleBucket = `${testPrefix}-toggle`;
+    // Separate fresh bucket: enabling snapshots on an already-enabled bucket
+    // is rejected, so the --json test needs its own regular bucket to enable.
+    const toggleJsonBucket = `${testPrefix}-toggle-json`;
 
     beforeAll(() => {
-      // Regular bucket (no --enable-snapshots) so we can turn snapshots on.
+      // Regular buckets (no --enable-snapshots) so we can turn snapshots on.
       runCli(`mk ${toggleBucket}`);
+      runCli(`mk ${toggleJsonBucket}`);
     });
 
     afterAll(() => {
       runCli(`rm ${t3(toggleBucket)} -f`);
+      runCli(`rm ${t3(toggleJsonBucket)} -f`);
     });
 
     it('should enable snapshots on an existing regular bucket', () => {
@@ -2120,12 +2125,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
 
     it('should output JSON with --json on enable-snapshots', () => {
-      const result = runCli(`buckets enable-snapshots ${toggleBucket} --json`);
+      const result = runCli(
+        `buckets enable-snapshots ${toggleJsonBucket} --json`
+      );
       expect(result.exitCode).toBe(0);
       const parsed = JSON.parse(result.stdout.trim());
       expect(parsed).toMatchObject({
         action: 'snapshots-enabled',
-        name: toggleBucket,
+        name: toggleJsonBucket,
       });
     });
 
