@@ -1270,9 +1270,17 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
   describe('presign command', () => {
     const accessKey = process.env.TIGRIS_STORAGE_ACCESS_KEY_ID!;
+    let snapshotVersion: string;
 
     beforeAll(() => {
       runCli(`touch ${testBucket}/presign-test.txt`);
+      // Take a real snapshot AFTER creating the object so the snapshot
+      // version post-dates the object. The SDK resolves --snapshot-version
+      // by finding an object version <= the snapshot version, so a hardcoded
+      // timestamp can never match a freshly-created object.
+      runCli(`snapshots take ${testBucket}`);
+      const list = runCli(`snapshots list ${testBucket} --format json`);
+      snapshotVersion = JSON.parse(list.stdout.trim()).items[0].version;
     });
 
     afterAll(() => {
@@ -1334,6 +1342,32 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(`presign ${testBucket} --access-key ${accessKey}`);
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('Object key is required');
+    });
+
+    it('should generate presigned GET URL with --snapshot-version', () => {
+      const result = runCli(
+        `presign ${testBucket}/presign-test.txt --snapshot-version ${snapshotVersion} --access-key ${accessKey}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.trim()).toMatch(/^https:\/\//);
+    });
+
+    it('should accept the --snapshot alias for GET', () => {
+      const result = runCli(
+        `presign ${testBucket}/presign-test.txt --snapshot ${snapshotVersion} --access-key ${accessKey}`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.trim()).toMatch(/^https:\/\//);
+    });
+
+    it('should reject --snapshot-version with --method put', () => {
+      const result = runCli(
+        `presign ${testBucket}/presign-test.txt --method put --snapshot-version ${snapshotVersion} --access-key ${accessKey}`
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain(
+        'Snapshot version is only supported for GET requests'
+      );
     });
   });
 
@@ -2053,6 +2087,59 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain(forkBucket);
     }, 120_000);
+
+    it('should reject disable-snapshots while the bucket has dependent forks', () => {
+      // The parent must register the fork before the guard trips (eventually
+      // consistent); the preceding test already polled until it was listed.
+      let result = { stdout: '', stderr: '', exitCode: 0 };
+      for (let i = 0; i < 5; i++) {
+        result = runCli(`buckets disable-snapshots ${snapBucket}`);
+        if (result.exitCode === 1) break;
+        if (i < 4) execSync('sleep 5');
+      }
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr.toLowerCase()).toContain('fork');
+    }, 120_000);
+  });
+
+  describe('bucket snapshot toggle', () => {
+    const toggleBucket = `${testPrefix}-toggle`;
+    // Separate fresh bucket: enabling snapshots on an already-enabled bucket
+    // is rejected, so the --json test needs its own regular bucket to enable.
+    const toggleJsonBucket = `${testPrefix}-toggle-json`;
+
+    beforeAll(() => {
+      // Regular buckets (no --enable-snapshots) so we can turn snapshots on.
+      runCli(`mk ${toggleBucket}`);
+      runCli(`mk ${toggleJsonBucket}`);
+    });
+
+    afterAll(() => {
+      runCli(`rm ${t3(toggleBucket)} -f`);
+      runCli(`rm ${t3(toggleJsonBucket)} -f`);
+    });
+
+    it('should enable snapshots on an existing regular bucket', () => {
+      const result = runCli(`buckets enable-snapshots ${toggleBucket}`);
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should output JSON with --json on enable-snapshots', () => {
+      const result = runCli(
+        `buckets enable-snapshots ${toggleJsonBucket} --json`
+      );
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(parsed).toMatchObject({
+        action: 'snapshots-enabled',
+        name: toggleJsonBucket,
+      });
+    });
+
+    it('should disable snapshots on a bucket with no forks', () => {
+      const result = runCli(`buckets disable-snapshots ${toggleBucket}`);
+      expect(result.exitCode).toBe(0);
+    });
   });
 
   describe('credentials test command', () => {

@@ -287,6 +287,7 @@ tigris presign <path> [flags]
 | `--access-key` | Access key ID to use for signing. If not provided, resolved from credentials or auto-selected |
 | `--select` | Interactively select an access key (OAuth only) |
 | `--format` | Output format (default: url) |
+| `-snapshot, --snapshot-version` | Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Only supported for GET requests. |
 
 **Examples:**
 ```bash
@@ -445,7 +446,10 @@ Create, inspect, update, and delete buckets. Buckets are top-level containers th
 | `tigris buckets create` (c) | Create a new bucket with optional access, tier, and location settings |
 | `tigris buckets get` (g) | Show details for a bucket including access level, region, tier, and custom domain |
 | `tigris buckets delete` (d) | Delete one or more buckets by name. The bucket must be empty or delete-protection must be off |
+| `tigris buckets restore` | Restore a soft-deleted bucket within its retention window. List recoverable buckets with "tigris buckets list --deleted" |
 | `tigris buckets set` (s) | Update settings on an existing bucket such as access level, location, caching, or custom domain |
+| `tigris buckets enable-snapshots` | Enable snapshots on an existing bucket, converting it to a snapshot bucket |
+| `tigris buckets disable-snapshots` | Disable snapshots on an existing bucket, converting it back to a regular bucket. Rejected while the bucket has dependent forks |
 | `tigris buckets set-locations` | Set the data locations for a bucket |
 | `tigris buckets set-migration` | Configure data migration from an external S3-compatible source bucket. Tigris will pull objects on demand from the source |
 | `tigris buckets migrate` | Actively migrate all objects from a shadow bucket to Tigris by scheduling server-side migration for unmigrated objects |
@@ -465,6 +469,7 @@ tigris buckets list [flags]
 |------|-------------|
 | `--format` | Output format (default: table) |
 | `--forks-of` | Only list buckets that are forks of the named source bucket |
+| `--deleted` | Only list soft-deleted buckets |
 | `--limit` | Maximum number of items to return per page |
 | `-pt, --page-token` | Pagination token from a previous request to fetch the next page |
 
@@ -473,6 +478,7 @@ tigris buckets list [flags]
 tigris buckets list
 tigris buckets list --format json
 tigris buckets list --forks-of my-bucket
+tigris buckets list --deleted
 ```
 
 #### `tigris buckets create` (c)
@@ -537,6 +543,19 @@ tigris buckets delete my-bucket --yes
 tigris buckets delete bucket-a,bucket-b --yes
 ```
 
+#### `tigris buckets restore`
+
+Restore a soft-deleted bucket within its retention window. List recoverable buckets with "tigris buckets list --deleted"
+
+```
+tigris buckets restore <name>
+```
+
+**Examples:**
+```bash
+tigris buckets restore my-bucket
+```
+
 #### `tigris buckets set` (s)
 
 Update settings on an existing bucket such as access level, location, caching, or custom domain
@@ -554,6 +573,8 @@ tigris buckets set <name> [flags]
 | `--cache-control` | Default cache-control header value |
 | `--custom-domain` | Custom domain for the bucket |
 | `--enable-delete-protection` | Enable delete protection |
+| `--soft-delete` | Enable or disable soft delete (recoverable deletes). Requires --retention-days when enabling |
+| `--retention-days` | Number of days to retain soft-deleted objects (required when enabling --soft-delete) |
 | `--enable-additional-headers` | Enable additional HTTP headers (X-Content-Type-Options nosniff) |
 
 **Examples:**
@@ -561,6 +582,34 @@ tigris buckets set <name> [flags]
 tigris buckets set my-bucket --access public
 tigris buckets set my-bucket --locations iad,fra --cache-control 'max-age=3600'
 tigris buckets set my-bucket --custom-domain assets.example.com
+tigris buckets set my-bucket --soft-delete enable --retention-days 30
+tigris buckets set my-bucket --soft-delete disable
+```
+
+#### `tigris buckets enable-snapshots`
+
+Enable snapshots on an existing bucket, converting it to a snapshot bucket
+
+```
+tigris buckets enable-snapshots <name>
+```
+
+**Examples:**
+```bash
+tigris buckets enable-snapshots my-bucket
+```
+
+#### `tigris buckets disable-snapshots`
+
+Disable snapshots on an existing bucket, converting it back to a regular bucket. Rejected while the bucket has dependent forks
+
+```
+tigris buckets disable-snapshots <name>
+```
+
+**Examples:**
+```bash
+tigris buckets disable-snapshots my-bucket
 ```
 
 #### `tigris buckets set-locations`

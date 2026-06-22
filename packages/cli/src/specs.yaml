@@ -437,6 +437,9 @@ commands:
         description: Output format
         options: [url, json]
         default: url
+      - name: snapshot-version
+        description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Only supported for GET requests.
+        alias: snapshot
 
   # cp
   - name: cp
@@ -870,6 +873,38 @@ commands:
           - name: enable-additional-headers
             description: Enable additional HTTP headers (X-Content-Type-Options nosniff)
             type: boolean
+      # enable-snapshots
+      - name: enable-snapshots
+        description: Enable snapshots on an existing bucket, converting it to a snapshot bucket
+        examples:
+          - "tigris buckets enable-snapshots my-bucket"
+        messages:
+          onStart: 'Enabling snapshots...'
+          onSuccess: 'Snapshots enabled for bucket {{name}}'
+          onFailure: 'Failed to enable snapshots'
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: positional
+            required: true
+            examples:
+              - my-bucket
+      # disable-snapshots
+      - name: disable-snapshots
+        description: Disable snapshots on an existing bucket, converting it back to a regular bucket. Rejected while the bucket has dependent forks
+        examples:
+          - "tigris buckets disable-snapshots my-bucket"
+        messages:
+          onStart: 'Disabling snapshots...'
+          onSuccess: 'Snapshots disabled for bucket {{name}}'
+          onFailure: 'Failed to disable snapshots'
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: positional
+            required: true
+            examples:
+              - my-bucket
       # set-ttl
       - name: set-ttl
         removed: true
