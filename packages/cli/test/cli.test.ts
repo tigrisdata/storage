@@ -2079,6 +2079,52 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain(forkBucket);
     }, 120_000);
+
+    it('should reject disable-snapshots while the bucket has dependent forks', () => {
+      // The parent must register the fork before the guard trips (eventually
+      // consistent); the preceding test already polled until it was listed.
+      let result = { stdout: '', stderr: '', exitCode: 0 };
+      for (let i = 0; i < 5; i++) {
+        result = runCli(`buckets disable-snapshots ${snapBucket}`);
+        if (result.exitCode === 1) break;
+        if (i < 4) execSync('sleep 5');
+      }
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr.toLowerCase()).toContain('fork');
+    }, 120_000);
+  });
+
+  describe('bucket snapshot toggle', () => {
+    const toggleBucket = `${testPrefix}-toggle`;
+
+    beforeAll(() => {
+      // Regular bucket (no --enable-snapshots) so we can turn snapshots on.
+      runCli(`mk ${toggleBucket}`);
+    });
+
+    afterAll(() => {
+      runCli(`rm ${t3(toggleBucket)} -f`);
+    });
+
+    it('should enable snapshots on an existing regular bucket', () => {
+      const result = runCli(`buckets enable-snapshots ${toggleBucket}`);
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should output JSON with --json on enable-snapshots', () => {
+      const result = runCli(`buckets enable-snapshots ${toggleBucket} --json`);
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(parsed).toMatchObject({
+        action: 'snapshots-enabled',
+        name: toggleBucket,
+      });
+    });
+
+    it('should disable snapshots on a bucket with no forks', () => {
+      const result = runCli(`buckets disable-snapshots ${toggleBucket}`);
+      expect(result.exitCode).toBe(0);
+    });
   });
 
   describe('credentials test command', () => {
