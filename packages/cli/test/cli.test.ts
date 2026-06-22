@@ -1270,9 +1270,17 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
   describe('presign command', () => {
     const accessKey = process.env.TIGRIS_STORAGE_ACCESS_KEY_ID!;
+    let snapshotVersion: string;
 
     beforeAll(() => {
       runCli(`touch ${testBucket}/presign-test.txt`);
+      // Take a real snapshot AFTER creating the object so the snapshot
+      // version post-dates the object. The SDK resolves --snapshot-version
+      // by finding an object version <= the snapshot version, so a hardcoded
+      // timestamp can never match a freshly-created object.
+      runCli(`snapshots take ${testBucket}`);
+      const list = runCli(`snapshots list ${testBucket} --format json`);
+      snapshotVersion = JSON.parse(list.stdout.trim()).items[0].version;
     });
 
     afterAll(() => {
@@ -1338,7 +1346,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should generate presigned GET URL with --snapshot-version', () => {
       const result = runCli(
-        `presign ${testBucket}/presign-test.txt --snapshot-version 1765889000501544464 --access-key ${accessKey}`
+        `presign ${testBucket}/presign-test.txt --snapshot-version ${snapshotVersion} --access-key ${accessKey}`
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout.trim()).toMatch(/^https:\/\//);
@@ -1346,7 +1354,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should accept the --snapshot alias for GET', () => {
       const result = runCli(
-        `presign ${testBucket}/presign-test.txt --snapshot 1765889000501544464 --access-key ${accessKey}`
+        `presign ${testBucket}/presign-test.txt --snapshot ${snapshotVersion} --access-key ${accessKey}`
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout.trim()).toMatch(/^https:\/\//);
@@ -1354,7 +1362,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should reject --snapshot-version with --method put', () => {
       const result = runCli(
-        `presign ${testBucket}/presign-test.txt --method put --snapshot-version 1765889000501544464 --access-key ${accessKey}`
+        `presign ${testBucket}/presign-test.txt --method put --snapshot-version ${snapshotVersion} --access-key ${accessKey}`
       );
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain(
