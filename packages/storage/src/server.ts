@@ -45,6 +45,14 @@ export {
 } from './lib/bucket/set/notifications';
 export { type SetBucketTtlOptions, setBucketTtl } from './lib/bucket/set/ttl';
 export {
+  type BucketSnapshotOptions,
+  BucketTypes,
+  disableSnapshot,
+  enableSnapshot,
+  type SetBucketTypeOptions,
+  setBucketType,
+} from './lib/bucket/set/type';
+export {
   type BucketSnapshot,
   type CreateBucketSnapshotOptions,
   type CreateBucketSnapshotResponse,

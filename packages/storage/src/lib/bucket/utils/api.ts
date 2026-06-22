@@ -72,6 +72,7 @@ type BucketApiSettings = {
   object_notifications?: BucketApiNotifications;
   soft_delete?: { enabled: true; retention_days: number } | { enabled: false };
   additional_http_headers?: { 'X-Content-Type-Options': 'nosniff' } | null;
+  type?: 0 | 1;
 };
 
 export type GetBucketInfoApiResponseBody = BucketApiSettings & {
@@ -86,7 +87,6 @@ export type GetBucketInfoApiResponseBody = BucketApiSettings & {
   };
   name: string;
   storage_class: StorageClass;
-  type?: 1;
   tier_sizes: Record<string, number>;
   estimated_unique_rows?: number; // number of objects
   estimated_size?: number; // estimated size of the bucket in bytes
