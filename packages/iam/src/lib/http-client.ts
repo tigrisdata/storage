@@ -3,6 +3,8 @@ import { config, DEFAULT_ENDPOINTS } from './config';
 import type { TigrisIAMConfig, TigrisIAMResponse } from './types';
 
 export const IAM_ENDPOINTS = {
+  // Teams
+  teams: '/tigris-iam/teams',
   // Whoami
   whoami: '/users/whoami',
   // Users

@@ -65,6 +65,23 @@ export type {
   PolicyDocument,
   PolicyStatement,
 } from './lib/policy/types';
+export {
+  type CreateTeamInput,
+  type CreateTeamOptions,
+  type CreateTeamResponse,
+  createTeam,
+} from './lib/team/create';
+export {
+  type EditTeamOptions,
+  type EditTeamResponse,
+  editTeam,
+} from './lib/team/edit';
+export {
+  type ListTeamsOptions,
+  type ListTeamsResponse,
+  listTeams,
+  type Team,
+} from './lib/team/list';
 export { type InviteUserOptions, inviteUser } from './lib/users/invite';
 export {
   type ListUsersOptions,
