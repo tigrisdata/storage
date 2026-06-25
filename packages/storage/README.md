@@ -506,8 +506,10 @@ createBucket(bucketName: string, options?: CreateBucketOptions): Promise<TigrisS
 | **Parameter**        | **Required** | **Values**                                                                                                                                                               |
 | -------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | access               | No           | `public` or `private`. If set to public, objects in this bucket will be publicly readable. Default value is `private`                                                    |
+| allowObjectAcl       | No           | Whether to allow per-object ACL settings. When `true`, it is applied with a follow-up request after the bucket is created. Default is `false`                            |
 | defaultTier          | No           | `STANDARD`, `STANDARD_IA`, `GLACIER` or `GLACIER_IR`. This is default object tier for all objects uploaded to it. Default is `STANDARD`                                  |
 | enableSnapshot       | No           | Enable snapshot functionality for the bucket. Default is `false`. Please note only the Standard storage tier is supported for snapshot-enabled buckets                   |
+| enableDirectoryListing | No         | Whether the bucket's objects can be listed by unauthenticated clients (relevant for public buckets). Default is `false` (listing disabled)                               |
 | locations            | No           | Bucket location configuration. See [Locations](#bucket-locations) below. Default is **global**.                                                                          |
 | sourceBucketName     | No           | The name of the source bucket to fork from.                                                                                                                              |
 | sourceBucketSnapshot | No           | The snapshot version of the source bucket to fork from.                                                                                                                  |
@@ -581,6 +583,35 @@ if (result.error) {
   console.error('Error creating forked bucket:', result.error);
 } else {
   console.log('Forked bucket created:', result.data);
+}
+```
+
+#### Create a bucket that allows per-object ACLs
+
+```ts
+const result = await createBucket('my-acl-bucket', {
+  allowObjectAcl: true,
+});
+
+if (result.error) {
+  console.error('Error creating bucket:', result.error);
+} else {
+  console.log('Bucket created with per-object ACLs allowed:', result.data);
+}
+```
+
+#### Create a bucket with directory listing enabled
+
+```ts
+const result = await createBucket('my-listable-bucket', {
+  access: 'public',
+  enableDirectoryListing: true,
+});
+
+if (result.error) {
+  console.error('Error creating bucket:', result.error);
+} else {
+  console.log('Bucket created with directory listing enabled:', result.data);
 }
 ```
 

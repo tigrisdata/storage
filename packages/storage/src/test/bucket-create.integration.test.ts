@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { createBucket } from '../lib/bucket/create';
+import { getBucketInfo } from '../lib/bucket/info';
 import { listBuckets } from '../lib/bucket/list';
 import { removeBucket } from '../lib/bucket/remove';
 import { config } from '../lib/config';
@@ -12,6 +13,11 @@ const testBucket = (suffix: string) =>
 
 describe.skipIf(skipTests)('createBucket Integration Tests', () => {
   const bucketsToCleanup: string[] = [];
+
+  // allowObjectAcl is applied with a follow-up updateBucket PATCH after the
+  // bucket is created, so round-trip assertions poll getBucketInfo until the
+  // change propagates rather than reading once.
+  const POLL = { timeout: 15000, interval: 1000 };
 
   afterEach(async () => {
     for (const bucket of bucketsToCleanup) {
@@ -135,6 +141,43 @@ describe.skipIf(skipTests)('createBucket Integration Tests', () => {
     expect(result.error).toBeUndefined();
     expect(result.data).toBeDefined();
     expect(result.data?.isSnapshotEnabled).toBe(true);
+  });
+
+  // ── Object ACL ──
+
+  it('should create a bucket with object ACL allowed and round-trip via getBucketInfo', async () => {
+    const name = testBucket('acl');
+    bucketsToCleanup.push(name);
+
+    const result = await createBucket(name, {
+      allowObjectAcl: true,
+      config,
+    });
+
+    expect(
+      result.error,
+      `create with allowObjectAcl failed: ${result.error?.message}`
+    ).toBeUndefined();
+    expect(result.data).toBeDefined();
+
+    await expect
+      .poll(async () => {
+        const info = await getBucketInfo(name, { config });
+        return info.data?.settings.allowObjectAcl;
+      }, POLL)
+      .toBe(true);
+  });
+
+  it('should default object ACL to disabled when allowObjectAcl is omitted', async () => {
+    const name = testBucket('no-acl');
+    bucketsToCleanup.push(name);
+
+    const result = await createBucket(name, { config });
+    expect(result.error).toBeUndefined();
+
+    const info = await getBucketInfo(name, { config });
+    expect(info.error).toBeUndefined();
+    expect(info.data?.settings.allowObjectAcl).toBe(false);
   });
 
   // ── Validation errors ──
