@@ -46,6 +46,7 @@ export default async function create(options: Record<string, unknown>) {
     console.log(
       JSON.stringify({ action: 'created', teamId: data.teamId, name })
     );
+    return;
   }
 
   printSuccess(context, { name });
