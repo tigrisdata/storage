@@ -5,6 +5,7 @@ export enum TigrisHeaders {
   SESSION_TOKEN = 'x-amz-security-token',
   NAMESPACE = 'X-Tigris-Namespace',
   STORAGE_CLASS = 'X-Amz-Storage-Class',
+  RESTORE = 'X-Amz-Restore',
   /** Prefix for user metadata headers; concatenate with a key, e.g. `${TigrisHeaders.META_PREFIX}author`. */
   META_PREFIX = 'x-amz-meta-',
 
