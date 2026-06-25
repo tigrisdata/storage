@@ -1,5 +1,44 @@
 # @tigrisdata/storage
 
+## 3.16.0
+
+### Minor Changes
+
+- [#168](https://github.com/tigrisdata/storage/pull/168) [`4790e55`](https://github.com/tigrisdata/storage/commit/4790e5566be74397d2738126cc1d7a623d12157e) Thanks [@designcode](https://github.com/designcode)! - Support the `allowObjectAcl` and `enableDirectoryListing` options in `createBucket`.
+
+  - `allowObjectAcl: true` applies the object ACL setting via a follow-up `updateBucket` call once the bucket exists (the S3 `CreateBucket` command can't carry it). If the bucket is created but the ACL update fails — whether it returns an error or throws — the returned error makes the partial state explicit.
+  - `enableDirectoryListing: true` enables object listing for the bucket at creation time (relevant for public buckets). It defaults to `false` (listing disabled).
+
+  ```ts
+  import { createBucket } from "@tigrisdata/storage";
+
+  await createBucket("my-bucket", { allowObjectAcl: true });
+  await createBucket("my-listable-bucket", {
+    access: "public",
+    enableDirectoryListing: true,
+  });
+  ```
+
+- [#169](https://github.com/tigrisdata/storage/pull/169) [`f6dade9`](https://github.com/tigrisdata/storage/commit/f6dade9ba5d36a9ce631a57b2d1e6006cb4070b8) Thanks [@designcode](https://github.com/designcode)! - Add `restoreObject` and `getRestoreInfo` for working with archived objects.
+
+  - `restoreObject(path, options?)` restores an archived object (e.g. one in the `GLACIER` tier) back into an actively-readable copy for a number of `days` (defaults to `1`).
+  - `getRestoreInfo(path, options?)` reports an object's restore state from its `HEAD` headers as a `RestoreInfo` (`{ status, expiresAt? }`), using the `RestoreStatus` enum (`Archived`, `InProgress`, `Restored`). It resolves to `undefined` when there is no restore information — for a non-archived object or one that does not exist.
+
+  ```ts
+  import {
+    restoreObject,
+    getRestoreInfo,
+    RestoreStatus,
+  } from "@tigrisdata/storage";
+
+  await restoreObject("archived.bin", { days: 3 });
+
+  const { data } = await getRestoreInfo("archived.bin");
+  if (data?.status === RestoreStatus.InProgress) {
+    // restore underway
+  }
+  ```
+
 ## 3.15.0
 
 ### Minor Changes
