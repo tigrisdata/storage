@@ -222,6 +222,8 @@ tigris mk <path> [flags]
 | `-a, --access` | Access level (only applies when creating a bucket) (default: private) |
 | `--public` | Shorthand for --access public (only applies when creating a bucket) |
 | `-s, --enable-snapshots` | Enable snapshots for the bucket (only applies when creating a bucket) (default: false) |
+| `--allow-object-acl` | Allow per-object ACLs on the bucket (only applies when creating a bucket) (default: false) |
+| `--enable-directory-listing` | Enable directory listing, relevant for public buckets (only applies when creating a bucket) (default: false) |
 | `-t, --default-tier` | Default storage tier (only applies when creating a bucket) (default: STANDARD) |
 | `-l, --locations` | Location for the bucket (only applies when creating a bucket) (default: global) |
 | `-fork, --fork-of` | Create this bucket as a fork (copy-on-write clone) of the named source bucket |
@@ -231,6 +233,8 @@ tigris mk <path> [flags]
 ```bash
 tigris mk my-bucket
 tigris mk my-bucket --access public --region iad
+tigris mk my-bucket --allow-object-acl
+tigris mk my-bucket --public --enable-directory-listing
 tigris mk my-bucket/images/
 tigris mk t3://my-bucket
 tigris mk my-fork --fork-of my-bucket
@@ -308,10 +312,12 @@ tigris cp <src> <dest> [flags]
 | Flag | Description |
 |------|-------------|
 | `-r, --recursive` | Copy directories recursively |
+| `-a, --access` | Access level for uploaded objects (only applies to local-to-remote uploads) |
 
 **Examples:**
 ```bash
 tigris cp ./file.txt t3://my-bucket/file.txt
+tigris cp ./logo.png t3://my-bucket/logo.png --access public
 tigris cp t3://my-bucket/file.txt ./local-copy.txt
 tigris cp t3://my-bucket/src/ t3://my-bucket/dest/ -r
 tigris cp ./images/ t3://my-bucket/images/ -r
@@ -494,6 +500,8 @@ tigris buckets create [name] [flags]
 | `-a, --access` | Access level (default: private) |
 | `--public` | Shorthand for --access public |
 | `-s, --enable-snapshots` | Enable snapshots for the bucket (default: false) |
+| `--allow-object-acl` | Allow per-object ACLs on the bucket (default: false) |
+| `--enable-directory-listing` | Enable directory listing, relevant for public buckets (default: false) |
 | `-t, --default-tier` | Choose the default tier for the bucket (default: STANDARD) |
 | `-l, --locations` | Location for the bucket (default: global) |
 | `-fork, --fork-of` | Create this bucket as a fork (copy-on-write clone) of the named source bucket |
@@ -504,6 +512,8 @@ tigris buckets create [name] [flags]
 tigris buckets create my-bucket
 tigris buckets create my-bucket --access public --locations iad
 tigris buckets create my-bucket --enable-snapshots --default-tier STANDARD_IA
+tigris buckets create my-bucket --allow-object-acl
+tigris buckets create my-bucket --public --enable-directory-listing
 tigris buckets create my-fork --fork-of my-bucket
 tigris buckets create my-fork --fork-of my-bucket --source-snapshot 1765889000501544464
 ```

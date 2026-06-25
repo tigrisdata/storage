@@ -101,7 +101,8 @@ async function uploadFile(
   bucket: string,
   key: string,
   config: Awaited<ReturnType<typeof getStorageConfig>>,
-  showProgress = false
+  showProgress = false,
+  access?: 'public' | 'private'
 ): Promise<{ error?: string }> {
   let fileSize: number | undefined;
   try {
@@ -119,6 +120,7 @@ async function uploadFile(
   const { error: putError } = await put(key, body, {
     ...calculateUploadParams(fileSize),
     ...(contentType ? { contentType } : {}),
+    ...(access ? { access } : {}),
     onUploadProgress: showProgress
       ? ({ loaded }) => {
           if (fileSize !== undefined && fileSize > 0) {
@@ -253,7 +255,8 @@ async function copyLocalToRemote(
   src: string,
   destParsed: ParsedPath,
   config: Awaited<ReturnType<typeof getStorageConfig>>,
-  recursive: boolean
+  recursive: boolean,
+  access?: 'public' | 'private'
 ) {
   const localPath = resolveLocalPath(src);
   const isWildcard = src.includes('*');
@@ -282,7 +285,14 @@ async function copyLocalToRemote(
         ? `${destParsed.path.replace(/\/$/, '')}/${relPath}`
         : relPath;
 
-      const result = await uploadFile(file, destParsed.bucket, destKey, config);
+      const result = await uploadFile(
+        file,
+        destParsed.bucket,
+        destKey,
+        config,
+        false,
+        access
+      );
       if (result.error) {
         console.error(`Failed to upload ${file}: ${result.error}`);
         return false;
@@ -352,7 +362,14 @@ async function copyLocalToRemote(
       ].filter(Boolean);
       const destKey = parts.join('/');
 
-      const result = await uploadFile(file, destParsed.bucket, destKey, config);
+      const result = await uploadFile(
+        file,
+        destParsed.bucket,
+        destKey,
+        config,
+        false,
+        access
+      );
       if (result.error) {
         console.error(`Failed to upload ${file}: ${result.error}`);
         return false;
@@ -405,7 +422,8 @@ async function copyLocalToRemote(
       destParsed.bucket,
       destKey,
       config,
-      !_jsonMode
+      !_jsonMode,
+      access
     );
     if (result.error) {
       exitWithError(result.error);
@@ -824,10 +842,29 @@ export default async function cp(options: Record<string, unknown>) {
   }
 
   const recursive = !!getOption<boolean>(options, ['recursive', 'r']);
+  const accessArg = getOption<string>(options, ['access', 'a', 'A']);
   const format = getFormat(options);
   _jsonMode = format === 'json';
 
+  let access: 'public' | 'private' | undefined;
+  if (accessArg === undefined) {
+    access = undefined;
+  } else if (accessArg === 'public' || accessArg === 'private') {
+    access = accessArg;
+  } else {
+    exitWithError('Access level must be either "public" or "private"');
+  }
+
   const direction = detectDirection(src, dest);
+
+  // --access only affects the object being written, which only happens on
+  // upload. copy() can't carry access and a downloaded file has none.
+  if (access !== undefined && direction !== 'local-to-remote') {
+    exitWithError(
+      '--access only applies to local-to-remote uploads. Use "tigris objects set-access" to change access on existing objects.'
+    );
+  }
+
   const config = await getStorageConfig({ withCredentialProvider: true });
 
   switch (direction) {
@@ -836,7 +873,7 @@ export default async function cp(options: Record<string, unknown>) {
       if (!destParsed.bucket) {
         exitWithError('Invalid destination path');
       }
-      await copyLocalToRemote(src, destParsed, config, recursive);
+      await copyLocalToRemote(src, destParsed, config, recursive, access);
       break;
     }
     case 'remote-to-local': {

@@ -298,6 +298,8 @@ commands:
     examples:
       - "tigris mk my-bucket"
       - "tigris mk my-bucket --access public --region iad"
+      - "tigris mk my-bucket --allow-object-acl"
+      - "tigris mk my-bucket --public --enable-directory-listing"
       - "tigris mk my-bucket/images/"
       - "tigris mk t3://my-bucket"
       - "tigris mk my-fork --fork-of my-bucket"
@@ -325,6 +327,14 @@ commands:
       - name: enable-snapshots
         description: Enable snapshots for the bucket (only applies when creating a bucket)
         alias: s
+        type: flag
+        default: false
+      - name: allow-object-acl
+        description: Allow per-object ACLs on the bucket (only applies when creating a bucket)
+        type: flag
+        default: false
+      - name: enable-directory-listing
+        description: Enable directory listing, relevant for public buckets (only applies when creating a bucket)
         type: flag
         default: false
       - name: default-tier
@@ -447,6 +457,7 @@ commands:
     alias: copy
     examples:
       - "tigris cp ./file.txt t3://my-bucket/file.txt"
+      - "tigris cp ./logo.png t3://my-bucket/logo.png --access public"
       - "tigris cp t3://my-bucket/file.txt ./local-copy.txt"
       - "tigris cp t3://my-bucket/src/ t3://my-bucket/dest/ -r"
       - "tigris cp ./images/ t3://my-bucket/images/ -r"
@@ -476,6 +487,10 @@ commands:
         type: flag
         alias: r
         description: Copy directories recursively
+      - name: access
+        description: Access level for uploaded objects (only applies to local-to-remote uploads)
+        alias: a
+        options: *access_options
 
   # mv
   - name: mv
@@ -699,6 +714,8 @@ commands:
           - "tigris buckets create my-bucket"
           - "tigris buckets create my-bucket --access public --locations iad"
           - "tigris buckets create my-bucket --enable-snapshots --default-tier STANDARD_IA"
+          - "tigris buckets create my-bucket --allow-object-acl"
+          - "tigris buckets create my-bucket --public --enable-directory-listing"
           - "tigris buckets create my-fork --fork-of my-bucket"
           - "tigris buckets create my-fork --fork-of my-bucket --source-snapshot 1765889000501544464"
         messages:
@@ -728,6 +745,14 @@ commands:
           - name: enable-snapshots
             description: Enable snapshots for the bucket
             alias: s
+            type: flag
+            default: false
+          - name: allow-object-acl
+            description: Allow per-object ACLs on the bucket
+            type: flag
+            default: false
+          - name: enable-directory-listing
+            description: Enable directory listing, relevant for public buckets
             type: flag
             default: false
           - name: default-tier

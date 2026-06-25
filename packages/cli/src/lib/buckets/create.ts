@@ -32,6 +32,14 @@ export default async function create(options: Record<string, unknown>) {
     's',
     'S',
   ]);
+  const allowObjectAcl = getOption<boolean>(options, [
+    'allow-object-acl',
+    'allowObjectAcl',
+  ]);
+  const enableDirectoryListing = getOption<boolean>(options, [
+    'enable-directory-listing',
+    'enableDirectoryListing',
+  ]);
   let defaultTier = getOption<string>(options, ['default-tier', 't', 'T']);
   const locations = getOption<string>(options, ['locations', 'l', 'L']);
   const forkOf = getOption<string>(options, ['fork-of', 'forkOf', 'fork']);
@@ -120,6 +128,8 @@ export default async function create(options: Record<string, unknown>) {
   const { error } = await createBucket(name, {
     defaultTier: (defaultTier ?? 'STANDARD') as StorageClass,
     enableSnapshot: enableSnapshots === true,
+    allowObjectAcl: allowObjectAcl === true,
+    enableDirectoryListing: enableDirectoryListing === true,
     access: (access ?? 'private') as 'public' | 'private',
     locations: parsedLocations ?? parseLocations(locations ?? 'global'),
     ...(forkOf ? { sourceBucketName: forkOf } : {}),
