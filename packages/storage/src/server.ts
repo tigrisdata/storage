@@ -133,6 +133,15 @@ export {
 export { type PutOptions, type PutResponse, put } from './lib/object/put';
 export { type RemoveOptions, remove } from './lib/object/remove';
 export {
+  type GetRestoreInfoOptions,
+  getRestoreInfo,
+  type RestoreInfo,
+  type RestoreObjectOptions,
+  type RestoreObjectResponse,
+  RestoreStatus,
+  restoreObject,
+} from './lib/object/restore';
+export {
   type SetObjectAccessOptions,
   type SetObjectAccessResponse,
   setObjectAccess,
