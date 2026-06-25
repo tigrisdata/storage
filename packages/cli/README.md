@@ -1276,6 +1276,7 @@ Identity and Access Management - manage policies, users, and permissions
 |---------|-------------|
 | `tigris iam policies` (p) | Manage IAM policies. Policies define permissions for access keys |
 | `tigris iam users` (u) | Manage organization users and invitations |
+| `tigris iam teams` (t) | Manage organization teams |
 
 #### `tigris iam policies` (p)
 
@@ -1547,6 +1548,75 @@ tigris iam users remove [resource] [flags]
 tigris iam users remove
 tigris iam users remove user@example.com --yes
 tigris iam users remove user@example.com,user@example.net --yes
+```
+
+#### `tigris iam teams` (t)
+
+Manage organization teams
+
+| Command | Description |
+|---------|-------------|
+| `tigris iam teams list` (l) | List all teams in the organization |
+| `tigris iam teams create` (c) | Create a new team in the organization |
+| `tigris iam teams edit` (e) | Update a team's name, description, or members. Members are replaced with the provided list |
+
+##### `tigris iam teams list` (l)
+
+List all teams in the organization
+
+```
+tigris iam teams list [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--format` | Output format (default: table) |
+
+**Examples:**
+```bash
+tigris iam teams list
+tigris iam teams list --format json
+```
+
+##### `tigris iam teams create` (c)
+
+Create a new team in the organization
+
+```
+tigris iam teams create <name> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-d, --description` | Description for the team |
+| `-m, --members` | Member email address(es) to add (comma-separated for multiple) |
+
+**Examples:**
+```bash
+tigris iam teams create engineering
+tigris iam teams create engineering --description 'Engineering team'
+tigris iam teams create engineering --members a@example.com,b@example.com
+```
+
+##### `tigris iam teams edit` (e)
+
+Update a team's name, description, or members. Members are replaced with the provided list
+
+```
+tigris iam teams edit <id> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-n, --name` | New name for the team |
+| `-d, --description` | New description for the team |
+| `-m, --members` | Replace the team's members with these email address(es) (comma-separated for multiple) |
+
+**Examples:**
+```bash
+tigris iam teams edit team_id --name platform
+tigris iam teams edit team_id --description 'Platform team'
+tigris iam teams edit team_id --members a@example.com,b@example.com
 ```
 
 ## License
