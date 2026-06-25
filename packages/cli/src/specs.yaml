@@ -1588,6 +1588,62 @@ commands:
             alias: snapshot
           - name: version-id
             description: Object version id (requires bucket versioning). Omit to read the latest version
+      # restore
+      - name: restore
+        description: Restore an archived object (e.g. one in the GLACIER tier) into an actively-readable copy for a number of days
+        alias: rs
+        examples:
+          - "tigris objects restore my-bucket archived.bin"
+          - "tigris objects restore my-bucket archived.bin --days 3"
+          - "tigris objects restore t3://my-bucket/archived.bin --days 7"
+        messages:
+          onStart: 'Requesting restore...'
+          onSuccess: "Restore requested for '{{key}}'"
+          onFailure: 'Failed to restore object'
+        arguments:
+          - name: bucket
+            type: positional
+            required: true
+            description: Name of the bucket, or a full path (t3://bucket/key)
+          - name: key
+            type: positional
+            description: Key of the object (omit if bucket contains the full path)
+          - name: days
+            description: How many days the restored copy stays available before reverting to its archived tier
+            alias: d
+            default: 1
+          - name: version-id
+            description: Restore a specific object version (requires bucket versioning). Omit to restore the current version
+          - name: format
+            description: Output format
+            options: [json, table, xml]
+            default: table
+      # restore-info
+      - name: restore-info
+        description: Show the restore state of an archived object (archived, in-progress, or restored)
+        alias: ri
+        examples:
+          - "tigris objects restore-info my-bucket archived.bin"
+          - "tigris objects restore-info t3://my-bucket/archived.bin --format json"
+        messages:
+          onStart: ''
+          onSuccess: ''
+          onFailure: 'Failed to get restore info'
+          onEmpty: 'No restore information for this object (it is not archived)'
+        arguments:
+          - name: bucket
+            type: positional
+            required: true
+            description: Name of the bucket, or a full path (t3://bucket/key)
+          - name: key
+            type: positional
+            description: Key of the object (omit if bucket contains the full path)
+          - name: version-id
+            description: Inspect a specific object version (requires bucket versioning). Omit to read the current version
+          - name: format
+            description: Output format
+            options: [json, table, xml]
+            default: table
 
   #########################
   # Manage access keys

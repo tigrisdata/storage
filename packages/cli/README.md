@@ -874,6 +874,8 @@ Low-level object operations for listing, downloading, uploading, and deleting in
 | `tigris objects set` (s) | (Deprecated) Update settings on an existing object such as access level. Use `tigris objects set-access` for ACL changes and `tigris mv` to rename |
 | `tigris objects set-access` (sa) | Set the access level (public or private) on an existing object |
 | `tigris objects info` (i) | Show metadata for an object (content type, size, modified date) |
+| `tigris objects restore` (rs) | Restore an archived object (e.g. one in the GLACIER tier) into an actively-readable copy for a number of days |
+| `tigris objects restore-info` (ri) | Show the restore state of an archived object (archived, in-progress, or restored) |
 
 #### `tigris objects list` (l)
 
@@ -1050,6 +1052,46 @@ tigris objects info my-bucket report.pdf
 tigris objects info t3://my-bucket/report.pdf
 tigris objects info my-bucket report.pdf --format json
 tigris objects info my-bucket report.pdf --version-id abc123
+```
+
+#### `tigris objects restore` (rs)
+
+Restore an archived object (e.g. one in the GLACIER tier) into an actively-readable copy for a number of days
+
+```
+tigris objects restore <bucket> [key] [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-d, --days` | How many days the restored copy stays available before reverting to its archived tier (default: 1) |
+| `--version-id` | Restore a specific object version (requires bucket versioning). Omit to restore the current version |
+| `--format` | Output format (default: table) |
+
+**Examples:**
+```bash
+tigris objects restore my-bucket archived.bin
+tigris objects restore my-bucket archived.bin --days 3
+tigris objects restore t3://my-bucket/archived.bin --days 7
+```
+
+#### `tigris objects restore-info` (ri)
+
+Show the restore state of an archived object (archived, in-progress, or restored)
+
+```
+tigris objects restore-info <bucket> [key] [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--version-id` | Inspect a specific object version (requires bucket versioning). Omit to read the current version |
+| `--format` | Output format (default: table) |
+
+**Examples:**
+```bash
+tigris objects restore-info my-bucket archived.bin
+tigris objects restore-info t3://my-bucket/archived.bin --format json
 ```
 
 ### `tigris access-keys` (keys)
