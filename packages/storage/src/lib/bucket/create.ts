@@ -1,9 +1,10 @@
 import { CreateBucketCommand } from '@aws-sdk/client-s3';
 import type { HttpRequest } from '@aws-sdk/types';
-import { TigrisHeaders } from '@shared/index';
+import { TigrisHeaders, toError } from '@shared/index';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import type { BucketLocations, StorageClass } from './types';
+import { updateBucket } from './update';
 import { validateLocationValues } from './utils/regions';
 
 export type CreateBucketOptions = {
@@ -13,6 +14,8 @@ export type CreateBucketOptions = {
   access?: 'public' | 'private';
   defaultTier?: StorageClass;
   locations?: BucketLocations;
+  enableDirectoryListing?: boolean;
+  allowObjectAcl?: boolean;
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
@@ -72,6 +75,11 @@ export async function createBucket(
       // Disable directory listing by default
       req.headers[TigrisHeaders.ACL_LIST_OBJECTS] = 'false';
 
+      if (options?.enableDirectoryListing !== undefined) {
+        req.headers[TigrisHeaders.ACL_LIST_OBJECTS] =
+          options.enableDirectoryListing === true ? 'true' : 'false';
+      }
+
       // Set storage class
       if (options?.defaultTier) {
         req.headers[TigrisHeaders.STORAGE_CLASS] = options.defaultTier;
@@ -120,7 +128,33 @@ export async function createBucket(
   try {
     return tigrisClient
       .send(command)
-      .then(() => {
+      .then(async () => {
+        // Object ACL settings can't be set on the S3 CreateBucket command,
+        // so when they're requested we apply them with a follow-up
+        // updateBucket PATCH once the bucket exists.
+        if (options?.allowObjectAcl === true) {
+          try {
+            const { error: updateError } = await updateBucket(bucketName, {
+              allowObjectAcl: true,
+              config: options?.config,
+            });
+
+            if (updateError) {
+              throw updateError;
+            }
+          } catch (updateError) {
+            // updateBucket can either return an error or throw (e.g. a
+            // network failure in the underlying request). Funnel both into
+            // the same partial-failure message so a created-but-not-updated
+            // bucket isn't misreported as a creation failure.
+            return {
+              error: new Error(
+                `Bucket created but failed to set object ACL settings: ${toError(updateError).message}`
+              ),
+            };
+          }
+        }
+
         return {
           data: {
             isSnapshotEnabled: !!options?.enableSnapshot,
@@ -135,7 +169,9 @@ export async function createBucket(
         };
       })
       .catch((error) => {
-        return { error: new Error(`Unable to create bucket ${error.message}`) };
+        return {
+          error: new Error(`Unable to create bucket ${error.message}`),
+        };
       });
   } catch {
     return { error: new Error('Unable to create bucket') };
