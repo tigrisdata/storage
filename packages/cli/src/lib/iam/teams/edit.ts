@@ -4,6 +4,8 @@ import { failWithError } from '@utils/exit.js';
 import { msg, printStart, printSuccess } from '@utils/messages.js';
 import { getFormat, getOption } from '@utils/options.js';
 
+import { parseMembers } from './shared.js';
+
 const context = msg('iam teams', 'edit');
 
 export default async function edit(options: Record<string, unknown>) {
@@ -14,19 +16,23 @@ export default async function edit(options: Record<string, unknown>) {
   if (isFlyOrganization('Team management')) return;
 
   const id = getOption<string>(options, ['id']);
-  const name = getOption<string>(options, ['name', 'n']);
-  const description = getOption<string>(options, ['description', 'd']);
-  const membersOption = getOption<string | string[]>(options, ['members', 'm']);
 
   if (!id) {
     failWithError(context, 'Team ID is required');
   }
 
-  const members = Array.isArray(membersOption)
-    ? membersOption
-    : membersOption
-      ? [membersOption]
-      : undefined;
+  const nameRaw = getOption<string | boolean>(options, ['name', 'n']);
+  const name = typeof nameRaw === 'string' ? nameRaw : undefined;
+  const descriptionRaw = getOption<string | boolean>(options, [
+    'description',
+    'd',
+  ]);
+  const description =
+    typeof descriptionRaw === 'string' ? descriptionRaw : undefined;
+  const members = parseMembers(
+    context,
+    getOption<string | string[] | boolean>(options, ['members', 'm'])
+  );
 
   if (
     name === undefined &&

@@ -2032,6 +2032,18 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('Provide at least one of');
     });
+
+    it('create should reject a valueless --members flag', () => {
+      const result = runCli(`iam teams create ${testPrefix}-noval --members`);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('requires at least one email address');
+    });
+
+    it('edit should reject an empty --members value', () => {
+      const result = runCli('iam teams edit some-team-id --members ""');
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('requires at least one email address');
+    });
   });
 
   describe('objects commands with t3:// paths', () => {

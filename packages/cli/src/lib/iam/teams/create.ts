@@ -4,6 +4,8 @@ import { failWithError } from '@utils/exit.js';
 import { msg, printStart, printSuccess } from '@utils/messages.js';
 import { getFormat, getOption } from '@utils/options.js';
 
+import { parseMembers } from './shared.js';
+
 const context = msg('iam teams', 'create');
 
 export default async function create(options: Record<string, unknown>) {
@@ -14,18 +16,20 @@ export default async function create(options: Record<string, unknown>) {
   if (isFlyOrganization('Team management')) return;
 
   const name = getOption<string>(options, ['name']);
-  const description = getOption<string>(options, ['description', 'd']);
-  const membersOption = getOption<string | string[]>(options, ['members', 'm']);
+  const descriptionRaw = getOption<string | boolean>(options, [
+    'description',
+    'd',
+  ]);
+  const description =
+    typeof descriptionRaw === 'string' ? descriptionRaw : undefined;
+  const members = parseMembers(
+    context,
+    getOption<string | string[] | boolean>(options, ['members', 'm'])
+  );
 
   if (!name) {
     failWithError(context, 'Team name is required');
   }
-
-  const members = Array.isArray(membersOption)
-    ? membersOption
-    : membersOption
-      ? [membersOption]
-      : undefined;
 
   const iamConfig = await getOAuthIAMConfig(context);
 
