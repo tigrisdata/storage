@@ -1894,6 +1894,158 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
   });
 
+  describe('bucket ACL and directory listing', () => {
+    const aclBuckets: string[] = [];
+
+    afterAll(() => {
+      for (const b of aclBuckets) {
+        runCli(`rm ${t3(b)} -f`);
+      }
+    });
+
+    it('mk should create a bucket with --allow-object-acl', () => {
+      const name = `${testPrefix}-acl-mk`;
+      aclBuckets.push(name);
+      const result = runCli(`mk ${name} --allow-object-acl`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('created');
+
+      // buckets get surfaces the setting as "Allow Object ACL: Yes"
+      const info = runCli(`buckets get ${name}`);
+      expect(info.exitCode).toBe(0);
+      expect(info.stdout).toContain('Allow Object ACL');
+      expect(info.stdout).toContain('Yes');
+    });
+
+    it('buckets create should create a bucket with --allow-object-acl', () => {
+      const name = `${testPrefix}-acl-bc`;
+      aclBuckets.push(name);
+      const result = runCli(`buckets create ${name} --allow-object-acl`);
+      expect(result.exitCode).toBe(0);
+
+      const info = runCli(`buckets get ${name}`);
+      expect(info.stdout).toContain('Allow Object ACL');
+      expect(info.stdout).toContain('Yes');
+    });
+
+    it('mk should create a public bucket with --enable-directory-listing', () => {
+      // Directory listing is not surfaced by buckets get, so we only assert
+      // that creation with the flag succeeds.
+      const name = `${testPrefix}-dirlist`;
+      aclBuckets.push(name);
+      const result = runCli(`mk ${name} --public --enable-directory-listing`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('created');
+    });
+  });
+
+  describe('cp command - access', () => {
+    const tmpBase = join(tmpdir(), `cli-test-cpaccess-${testPrefix}`);
+
+    beforeAll(() => {
+      mkdirSync(tmpBase, { recursive: true });
+    });
+
+    afterAll(() => {
+      rmSync(tmpBase, { recursive: true, force: true });
+      runCli(`rm ${t3(testBucket)}/cp-access-pub.txt -f`);
+    });
+
+    it('should upload local->remote with --access public', () => {
+      const tmpFile = join(tmpBase, 'pub.txt');
+      writeFileSync(tmpFile, 'public via cp');
+      const result = runCli(
+        `cp ${tmpFile} ${t3(testBucket)}/cp-access-pub.txt --access public`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Uploaded');
+    });
+
+    it('should reject --access on remote-to-remote copies', () => {
+      const result = runCli(
+        `cp ${t3(testBucket)}/cp-access-pub.txt ${t3(testBucket)}/cp-access-copy.txt --access public`
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain(
+        'only applies to local-to-remote uploads'
+      );
+    });
+
+    it('should reject an invalid --access value', () => {
+      const tmpFile = join(tmpBase, 'inv.txt');
+      writeFileSync(tmpFile, 'x');
+      const result = runCli(
+        `cp ${tmpFile} ${t3(testBucket)}/cp-access-inv.txt --access maybe`
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Access level must be either');
+    });
+  });
+
+  describe('objects restore / restore-info', () => {
+    const restoreFile = 'restore-test.txt';
+
+    beforeAll(() => {
+      runCli(`touch ${testBucket}/${restoreFile}`);
+    });
+
+    afterAll(() => {
+      runCli(`rm ${t3(testBucket)}/${restoreFile} -f`);
+    });
+
+    it('restore-info should report no restore info for a non-archived object', () => {
+      const result = runCli(
+        `objects restore-info ${testBucket} ${restoreFile} --format json`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('"status":null');
+    });
+
+    it('restore should reject a non-positive --days', () => {
+      const result = runCli(
+        `objects restore ${testBucket} ${restoreFile} --days 0`
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--days must be a positive integer');
+    });
+
+    it('restore should reject a non-numeric --days', () => {
+      const result = runCli(
+        `objects restore ${testBucket} ${restoreFile} --days abc`
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--days must be a positive integer');
+    });
+
+    it('restore-info should error when the object key is missing', () => {
+      const result = runCli(`objects restore-info ${testBucket}`);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Object key is required');
+    });
+  });
+
+  describe('iam teams - validation', () => {
+    // Pure CLI validation — fails before any OAuth/network call, so it runs
+    // without OAuth credentials.
+    it('edit should error when no fields are provided', () => {
+      const result = runCli('iam teams edit some-team-id');
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Provide at least one of');
+    });
+
+    it('create should reject a valueless --members flag', () => {
+      const result = runCli(`iam teams create ${testPrefix}-noval --members`);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('requires at least one email address');
+    });
+
+    it('edit should reject an empty --members value', () => {
+      const result = runCli('iam teams edit some-team-id --members ""');
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('requires at least one email address');
+    });
+  });
+
   describe('objects commands with t3:// paths', () => {
     const tmpBase = join(tmpdir(), `cli-test-t3path-${testPrefix}`);
 
@@ -2338,6 +2490,37 @@ describe.skipIf(skipTests || skipOAuth)('OAuth Integration Tests', () => {
       if (result.exitCode === 0 && result.stdout.trim()) {
         expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
       }
+    });
+  });
+
+  describe('iam teams', () => {
+    let createdTeamId: string | undefined;
+    const teamName = `${getTestPrefix()}-team`;
+
+    it('should create a team', () => {
+      const result = runCli(`iam teams create ${teamName} --format json`);
+      // May fail for Fly orgs — that's expected
+      if (result.exitCode === 0 && result.stdout.trim()) {
+        const parsed = JSON.parse(result.stdout.trim()) as { teamId?: string };
+        expect(parsed.teamId).toBeTruthy();
+        createdTeamId = parsed.teamId;
+      }
+    });
+
+    it('should list teams', () => {
+      const result = runCli('iam teams list --format json');
+      if (result.exitCode === 0 && result.stdout.trim()) {
+        expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
+      }
+    });
+
+    it('should edit the created team', () => {
+      // Skip if creation didn't yield an id (e.g. Fly org).
+      if (!createdTeamId) return;
+      const result = runCli(
+        `iam teams edit ${createdTeamId} --name ${teamName}-renamed`
+      );
+      expect(result.exitCode).toBe(0);
     });
   });
 

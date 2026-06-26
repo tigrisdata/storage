@@ -222,6 +222,8 @@ tigris mk <path> [flags]
 | `-a, --access` | Access level (only applies when creating a bucket) (default: private) |
 | `--public` | Shorthand for --access public (only applies when creating a bucket) |
 | `-s, --enable-snapshots` | Enable snapshots for the bucket (only applies when creating a bucket) (default: false) |
+| `--allow-object-acl` | Allow per-object ACLs on the bucket (only applies when creating a bucket) (default: false) |
+| `--enable-directory-listing` | Enable directory listing, relevant for public buckets (only applies when creating a bucket) (default: false) |
 | `-t, --default-tier` | Default storage tier (only applies when creating a bucket) (default: STANDARD) |
 | `-l, --locations` | Location for the bucket (only applies when creating a bucket) (default: global) |
 | `-fork, --fork-of` | Create this bucket as a fork (copy-on-write clone) of the named source bucket |
@@ -231,6 +233,8 @@ tigris mk <path> [flags]
 ```bash
 tigris mk my-bucket
 tigris mk my-bucket --access public --region iad
+tigris mk my-bucket --allow-object-acl
+tigris mk my-bucket --public --enable-directory-listing
 tigris mk my-bucket/images/
 tigris mk t3://my-bucket
 tigris mk my-fork --fork-of my-bucket
@@ -308,10 +312,12 @@ tigris cp <src> <dest> [flags]
 | Flag | Description |
 |------|-------------|
 | `-r, --recursive` | Copy directories recursively |
+| `-a, --access` | Access level for uploaded objects (only applies to local-to-remote uploads) |
 
 **Examples:**
 ```bash
 tigris cp ./file.txt t3://my-bucket/file.txt
+tigris cp ./logo.png t3://my-bucket/logo.png --access public
 tigris cp t3://my-bucket/file.txt ./local-copy.txt
 tigris cp t3://my-bucket/src/ t3://my-bucket/dest/ -r
 tigris cp ./images/ t3://my-bucket/images/ -r
@@ -494,6 +500,8 @@ tigris buckets create [name] [flags]
 | `-a, --access` | Access level (default: private) |
 | `--public` | Shorthand for --access public |
 | `-s, --enable-snapshots` | Enable snapshots for the bucket (default: false) |
+| `--allow-object-acl` | Allow per-object ACLs on the bucket (default: false) |
+| `--enable-directory-listing` | Enable directory listing, relevant for public buckets (default: false) |
 | `-t, --default-tier` | Choose the default tier for the bucket (default: STANDARD) |
 | `-l, --locations` | Location for the bucket (default: global) |
 | `-fork, --fork-of` | Create this bucket as a fork (copy-on-write clone) of the named source bucket |
@@ -504,6 +512,8 @@ tigris buckets create [name] [flags]
 tigris buckets create my-bucket
 tigris buckets create my-bucket --access public --locations iad
 tigris buckets create my-bucket --enable-snapshots --default-tier STANDARD_IA
+tigris buckets create my-bucket --allow-object-acl
+tigris buckets create my-bucket --public --enable-directory-listing
 tigris buckets create my-fork --fork-of my-bucket
 tigris buckets create my-fork --fork-of my-bucket --source-snapshot 1765889000501544464
 ```
@@ -864,6 +874,8 @@ Low-level object operations for listing, downloading, uploading, and deleting in
 | `tigris objects set` (s) | (Deprecated) Update settings on an existing object such as access level. Use `tigris objects set-access` for ACL changes and `tigris mv` to rename |
 | `tigris objects set-access` (sa) | Set the access level (public or private) on an existing object |
 | `tigris objects info` (i) | Show metadata for an object (content type, size, modified date) |
+| `tigris objects restore` (rs) | Restore an archived object (e.g. one in the GLACIER tier) into an actively-readable copy for a number of days |
+| `tigris objects restore-info` (ri) | Show the restore state of an archived object (archived, in-progress, or restored) |
 
 #### `tigris objects list` (l)
 
@@ -1040,6 +1052,46 @@ tigris objects info my-bucket report.pdf
 tigris objects info t3://my-bucket/report.pdf
 tigris objects info my-bucket report.pdf --format json
 tigris objects info my-bucket report.pdf --version-id abc123
+```
+
+#### `tigris objects restore` (rs)
+
+Restore an archived object (e.g. one in the GLACIER tier) into an actively-readable copy for a number of days
+
+```
+tigris objects restore <bucket> [key] [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-d, --days` | How many days the restored copy stays available before reverting to its archived tier (default: 1) |
+| `--version-id` | Restore a specific object version (requires bucket versioning). Omit to restore the current version |
+| `--format` | Output format (default: table) |
+
+**Examples:**
+```bash
+tigris objects restore my-bucket archived.bin
+tigris objects restore my-bucket archived.bin --days 3
+tigris objects restore t3://my-bucket/archived.bin --days 7
+```
+
+#### `tigris objects restore-info` (ri)
+
+Show the restore state of an archived object (archived, in-progress, or restored)
+
+```
+tigris objects restore-info <bucket> [key] [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--version-id` | Inspect a specific object version (requires bucket versioning). Omit to read the current version |
+| `--format` | Output format (default: table) |
+
+**Examples:**
+```bash
+tigris objects restore-info my-bucket archived.bin
+tigris objects restore-info t3://my-bucket/archived.bin --format json
 ```
 
 ### `tigris access-keys` (keys)
@@ -1224,6 +1276,7 @@ Identity and Access Management - manage policies, users, and permissions
 |---------|-------------|
 | `tigris iam policies` (p) | Manage IAM policies. Policies define permissions for access keys |
 | `tigris iam users` (u) | Manage organization users and invitations |
+| `tigris iam teams` (t) | Manage organization teams |
 
 #### `tigris iam policies` (p)
 
@@ -1495,6 +1548,75 @@ tigris iam users remove [resource] [flags]
 tigris iam users remove
 tigris iam users remove user@example.com --yes
 tigris iam users remove user@example.com,user@example.net --yes
+```
+
+#### `tigris iam teams` (t)
+
+Manage organization teams
+
+| Command | Description |
+|---------|-------------|
+| `tigris iam teams list` (l) | List all teams in the organization |
+| `tigris iam teams create` (c) | Create a new team in the organization |
+| `tigris iam teams edit` (e) | Update a team's name, description, or members. Members are replaced with the provided list |
+
+##### `tigris iam teams list` (l)
+
+List all teams in the organization
+
+```
+tigris iam teams list [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--format` | Output format (default: table) |
+
+**Examples:**
+```bash
+tigris iam teams list
+tigris iam teams list --format json
+```
+
+##### `tigris iam teams create` (c)
+
+Create a new team in the organization
+
+```
+tigris iam teams create <name> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-d, --description` | Description for the team |
+| `-m, --members` | Member email address(es) to add (comma-separated for multiple) |
+
+**Examples:**
+```bash
+tigris iam teams create engineering
+tigris iam teams create engineering --description 'Engineering team'
+tigris iam teams create engineering --members a@example.com,b@example.com
+```
+
+##### `tigris iam teams edit` (e)
+
+Update a team's name, description, or members. Members are replaced with the provided list
+
+```
+tigris iam teams edit <id> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-n, --name` | New name for the team |
+| `-d, --description` | New description for the team |
+| `-m, --members` | Replace the team's members with these email address(es) (comma-separated for multiple) |
+
+**Examples:**
+```bash
+tigris iam teams edit team_id --name platform
+tigris iam teams edit team_id --description 'Platform team'
+tigris iam teams edit team_id --members a@example.com,b@example.com
 ```
 
 ## License
