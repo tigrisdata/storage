@@ -10,6 +10,12 @@ export {
   type ListForksOptions,
   type ListForksResponse,
   listForks,
+  type MergeForkOptions,
+  type MergeForkResponse,
+  mergeFork,
+  type RebaseForkOptions,
+  type RebaseForkResponse,
+  rebaseFork,
 } from './lib/bucket/forks';
 export {
   type BucketInfoResponse,
