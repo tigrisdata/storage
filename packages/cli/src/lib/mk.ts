@@ -33,6 +33,14 @@ export default async function mk(options: Record<string, unknown>) {
       's',
       'S',
     ]);
+    const allowObjectAcl = getOption<boolean>(options, [
+      'allow-object-acl',
+      'allowObjectAcl',
+    ]);
+    const enableDirectoryListing = getOption<boolean>(options, [
+      'enable-directory-listing',
+      'enableDirectoryListing',
+    ]);
     const defaultTier = getOption<string>(options, [
       'defaultTier',
       'default-tier',
@@ -54,6 +62,8 @@ export default async function mk(options: Record<string, unknown>) {
     const { error } = await createBucket(bucket, {
       defaultTier: (defaultTier ?? 'STANDARD') as StorageClass,
       enableSnapshot: enableSnapshots === true,
+      allowObjectAcl: allowObjectAcl === true,
+      enableDirectoryListing: enableDirectoryListing === true,
       access: (access ?? 'private') as 'public' | 'private',
       locations: parseLocations(locations ?? 'global'),
       ...(forkOf ? { sourceBucketName: forkOf } : {}),
