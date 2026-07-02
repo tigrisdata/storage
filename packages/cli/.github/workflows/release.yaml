@@ -3,7 +3,8 @@ name: Release
 on:
   push:
     branches:
-      - release
+      - main
+  # Manual dispatch publishes a beta prerelease (see the `beta` job below).
   workflow_dispatch:
 
 permissions:
@@ -13,46 +14,70 @@ permissions:
   id-token: write
 
 jobs:
+  # Stable releases via Changesets. On push to main:
+  #  - if changesets are present, opens/updates the "Version Packages" PR
+  #  - once that PR is merged (version bumped, no changesets left), publishes
+  #    to npm, creates the v<version> git tag and GitHub release.
   release:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
-      new_release_published: ${{ steps.semantic.outputs.new_release_published }}
-      new_release_version: ${{ steps.semantic.outputs.new_release_version }}
+      new_release_published: ${{ steps.changesets.outputs.published }}
+      new_release_version: ${{ steps.version.outputs.value }}
 
     steps:
-      # Checkout code with full history to get tags
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      # Set up Node.js
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
 
-      # Install dependencies, test, and build
       - run: npm ci
       - run: npm run lint
       - run: npm run build
       - run: npm run test
-      - run: npm run test:integration
+      - run: npm run publint
+
+      # A push to main with no pending changesets means the Version Packages
+      # PR was merged and changesets is about to publish — gate that publish on
+      # the integration suite. Feature-merge pushes still have changesets
+      # pending, so they skip this heavier step (it also runs in ci.yaml).
+      - name: Detect pending changesets
+        id: pending
+        run: |
+          if ls .changeset/*.md 2>/dev/null | grep -qvx '.changeset/README.md'; then
+            echo 'changesets=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'changesets=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Integration tests (pre-publish gate)
+        if: steps.pending.outputs.changesets == 'false'
+        run: npm run test:integration
         env:
           TIGRIS_STORAGE_ACCESS_KEY_ID: ${{ secrets.TIGRIS_STORAGE_ACCESS_KEY_ID }}
           TIGRIS_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_STORAGE_SECRET_ACCESS_KEY }}
-      - run: npm run publint
-      - run: npm audit signatures
 
-      # Release to GitHub and NPM
-      - name: Release
-        id: semantic
+      - name: Create Release PR or publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: npm run version-packages
+          publish: npm run release
+          commit: 'chore: version packages'
+          title: 'chore: version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+
+      - name: Resolve published version
+        id: version
+        if: steps.changesets.outputs.published == 'true'
         run: |
-          npm run semantic-release
-          git fetch --tags
-          TAG=$(git tag --points-at HEAD | grep "^v" | head -1 || true)
-          echo "new_release_version=${TAG#v}" >> $GITHUB_OUTPUT
-          echo "new_release_published=$( [ -n "$TAG" ] && echo true || echo false )" >> $GITHUB_OUTPUT
+          echo "value=$(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[0].version')" >> "$GITHUB_OUTPUT"
 
   build-binaries:
     needs: release
@@ -150,7 +175,7 @@ jobs:
 
   update-homebrew:
     needs: [release, build-binaries]
-    if: needs.release.outputs.new_release_published == 'true' && github.ref == 'refs/heads/release'
+    if: needs.release.outputs.new_release_published == 'true' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
@@ -162,3 +187,32 @@ jobs:
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: scripts/update-homebrew.sh ${{ needs.release.outputs.new_release_version }}
+
+  # On-demand beta prereleases (manual workflow_dispatch only).
+  # Publishes an ephemeral snapshot of any pending changesets to the npm
+  # `beta` dist-tag (version like 3.4.0-beta-<timestamp>). No git tag or
+  # GitHub release is created. Requires at least one pending changeset.
+  beta:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Publish beta snapshot to npm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+        run: |
+          npx changeset version --snapshot beta
+          npx changeset publish --tag beta --no-git-tag

@@ -1,6 +1,6 @@
 {
   "name": "@tigrisdata/cli",
-  "version": "0.0.1",
+  "version": "3.3.0",
   "description": "Command line interface for Tigris object storage",
   "type": "module",
   "exports": {
@@ -42,8 +42,10 @@
     "dev:binary": "npm run generate:registry && tsc --noEmit --watch --preserveWatchOutput -p tsconfig.binary.json & bun build src/cli-binary.ts --compile --watch --outfile=bin/tigris",
     "prepublishOnly": "npm run build",
     "clean": "rm -rf dist",
-    "semantic-release": "semantic-release",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "changeset publish"
   },
   "keywords": [
     "cli",
@@ -58,47 +60,6 @@
     "url": "git+https://github.com/tigrisdata/cli.git"
   },
   "license": "MIT",
-  "commitlint": {
-    "extends": [
-      "@commitlint/config-conventional"
-    ]
-  },
-  "release": {
-    "branches": [
-      "release",
-      {
-        "name": "main",
-        "prerelease": "beta",
-        "channel": "beta"
-      }
-    ],
-    "plugins": [
-      [
-        "@semantic-release/commit-analyzer",
-        {
-          "preset": "conventionalcommits",
-          "releaseRules": [
-            {
-              "breaking": true,
-              "release": "major"
-            },
-            {
-              "type": "refactor",
-              "release": "patch"
-            }
-          ]
-        }
-      ],
-      [
-        "@semantic-release/release-notes-generator",
-        {
-          "preset": "conventionalcommits"
-        }
-      ],
-      "@semantic-release/github",
-      "@semantic-release/npm"
-    ]
-  },
   "dependencies": {
     "@aws-sdk/credential-providers": "^3.1038.0",
     "@smithy/shared-ini-file-loader": "^4.4.9",
@@ -111,18 +72,16 @@
     "yaml": "^2.8.3"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.5.2",
-    "@commitlint/config-conventional": "^20.5.0",
+    "@changesets/changelog-github": "^0.7.0",
+    "@changesets/cli": "^2.31.0",
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.19.11",
-    "conventional-changelog-conventionalcommits": "^9.3.1",
     "dotenv": "^17.4.2",
     "eslint": "^10.2.1",
     "eslint-plugin-simple-import-sort": "^13.0.0",
     "husky": "^9.1.7",
     "prettier": "^3.8.3",
     "publint": "^0.3.18",
-    "semantic-release": "^25.0.3",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
