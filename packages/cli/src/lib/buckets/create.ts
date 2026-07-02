@@ -29,6 +29,7 @@ export default async function create(options: Record<string, unknown>) {
     : getOption<string>(options, ['access', 'a', 'A']);
   let enableSnapshots = getOption<boolean>(options, [
     'enable-snapshots',
+    'enableSnapshots',
     's',
     'S',
   ]);

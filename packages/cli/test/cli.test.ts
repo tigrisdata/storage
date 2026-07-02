@@ -1527,6 +1527,21 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       expect(result.exitCode).toBe(0);
     });
 
+    it('should actually enable snapshots with --enable-snapshots', () => {
+      const name = `${testPrefix}-bc-snap`;
+      bcBuckets.push(name);
+      const result = runCli(`buckets create ${name} --enable-snapshots`);
+      expect(result.exitCode).toBe(0);
+
+      // Regression: --enable-snapshots must actually enable snapshots, not
+      // just create the bucket. The flag arrives camelCased (enableSnapshots)
+      // and was previously not read here, so snapshots stayed off.
+      const info = runCli(`buckets get ${name}`);
+      expect(info.exitCode).toBe(0);
+      expect(info.stdout).toContain('Snapshots Enabled');
+      expect(info.stdout).toContain('Yes');
+    });
+
     it('should error on --source-snapshot without --fork-of', () => {
       const result = runCli(
         `buckets create ${testPrefix}-bc-err --source-snapshot snap1`
