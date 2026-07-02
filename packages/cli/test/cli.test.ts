@@ -57,6 +57,41 @@ function runCli(args: string): {
   }
 }
 
+// Like runCli, but pipes `input` to the command's stdin. execSync's `input`
+// makes stdin a pipe (not a TTY), so commands that read piped data — e.g.
+// `objects put` from stdin — take the stdin path. runCli itself ignores stdin.
+function runCliWithStdin(
+  input: string,
+  args: string
+): { stdout: string; stderr: string; exitCode: number } {
+  try {
+    const stdout = execSync(`node dist/cli.js ${args}`, {
+      encoding: 'utf-8',
+      input,
+      timeout: 60000,
+      env: {
+        ...process.env,
+        TIGRIS_STORAGE_ACCESS_KEY_ID: process.env.TIGRIS_STORAGE_ACCESS_KEY_ID,
+        TIGRIS_STORAGE_SECRET_ACCESS_KEY:
+          process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY,
+        TIGRIS_STORAGE_ENDPOINT: process.env.TIGRIS_STORAGE_ENDPOINT,
+      },
+    });
+    return { stdout, stderr: '', exitCode: 0 };
+  } catch (error: unknown) {
+    const execError = error as {
+      stdout?: string;
+      stderr?: string;
+      status?: number;
+    };
+    return {
+      stdout: execError.stdout || '',
+      stderr: execError.stderr || '',
+      exitCode: execError.status || 1,
+    };
+  }
+}
+
 // Configure CLI credentials from env vars before tests
 function setupCredentials(): boolean {
   const accessKey = process.env.TIGRIS_STORAGE_ACCESS_KEY_ID;
@@ -410,6 +445,22 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(`objects list ${testBucket}`);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain(putTestFile);
+    });
+
+    it('should upload from stdin (piped input)', () => {
+      const stdinKey = 'stdin-test.txt';
+      const stdinContent = 'piped hello from stdin';
+      const putResult = runCliWithStdin(
+        stdinContent,
+        `objects put ${t3(testBucket)}/${stdinKey} --content-type text/plain`
+      );
+      expect(putResult.exitCode).toBe(0);
+      expect(putResult.stdout).toContain(stdinKey);
+
+      // Round-trip: the object should hold exactly what was piped in
+      const getResult = runCli(`objects get ${testBucket} ${stdinKey}`);
+      expect(getResult.exitCode).toBe(0);
+      expect(getResult.stdout).toContain(stdinContent);
     });
   });
 
@@ -2238,6 +2289,32 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       }
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain(forkBucket);
+    }, 120_000);
+
+    it('should rebase the fork onto its source', () => {
+      const result = runCli(`buckets rebase ${forkBucket} --yes --format json`);
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(parsed.action).toBe('rebased');
+      expect(parsed.fork).toBe(forkBucket);
+      expect(parsed).toHaveProperty('snapshotVersion');
+    }, 120_000);
+
+    it('should merge the fork back into its source (auto-resolved parent)', () => {
+      // merge auto-resolves the parent from the fork's info, which is
+      // eventually consistent — retry until it resolves.
+      let result = { stdout: '', stderr: '', exitCode: 1 };
+      for (let i = 0; i < 3; i++) {
+        result = runCli(`buckets merge ${forkBucket} --yes --format json`);
+        if (result.exitCode === 0) break;
+        if (i < 2) execSync('sleep 5');
+      }
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(parsed.action).toBe('merged');
+      expect(parsed.fork).toBe(forkBucket);
+      expect(parsed.into).toBe(snapBucket);
+      expect(parsed).toHaveProperty('snapshotVersion');
     }, 120_000);
 
     it('should reject disable-snapshots while the bucket has dependent forks', () => {

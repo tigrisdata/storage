@@ -779,6 +779,54 @@ commands:
           - name: source-snapshot
             description: Fork from a specific snapshot of the source bucket. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Requires --fork-of
             alias: source-snap
+      # rebase
+      - name: rebase
+        description: Update a fork with the latest changes from its source bucket
+        examples:
+          - "tigris buckets rebase my-fork"
+          - "tigris buckets rebase my-fork --yes"
+        messages:
+          onStart: 'Rebasing fork...'
+          onSuccess: "Fork '{{fork}}' rebased onto its source (snapshot {{snapshotVersion}})"
+          onFailure: "Failed to rebase fork '{{fork}}'"
+          nextActions:
+            - command: 'tigris buckets merge {{fork}}'
+              description: "Merge the fork's changes back into its source bucket"
+        arguments:
+          - name: fork
+            description: Name of the fork bucket to rebase onto its source
+            type: positional
+            required: true
+            examples:
+              - my-fork
+      # merge
+      - name: merge
+        description: Merge a fork's changes back into its source bucket
+        examples:
+          - "tigris buckets merge my-fork"
+          - "tigris buckets merge my-fork --into my-bucket"
+          - "tigris buckets merge my-fork --from-snapshot 1765889000501544464"
+          - "tigris buckets merge my-fork --yes"
+        messages:
+          onStart: 'Merging fork...'
+          onSuccess: "Fork '{{fork}}' merged into '{{into}}' (snapshot {{snapshotVersion}})"
+          onFailure: "Failed to merge fork '{{fork}}'"
+          nextActions:
+            - command: 'tigris buckets get {{into}}'
+              description: 'Inspect the updated source bucket'
+        arguments:
+          - name: fork
+            description: Name of the fork bucket whose changes will be merged
+            type: positional
+            required: true
+            examples:
+              - my-fork
+          - name: into
+            description: Source bucket to merge into. Defaults to the fork's parent source bucket
+            alias: source
+          - name: from-snapshot
+            description: Merge from a specific snapshot of the fork rather than its current state. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
+            alias: from-snap
       # get
       - name: get
         description: Show details for a bucket including access level, region, tier, and custom domain
@@ -1419,12 +1467,14 @@ commands:
             description: Object version id to download (requires bucket versioning). Omit to download the latest version
       # put
       - name: put
-        description: Upload a local file as an object. Content-type is auto-detected from extension unless overridden
+        description: Upload a local file — or data piped via stdin — as an object. Content-type is auto-detected from the file extension unless overridden
         alias: p
         examples:
           - "tigris objects put my-bucket report.pdf ./report.pdf"
           - "tigris objects put t3://my-bucket/report.pdf ./report.pdf"
           - "tigris objects put my-bucket logo.png ./logo.png --access public --content-type image/png"
+          - "echo 'hello' | tigris objects put t3://my-bucket/hello.txt"
+          - "cat report.pdf | tigris objects put my-bucket report.pdf --content-type application/pdf"
         messages:
           onStart: 'Uploading object...'
           onSuccess: "Object '{{key}}' uploaded successfully"
@@ -1446,7 +1496,7 @@ commands:
             examples:
               - my-file.txt
           - name: file
-            description: Path to the local file to upload
+            description: Path to the local file to upload. Omit to read the object data from stdin (piped input)
             type: positional
             examples:
               - ./my-file.txt
