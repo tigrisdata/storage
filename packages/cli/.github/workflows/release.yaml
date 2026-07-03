@@ -104,9 +104,6 @@ jobs:
 
       - run: npm ci
 
-      - name: Set version in package.json
-        run: npm version ${{ needs.release.outputs.new_release_version }} --no-git-tag-version
-
       - name: Build binaries for all platforms
         run: npm run build:binary
 
@@ -181,7 +178,7 @@ jobs:
 
   update-homebrew:
     needs: [release, build-binaries]
-    if: needs.release.outputs.new_release_published == 'true' && github.ref == 'refs/heads/main'
+    if: needs.release.outputs.new_release_published == 'true'
     runs-on: ubuntu-latest
 
     steps:
