@@ -1,5 +1,11 @@
 # @tigrisdata/cli
 
+## 3.4.1
+
+### Patch Changes
+
+- [#121](https://github.com/tigrisdata/cli/pull/121) [`8a901c1`](https://github.com/tigrisdata/cli/commit/8a901c19513699e2d43169db1e5590e7b1f2af87) Thanks [@designcode](https://github.com/designcode)! - Migrate the lint/format toolchain from ESLint and Prettier to Biome. Internal change with no impact on the published CLI behavior.
+
 ## 3.4.0
 
 ### Minor Changes
