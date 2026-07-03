@@ -4,10 +4,6 @@ on:
   pull_request:
     branches:
       - main
-      - next
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
@@ -19,7 +15,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
-          node-version: '22'
+          node-version: "22"
       - run: npm ci
       - run: npm run test
       - run: npm run build
@@ -36,7 +32,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
-          node-version: '22'
+          node-version: "22"
       - run: npm ci
       - run: npm run build
       - run: npm run test:integration
