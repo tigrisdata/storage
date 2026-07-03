@@ -1,5 +1,7 @@
 import enquirer from 'enquirer';
+
 const { prompt } = enquirer;
+
 import { listPolicies } from '@tigrisdata/iam';
 import { failWithError } from '@utils/exit.js';
 import { requireInteractive } from '@utils/interactive.js';

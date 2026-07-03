@@ -1,3 +1,15 @@
+import {
+  createReadStream,
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  statSync,
+} from 'node:fs';
+import { homedir } from 'node:os';
+import { basename, dirname, join, relative, resolve } from 'node:path';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { getStorageConfig } from '@auth/provider.js';
 import { copy, get, head, list, put } from '@tigrisdata/storage';
 import { executeWithConcurrency } from '@utils/concurrency.js';
@@ -14,18 +26,6 @@ import {
   wildcardPrefix,
 } from '@utils/path.js';
 import { calculateUploadParams } from '@utils/upload.js';
-import {
-  createReadStream,
-  createWriteStream,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  statSync,
-} from 'fs';
-import { homedir } from 'os';
-import { basename, dirname, join, relative, resolve } from 'path';
-import { Readable } from 'stream';
-import { pipeline } from 'stream/promises';
 
 import type { ParsedPath } from '../types.js';
 
@@ -140,7 +140,7 @@ async function uploadFile(
   });
 
   if (showProgress) {
-    process.stdout.write('\r' + ' '.repeat(60) + '\r');
+    process.stdout.write(`\r${' '.repeat(60)}\r`);
   }
 
   if (putError) {
@@ -201,7 +201,7 @@ async function downloadFile(
   await pipeline(nodeStream, writeStream);
 
   if (showProgress) {
-    process.stdout.write('\r' + ' '.repeat(60) + '\r');
+    process.stdout.write(`\r${' '.repeat(60)}\r`);
   }
 
   return {};
@@ -320,7 +320,7 @@ async function copyLocalToRemote(
     return;
   }
 
-  let stats;
+  let stats: ReturnType<typeof statSync>;
   try {
     stats = statSync(localPath);
   } catch {

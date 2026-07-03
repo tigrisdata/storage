@@ -1,13 +1,13 @@
+import { createWriteStream, writeFileSync } from 'node:fs';
+import { extname } from 'node:path';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { getStorageConfig } from '@auth/provider.js';
 import { get } from '@tigrisdata/storage';
 import { failWithError } from '@utils/exit.js';
 import { msg, printStart, printSuccess } from '@utils/messages.js';
 import { getFormat, getOption } from '@utils/options.js';
 import { resolveObjectArgs } from '@utils/path.js';
-import { createWriteStream, writeFileSync } from 'fs';
-import { extname } from 'path';
-import { Readable } from 'stream';
-import { pipeline } from 'stream/promises';
 
 const context = msg('objects', 'get');
 

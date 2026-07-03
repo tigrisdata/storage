@@ -6,7 +6,7 @@ import {
 } from '@tigrisdata/storage';
 import { describeExpiration, describeTransition } from '@utils/bucket-info.js';
 import { failWithError } from '@utils/exit.js';
-import { type MessageContext } from '@utils/messages.js';
+import type { MessageContext } from '@utils/messages.js';
 import { getOption } from '@utils/options.js';
 
 const VALID_TRANSITION_CLASSES = [
@@ -22,7 +22,9 @@ function isTransitionClass(value: string): value is TransitionClass {
 }
 
 function isIsoDate(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}/.test(value) && !isNaN(new Date(value).getTime());
+  return (
+    /^\d{4}-\d{2}-\d{2}/.test(value) && !Number.isNaN(new Date(value).getTime())
+  );
 }
 
 type RuleInput = {
@@ -90,7 +92,7 @@ export function validateRuleFieldCombinations(
 
   if (
     input.days !== undefined &&
-    (isNaN(Number(input.days)) || Number(input.days) <= 0)
+    (Number.isNaN(Number(input.days)) || Number(input.days) <= 0)
   ) {
     return '--days must be a positive number';
   }
@@ -105,7 +107,7 @@ export function validateRuleFieldCombinations(
 
   if (
     input.expireDays !== undefined &&
-    (isNaN(Number(input.expireDays)) || Number(input.expireDays) <= 0)
+    (Number.isNaN(Number(input.expireDays)) || Number(input.expireDays) <= 0)
   ) {
     return '--expire-days must be a positive number';
   }

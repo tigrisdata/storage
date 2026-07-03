@@ -43,7 +43,10 @@ export default async function setCors(options: Record<string, unknown>) {
     failWithError(context, 'Provide --origins or --reset');
   }
 
-  if (maxAge !== undefined && (isNaN(Number(maxAge)) || Number(maxAge) <= 0)) {
+  if (
+    maxAge !== undefined &&
+    (Number.isNaN(Number(maxAge)) || Number(maxAge) <= 0)
+  ) {
     failWithError(context, '--max-age must be a positive number');
   }
 

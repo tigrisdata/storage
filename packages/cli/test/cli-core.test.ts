@@ -11,19 +11,26 @@ import {
 import type { Argument } from '../src/types.js';
 
 describe('isValidCommandName', () => {
-  it.each(['buckets', 'access-keys', 'set_ttl', 'ls', 'a1'])(
-    'accepts valid name: %s',
-    (name) => {
-      expect(isValidCommandName(name)).toBe(true);
-    }
-  );
+  it.each([
+    'buckets',
+    'access-keys',
+    'set_ttl',
+    'ls',
+    'a1',
+  ])('accepts valid name: %s', (name) => {
+    expect(isValidCommandName(name)).toBe(true);
+  });
 
-  it.each(['', '../etc', 'foo bar', 'rm;ls', 'a/b', 'cmd@1'])(
-    'rejects invalid name: %s',
-    (name) => {
-      expect(isValidCommandName(name)).toBe(false);
-    }
-  );
+  it.each([
+    '',
+    '../etc',
+    'foo bar',
+    'rm;ls',
+    'a/b',
+    'cmd@1',
+  ])('rejects invalid name: %s', (name) => {
+    expect(isValidCommandName(name)).toBe(false);
+  });
 });
 
 describe('formatArgumentHelp', () => {

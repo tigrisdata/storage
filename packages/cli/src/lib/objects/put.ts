@@ -1,3 +1,5 @@
+import { createReadStream, statSync } from 'node:fs';
+import { Readable } from 'node:stream';
 import { getStorageConfig } from '@auth/provider.js';
 import { put } from '@tigrisdata/storage';
 import { failWithError, printNextActions } from '@utils/exit.js';
@@ -7,8 +9,6 @@ import { getContentType } from '@utils/mime.js';
 import { getFormat, getOption } from '@utils/options.js';
 import { resolveObjectArgs } from '@utils/path.js';
 import { calculateUploadParams } from '@utils/upload.js';
-import { createReadStream, statSync } from 'fs';
-import { Readable } from 'stream';
 
 const context = msg('objects', 'put');
 
@@ -98,7 +98,7 @@ export default async function putObject(options: Record<string, unknown>) {
   });
 
   // Clear the progress line
-  process.stdout.write('\r' + ' '.repeat(60) + '\r');
+  process.stdout.write(`\r${' '.repeat(60)}\r`);
 
   if (error) {
     failWithError(context, error);

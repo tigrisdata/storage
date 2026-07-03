@@ -62,16 +62,12 @@ function checkUnknownSubcommand(
   return positional;
 }
 
-export interface ModuleLoader {
-  (commandPath: string[]): Promise<{
-    module: Record<string, unknown> | null;
-    error: string | null;
-  }>;
-}
+export type ModuleLoader = (commandPath: string[]) => Promise<{
+  module: Record<string, unknown> | null;
+  error: string | null;
+}>;
 
-export interface ImplementationChecker {
-  (commandPath: string[]): boolean;
-}
+export type ImplementationChecker = (commandPath: string[]) => boolean;
 
 export interface CLIConfig {
   specs: Specs;
@@ -120,7 +116,7 @@ export function formatArgumentHelp(arg: Argument): string {
   const minPadding = 26;
   const paddedOptionPart =
     optionPart.length >= minPadding
-      ? optionPart + '  '
+      ? `${optionPart}  `
       : optionPart.padEnd(minPadding);
   let description = arg.description;
 
@@ -403,7 +399,7 @@ function getOptionValue(
 ): unknown {
   if (args) {
     const argDef = args.find((a) => a.name === argName);
-    if (argDef && argDef.alias && typeof argDef.alias === 'string') {
+    if (argDef?.alias && typeof argDef.alias === 'string') {
       const aliasKey =
         argDef.alias.charAt(0).toUpperCase() + argDef.alias.slice(1);
       if (options[aliasKey] !== undefined) {
@@ -567,7 +563,9 @@ export function registerCommands(
 
     if (spec.alias) {
       const aliases = Array.isArray(spec.alias) ? spec.alias : [spec.alias];
-      aliases.forEach((alias) => cmd.alias(alias));
+      aliases.forEach((alias) => {
+        cmd.alias(alias);
+      });
     }
 
     // Removed commands: register a redirect-and-exit action; skip

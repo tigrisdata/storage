@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { existsSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { version } from '../package.json';
 import {
@@ -27,7 +27,7 @@ const specs = loadSpecs();
 const hasImplementation: ImplementationChecker = (pathParts) => {
   if (pathParts.length === 0) return false;
 
-  const directPath = join(__dirname, 'lib', ...pathParts) + '.js';
+  const directPath = `${join(__dirname, 'lib', ...pathParts)}.js`;
   if (existsSync(directPath)) return true;
 
   const indexPath = join(__dirname, 'lib', ...pathParts, 'index.js');

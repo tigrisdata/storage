@@ -1,5 +1,7 @@
 import enquirer from 'enquirer';
+
 const { prompt } = enquirer;
+
 import { getIAMConfig } from '@auth/iam.js';
 import {
   detachPolicyFromAccessKey,

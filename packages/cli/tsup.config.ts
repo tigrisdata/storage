@@ -1,5 +1,5 @@
-import { copyFileSync, watch } from 'fs';
-import { join } from 'path';
+import { copyFileSync, watch } from 'node:fs';
+import { join } from 'node:path';
 import { defineConfig } from 'tsup';
 
 const copySpecs = () => {

@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import * as YAML from 'yaml';
 
@@ -83,7 +83,7 @@ describe('specs completeness', () => {
     for (const { path } of leaves) {
       const label = path.join(' ');
       it(`${label}`, () => {
-        const filePath = join(srcRoot, ...path) + '.ts';
+        const filePath = `${join(srcRoot, ...path)}.ts`;
         const indexPath = join(srcRoot, ...path, 'index.ts');
         const exists = existsSync(filePath) || existsSync(indexPath);
         expect(exists, `Missing handler: ${filePath} or ${indexPath}`).toBe(

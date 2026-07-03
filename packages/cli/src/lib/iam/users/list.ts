@@ -68,7 +68,7 @@ export default async function list(options: Record<string, unknown>) {
     console.log(formatJson({ users, invitations }));
   } else if (format === 'xml') {
     const lines = ['<organization>'];
-    lines.push('  ' + formatXml(users, 'users', 'user').replace(/\n/g, '\n  '));
+    lines.push(`  ${formatXml(users, 'users', 'user').replace(/\n/g, '\n  ')}`);
     lines.push(
       '  ' +
         formatXml(invitations, 'invitations', 'invitation').replace(

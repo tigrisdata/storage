@@ -4,9 +4,9 @@ import {
   readFileSync,
   rmSync,
   writeFileSync,
-} from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock os.homedir() to return a temp directory so tests don't touch real config
@@ -113,7 +113,7 @@ describe('auth/storage', () => {
 
       // Config should now be v2 on disk
       const raw = readRawConfig() as Record<string, unknown>;
-      expect(raw['version']).toBe(2);
+      expect(raw.version).toBe(2);
     });
 
     it('handles v1 config with no credentials gracefully', async () => {
@@ -294,19 +294,19 @@ describe('auth/storage', () => {
 
       // Saved creds should survive
       const raw = readRawConfig() as Record<string, unknown>;
-      const creds = raw['credentials'] as Record<string, unknown>;
-      expect(creds['saved']).toBeDefined();
-      const saved = creds['saved'] as Record<string, unknown>;
-      expect(saved['accessKeyId']).toBe('AKID');
+      const creds = raw.credentials as Record<string, unknown>;
+      expect(creds.saved).toBeDefined();
+      const saved = creds.saved as Record<string, unknown>;
+      expect(saved.accessKeyId).toBe('AKID');
 
       // Temporary should be gone
-      expect(creds['temporary']).toBeUndefined();
+      expect(creds.temporary).toBeUndefined();
 
       // OAuth should be gone
-      expect(raw['oauth']).toBeUndefined();
+      expect(raw.oauth).toBeUndefined();
 
       // activeMethod should be gone
-      expect(raw['activeMethod']).toBeUndefined();
+      expect(raw.activeMethod).toBeUndefined();
     });
 
     it('works when no saved credentials exist', async () => {
@@ -322,9 +322,9 @@ describe('auth/storage', () => {
       await storage.clearAllData();
 
       const raw = readRawConfig() as Record<string, unknown>;
-      expect(raw['version']).toBe(2);
-      expect(raw['oauth']).toBeUndefined();
-      expect(raw['credentials']).toBeUndefined();
+      expect(raw.version).toBe(2);
+      expect(raw.oauth).toBeUndefined();
+      expect(raw.credentials).toBeUndefined();
     });
   });
 
@@ -354,13 +354,13 @@ describe('auth/storage', () => {
       await storage.storeCredentialOrganization('my-org', 'temporary');
 
       const raw = readRawConfig() as Record<string, unknown>;
-      const creds = raw['credentials'] as Record<string, unknown>;
-      const temp = creds['temporary'] as Record<string, unknown>;
-      const saved = creds['saved'] as Record<string, unknown>;
+      const creds = raw.credentials as Record<string, unknown>;
+      const temp = creds.temporary as Record<string, unknown>;
+      const saved = creds.saved as Record<string, unknown>;
 
-      expect(temp['organizationId']).toBe('my-org');
+      expect(temp.organizationId).toBe('my-org');
       // Saved should NOT have been modified
-      expect(saved['organizationId']).toBeUndefined();
+      expect(saved.organizationId).toBeUndefined();
     });
 
     it('writes to saved slot when target is saved', async () => {
@@ -380,10 +380,10 @@ describe('auth/storage', () => {
       await storage.storeCredentialOrganization('saved-org', 'saved');
 
       const raw = readRawConfig() as Record<string, unknown>;
-      const creds = raw['credentials'] as Record<string, unknown>;
-      const saved = creds['saved'] as Record<string, unknown>;
+      const creds = raw.credentials as Record<string, unknown>;
+      const saved = creds.saved as Record<string, unknown>;
 
-      expect(saved['organizationId']).toBe('saved-org');
+      expect(saved.organizationId).toBe('saved-org');
     });
 
     it('does nothing when target slot does not exist', async () => {
@@ -393,7 +393,7 @@ describe('auth/storage', () => {
       await storage.storeCredentialOrganization('org-id', 'saved');
 
       const raw = readRawConfig() as Record<string, unknown>;
-      expect(raw['credentials']).toBeUndefined();
+      expect(raw.credentials).toBeUndefined();
     });
   });
 
@@ -423,9 +423,9 @@ describe('auth/storage', () => {
       await storage.clearTemporaryCredentials();
 
       const raw = readRawConfig() as Record<string, unknown>;
-      const creds = raw['credentials'] as Record<string, unknown>;
-      expect(creds['saved']).toBeDefined();
-      expect(creds['temporary']).toBeUndefined();
+      const creds = raw.credentials as Record<string, unknown>;
+      expect(creds.saved).toBeDefined();
+      expect(creds.temporary).toBeUndefined();
     });
 
     it('does nothing when no credentials exist', async () => {
@@ -435,7 +435,7 @@ describe('auth/storage', () => {
       await storage.clearTemporaryCredentials();
 
       const raw = readRawConfig() as Record<string, unknown>;
-      expect(raw['version']).toBe(2);
+      expect(raw.version).toBe(2);
     });
   });
 
@@ -465,9 +465,9 @@ describe('auth/storage', () => {
       await storage.clearOAuthData();
 
       const raw = readRawConfig() as Record<string, unknown>;
-      expect(raw['oauth']).toBeUndefined();
-      expect(raw['credentials']).toBeDefined();
-      expect(raw['activeMethod']).toBeUndefined();
+      expect(raw.oauth).toBeUndefined();
+      expect(raw.credentials).toBeDefined();
+      expect(raw.activeMethod).toBeUndefined();
     });
 
     it('preserves activeMethod when it is not oauth', async () => {
@@ -483,8 +483,8 @@ describe('auth/storage', () => {
       await storage.clearOAuthData();
 
       const raw = readRawConfig() as Record<string, unknown>;
-      expect(raw['oauth']).toBeUndefined();
-      expect(raw['activeMethod']).toBe('credentials');
+      expect(raw.oauth).toBeUndefined();
+      expect(raw.activeMethod).toBe('credentials');
     });
 
     it('does nothing when no OAuth data exists', async () => {
@@ -494,7 +494,7 @@ describe('auth/storage', () => {
       await storage.clearOAuthData();
 
       const raw = readRawConfig() as Record<string, unknown>;
-      expect(raw['version']).toBe(2);
+      expect(raw.version).toBe(2);
     });
   });
 

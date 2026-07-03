@@ -7,7 +7,9 @@ import { failWithError } from '@utils/exit.js';
 import type { MessageContext } from '@utils/messages.js';
 
 import { getAuthClient } from './client.js';
+
 export { isFlyOrganization } from './fly.js';
+
 import { getTigrisConfig, resolveAuthMethod } from './provider.js';
 import { getLoginMethod, getSelectedOrganization } from './storage.js';
 

@@ -1,7 +1,7 @@
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'fs';
-import https from 'https';
-import { homedir } from 'os';
-import { join } from 'path';
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import https from 'node:https';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 
 import { version as currentVersion } from '../../package.json';
 import {
@@ -66,7 +66,7 @@ export function isNewerVersion(current: string, latest: string): boolean {
     if (parts.length !== 3) return null;
 
     const nums = parts.map(Number);
-    if (nums.some(isNaN)) return null;
+    if (nums.some(Number.isNaN)) return null;
 
     return { major: nums[0], minor: nums[1], patch: nums[2], prerelease };
   };
@@ -201,9 +201,9 @@ export function checkForUpdates(): void {
       const line1 = `Update available: ${currentVersion} → ${cache.latestVersion}`;
       const line2 = 'Run "tigris update" to upgrade.';
       const width = Math.max(line1.length, line2.length) + 4;
-      const top = '┌' + '─'.repeat(width - 2) + '┐';
-      const bot = '└' + '─'.repeat(width - 2) + '┘';
-      const pad = (s: string) => '│ ' + s.padEnd(width - 4) + ' │';
+      const top = `┌${'─'.repeat(width - 2)}┐`;
+      const bot = `└${'─'.repeat(width - 2)}┘`;
+      const pad = (s: string) => `│ ${s.padEnd(width - 4)} │`;
       console.log(
         `\n${top}\n${pad('')}\n${pad(line1)}\n${pad(line2)}\n${pad('')}\n${bot}\n`
       );

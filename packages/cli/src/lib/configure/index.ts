@@ -1,5 +1,7 @@
 import enquirer from 'enquirer';
+
 const { prompt } = enquirer;
+
 import { getTigrisConfig } from '@auth/provider.js';
 import {
   storeCredentialOrganization,
@@ -27,18 +29,17 @@ export default async function configure(options: Record<string, unknown>) {
 
   let accessKey =
     options['access-key'] ||
-    options['accessKey'] ||
+    options.accessKey ||
     options.key ||
     options.Key ||
     options.accesskey;
   let accessSecret =
     options['access-secret'] ||
-    options['accessSecret'] ||
+    options.accessSecret ||
     options.secret ||
     options.Secret ||
     options.accesssecret;
-  let endpoint =
-    options['endpoint'] || options.e || options.E || options.Endpoint;
+  let endpoint = options.endpoint || options.e || options.E || options.Endpoint;
 
   // If credentials are not provided via CLI args, prompt for them
   if (!accessKey || !accessSecret || !endpoint) {

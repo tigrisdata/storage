@@ -14,9 +14,9 @@ import { getAuth0Config, getAuthClient } from './client.js';
 import {
   type CredentialsConfig,
   getAwsProfileConfig,
-  getLoginMethod as getStoredLoginMethod,
   getSelectedOrganization,
   getStoredCredentials,
+  getLoginMethod as getStoredLoginMethod,
   hasAwsProfile,
 } from './storage.js';
 

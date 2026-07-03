@@ -1,6 +1,6 @@
-import { readFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as YAML from 'yaml';
 
 import type { Argument, CommandSpec, Specs } from '../types.js';
@@ -70,7 +70,7 @@ export function getArgumentSpec(
 ): Argument | null {
   const spec = getCommandSpec(commandName, operationName);
 
-  if (!spec || !spec.arguments) {
+  if (!spec?.arguments) {
     return null;
   }
 

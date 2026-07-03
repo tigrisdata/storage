@@ -125,25 +125,27 @@ describe('getIAMConfig', () => {
     expect(config).toHaveProperty('sessionToken', 'tok-456');
   });
 
-  it.each(['credentials', 'environment', 'configured', 'aws-profile'] as const)(
-    'returns credential config when type is %s',
-    async (type) => {
-      vi.mocked(resolveAuthMethod).mockResolvedValue({
-        type,
-        accessKeyId: 'ak-123',
-        secretAccessKey: 'sk-456',
-      } as Awaited<ReturnType<typeof resolveAuthMethod>>);
-      vi.mocked(getSelectedOrganization).mockReturnValue('org-2');
+  it.each([
+    'credentials',
+    'environment',
+    'configured',
+    'aws-profile',
+  ] as const)('returns credential config when type is %s', async (type) => {
+    vi.mocked(resolveAuthMethod).mockResolvedValue({
+      type,
+      accessKeyId: 'ak-123',
+      secretAccessKey: 'sk-456',
+    } as Awaited<ReturnType<typeof resolveAuthMethod>>);
+    vi.mocked(getSelectedOrganization).mockReturnValue('org-2');
 
-      const config = await getIAMConfig(context);
-      expect(config).toEqual({
-        accessKeyId: 'ak-123',
-        secretAccessKey: 'sk-456',
-        organizationId: 'org-2',
-        iamEndpoint: 'https://iam.test',
-      });
-    }
-  );
+    const config = await getIAMConfig(context);
+    expect(config).toEqual({
+      accessKeyId: 'ak-123',
+      secretAccessKey: 'sk-456',
+      organizationId: 'org-2',
+      iamEndpoint: 'https://iam.test',
+    });
+  });
 
   it('throws when type is none', async () => {
     vi.mocked(resolveAuthMethod).mockResolvedValue({

@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import { failWithError } from '@utils/exit.js';
 import {
   msg,
@@ -11,7 +12,6 @@ import {
   getUpdateCommand,
   isNewerVersion,
 } from '@utils/update-check.js';
-import { execSync } from 'child_process';
 
 import { version as currentVersion } from '../../package.json';
 

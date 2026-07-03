@@ -2,18 +2,18 @@
  * Secure storage using a single config file
  */
 
-import { loadSharedConfigFiles } from '@smithy/shared-ini-file-loader';
-import type { Organization } from '@tigrisdata/iam';
-import { execFileSync } from 'child_process';
+import { execFileSync } from 'node:child_process';
 import {
   chmodSync,
   existsSync,
   mkdirSync,
   readFileSync,
   writeFileSync,
-} from 'fs';
-import { homedir, platform } from 'os';
-import { join } from 'path';
+} from 'node:fs';
+import { homedir, platform } from 'node:os';
+import { join } from 'node:path';
+import { loadSharedConfigFiles } from '@smithy/shared-ini-file-loader';
+import type { Organization } from '@tigrisdata/iam';
 
 export interface TokenSet {
   accessToken: string;
@@ -121,18 +121,18 @@ function migrateV1(raw: Record<string, unknown>): TigrisConfigV2 {
   const config: TigrisConfigV2 = { version: 2 };
 
   // Preserve saved credentials if they look valid
-  const creds = raw['credentials'];
+  const creds = raw.credentials;
   if (
     isRecord(creds) &&
-    typeof creds['accessKeyId'] === 'string' &&
-    typeof creds['secretAccessKey'] === 'string' &&
-    typeof creds['endpoint'] === 'string'
+    typeof creds.accessKeyId === 'string' &&
+    typeof creds.secretAccessKey === 'string' &&
+    typeof creds.endpoint === 'string'
   ) {
     config.credentials = {
       saved: {
-        accessKeyId: creds['accessKeyId'],
-        secretAccessKey: creds['secretAccessKey'],
-        endpoint: creds['endpoint'],
+        accessKeyId: creds.accessKeyId,
+        secretAccessKey: creds.secretAccessKey,
+        endpoint: creds.endpoint,
       },
     };
   }
@@ -157,7 +157,7 @@ function readConfig(): TigrisConfigV2 {
     }
 
     // Already v2
-    if (parsed['version'] === 2) {
+    if (parsed.version === 2) {
       return parsed as unknown as TigrisConfigV2;
     }
 
@@ -326,10 +326,9 @@ export async function getAwsProfileConfig(
     }
 
     return {
-      endpoint:
-        profileConfig['endpoint_url_s3'] || profileConfig['endpoint_url'],
-      iamEndpoint: profileConfig['endpoint_url_iam'],
-      region: profileConfig['region'],
+      endpoint: profileConfig.endpoint_url_s3 || profileConfig.endpoint_url,
+      iamEndpoint: profileConfig.endpoint_url_iam,
+      region: profileConfig.region,
     };
   } catch {
     return {};

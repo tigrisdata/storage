@@ -1,5 +1,7 @@
 import enquirer from 'enquirer';
+
 const { prompt } = enquirer;
+
 import { requireInteractive } from '@utils/interactive.js';
 
 import credentials from './credentials.js';
@@ -14,13 +16,13 @@ export default async function select(options: Record<string, unknown>) {
   // Check if access key and/or secret are provided
   const accessKey =
     options['access-key'] ||
-    options['accessKey'] ||
+    options.accessKey ||
     options.key ||
     options.Key ||
     options.accesskey;
   const accessSecret =
     options['access-secret'] ||
-    options['accessSecret'] ||
+    options.accessSecret ||
     options.secret ||
     options.Secret ||
     options.accesssecret;

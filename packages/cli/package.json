@@ -25,10 +25,10 @@
     "build": "tsc --noEmit && tsup",
     "dev": "export $(grep -v '^#' .env.test | xargs) && (tsc --noEmit --watch --preserveWatchOutput & tsup --watch)",
     "cli": "export $(grep -v '^#' .env.test | xargs) && node dist/cli.js",
-    "lint": "eslint src test",
-    "lint:fix": "eslint src test --fix",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "lint": "biome lint",
+    "lint:fix": "biome lint --write",
+    "format": "biome format --write",
+    "format:check": "biome format",
     "test": "vitest run --exclude test/cli.test.ts",
     "test:watch": "vitest",
     "test:all": "vitest run",
@@ -45,7 +45,9 @@
     "prepare": "husky install",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "changeset publish"
+    "release": "changeset publish",
+    "check": "biome check",
+    "check:fix": "biome check --write"
   },
   "keywords": [
     "cli",
@@ -72,20 +74,16 @@
     "yaml": "^2.8.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.2",
     "@changesets/changelog-github": "^0.7.0",
     "@changesets/cli": "^2.31.0",
-    "@eslint/js": "^10.0.1",
     "@types/node": "^22.19.11",
     "dotenv": "^17.4.2",
-    "eslint": "^10.2.1",
-    "eslint-plugin-simple-import-sort": "^13.0.0",
     "husky": "^9.1.7",
-    "prettier": "^3.8.3",
     "publint": "^0.3.18",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.59.1",
     "vitest": "^4.1.5"
   }
 }

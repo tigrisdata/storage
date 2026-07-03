@@ -8,9 +8,9 @@
  *   npx tsx scripts/build-binaries.ts linux-x64 # build one target
  */
 
-import { execSync } from 'child_process';
-import { mkdirSync } from 'fs';
-import { join } from 'path';
+import { execSync } from 'node:child_process';
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 const ENTRY = 'src/cli-binary.ts';
 const OUT_DIR = join(process.cwd(), 'bin');

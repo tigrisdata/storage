@@ -4,5 +4,5 @@ declare module '*.yaml' {
 }
 
 // Global JSON mode flag set by CLI core when --json or --format=json is used
-// eslint-disable-next-line no-var
+// biome-ignore lint/suspicious/noVar: `var` is required to augment the global scope (globalThis)
 declare var __TIGRIS_JSON_MODE: boolean | undefined;

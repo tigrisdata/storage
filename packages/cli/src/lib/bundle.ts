@@ -1,11 +1,11 @@
+import { createWriteStream, existsSync, readFileSync } from 'node:fs';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { getStorageConfig } from '@auth/provider.js';
 import { bundle } from '@tigrisdata/storage';
 import { exitWithError } from '@utils/exit.js';
 import { getFormat, getOption, readStdin } from '@utils/options.js';
 import { parseAnyPath } from '@utils/path.js';
-import { createWriteStream, existsSync, readFileSync } from 'fs';
-import { Readable } from 'stream';
-import { pipeline } from 'stream/promises';
 
 const MAX_KEYS = 5000;
 

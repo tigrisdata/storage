@@ -1,5 +1,7 @@
 import enquirer from 'enquirer';
+
 const { prompt } = enquirer;
+
 import { getTigrisConfig } from '@auth/provider.js';
 import {
   clearOAuthData,
@@ -30,13 +32,13 @@ export default async function credentials(options: Record<string, unknown>) {
 
   let accessKey =
     options['access-key'] ||
-    options['accessKey'] ||
+    options.accessKey ||
     options.key ||
     options.Key ||
     options.accesskey;
   let accessSecret =
     options['access-secret'] ||
-    options['accessSecret'] ||
+    options.accessSecret ||
     options.secret ||
     options.Secret ||
     options.accesssecret;

@@ -1,4 +1,4 @@
-import { extname } from 'path';
+import { extname } from 'node:path';
 
 /**
  * Inline MIME table covering the file types commonly served from

@@ -1,5 +1,5 @@
 import { getStorageConfigWithOrg } from '@auth/provider.js';
-import { updateBucket, type UpdateBucketOptions } from '@tigrisdata/storage';
+import { type UpdateBucketOptions, updateBucket } from '@tigrisdata/storage';
 import { failWithError } from '@utils/exit.js';
 import { parseLocations } from '@utils/locations.js';
 import { msg, printStart, printSuccess } from '@utils/messages.js';

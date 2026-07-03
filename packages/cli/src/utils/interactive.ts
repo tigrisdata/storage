@@ -1,4 +1,4 @@
-import * as readline from 'readline';
+import * as readline from 'node:readline';
 
 /**
  * Guard for interactive-only operations.

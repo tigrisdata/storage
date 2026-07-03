@@ -1,5 +1,7 @@
 import enquirer from 'enquirer';
+
 const { prompt } = enquirer;
+
 import { getOAuthIAMConfig, isFlyOrganization } from '@auth/iam.js';
 import { listUsers, revokeInvitation as revokeInv } from '@tigrisdata/iam';
 import { failWithError } from '@utils/exit.js';

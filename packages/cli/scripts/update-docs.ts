@@ -1,6 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as yaml from 'yaml';
 
 import type { CommandSpec } from '../src/types.js';
@@ -18,7 +18,7 @@ interface Specs {
 
 function isImplemented(...parts: string[]): boolean {
   const base = join(libDir, ...parts);
-  const paths = [base + '.ts', join(base, 'index.ts')];
+  const paths = [`${base}.ts`, join(base, 'index.ts')];
   return paths.some((p) => existsSync(p) && !p.includes('/_'));
 }
 
@@ -49,7 +49,7 @@ function getPositionalSuffix(cmd: CommandSpec): string {
   const positionals = (cmd.arguments ?? [])
     .filter((a) => a.type === 'positional' && !a.removed)
     .map((a) => (a.required ? `<${a.name}>` : `[${a.name}]`));
-  return positionals.length ? ' ' + positionals.join(' ') : '';
+  return positionals.length ? ` ${positionals.join(' ')}` : '';
 }
 
 function renderCommandTable(

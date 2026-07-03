@@ -9,8 +9,7 @@ import {
   printStart,
   printSuccess,
 } from '@utils/messages.js';
-import { getFormat, getPaginationOptions } from '@utils/options.js';
-import { getOption } from '@utils/options.js';
+import { getFormat, getOption, getPaginationOptions } from '@utils/options.js';
 
 const context = msg('access-keys', 'list-policies');
 

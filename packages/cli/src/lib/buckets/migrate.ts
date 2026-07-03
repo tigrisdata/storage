@@ -190,7 +190,7 @@ function printProgress(state: MigrationState, bucket: string): void {
 
 function clearProgress(): void {
   if (!process.stderr.isTTY || globalThis.__TIGRIS_JSON_MODE) return;
-  process.stderr.write('\r' + ' '.repeat(100) + '\r');
+  process.stderr.write(`\r${' '.repeat(100)}\r`);
 }
 
 async function flushScheduleBatch(

@@ -5,7 +5,7 @@ export function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
+  return `${(bytes / 1024 ** i).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
 }
 
 /**
@@ -75,7 +75,7 @@ export interface TableColumn {
  */
 function truncate(str: string, maxLength: number): string {
   if (str.length <= maxLength) return str;
-  return str.slice(0, maxLength - 1) + '…';
+  return `${str.slice(0, maxLength - 1)}…`;
 }
 
 /**
@@ -91,7 +91,7 @@ function formatCellValue(value: unknown): string {
   if (typeof value === 'string') {
     // Try to parse as date if it looks like an ISO date
     const date = new Date(value);
-    if (!isNaN(date.getTime()) && value.includes('T')) {
+    if (!Number.isNaN(date.getTime()) && value.includes('T')) {
       return formatDate(date);
     }
   }
@@ -191,14 +191,12 @@ export function formatTable<T extends Record<string, unknown>>(
   const widths = calculateColumnWidths(items, columns);
 
   // Build header separator
-  const topBorder = '┌' + widths.map((w) => '─'.repeat(w + 2)).join('┬') + '┐';
-  const middleBorder =
-    '├' + widths.map((w) => '─'.repeat(w + 2)).join('┼') + '┤';
-  const bottomBorder =
-    '└' + widths.map((w) => '─'.repeat(w + 2)).join('┴') + '┘';
+  const topBorder = `┌${widths.map((w) => '─'.repeat(w + 2)).join('┬')}┐`;
+  const middleBorder = `├${widths.map((w) => '─'.repeat(w + 2)).join('┼')}┤`;
+  const bottomBorder = `└${widths.map((w) => '─'.repeat(w + 2)).join('┴')}┘`;
 
   // Top border
-  lines.push('\n' + topBorder);
+  lines.push(`\n${topBorder}`);
 
   // Header row
   const headerRow =
@@ -220,11 +218,11 @@ export function formatTable<T extends Record<string, unknown>>(
         ? value.padStart(widths[i])
         : value.padEnd(widths[i]);
     });
-    lines.push('│ ' + cells.join(' │ ') + ' │');
+    lines.push(`│ ${cells.join(' │ ')} │`);
   });
 
   // Bottom border
-  lines.push(bottomBorder + '\n');
+  lines.push(`${bottomBorder}\n`);
 
   return lines.join('\n');
 }

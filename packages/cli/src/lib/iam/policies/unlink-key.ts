@@ -1,5 +1,7 @@
 import enquirer from 'enquirer';
+
 const { prompt } = enquirer;
+
 import { getOAuthIAMConfig } from '@auth/iam.js';
 import { detachPolicyFromAccessKey, getPolicy } from '@tigrisdata/iam';
 import { failWithError } from '@utils/exit.js';

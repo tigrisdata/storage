@@ -215,7 +215,7 @@ export class TigrisAuthClient {
 
       const idTokenClaims = await this.verifyIdToken(data.id_token);
 
-      if (idTokenClaims['email_verified'] === false) {
+      if (idTokenClaims.email_verified === false) {
         console.log(
           'Email not verified. Please verify your email and try again.'
         );
@@ -322,7 +322,7 @@ export class TigrisAuthClient {
   async getIdTokenClaims(): Promise<IdTokenClaims> {
     const tokens = await storage.getTokens();
 
-    if (!tokens || !tokens.idToken) {
+    if (!tokens?.idToken) {
       throw new Error(
         'Not authenticated. Please run "tigris login" to authenticate.'
       );

@@ -9,6 +9,7 @@ import { formatJson } from '@utils/format.js';
 import { getFormat, getOption } from '@utils/options.js';
 import { parseAnyPath } from '@utils/path.js';
 import enquirer from 'enquirer';
+
 const { prompt } = enquirer;
 
 export default async function presign(options: Record<string, unknown>) {

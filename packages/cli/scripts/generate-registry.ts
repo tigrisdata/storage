@@ -9,8 +9,8 @@
  * Run: npm run generate:registry
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import * as YAML from 'yaml';
 
 import type { CommandSpec, Specs } from '../src/types.js';
@@ -134,7 +134,9 @@ const specs: Specs = YAML.parse(specsContent, { schema: 'core' });
 const entries = collectEntries(specs.commands);
 
 console.log(`Found ${entries.length} command implementations:`);
-entries.forEach((e) => console.log(`  ${e.key}`));
+entries.forEach((e) => {
+  console.log(`  ${e.key}`);
+});
 
 const output = generateRegistry(entries);
 writeFileSync(OUTPUT_PATH, output);
