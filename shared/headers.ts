@@ -25,7 +25,6 @@ export enum TigrisHeaders {
   FORK_SOURCE_BUCKET_SNAPSHOT = 'X-Tigris-Fork-Source-Bucket-Snapshot',
 
   FORK_MERGE_SOURCE_BUCKET = 'X-Tigris-Merge-Source-Bucket',
-  FORK_MERGE_SOURCE_BUCKET_SNAPSHOT = 'X-Tigris-Merge-Source-Bucket-Snapshot',
 
   REBASE = 'X-Tigris-Rebase',
 
