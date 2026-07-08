@@ -8,7 +8,6 @@ import {
   it,
 } from 'vitest';
 import { createBucket } from '../lib/bucket/create';
-import { listForks } from '../lib/bucket/forks';
 import { getBucketInfo } from '../lib/bucket/info';
 import { listBuckets } from '../lib/bucket/list';
 import { removeBucket } from '../lib/bucket/remove';
@@ -20,6 +19,7 @@ import {
 } from '../lib/bucket/snapshot';
 import { updateBucket } from '../lib/bucket/update';
 import { config } from '../lib/config';
+import { listForks } from '../lib/fork/list';
 import { copy } from '../lib/object/copy';
 import { get } from '../lib/object/get';
 import { head } from '../lib/object/head';

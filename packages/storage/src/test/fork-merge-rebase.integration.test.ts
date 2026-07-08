@@ -1,9 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createBucket } from '../lib/bucket/create';
-import { mergeFork, rebaseFork } from '../lib/bucket/forks';
 import { removeBucket } from '../lib/bucket/remove';
 import { createBucketSnapshot } from '../lib/bucket/snapshot';
 import { config } from '../lib/config';
+import { mergeFork } from '../lib/fork/merge';
+import { rebaseFork } from '../lib/fork/rebase';
 import { get } from '../lib/object/get';
 import { put } from '../lib/object/put';
 import { shouldSkipIntegrationTests } from './setup';

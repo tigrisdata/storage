@@ -3,10 +3,10 @@
  * This is a temporary solution to list forks. Should be removed when 1.320.0 makes it to production gateway.
  */
 
+import { fetchBucketListing } from '../bucket/listing';
 import { config } from '../config';
 import type { TigrisStorageResponse } from '../types';
-import type { BucketFork, ListForksOptions, ListForksResponse } from './forks';
-import { fetchBucketListing } from './listing';
+import type { BucketFork, ListForksOptions, ListForksResponse } from './list';
 
 export async function listForksLegacy(
   options?: ListForksOptions

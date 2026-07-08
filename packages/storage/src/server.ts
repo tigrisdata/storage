@@ -5,19 +5,6 @@ export {
   createBucket,
 } from './lib/bucket/create';
 export {
-  type BucketFork,
-  type ForkedBucket,
-  type ListForksOptions,
-  type ListForksResponse,
-  listForks,
-  type MergeForkOptions,
-  type MergeForkResponse,
-  mergeFork,
-  type RebaseForkOptions,
-  type RebaseForkResponse,
-  rebaseFork,
-} from './lib/bucket/forks';
-export {
   type BucketInfoResponse,
   type GetBucketInfoOptions,
   getBucketInfo,
@@ -91,6 +78,23 @@ export type {
   UpdateBucketResponse,
 } from './lib/bucket/types';
 export { type UpdateBucketOptions, updateBucket } from './lib/bucket/update';
+export {
+  type BucketFork,
+  type ForkedBucket,
+  type ListForksOptions,
+  type ListForksResponse,
+  listForks,
+} from './lib/fork/list';
+export {
+  type MergeForkOptions,
+  type MergeForkResponse,
+  mergeFork,
+} from './lib/fork/merge';
+export {
+  type RebaseForkOptions,
+  type RebaseForkResponse,
+  rebaseFork,
+} from './lib/fork/rebase';
 export {
   type BundleOptions,
   type BundleResponse,
