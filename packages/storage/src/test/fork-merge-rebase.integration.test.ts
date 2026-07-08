@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createBucket } from '../lib/bucket/create';
 import { removeBucket } from '../lib/bucket/remove';
-import { createBucketSnapshot } from '../lib/bucket/snapshot';
 import { config } from '../lib/config';
 import { mergeFork } from '../lib/fork/merge';
 import { rebaseFork } from '../lib/fork/rebase';
@@ -24,7 +23,6 @@ describe.skipIf(skipTests)('mergeFork integration', () => {
   const ts = Date.now();
   const sourceBucket = `test-merge-src-${ts}`.toLowerCase();
   const forkBucket = `test-merge-fork-${ts}`.toLowerCase();
-  const snapshotForkBucket = `test-merge-fork-snap-${ts}`.toLowerCase();
   const bucketsToCleanup: string[] = [];
 
   beforeAll(async () => {
@@ -54,19 +52,12 @@ describe.skipIf(skipTests)('mergeFork integration', () => {
     ).toBeUndefined();
     bucketsToCleanup.push(forkBucket);
 
-    const snapFork = await createBucket(snapshotForkBucket, {
-      sourceBucketName: sourceBucket,
-      config,
-    });
-    expect(snapFork.error).toBeUndefined();
-    bucketsToCleanup.push(snapshotForkBucket);
-
     await waitForConsistency();
   }, 60_000);
 
   afterAll(async () => {
     // Remove forks before the parent so the source bucket can be deleted.
-    const order = [forkBucket, snapshotForkBucket, sourceBucket].filter((b) =>
+    const order = [forkBucket, sourceBucket].filter((b) =>
       bucketsToCleanup.includes(b)
     );
     for (const bucket of order) {
@@ -99,31 +90,6 @@ describe.skipIf(skipTests)('mergeFork integration', () => {
     });
     expect(merged.error).toBeUndefined();
     expect(merged.data).toBe('made in fork');
-  }, 60_000);
-
-  it('merges from a specific fork snapshot', async () => {
-    const change = await put('snap-fork-only.txt', 'snapshot content', {
-      config: bucketConfig(snapshotForkBucket),
-    });
-    expect(change.error).toBeUndefined();
-
-    // The optional snapshot scopes the merge to a snapshot of the *fork*
-    // (the merge source), not of the parent bucket.
-    const snap = await createBucketSnapshot(snapshotForkBucket, { config });
-    expect(snap.error).toBeUndefined();
-    const version = snap.data?.snapshotVersion as string;
-    expect(version).toBeTruthy();
-
-    const result = await mergeFork(snapshotForkBucket, sourceBucket, {
-      forkSnapshot: version,
-      config,
-    });
-
-    expect(
-      result.error,
-      `snapshot merge failed: ${result.error?.message}`
-    ).toBeUndefined();
-    expect(result.data?.snapshotVersion).not.toBe('');
   }, 60_000);
 
   // ── Validation errors (no network) ──

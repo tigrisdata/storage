@@ -3,11 +3,6 @@ import { createStorageClient } from '../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
 export type MergeForkOptions = {
-  /**
-   * Merge from a specific snapshot of the fork (the merge source) rather than
-   * its current state. Maps to `X-Tigris-Merge-Source-Bucket-Snapshot`.
-   */
-  forkSnapshot?: string;
   config?: TigrisStorageConfig;
 };
 
@@ -43,12 +38,6 @@ export async function mergeFork(
       path: `/${sourceBucketName}`,
       headers: {
         [TigrisHeaders.FORK_MERGE_SOURCE_BUCKET]: forkName,
-        ...(options?.forkSnapshot
-          ? {
-              [TigrisHeaders.FORK_MERGE_SOURCE_BUCKET_SNAPSHOT]:
-                options?.forkSnapshot,
-            }
-          : {}),
       },
     });
 
