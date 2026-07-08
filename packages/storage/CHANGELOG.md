@@ -1,5 +1,11 @@
 # @tigrisdata/storage
 
+## 3.17.1
+
+### Patch Changes
+
+- [#178](https://github.com/tigrisdata/storage/pull/178) [`01926ff`](https://github.com/tigrisdata/storage/commit/01926ffabdb604cff68febeeb134acb236bece8c) Thanks [@designcode](https://github.com/designcode)! - Remove the `forkSnapshot` option from `mergeFork`. `mergeFork(forkName, sourceBucketName, options?)` now always merges from the fork's current state, and the `X-Tigris-Merge-Source-Bucket-Snapshot` header is no longer sent.
+
 ## 3.17.0
 
 ### Minor Changes
