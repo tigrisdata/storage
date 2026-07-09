@@ -87,9 +87,10 @@
       "groupName": "github-actions"
     },
     {
-      "description": "Group pnpm bumps (packageManager field + workflows)",
+      "description": "Group pnpm bumps (packageManager field + workflows); skip 10.34.4, which we rolled back from",
       "matchPackageNames": ["pnpm"],
-      "groupName": "pnpm"
+      "groupName": "pnpm",
+      "allowedVersions": "<10.34.4 || >10.34.4"
     }
   ]
 }
