@@ -8,10 +8,12 @@ import {
   enableSnapshot,
   setBucketType,
 } from '../lib/bucket/set/type';
-import { config } from '../lib/config';
+import { getConfig } from '../lib/config';
 import { shouldSkipIntegrationTests } from './setup';
 
 const skipTests = shouldSkipIntegrationTests();
+
+const config = getConfig();
 
 const testBucket = (suffix: string) =>
   `test-snap-${suffix}-${Date.now()}`.toLowerCase();

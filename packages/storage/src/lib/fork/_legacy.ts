@@ -4,7 +4,7 @@
  */
 
 import { fetchBucketListing } from '../bucket/listing';
-import { config } from '../config';
+import { getConfig } from '../config';
 import type { TigrisStorageResponse } from '../types';
 import type { BucketFork, ListForksOptions, ListForksResponse } from './list';
 
@@ -19,6 +19,7 @@ export async function listForksLegacy(
   sourceBucketName?: string | ListForksOptions,
   options?: ListForksOptions
 ): Promise<TigrisStorageResponse<ListForksResponse, Error>> {
+  const config = getConfig();
   if (typeof sourceBucketName === 'object') {
     options = sourceBucketName;
     sourceBucketName = undefined;

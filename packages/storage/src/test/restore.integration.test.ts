@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { createBucket } from '../lib/bucket/create';
 import { removeBucket } from '../lib/bucket/remove';
-import { config } from '../lib/config';
+import { getConfig } from '../lib/config';
 import { put } from '../lib/object/put';
 import {
   getRestoreInfo,
@@ -11,6 +11,8 @@ import {
 import { shouldSkipIntegrationTests } from './setup';
 
 const skipTests = shouldSkipIntegrationTests();
+
+const config = getConfig();
 
 const testBucket = (suffix: string) =>
   `test-restore-${suffix}-${Date.now()}`.toLowerCase();

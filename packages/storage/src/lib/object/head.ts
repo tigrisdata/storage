@@ -2,7 +2,7 @@ import { HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { HttpRequest } from '@aws-sdk/types';
 import { TigrisHeaders } from '@shared/index';
-import { config } from '../config';
+import { getConfig } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
@@ -27,6 +27,7 @@ export async function head(
   path: string,
   options?: HeadOptions
 ): Promise<TigrisStorageResponse<HeadResponse | undefined, Error>> {
+  const config = getConfig();
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
   if (error) {

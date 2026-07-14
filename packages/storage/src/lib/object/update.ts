@@ -1,7 +1,7 @@
 import { PutObjectAclCommand } from '@aws-sdk/client-s3';
 import { TigrisHeaders } from '@shared/headers';
 import { encodeObjectKey, handleError } from '@shared/utils';
-import { config, missingConfigError } from '../config';
+import { getConfig, missingConfigError } from '../config';
 import { createStorageClient } from '../http-client';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
@@ -25,6 +25,7 @@ export async function updateObject(
   path: string,
   options?: UpdateObjectOptions
 ): Promise<TigrisStorageResponse<UpdateObjectResponse, Error>> {
+  const config = getConfig();
   if (!options?.key && !options?.access) {
     return { error: new Error('No update options provided') };
   }

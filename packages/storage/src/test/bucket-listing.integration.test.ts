@@ -2,10 +2,12 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createBucket } from '../lib/bucket/create';
 import { listBuckets } from '../lib/bucket/list';
 import { removeBucket } from '../lib/bucket/remove';
-import { config } from '../lib/config';
+import { getConfig } from '../lib/config';
 import { shouldSkipIntegrationTests } from './setup';
 
 const skipTests = shouldSkipIntegrationTests();
+
+const config = getConfig();
 
 // Pagination regression coverage for the listing endpoint: the gateway expects
 // `max-buckets` / `continuation-token` query params and returns the next page

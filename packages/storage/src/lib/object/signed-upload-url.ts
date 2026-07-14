@@ -6,7 +6,7 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { TigrisHeaders } from '@shared/headers';
 import { handleError } from '@shared/utils';
-import { config, missingConfigError } from '../config';
+import { getConfig, missingConfigError } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import type { SignedUploadUrlResponse } from '../upload/shared';
@@ -64,6 +64,7 @@ export async function getSignedUploadUrl(
   key: string,
   options?: GetSignedUploadUrlOptions
 ): Promise<TigrisStorageResponse<SignedUploadUrlResponse, Error>> {
+  const config = getConfig();
   const bucket = options?.config?.bucket ?? config.bucket;
   if (!bucket) return missingConfigError('bucket');
 

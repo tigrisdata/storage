@@ -1,6 +1,6 @@
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { handleError } from '@shared/utils';
-import { config } from '../config';
+import { getConfig } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
@@ -13,6 +13,7 @@ export async function remove(
   path: string,
   options?: RemoveOptions
 ): Promise<TigrisStorageResponse<void, Error>> {
+  const config = getConfig();
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
   if (error) {

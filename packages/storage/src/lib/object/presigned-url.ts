@@ -1,4 +1,4 @@
-import { config, missingConfigError } from '../config';
+import { getConfig, missingConfigError } from '../config';
 import { createStorageClient } from '../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import { listVersions } from './list-versions';
@@ -54,6 +54,7 @@ export async function getPresignedUrl(
   path: string,
   options: GetPresignedUrlOptions
 ): Promise<TigrisStorageResponse<GetPresignedUrlResponse, Error>> {
+  const config = getConfig();
   const { data: client, error } = createStorageClient(options?.config);
 
   if (error) {

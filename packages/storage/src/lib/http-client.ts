@@ -1,14 +1,15 @@
 import { createTigrisHttpClient, type TigrisHttpClient } from '@shared/index';
-import { config } from './config';
+import { getConfig } from './config';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
 function getStorageEndpoint(options?: TigrisStorageConfig): string {
-  return options?.endpoint ?? config.endpoint ?? 'https://t3.storage.dev';
+  return options?.endpoint ?? getConfig().endpoint ?? 'https://t3.storage.dev';
 }
 
 export function createStorageClient(
   options?: TigrisStorageConfig
 ): TigrisStorageResponse<TigrisHttpClient, Error> {
+  const config = getConfig();
   const sessionToken = options?.sessionToken ?? config.sessionToken;
   const organizationId = options?.organizationId ?? config.organizationId;
   const accessKeyId = options?.accessKeyId ?? config.accessKeyId;

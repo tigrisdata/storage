@@ -1,5 +1,5 @@
 import { createTigrisHttpClient, type TigrisHttpClient } from '@shared/index';
-import { config, DEFAULT_ENDPOINTS } from './config';
+import { DEFAULT_ENDPOINTS, getConfig } from './config';
 import type { TigrisIAMConfig, TigrisIAMResponse } from './types';
 
 export const IAM_ENDPOINTS = {
@@ -38,17 +38,22 @@ export const IAM_ENDPOINTS = {
 };
 
 function getIAMEndpoint(options?: TigrisIAMConfig): string {
-  return options?.iamEndpoint ?? config.iamEndpoint ?? DEFAULT_ENDPOINTS.iam;
+  return (
+    options?.iamEndpoint ?? getConfig().iamEndpoint ?? DEFAULT_ENDPOINTS.iam
+  );
 }
 
 function getManagementEndpoint(options?: TigrisIAMConfig): string {
-  return options?.mgmtEndpoint ?? config.mgmtEndpoint ?? DEFAULT_ENDPOINTS.mgmt;
+  return (
+    options?.mgmtEndpoint ?? getConfig().mgmtEndpoint ?? DEFAULT_ENDPOINTS.mgmt
+  );
 }
 
 export function createIAMClient(
   options?: TigrisIAMConfig,
   isManagement?: boolean
 ): TigrisIAMResponse<TigrisHttpClient, Error> {
+  const config = getConfig();
   const sessionToken = options?.sessionToken ?? config.sessionToken;
   const organizationId = options?.organizationId ?? config.organizationId;
   const accessKeyId = options?.accessKeyId ?? config.accessKeyId;

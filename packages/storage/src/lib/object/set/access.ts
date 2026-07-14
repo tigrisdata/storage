@@ -1,6 +1,6 @@
 import { PutObjectAclCommand } from '@aws-sdk/client-s3';
 import { handleError } from '@shared/utils';
-import { config, missingConfigError } from '../../config';
+import { getConfig, missingConfigError } from '../../config';
 import { createTigrisClient } from '../../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../../types';
 
@@ -17,6 +17,7 @@ export async function setObjectAccess(
   path: string,
   options: SetObjectAccessOptions
 ): Promise<TigrisStorageResponse<SetObjectAccessResponse, Error>> {
+  const config = getConfig();
   if (!options?.access) {
     return { error: new Error('No access option provided') };
   }

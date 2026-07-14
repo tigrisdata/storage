@@ -18,7 +18,7 @@ import {
   listBucketSnapshots,
 } from '../lib/bucket/snapshot';
 import { updateBucket } from '../lib/bucket/update';
-import { config } from '../lib/config';
+import { getConfig } from '../lib/config';
 import { listForks } from '../lib/fork/list';
 import { copy } from '../lib/object/copy';
 import { get } from '../lib/object/get';
@@ -32,6 +32,8 @@ import { getSignedUploadUrl } from '../lib/object/signed-upload-url';
 import { shouldSkipIntegrationTests } from './setup';
 
 const skipTests = shouldSkipIntegrationTests();
+
+const config = getConfig();
 
 describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
   const testFileName = `test-${Date.now()}.txt`;

@@ -1,5 +1,5 @@
 import { TigrisHeaders, toError } from '@shared/index';
-import { config, missingConfigError } from '../config';
+import { getConfig, missingConfigError } from '../config';
 import { createStorageClient } from '../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
@@ -50,6 +50,7 @@ export async function bundle(
   keys: string[],
   options?: BundleOptions
 ): Promise<TigrisStorageResponse<BundleResponse, Error>> {
+  const config = getConfig();
   const bucket = options?.config?.bucket ?? config.bucket;
 
   if (!bucket) {

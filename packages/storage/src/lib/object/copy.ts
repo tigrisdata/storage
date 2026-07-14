@@ -1,6 +1,6 @@
 import { TigrisHeaders } from '@shared/headers';
 import { encodeObjectKey, handleError } from '@shared/utils';
-import { config, missingConfigError } from '../config';
+import { getConfig, missingConfigError } from '../config';
 import { createStorageClient } from '../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
@@ -31,6 +31,7 @@ export async function copyOrMove(
   rename: boolean,
   options?: CopyOptions
 ): Promise<TigrisStorageResponse<CopyResponse, Error>> {
+  const config = getConfig();
   if (!src || !dest) {
     return { error: new Error('src and dest are required') };
   }
