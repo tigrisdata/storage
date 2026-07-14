@@ -1,3 +1,4 @@
+import { getEnvVar } from '@shared/index';
 import { afterAll, beforeAll } from 'vitest';
 import { getConfig } from '../lib/config';
 import { list } from '../lib/object/list';
@@ -43,7 +44,9 @@ export function shouldSkipIntegrationTests(): boolean {
     'TIGRIS_STORAGE_SECRET_ACCESS_KEY',
   ];
 
-  const missing = requiredEnvVars.filter((envVar) => !process.env[envVar]);
+  // Resolve through the SDK's own env resolution (process.env + private .env),
+  // so the skip decision matches what getConfig() will actually resolve.
+  const missing = requiredEnvVars.filter((envVar) => !getEnvVar(envVar));
 
   if (missing.length > 0) {
     console.warn(
