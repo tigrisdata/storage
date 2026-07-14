@@ -1,5 +1,13 @@
 # @tigrisdata/storage
 
+## 3.17.2
+
+### Patch Changes
+
+- [#183](https://github.com/tigrisdata/storage/pull/183) [`a06a2bb`](https://github.com/tigrisdata/storage/commit/a06a2bb0234f6e0ddeb0c699d3e559ea94e94cb3) Thanks [@designcode](https://github.com/designcode)! - Stop mutating the global `process.env` when loading configuration. Previously, importing the server entry ran `dotenv.config()` as an import-time side effect, loading the consuming app's entire `.env` (including unrelated keys) into `process.env`.
+
+  Configuration is now resolved on demand, per operation, directly from the environment: the SDK parses `.env` into a private object (never touching `process.env`), keeps only `TIGRIS_`-prefixed keys, and prefers explicitly-set `process.env` values. Importing the SDK no longer has side effects, and apps that manage their own environment are no longer overridden.
+
 ## 3.17.1
 
 ### Patch Changes

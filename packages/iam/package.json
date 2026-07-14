@@ -1,6 +1,6 @@
 {
   "name": "@tigrisdata/iam",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Tigris SDK for IAM operations",
   "type": "module",
   "main": "./dist/index.js",
