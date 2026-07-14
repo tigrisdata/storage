@@ -5,7 +5,7 @@ import {
 } from '@aws-sdk/client-s3';
 import type { HttpRequest, HttpResponse } from '@aws-sdk/types';
 import { TigrisHeaders } from '@shared/index';
-import { config } from '../config';
+import { getConfig } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
@@ -37,6 +37,7 @@ export async function listBucketSnapshots(
   sourceBucketName?: string | ListBucketSnapshotsOptions,
   options?: ListBucketSnapshotsOptions
 ): Promise<TigrisStorageResponse<ListBucketSnapshotsResponse, Error>> {
+  const config = getConfig();
   if (typeof sourceBucketName === 'object') {
     options = sourceBucketName;
     sourceBucketName = undefined;
@@ -116,6 +117,7 @@ export async function createBucketSnapshot(
   sourceBucketName?: string | CreateBucketSnapshotOptions,
   options?: CreateBucketSnapshotOptions
 ): Promise<TigrisStorageResponse<CreateBucketSnapshotResponse, Error>> {
+  const config = getConfig();
   if (typeof sourceBucketName === 'object') {
     options = sourceBucketName;
     sourceBucketName = undefined;

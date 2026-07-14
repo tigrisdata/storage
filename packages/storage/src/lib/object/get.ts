@@ -1,7 +1,7 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import type { HttpRequest } from '@aws-sdk/types';
 import { handleError, TigrisHeaders } from '@shared/index';
-import { config } from '../config';
+import { getConfig } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
@@ -136,6 +136,7 @@ export async function get(
     Error
   >
 > {
+  const config = getConfig();
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
   if (error) {

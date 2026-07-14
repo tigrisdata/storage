@@ -2,7 +2,7 @@ import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { toError } from '@shared/utils';
-import { config } from '../config';
+import { getConfig } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import { addRandomSuffix } from '../utils';
@@ -49,6 +49,7 @@ export async function put(
   body: string | ReadableStream | Blob | Buffer,
   options?: PutOptions
 ): Promise<TigrisStorageResponse<PutResponse, Error>> {
+  const config = getConfig();
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
   if (error) {

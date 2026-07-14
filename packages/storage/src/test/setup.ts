@@ -1,5 +1,5 @@
 import { afterAll, beforeAll } from 'vitest';
-import { config } from '../lib/config';
+import { getConfig } from '../lib/config';
 import { list } from '../lib/object/list';
 import { remove } from '../lib/object/remove';
 
@@ -14,6 +14,7 @@ afterAll(async () => {
 });
 
 async function cleanupTestFiles() {
+  const config = getConfig();
   try {
     const result = await list({ config });
 

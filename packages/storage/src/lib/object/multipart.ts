@@ -5,7 +5,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { toError } from '@shared/utils';
-import { config } from '../config';
+import { getConfig } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import { getPresignedUrl } from './presigned-url';
@@ -22,6 +22,7 @@ export async function initMultipartUpload(
   path: string,
   options?: InitMultipartUploadOptions
 ): Promise<TigrisStorageResponse<InitMultipartUploadResponse, Error>> {
+  const config = getConfig();
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
   if (error) {
@@ -69,6 +70,7 @@ export async function getPartsPresignedUrls(
   uploadId: string,
   options?: GetPartsPresignedUrlsOptions
 ): Promise<TigrisStorageResponse<GetPartsPresignedUrlsResponse, Error>> {
+  const config = getConfig();
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
   if (error) {
@@ -121,6 +123,7 @@ export async function completeMultipartUpload(
   partIds: Array<{ [key: number]: string }>,
   options?: CompleteMultipartUploadOptions
 ): Promise<TigrisStorageResponse<CompleteMultipartUploadResponse, Error>> {
+  const config = getConfig();
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
   if (error) {

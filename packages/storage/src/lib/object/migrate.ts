@@ -1,7 +1,7 @@
 import { HeadObjectCommand } from '@aws-sdk/client-s3';
 import type { HttpRequest, HttpResponse } from '@aws-sdk/types';
 import { handleError, TigrisHeaders } from '@shared/index';
-import { config } from '../config';
+import { getConfig } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
@@ -13,6 +13,7 @@ export async function migrate(
   path: string,
   options?: MigrateOptions
 ): Promise<TigrisStorageResponse<void, Error>> {
+  const config = getConfig();
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
   if (error) {
@@ -54,6 +55,7 @@ export async function isMigrated(
   path: string,
   options?: MigrateOptions
 ): Promise<TigrisStorageResponse<boolean, Error>> {
+  const config = getConfig();
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
   if (error) {

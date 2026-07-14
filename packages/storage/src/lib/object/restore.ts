@@ -1,7 +1,7 @@
 import { HeadObjectCommand, RestoreObjectCommand } from '@aws-sdk/client-s3';
 import type { HttpResponse } from '@aws-sdk/types';
 import { handleError, TigrisHeaders } from '@shared/index';
-import { config } from '../config';
+import { getConfig } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
@@ -30,6 +30,7 @@ export async function restoreObject(
   path: string,
   options?: RestoreObjectOptions
 ): Promise<TigrisStorageResponse<RestoreObjectResponse, Error>> {
+  const config = getConfig();
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
   if (error) {
@@ -96,6 +97,7 @@ export async function getRestoreInfo(
   path: string,
   options?: GetRestoreInfoOptions
 ): Promise<TigrisStorageResponse<RestoreInfo | undefined, Error>> {
+  const config = getConfig();
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
   if (error) {

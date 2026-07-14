@@ -3,10 +3,12 @@ import { createBucket } from '../lib/bucket/create';
 import { getBucketInfo } from '../lib/bucket/info';
 import { listBuckets } from '../lib/bucket/list';
 import { removeBucket } from '../lib/bucket/remove';
-import { config } from '../lib/config';
+import { getConfig } from '../lib/config';
 import { shouldSkipIntegrationTests } from './setup';
 
 const skipTests = shouldSkipIntegrationTests();
+
+const config = getConfig();
 
 const testBucket = (suffix: string) =>
   `test-create-${suffix}-${Date.now()}`.toLowerCase();

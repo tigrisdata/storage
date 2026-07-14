@@ -1,7 +1,7 @@
 import {
   missingConfigError as baseMissingConfigError,
+  getEnvVar,
   isNode,
-  loadEnv,
 } from '@shared/index';
 import type { TigrisStorageConfig } from './types';
 
@@ -17,24 +17,29 @@ const configMap: Partial<Record<keyof TigrisStorageConfig, string>> = {
 export const missingConfigError = (key: string) =>
   baseMissingConfigError(key, configMap[key as keyof TigrisStorageConfig]);
 
-function loadStorageConfig(): TigrisStorageConfig {
-  loadEnv();
-
+/**
+ * Resolve the Tigris storage configuration from the environment, on demand.
+ *
+ * Reads only `TIGRIS_`-prefixed variables — from `process.env`, falling back to
+ * a private parse of `.env` — and never mutates `process.env`. There is no
+ * module-level config and importing this module has no side effects: each
+ * operation calls `getConfig()` when it needs the current configuration.
+ */
+export function getConfig(): TigrisStorageConfig {
   const config: TigrisStorageConfig = {
     endpoint: 'https://t3.storage.dev',
   };
 
   if (isNode()) {
-    config.bucket = process.env.TIGRIS_STORAGE_BUCKET ?? '';
-    config.accessKeyId = process.env.TIGRIS_STORAGE_ACCESS_KEY_ID ?? '';
-    config.secretAccessKey = process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY ?? '';
+    config.bucket = getEnvVar('TIGRIS_STORAGE_BUCKET') ?? '';
+    config.accessKeyId = getEnvVar('TIGRIS_STORAGE_ACCESS_KEY_ID') ?? '';
+    config.secretAccessKey =
+      getEnvVar('TIGRIS_STORAGE_SECRET_ACCESS_KEY') ?? '';
     config.endpoint =
-      process.env.TIGRIS_STORAGE_ENDPOINT ?? 'https://t3.storage.dev';
-    config.sessionToken = process.env.TIGRIS_SESSION_TOKEN;
-    config.organizationId = process.env.TIGRIS_ORGANIZATION_ID;
+      getEnvVar('TIGRIS_STORAGE_ENDPOINT') ?? 'https://t3.storage.dev';
+    config.sessionToken = getEnvVar('TIGRIS_SESSION_TOKEN');
+    config.organizationId = getEnvVar('TIGRIS_ORGANIZATION_ID');
   }
 
   return config;
 }
-
-export const config: TigrisStorageConfig = loadStorageConfig();

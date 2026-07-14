@@ -1,6 +1,6 @@
 import { ListObjectVersionsCommand } from '@aws-sdk/client-s3';
 import { handleError } from '@shared/utils';
-import { config, missingConfigError } from '../config';
+import { getConfig, missingConfigError } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 
@@ -44,6 +44,7 @@ export type ListVersionsResponse = {
 export async function listVersions(
   options?: ListVersionsOptions
 ): Promise<TigrisStorageResponse<ListVersionsResponse, Error>> {
+  const config = getConfig();
   if (!options?.config?.bucket && !config.bucket) {
     return missingConfigError('bucket');
   }

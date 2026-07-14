@@ -1,4 +1,4 @@
-export { isNode, loadEnv, missingConfigError } from './config';
+export { getEnvVar, isNode, missingConfigError } from './config';
 export { TigrisHeaders } from './headers';
 export {
   type CreateHttpClientOptions,

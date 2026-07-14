@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createBucket } from '../lib/bucket/create';
 import { removeBucket } from '../lib/bucket/remove';
 import { createBucketSnapshot } from '../lib/bucket/snapshot';
-import { config } from '../lib/config';
+import { getConfig } from '../lib/config';
 import { get } from '../lib/object/get';
 import { head } from '../lib/object/head';
 import { listVersions } from '../lib/object/list-versions';
@@ -12,6 +12,8 @@ import { remove } from '../lib/object/remove';
 import { shouldSkipIntegrationTests } from './setup';
 
 const skipTests = shouldSkipIntegrationTests();
+
+const config = getConfig();
 
 describe.skipIf(skipTests)('Object versioning Integration Tests', () => {
   const bucket = `test-versions-${Date.now()}`.toLowerCase();

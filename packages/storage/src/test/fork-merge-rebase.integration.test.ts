@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createBucket } from '../lib/bucket/create';
 import { removeBucket } from '../lib/bucket/remove';
-import { config } from '../lib/config';
+import { getConfig } from '../lib/config';
 import { mergeFork } from '../lib/fork/merge';
 import { rebaseFork } from '../lib/fork/rebase';
 import { get } from '../lib/object/get';
@@ -9,6 +9,8 @@ import { put } from '../lib/object/put';
 import { shouldSkipIntegrationTests } from './setup';
 
 const skipTests = shouldSkipIntegrationTests();
+
+const config = getConfig();
 
 // Target a specific bucket (a source or one of its forks) by overriding the
 // bucket on the shared config.

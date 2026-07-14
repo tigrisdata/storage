@@ -1,7 +1,7 @@
 import { S3Client } from '@aws-sdk/client-s3';
 import type { HttpRequest } from '@aws-sdk/types';
 import { TigrisHeaders } from '@shared/index';
-import { config, missingConfigError } from './config';
+import { getConfig, missingConfigError } from './config';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
 const cachedClients = new Map<string, S3Client>();
@@ -10,6 +10,7 @@ export function createTigrisClient(
   options?: TigrisStorageConfig,
   skipBucketCheck: boolean | undefined = false
 ): TigrisStorageResponse<S3Client, Error> {
+  const config = getConfig();
   const accessKeyId = options?.accessKeyId ?? config.accessKeyId;
   const secretAccessKey = options?.secretAccessKey ?? config.secretAccessKey;
   const endpoint = options?.endpoint ?? config.endpoint;
