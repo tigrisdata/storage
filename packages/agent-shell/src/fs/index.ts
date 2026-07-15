@@ -1,2 +1,2 @@
-export type { TigrisConfig } from "../types.js";
-export { TigrisAdapter } from "./tigris-adapter.js";
+export type { TigrisConfig } from '../types.js';
+export { TigrisAdapter } from './tigris-adapter.js';
