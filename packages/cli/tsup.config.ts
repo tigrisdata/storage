@@ -1,0 +1,46 @@
+import { copyFileSync, watch } from 'node:fs';
+import { join } from 'node:path';
+import { defineConfig } from 'tsup';
+
+const copySpecs = () => {
+  copyFileSync(
+    join(process.cwd(), 'src/specs.yaml'),
+    join(process.cwd(), 'dist/specs.yaml')
+  );
+};
+
+export default defineConfig((options) => ({
+  esbuildOptions(options) {
+    options.alias = {
+      '@auth': './src/auth',
+      '@utils': './src/utils',
+    };
+  },
+  entry: [
+    'src/cli.ts',
+    'src/**/*.ts',
+    // Exclude binary-only files (use bun-specific import syntax)
+    '!src/cli-binary.ts',
+    '!src/specs-embedded.ts',
+    '!src/command-registry.ts',
+  ],
+  format: ['esm'],
+  dts: false,
+  splitting: true,
+  sourcemap: false,
+  clean: true,
+  minify: true,
+  onSuccess: async () => {
+    copySpecs();
+
+    // In watch mode, also watch specs.yaml for changes
+    if (options.watch) {
+      watch(join(process.cwd(), 'src/specs.yaml'), (eventType) => {
+        if (eventType === 'change') {
+          console.log('specs.yaml changed, copying...');
+          copySpecs();
+        }
+      });
+    }
+  },
+}));
