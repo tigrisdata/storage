@@ -7,4 +7,9 @@ dist/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.test
 .vscode
+
+# packages/cli
+packages/cli/bin/
+packages/cli/src/command-registry.ts

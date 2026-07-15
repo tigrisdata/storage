@@ -2,6 +2,10 @@ const { openSync, writeSync, closeSync, mkdirSync, copyFileSync, existsSync } = 
 const { join } = require('path');
 const { homedir } = require('os');
 
+// Only run when installed as a dependency (under node_modules), not during
+// monorepo/workspace dev installs where this package is the source tree.
+if (!__dirname.includes('node_modules')) process.exit(0);
+
 // --- Install Claude Code SKILL.md ---
 try {
   const claudeDir = join(homedir(), '.claude');
