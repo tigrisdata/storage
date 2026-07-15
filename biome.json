@@ -31,16 +31,23 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "complexity": {
+        "noBannedTypes": "error",
+        "noExcessiveCognitiveComplexity": "warn"
+      },
       "correctness": {
+        "noUnusedImports": "error",
         "noUnusedVariables": "error"
       },
-      "suspicious": {
-        "noExplicitAny": "warn",
-        "noVar": "error"
-      },
       "style": {
+        "noNonNullAssertion": "off",
         "useConst": "error",
-        "noNonNullAssertion": "off"
+        "useImportType": "error"
+      },
+      "suspicious": {
+        "noConfusingVoidType": "error",
+        "noExplicitAny": "error",
+        "noVar": "error"
       }
     }
   },
