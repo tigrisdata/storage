@@ -1,92 +1,71 @@
 {
-	"name": "@tigrisdata/agent-shell",
-	"version": "0.0.2",
-	"description": "A virtual bash environment with a persistent filesystem — backed by Tigris object storage",
-	"type": "module",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
-	"bin": {
-		"agent-shell": "dist/cli.js",
-		"tigris-agent-shell": "dist/cli.js"
-	},
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
-		},
-		"./fs": {
-			"types": "./dist/fs/index.d.ts",
-			"import": "./dist/fs/index.js"
-		},
-		"./commands": {
-			"types": "./dist/commands/index.d.ts",
-			"import": "./dist/commands/index.js"
-		},
-		"./repl": {
-			"types": "./dist/repl/index.d.ts",
-			"import": "./dist/repl/index.js"
-		}
-	},
-	"publishConfig": {
-		"access": "public"
-	},
-	"files": [
-		"dist"
-	],
-	"scripts": {
-		"typecheck": "tsc --noEmit",
-		"build": "tsc -p tsconfig.build.json",
-		"test": "vitest run",
-		"test:watch": "vitest",
-		"lint": "biome check",
-		"lint:fix": "biome check --write",
-		"format": "biome format --write",
-		"format:md": "npx prettier --write \"**/*.md\"",
-		"prepare": "husky"
-	},
-	"keywords": [
-		"ai",
-		"agent",
-		"agent-storage",
-		"sandbox",
-		"sandboxed-storage",
-		"bash",
-		"shell",
-		"filesystem",
-		"tigris",
-		"object-storage"
-	],
-	"author": "Tigris Data Inc",
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/tigrisdata/agent-shell.git"
-	},
-	"engines": {
-		"node": ">=20.0.0"
-	},
-	"dependencies": {
-		"@tigrisdata/storage": "^3.7.0",
-		"just-bash": "^3.0.1"
-	},
-	"release": {
-		"branches": [
-			"main"
-		],
-		"plugins": [
-			"@semantic-release/commit-analyzer",
-			"@semantic-release/release-notes-generator",
-			"@semantic-release/github",
-			"@semantic-release/npm"
-		]
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.4.15",
-		"@commitlint/cli": "^21.0.1",
-		"@commitlint/config-conventional": "^21.0.1",
-		"husky": "^9.1.7",
-		"semantic-release": "^25.0.3",
-		"typescript": "~5.8.0",
-		"vitest": "^4.1.7"
-	}
+  "name": "@tigrisdata/agent-shell",
+  "version": "0.0.2",
+  "description": "A virtual bash environment with a persistent filesystem — backed by Tigris object storage",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "agent-shell": "dist/cli.js",
+    "tigris-agent-shell": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./fs": {
+      "types": "./dist/fs/index.d.ts",
+      "import": "./dist/fs/index.js"
+    },
+    "./commands": {
+      "types": "./dist/commands/index.d.ts",
+      "import": "./dist/commands/index.js"
+    },
+    "./repl": {
+      "types": "./dist/repl/index.d.ts",
+      "import": "./dist/repl/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
+    "format": "biome format --write"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "agent-storage",
+    "sandbox",
+    "sandboxed-storage",
+    "bash",
+    "shell",
+    "filesystem",
+    "tigris",
+    "object-storage"
+  ],
+  "author": "Tigris Data Inc",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tigrisdata/storage.git",
+    "directory": "packages/agent-shell"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@tigrisdata/storage": "workspace:^",
+    "just-bash": "^3.0.1"
+  }
 }

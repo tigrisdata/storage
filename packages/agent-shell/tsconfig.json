@@ -1,27 +1,27 @@
 {
-	"compilerOptions": {
-		"target": "ES2022",
-		"module": "NodeNext",
-		"moduleResolution": "NodeNext",
-		"verbatimModuleSyntax": true,
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "verbatimModuleSyntax": true,
 
-		"strict": true,
-		"noUncheckedIndexedAccess": true,
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-		"exactOptionalPropertyTypes": true,
-		"noFallthroughCasesInSwitch": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+    "noFallthroughCasesInSwitch": true,
 
-		"declaration": true,
-		"declarationMap": true,
-		"sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
 
-		"outDir": "dist",
+    "outDir": "dist",
 
-		"skipLibCheck": true,
-		"forceConsistentCasingInFileNames": true,
-		"isolatedModules": true
-	},
-	"include": ["src", "tests"],
-	"exclude": ["node_modules", "dist"]
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true
+  },
+  "include": ["src", "tests"],
+  "exclude": ["node_modules", "dist"]
 }
