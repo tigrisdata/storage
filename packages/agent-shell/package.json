@@ -1,6 +1,6 @@
 {
   "name": "@tigrisdata/agent-shell",
-  "version": "0.0.2",
+  "version": "0.7.0",
   "description": "A virtual bash environment with a persistent filesystem — backed by Tigris object storage",
   "type": "module",
   "main": "dist/index.js",
