@@ -1,9 +1,15 @@
 name: Deploy agent-shell playground
 
-# Manual deploy of apps/agent-shell-playground to Fly.io. The Dockerfile
-# (pierrezemb/gostatic) serves the Vite `dist/` produced in the build step,
-# so we build in CI first, then `flyctl deploy` ships the static bundle.
+# Deploys apps/agent-shell-playground to Fly.io on pushes to main that touch
+# the app or its @tigrisdata/agent-shell dependency, plus manual dispatch.
+# The Dockerfile (pierrezemb/gostatic) serves the Vite `dist/` built in CI,
+# so we build first, then `flyctl deploy` ships the static bundle.
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/agent-shell/**'
+      - 'apps/agent-shell-playground/**'
   workflow_dispatch:
 
 jobs:
