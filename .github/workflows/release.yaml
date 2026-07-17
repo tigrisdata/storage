@@ -140,6 +140,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # build:binary type-checks against @tigrisdata/iam and @tigrisdata/storage,
+      # so their dist/*.d.ts must exist first. This job is separate from the
+      # release job, so build the workspace packages here too.
+      - name: Build workspace packages
+        run: pnpm -r --if-present run build
+
       - name: Build binaries for all platforms
         run: pnpm --filter @tigrisdata/cli run build:binary
 
