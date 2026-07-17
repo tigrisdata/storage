@@ -1,5 +1,11 @@
 # @tigrisdata/cli
 
+## 3.4.2
+
+### Patch Changes
+
+- [#188](https://github.com/tigrisdata/storage/pull/188) [`693bcc8`](https://github.com/tigrisdata/storage/commit/693bcc86ce9b843141baa468dec0db70eb5a4745) Thanks [@designcode](https://github.com/designcode)! - Import the Tigris CLI into the storage monorepo and align its dev tooling with the workspace: drop the redundant `@types/node` dependency so pnpm resolves a single `@types/node` version across all packages (previously it pulled a second major, which broke `@tigrisdata/keyv-tigris`'s type-check).
+
 ## 3.4.1
 
 ### Patch Changes
