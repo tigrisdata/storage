@@ -63,11 +63,19 @@ Located in the root `packages/` directory as a pnpm workspace (`pnpm-workspace.y
   - Built with TypeScript, uses AWS SDK v3 for S3 compatibility
   - Exports both server and client modules
 - **`@tigrisdata/iam`** ([packages/iam](packages/iam)) — IAM SDK
+- **`@tigrisdata/cli`** ([packages/cli](packages/cli)) — Command line interface for Tigris object storage (depends on `@tigrisdata/storage` and `@tigrisdata/iam`)
 - **`@tigrisdata/agent-kit`** ([packages/agent-kit](packages/agent-kit)) — Composition library for AI agents (depends on `@tigrisdata/storage` and `@tigrisdata/iam`)
 - **`@tigrisdata/keyv-tigris`** ([packages/keyv-tigris](packages/keyv-tigris)) — Keyv adapter (depends on `@tigrisdata/storage`)
 - **`@tigrisdata/react`** ([packages/react](packages/react)) — React components (depends on `@tigrisdata/storage`)
+- **`@tigrisdata/agent-shell`** ([packages/agent-shell](packages/agent-shell)) — A virtual bash environment for AI agents, backed by Tigris object storage (depends on `@tigrisdata/storage`)
 
 Cross-package deps use the `workspace:^` protocol; pnpm rewrites them to real ranges at publish time.
+
+### Apps
+
+Non-published apps live in `apps/` (part of the pnpm workspace via the `apps/*` glob) and are marked `private: true` so Changesets never publishes them:
+
+- **`agent-shell-playground`** ([apps/agent-shell-playground](apps/agent-shell-playground)) — Vite playground for `@tigrisdata/agent-shell`, deployed to Fly.io via the `deploy-agent-shell-playground.yml` workflow
 
 Shared code lives in [`shared/`](shared) and is imported via the `@shared/*` TS path alias and the matching tsup esbuild alias. It is bundled into each package at build time and is not published as its own package.
 
