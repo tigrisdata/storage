@@ -25,6 +25,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NPM_CONFIG_PROVENANCE: "true"
+    # Surfaced so the CLI binary/Homebrew jobs below can run only when this
+    # release actually published @tigrisdata/cli, and know which version.
+    outputs:
+      cli_published: ${{ steps.cli.outputs.published }}
+      cli_version: ${{ steps.cli.outputs.version }}
 
     steps:
       - uses: actions/checkout@v7
@@ -61,6 +66,7 @@ jobs:
       # Stable release (push to main): open/update the Version Packages PR, or
       # publish to the `latest` tag when that PR merges.
       - name: Create release PR or publish
+        id: changesets
         if: ${{ github.event_name == 'push' }}
         uses: changesets/action@v1
         with:
@@ -70,6 +76,24 @@ jobs:
           title: "chore(release): bump versions and update changelogs"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Did this run publish @tigrisdata/cli? If so, expose its version so the
+      # build-binaries / update-homebrew jobs fire (and skip for releases that
+      # only touched other packages). publishedPackages is a JSON array of
+      # { name, version }.
+      - name: Detect CLI publish
+        id: cli
+        if: ${{ github.event_name == 'push' && steps.changesets.outputs.published == 'true' }}
+        env:
+          PUBLISHED: ${{ steps.changesets.outputs.publishedPackages }}
+        run: |
+          version="$(printf '%s' "$PUBLISHED" | jq -r '.[] | select(.name == "@tigrisdata/cli") | .version')"
+          if [ -n "$version" ]; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
 
       # Beta pre-release (manual dispatch from any branch): apply pending
       # changesets as an ephemeral snapshot version (e.g. 3.13.0-beta-<timestamp>)
@@ -90,3 +114,109 @@ jobs:
           TAG: ${{ inputs.tag }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm changeset publish --tag "$TAG" --no-git-tag
+
+  # Compile standalone CLI binaries (Bun) and attach them to the GitHub
+  # release changesets created for @tigrisdata/cli@<version>. Runs only when
+  # this release published the CLI. Cannot be exercised by PR CI — it is
+  # gated on a real publish; validated by review + the first live release.
+  build-binaries:
+    needs: release
+    if: ${{ needs.release.outputs.cli_published == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "pnpm"
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build binaries for all platforms
+        run: pnpm --filter @tigrisdata/cli run build:binary
+
+      - name: Verify binaries exist
+        working-directory: packages/cli/bin
+        run: |
+          missing=0
+          for f in tigris-darwin-arm64 tigris-darwin-x64 tigris-linux-x64 tigris-linux-arm64; do
+            [ -f "$f" ] || { echo "ERROR: missing binary: $f"; missing=1; }
+          done
+          [ -f "tigris-windows-x64.exe" ] || { echo "ERROR: missing binary: tigris-windows-x64.exe"; missing=1; }
+          if [ "$missing" -eq 1 ]; then echo "Binary build incomplete:"; ls -la; exit 1; fi
+          echo "All binaries present."
+
+      - name: Package archives
+        working-directory: packages/cli/bin
+        run: |
+          for f in tigris-darwin-arm64 tigris-darwin-x64 tigris-linux-x64 tigris-linux-arm64; do
+            tar czf "${f}.tar.gz" "$f"
+          done
+          zip tigris-windows-x64.zip tigris-windows-x64.exe
+
+      - name: Upload assets to the @tigrisdata/cli release
+        working-directory: packages/cli
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.release.outputs.cli_version }}
+        run: |
+          TAG="@tigrisdata/cli@${VERSION}"
+
+          # changesets/action creates the GitHub release for the tag; create it
+          # defensively if that ever changes (the git tag already exists).
+          if ! gh release view "$TAG" > /dev/null 2>&1; then
+            gh release create "$TAG" --title "$TAG" --notes "Tigris CLI ${VERSION}" --verify-tag
+          fi
+
+          for asset in \
+            bin/tigris-darwin-arm64.tar.gz \
+            bin/tigris-darwin-x64.tar.gz \
+            bin/tigris-linux-x64.tar.gz \
+            bin/tigris-linux-arm64.tar.gz \
+            bin/tigris-windows-x64.zip \
+            scripts/install.sh \
+            scripts/install.ps1
+          do
+            echo "Uploading $asset ..."
+            for attempt in 1 2 3; do
+              if gh release upload "$TAG" "$asset" --clobber; then break; fi
+              [ "$attempt" -eq 3 ] && { echo "ERROR: upload failed after 3 attempts"; exit 1; }
+              sleep 5
+            done
+          done
+          echo "All assets uploaded to $TAG"
+
+  # Regenerate the Homebrew formula from the release assets and open a PR
+  # against tigrisdata/homebrew-tap. Needs a HOMEBREW_TAP_TOKEN secret with
+  # push + PR access to that tap; the job no-ops gracefully if it is absent.
+  update-homebrew:
+    needs: [release, build-binaries]
+    if: ${{ needs.release.outputs.cli_published == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Update Homebrew formula
+        working-directory: packages/cli
+        env:
+          # GITHUB_TOKEN reads the release assets from this repo; the tap token
+          # pushes the formula PR to tigrisdata/homebrew-tap.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ needs.release.outputs.cli_version }}
+        run: |
+          # secrets can't be used in a step `if:`, so gate here: no token means
+          # the tap can't be pushed to, so skip rather than fail the release.
+          if [ -z "${HOMEBREW_TAP_TOKEN:-}" ]; then
+            echo "HOMEBREW_TAP_TOKEN not set — skipping Homebrew update."
+            exit 0
+          fi
+          scripts/update-homebrew.sh "$VERSION"

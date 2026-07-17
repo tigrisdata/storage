@@ -1,0 +1,75 @@
+{
+  "name": "@tigrisdata/cli",
+  "version": "3.4.1",
+  "description": "Command line interface for Tigris object storage",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/cli.js"
+    }
+  },
+  "bin": {
+    "tigris": "./dist/cli.js",
+    "t3": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "postinstall.cjs",
+    "README.md",
+    "SKILL.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc --noEmit && tsup",
+    "dev": "export $(grep -v '^#' .env.test | xargs) && (tsc --noEmit --watch --preserveWatchOutput & tsup --watch)",
+    "cli": "export $(grep -v '^#' .env.test | xargs) && node dist/cli.js",
+    "lint": "biome lint",
+    "lint:fix": "biome lint --write",
+    "format": "biome format --write",
+    "format:check": "biome format",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run test/cli.test.ts",
+    "publint": "publint",
+    "updatedocs": "tsx scripts/update-docs.ts",
+    "postinstall": "node postinstall.cjs",
+    "generate:registry": "tsx scripts/generate-registry.ts",
+    "build:binary": "npm run generate:registry && tsc --noEmit -p tsconfig.binary.json && tsx scripts/build-binaries.ts",
+    "build:binary:current": "npm run generate:registry && tsc --noEmit -p tsconfig.binary.json && bun build src/cli-binary.ts --compile --outfile=bin/tigris",
+    "dev:binary": "npm run generate:registry && tsc --noEmit --watch --preserveWatchOutput -p tsconfig.binary.json & bun build src/cli-binary.ts --compile --watch --outfile=bin/tigris",
+    "prepublishOnly": "npm run build",
+    "clean": "rm -rf dist",
+    "check": "biome check",
+    "check:fix": "biome check --write"
+  },
+  "keywords": [
+    "cli",
+    "object",
+    "storage",
+    "tigris",
+    "blob"
+  ],
+  "author": "Tigris Data",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tigrisdata/storage.git",
+    "directory": "packages/cli"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/credential-providers": "^3.1038.0",
+    "@smithy/shared-ini-file-loader": "^4.4.9",
+    "@tigrisdata/iam": "workspace:^",
+    "@tigrisdata/storage": "workspace:^",
+    "commander": "^14.0.3",
+    "enquirer": "^2.4.1",
+    "jose": "^6.2.3",
+    "open": "^11.0.0",
+    "yaml": "^2.8.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
+  }
+}

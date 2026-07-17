@@ -1,0 +1,191 @@
+import { createWriteStream, writeFileSync } from 'node:fs';
+import { extname } from 'node:path';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { getStorageConfig } from '@auth/provider.js';
+import { get } from '@tigrisdata/storage';
+import { failWithError } from '@utils/exit.js';
+import { msg, printStart, printSuccess } from '@utils/messages.js';
+import { getFormat, getOption } from '@utils/options.js';
+import { resolveObjectArgs } from '@utils/path.js';
+
+const context = msg('objects', 'get');
+
+// Text file extensions that should use string format
+const TEXT_EXTENSIONS = new Set([
+  // Code
+  '.js',
+  '.ts',
+  '.jsx',
+  '.tsx',
+  '.mjs',
+  '.cjs',
+  '.py',
+  '.rb',
+  '.php',
+  '.java',
+  '.go',
+  '.rs',
+  '.c',
+  '.cpp',
+  '.h',
+  '.hpp',
+  '.cs',
+  '.swift',
+  '.kt',
+  '.scala',
+  '.clj',
+  '.ex',
+  '.exs',
+  '.erl',
+  '.sh',
+  '.bash',
+  '.zsh',
+  '.fish',
+  '.ps1',
+  '.bat',
+  '.cmd',
+  '.sql',
+  '.graphql',
+  '.gql',
+  // Config
+  '.json',
+  '.yaml',
+  '.yml',
+  '.toml',
+  '.ini',
+  '.cfg',
+  '.conf',
+  '.xml',
+  '.plist',
+  '.env',
+  '.properties',
+  // Markup & styles
+  '.html',
+  '.htm',
+  '.css',
+  '.scss',
+  '.sass',
+  '.less',
+  '.styl',
+  '.md',
+  '.markdown',
+  '.mdx',
+  '.rst',
+  '.txt',
+  '.text',
+  '.csv',
+  '.tsv',
+  '.log',
+  // Templates
+  '.ejs',
+  '.hbs',
+  '.pug',
+  '.jade',
+  '.njk',
+  '.twig',
+  '.liquid',
+  // Other text
+  '.svg',
+  '.gitignore',
+  '.dockerignore',
+  '.editorconfig',
+]);
+
+/**
+ * Detect format based on file extension
+ * Text files use 'string', everything else uses 'stream'
+ */
+function detectFormat(key: string, output?: string): 'string' | 'stream' {
+  const pathToCheck = output || key;
+  const ext = extname(pathToCheck).toLowerCase();
+  return TEXT_EXTENSIONS.has(ext) ? 'string' : 'stream';
+}
+
+export default async function getObject(options: Record<string, unknown>) {
+  printStart(context);
+
+  const outputFormat = getFormat(options);
+
+  const bucketArg = getOption<string>(options, ['bucket']);
+  const keyArg = getOption<string>(options, ['key']);
+  const output = getOption<string>(options, ['output', 'o', 'O']);
+  const modeOption = getOption<string>(options, ['mode', 'm', 'M']);
+  const snapshotVersion = getOption<string>(options, [
+    'snapshot-version',
+    'snapshotVersion',
+    'snapshot',
+  ]);
+  const versionId = getOption<string>(options, ['version-id', 'versionId']);
+
+  if (!bucketArg) {
+    failWithError(context, 'Bucket name or path is required');
+  }
+
+  const { bucket, key } = resolveObjectArgs(bucketArg, keyArg);
+
+  if (!key) {
+    failWithError(context, 'Object key is required');
+  }
+
+  const config = await getStorageConfig();
+
+  // Use provided mode or auto-detect from extension
+  const mode = (modeOption as 'string' | 'stream') || detectFormat(key, output);
+
+  if (mode === 'stream') {
+    const { data, error } = await get(key, 'stream', {
+      ...(snapshotVersion ? { snapshotVersion } : {}),
+      ...(versionId ? { versionId } : {}),
+      config: {
+        ...config,
+        bucket,
+      },
+    });
+
+    if (error) {
+      failWithError(context, error);
+    }
+
+    if (output) {
+      const writeStream = createWriteStream(output);
+      await pipeline(Readable.fromWeb(data as ReadableStream), writeStream);
+      printSuccess(context, { key, output });
+      if (outputFormat === 'json') {
+        console.log(
+          JSON.stringify({ action: 'downloaded', bucket, key, output })
+        );
+      }
+    } else {
+      // Stream to stdout for binary data
+      await pipeline(Readable.fromWeb(data as ReadableStream), process.stdout);
+      printSuccess(context);
+    }
+  } else {
+    const { data, error } = await get(key, 'string', {
+      ...(snapshotVersion ? { snapshotVersion } : {}),
+      ...(versionId ? { versionId } : {}),
+      config: {
+        ...config,
+        bucket,
+      },
+    });
+
+    if (error) {
+      failWithError(context, error);
+    }
+
+    if (output) {
+      writeFileSync(output, data);
+      printSuccess(context, { key, output });
+      if (outputFormat === 'json') {
+        console.log(
+          JSON.stringify({ action: 'downloaded', bucket, key, output })
+        );
+      }
+    } else {
+      console.log(data);
+      printSuccess(context);
+    }
+  }
+}

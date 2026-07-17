@@ -1,0 +1,437 @@
+/**
+ * Auth0 authentication client for CLI
+ * Uses Device Authorization Flow (OAuth 2.0 Device Flow)
+ */
+
+import type { Organization } from '@tigrisdata/iam';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
+import open from 'open';
+
+import * as storage from './storage.js';
+
+/**
+ * Auth0 configuration for CLI authentication
+ */
+export interface Auth0Config {
+  domain: string;
+  clientId: string;
+  audience: string;
+  claimsNamespace: string;
+}
+
+/**
+ * Get Auth0 configuration from environment variables or defaults
+ */
+export function getAuth0Config(): Auth0Config {
+  const isDev = process.env.TIGRIS_ENV === 'development';
+  const domain = isDev
+    ? (process.env.AUTH0_DOMAIN ?? 'auth-storage.tigris.dev')
+    : (process.env.AUTH0_DOMAIN ?? 'auth.storage.tigrisdata.io');
+  const clientId = isDev
+    ? (process.env.AUTH0_CLIENT_ID ?? 'JdJVYIyw0O1uHi5L5OJH903qaWBgd3gF')
+    : (process.env.AUTH0_CLIENT_ID ?? 'DMejqeM3CQ4IqTjEcd3oA9eEiT40hn8D');
+  const audience = isDev
+    ? (process.env.AUTH0_AUDIENCE ?? 'https://tigris-api-dev')
+    : (process.env.AUTH0_AUDIENCE ?? 'https://tigris-os-api');
+  const claimsNamespace =
+    process.env.TIGRIS_CLAIMS_NAMESPACE ?? 'https://tigris';
+  return { domain, clientId, audience, claimsNamespace };
+}
+
+/**
+ * OAuth-specific types
+ */
+export interface IdTokenClaims {
+  sub: string;
+  email?: string;
+  email_verified?: boolean;
+  [key: string]: unknown;
+}
+
+interface DeviceCodeResponse {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  verification_uri_complete: string;
+  expires_in: number;
+  interval: number;
+}
+
+interface TokenResponse {
+  access_token: string;
+  refresh_token?: string;
+  id_token?: string;
+  expires_in: number;
+  token_type: string;
+}
+
+/**
+ * Auth0 Client wrapper for CLI authentication
+ */
+export class TigrisAuthClient {
+  private config: ReturnType<typeof getAuth0Config>;
+  private baseUrl: string;
+  private jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+
+  constructor() {
+    this.config = getAuth0Config();
+    this.baseUrl = `https://${this.config.domain}`;
+  }
+
+  /**
+   * Get the JWKS key set for verifying JWTs, lazily initialized and cached.
+   */
+  private getJWKS() {
+    if (!this.jwks) {
+      this.jwks = createRemoteJWKSet(
+        new URL(`${this.baseUrl}/.well-known/jwks.json`)
+      );
+    }
+    return this.jwks;
+  }
+
+  /**
+   * Verify an ID token's signature against Auth0's JWKS and validate
+   * standard claims (issuer, audience, expiration).
+   */
+  async verifyIdToken(token: string): Promise<IdTokenClaims> {
+    const { payload } = await jwtVerify(token, this.getJWKS(), {
+      issuer: `${this.baseUrl}/`,
+      audience: this.config.clientId,
+    });
+    return payload as unknown as IdTokenClaims;
+  }
+
+  /**
+   * Initiate device authorization flow
+   */
+  async login(callbacks?: {
+    onDeviceCode?: (code: string, uri: string) => void;
+    onWaiting?: () => void;
+  }): Promise<void> {
+    // Start device authorization
+    const response = await fetch(`${this.baseUrl}/oauth/device/code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: this.config.clientId,
+        audience: this.config.audience,
+        scope: 'openid profile email offline_access',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Device authorization failed: ${response.statusText}`);
+    }
+
+    const deviceCode: DeviceCodeResponse = JSON.parse(await response.text());
+
+    // Show device code for confirmation
+    callbacks?.onDeviceCode?.(
+      deviceCode.user_code,
+      deviceCode.verification_uri
+    );
+
+    // Delay before opening browser so user can see the code
+    await this.sleep(2000);
+
+    // Open browser automatically
+    try {
+      await open(deviceCode.verification_uri_complete);
+    } catch {
+      // Browser failed to open, user will need to manually visit the URL
+    }
+
+    callbacks?.onWaiting?.();
+
+    // Poll for token
+    const tokens = await this.pollForToken(
+      deviceCode.device_code,
+      deviceCode.interval || 5
+    );
+
+    // Store tokens securely
+    await storage.storeTokens(tokens);
+
+    // Store login method
+    storage.storeLoginMethod('oauth');
+
+    // Extract and store organizations
+    await this.extractAndStoreOrganizations();
+  }
+
+  /**
+   * Poll Auth0 for token after device authorization
+   */
+  private async pollForToken(
+    deviceCode: string,
+    interval: number
+  ): Promise<storage.TokenSet> {
+    const maxAttempts = 60; // 5 minutes with 5-second intervals
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+
+      const response = await fetch(`${this.baseUrl}/oauth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: this.config.clientId,
+          device_code: deviceCode,
+          grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody: { error?: string; error_description?: string } =
+          await response
+            .text()
+            .then(JSON.parse)
+            .catch(() => ({}));
+
+        // authorization_pending: User hasn't completed auth yet
+        if (errorBody.error === 'authorization_pending') {
+          await this.sleep(interval * 1000);
+          continue;
+        }
+
+        // slow_down: Polling too fast
+        if (errorBody.error === 'slow_down') {
+          interval += 5;
+          await this.sleep(interval * 1000);
+          continue;
+        }
+
+        // Any other error should stop polling
+        throw new Error(errorBody.error_description || 'Authentication failed');
+      }
+
+      const data: TokenResponse = JSON.parse(await response.text());
+
+      if (!data.id_token) {
+        throw new Error('No ID token found. Please try again.');
+      }
+
+      const idTokenClaims = await this.verifyIdToken(data.id_token);
+
+      if (idTokenClaims.email_verified === false) {
+        console.log(
+          'Email not verified. Please verify your email and try again.'
+        );
+        throw new Error(
+          'Email not verified. Please verify your email and try again.'
+        );
+      }
+
+      // Calculate expiration time
+      const expiresAt = Date.now() + (data.expires_in || 3600) * 1000;
+
+      return {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        idToken: data.id_token,
+        expiresAt,
+      };
+    }
+
+    throw new Error('Authentication timed out. Please try again.');
+  }
+
+  /**
+   * Get valid access token (refresh if needed)
+   */
+  async getAccessToken(): Promise<string> {
+    let tokens = await storage.getTokens();
+
+    if (!tokens) {
+      throw new Error(
+        'Not authenticated. Please run "tigris login" to authenticate.'
+      );
+    }
+
+    // Check if token is expired or will expire in next 5 minutes
+    const expiryBuffer = 5 * 60 * 1000; // 5 minutes
+    if (Date.now() + expiryBuffer >= tokens.expiresAt) {
+      tokens = await this.refreshAccessToken(tokens);
+    }
+
+    return tokens.accessToken;
+  }
+
+  /**
+   * Refresh access token using refresh token
+   */
+  async refreshAccessToken(
+    tokens?: storage.TokenSet
+  ): Promise<storage.TokenSet> {
+    let tokenSet: storage.TokenSet | null;
+
+    if (!tokens?.refreshToken) {
+      tokenSet = await storage.getTokens();
+    } else {
+      tokenSet = tokens;
+    }
+
+    if (!tokenSet?.refreshToken) {
+      throw new Error(
+        'No refresh token available. Please run "tigris login" to re-authenticate.'
+      );
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/oauth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: this.config.clientId,
+          grant_type: 'refresh_token',
+          refresh_token: tokenSet.refreshToken,
+          scope: 'openid profile email offline_access',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Token refresh failed');
+      }
+
+      const data: TokenResponse = JSON.parse(await response.text());
+
+      const newTokens: storage.TokenSet = {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token || tokenSet.refreshToken,
+        idToken: data.id_token || tokenSet.idToken,
+        expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
+      };
+
+      await storage.storeTokens(newTokens);
+      return newTokens;
+    } catch {
+      // Refresh failed, clear tokens and prompt re-login
+      await storage.clearTokens();
+
+      throw new Error(
+        'Token refresh failed. Please run "tigris login" to re-authenticate.'
+      );
+    }
+  }
+
+  /**
+   * Get ID token claims
+   */
+  async getIdTokenClaims(): Promise<IdTokenClaims> {
+    const tokens = await storage.getTokens();
+
+    if (!tokens?.idToken) {
+      throw new Error(
+        'Not authenticated. Please run "tigris login" to authenticate.'
+      );
+    }
+
+    try {
+      return await this.verifyIdToken(tokens.idToken);
+    } catch {
+      throw new Error(
+        'ID token verification failed. Please run "tigris login" to re-authenticate.'
+      );
+    }
+  }
+
+  /**
+   * Extract organizations from ID token claims and store them
+   */
+  async extractAndStoreOrganizations(): Promise<void> {
+    try {
+      const availableOrgs = await this.fetchOrganizationsFromUserInfo();
+      if (availableOrgs) {
+        storage.storeOrganizations(availableOrgs);
+      }
+    } catch {
+      // Silently fail - organizations will need to be fetched another way
+    }
+  }
+
+  async fetchOrganizationsFromUserInfo(): Promise<Organization[] | null> {
+    try {
+      const { domain, claimsNamespace } = this.config;
+      const accessToken = await this.getAccessToken();
+      const response = await fetch(`https://${domain}/userinfo`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data: Record<string, { ns?: Organization[] }> = JSON.parse(
+        await response.text()
+      );
+
+      const namespaces: Organization[] | undefined = data[claimsNamespace]?.ns;
+
+      if (!Array.isArray(namespaces)) {
+        return null;
+      }
+
+      return namespaces.map((ns: Organization) => ({
+        id: ns.id,
+        name: ns.name,
+        slug: ns.name,
+      }));
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get organizations from stored claims
+   */
+  async getOrganizations(): Promise<Organization[]> {
+    // First, ensure we have a valid token
+    await this.getAccessToken();
+
+    // Return stored organizations
+    return storage.getOrganizations();
+  }
+
+  async isFlyUser(): Promise<boolean> {
+    // First, ensure we have a valid token
+    const idTokenClaims = await this.getIdTokenClaims();
+
+    return idTokenClaims.sub.includes('fly-sso');
+  }
+
+  /**
+   * Logout and clear all stored data
+   */
+  async logout(): Promise<void> {
+    await storage.clearTokens();
+  }
+
+  /**
+   * Check if user is authenticated
+   */
+  async isAuthenticated(): Promise<boolean> {
+    const tokens = await storage.getTokens();
+    return tokens !== null;
+  }
+
+  /**
+   * Sleep utility
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+}
+
+/**
+ * Get singleton instance of auth client
+ */
+let authClient: TigrisAuthClient | null = null;
+
+export function getAuthClient(): TigrisAuthClient {
+  if (!authClient) {
+    authClient = new TigrisAuthClient();
+  }
+  return authClient;
+}

@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "allowJs": true,
+    "strict": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "paths": {
+      "@auth/*": ["./src/auth/*"],
+      "@utils/*": ["./src/utils/*"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["src/cli-binary.ts", "src/command-registry.ts"]
+}
