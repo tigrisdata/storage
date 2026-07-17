@@ -1,5 +1,11 @@
 # @tigrisdata/cli
 
+## 3.4.3
+
+### Patch Changes
+
+- [#190](https://github.com/tigrisdata/storage/pull/190) [`7d5a12c`](https://github.com/tigrisdata/storage/commit/7d5a12c3e96715e7e3353452f62b550ad703805f) Thanks [@designcode](https://github.com/designcode)! - Fix the release pipeline so the standalone binaries and Homebrew formula are actually built and published. The `build-binaries` job installed dependencies but never built the workspace packages, so the binary `tsc` could not resolve `@tigrisdata/iam` / `@tigrisdata/storage` types and failed before any assets were uploaded (3.4.2 shipped to npm but without binaries).
+
 ## 3.4.2
 
 ### Patch Changes
