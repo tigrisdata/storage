@@ -1,15 +1,15 @@
 # Tigris CLI installer for Windows
-# Usage: irm https://github.com/tigrisdata/cli/releases/latest/download/install.ps1 | iex
+# Usage: irm https://raw.githubusercontent.com/tigrisdata/storage/main/packages/cli/scripts/install.ps1 | iex
 #
 # Environment variables:
 #   TIGRIS_INSTALL_DIR  - Installation directory (default: $HOME\.tigris\bin)
 #   TIGRIS_VERSION      - Specific version to install (default: latest)
-#   TIGRIS_REPO         - GitHub repo (default: tigrisdata/cli)
+#   TIGRIS_REPO         - GitHub repo (default: tigrisdata/storage)
 #   TIGRIS_DOWNLOAD_URL - Direct download URL (skips version detection, for testing)
 
 $ErrorActionPreference = "Stop"
 
-$Repo = if ($env:TIGRIS_REPO) { $env:TIGRIS_REPO } else { "tigrisdata/cli" }
+$Repo = if ($env:TIGRIS_REPO) { $env:TIGRIS_REPO } else { "tigrisdata/storage" }
 $BinaryName = "tigris"
 $DefaultInstallDir = "$HOME\.tigris\bin"
 
@@ -18,9 +18,23 @@ function Write-Success { param($Message) Write-Host "success  " -ForegroundColor
 function Write-Warn { param($Message) Write-Host "warn  " -ForegroundColor Yellow -NoNewline; Write-Host $Message }
 function Write-Err { param($Message) Write-Host "error  " -ForegroundColor Red -NoNewline; Write-Host $Message; exit 1 }
 
-function Get-LatestVersion {
-    $response = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest"
-    return $response.tag_name
+function Resolve-AssetUrl {
+    param($AssetName)
+    # In this monorepo `releases/latest` is whatever package shipped last, not
+    # the CLI, and the @tigrisdata/cli@<version> tag's '/' and '@' don't encode
+    # consistently in a hand-built path. So list releases, keep the CLI ones,
+    # and use GitHub's own asset download URL verbatim.
+    $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases?per_page=100"
+    $cli = $releases | Where-Object { $_.tag_name -like '@tigrisdata/cli@*' }
+    if ($env:TIGRIS_VERSION) {
+        $cli = $cli | Where-Object { $_.tag_name -eq "@tigrisdata/cli@$($env:TIGRIS_VERSION)" }
+    }
+    # GitHub returns releases newest-first.
+    $release = $cli | Select-Object -First 1
+    if (-not $release) { return $null }
+    $asset = $release.assets | Where-Object { $_.name -eq $AssetName } | Select-Object -First 1
+    if (-not $asset) { return $null }
+    return $asset.browser_download_url
 }
 
 function Add-ToPath {
@@ -70,12 +84,7 @@ function Show-Banner {
 
 function Install-Skill {
     $skillDir = Join-Path $HOME ".claude\skills\tigris"
-    # Use the release tag when available, fall back to main
-    if ($version -and $version -ne "local") {
-        $skillUrl = "https://raw.githubusercontent.com/$Repo/$version/SKILL.md"
-    } else {
-        $skillUrl = "https://raw.githubusercontent.com/$Repo/main/SKILL.md"
-    }
+    $skillUrl = "https://raw.githubusercontent.com/$Repo/main/packages/cli/SKILL.md"
 
     # Only attempt if ~/.claude exists (Claude Code is installed)
     if (-not (Test-Path (Join-Path $HOME ".claude"))) {
@@ -115,16 +124,18 @@ function Main {
         $version = "local"
         Write-Info "Using direct download URL (testing mode)"
     } else {
-        # Fetch from GitHub releases
-        $version = $env:TIGRIS_VERSION
-        if (-not $version) {
-            Write-Info "Fetching latest version..."
-            $version = Get-LatestVersion
-            if (-not $version) {
-                Write-Err "Failed to determine latest version"
-            }
+        # Resolve the asset URL from the GitHub releases API (see Resolve-AssetUrl).
+        if ($env:TIGRIS_VERSION) {
+            Write-Info "Resolving @tigrisdata/cli@$($env:TIGRIS_VERSION)..."
+            $version = $env:TIGRIS_VERSION
+        } else {
+            Write-Info "Resolving latest @tigrisdata/cli release..."
+            $version = "latest"
         }
-        $downloadUrl = "https://github.com/$Repo/releases/download/$version/$archiveName"
+        $downloadUrl = Resolve-AssetUrl $archiveName
+        if (-not $downloadUrl) {
+            Write-Err "Could not find a $archiveName asset in $Repo @tigrisdata/cli releases"
+        }
     }
 
     Write-Info "Installing version: $version"

@@ -1,22 +1,28 @@
 #!/usr/bin/env bash
-# Updates the Homebrew formula with the correct version and SHA256 hashes,
-# then opens a PR against the tigrisdata/homebrew-tap repo.
+# Regenerate the Homebrew formula for the released Tigris CLI and open a PR
+# against the tap repo.
+#
+# The CLI's release tag is @tigrisdata/cli@<version> — it contains '/' and '@',
+# which are awkward and inconsistent to embed in a download path by hand. So we
+# never build those URLs: we read the release from the GitHub API and copy each
+# asset's own download URL verbatim into the formula.
 #
 # Usage:
 #   scripts/update-homebrew.sh <version>
 #
-# Example:
-#   scripts/update-homebrew.sh 1.2.3
-#
-# Environment variables:
-#   HOMEBREW_TAP_TOKEN  - GitHub token with push and PR access to the tap repo (required in CI)
-#   HOMEBREW_TAP_REPO   - Override tap repo (default: tigrisdata/homebrew-tap)
+# Environment:
+#   HOMEBREW_TAP_TOKEN  GitHub token with push + PR access to the tap (required)
+#   GITHUB_TOKEN        Token that can read the CLI_REPO releases (the default
+#                       Actions token; required)
+#   HOMEBREW_TAP_REPO   Override tap repo (default: tigrisdata/homebrew-tap)
+#   CLI_REPO            Override source repo (default: tigrisdata/storage)
 
 set -euo pipefail
 
 VERSION="${1:?Usage: update-homebrew.sh <version>}"
 TAP_REPO="${HOMEBREW_TAP_REPO:-tigrisdata/homebrew-tap}"
-CLI_REPO="tigrisdata/cli"
+CLI_REPO="${CLI_REPO:-tigrisdata/storage}"
+TAG="@tigrisdata/cli@${VERSION}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TEMPLATE="${SCRIPT_DIR}/../homebrew/Formula/tigris.rb"
 BRANCH="update-tigris-${VERSION}"
@@ -26,42 +32,37 @@ if [ ! -f "$TEMPLATE" ]; then
   exit 1
 fi
 
-CLONE_URL="https://github.com/${TAP_REPO}.git"
-if [ -n "${HOMEBREW_TAP_TOKEN:-}" ]; then
-  CLONE_URL="https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/${TAP_REPO}.git"
-fi
+# --- Read the release + asset URLs from GitHub (uses GITHUB_TOKEN). gh encodes
+#     the '@'/'/'-laden tag for the API call; we never touch the download URLs. ---
+ASSETS_JSON="$(GH_TOKEN="${GITHUB_TOKEN:-}" gh release view "$TAG" --repo "$CLI_REPO" --json assets,url)"
+RELEASE_URL="$(printf '%s' "$ASSETS_JSON" | jq -r '.url')"
 
-export GH_TOKEN="${HOMEBREW_TAP_TOKEN:-}"
+asset_url() {
+  printf '%s' "$ASSETS_JSON" | jq -r --arg n "$1" '.assets[] | select(.name == $n) | .url'
+}
 
-# Early exit: if a PR already exists for this version, nothing to do
-EXISTING_PR="$(gh pr list --repo "$TAP_REPO" --head "$BRANCH" --state open --json number --jq '.[0].number // empty' 2>/dev/null || true)"
-if [ -n "$EXISTING_PR" ]; then
-  echo "PR #${EXISTING_PR} already exists for ${BRANCH}."
-  exit 0
-fi
+URL_DARWIN_ARM64="$(asset_url tigris-darwin-arm64.tar.gz)"
+URL_DARWIN_X64="$(asset_url tigris-darwin-x64.tar.gz)"
+URL_LINUX_ARM64="$(asset_url tigris-linux-arm64.tar.gz)"
+URL_LINUX_X64="$(asset_url tigris-linux-x64.tar.gz)"
 
-# Early exit: if the branch exists but no PR, skip downloads and just create the PR
-REMOTE_BRANCH_EXISTS="$(git ls-remote "https://github.com/${TAP_REPO}.git" "refs/heads/${BRANCH}" | head -1)"
-if [ -n "$REMOTE_BRANCH_EXISTS" ]; then
-  echo "Branch ${BRANCH} already exists on remote. Creating PR..."
-  gh pr create \
-    --repo "$TAP_REPO" \
-    --base main \
-    --head "$BRANCH" \
-    --title "tigris ${VERSION}" \
-    --body "Update Tigris CLI formula to [v${VERSION}](https://github.com/${CLI_REPO}/releases/tag/v${VERSION})."
-  echo ""
-  echo "Pull request created for v${VERSION}"
-  exit 0
-fi
+for pair in \
+  "darwin-arm64:$URL_DARWIN_ARM64" \
+  "darwin-x64:$URL_DARWIN_X64" \
+  "linux-arm64:$URL_LINUX_ARM64" \
+  "linux-x64:$URL_LINUX_X64"; do
+  name="${pair%%:*}"
+  url="${pair#*:}"
+  if [ -z "$url" ] || [ "$url" = "null" ]; then
+    echo "ERROR: missing release asset for ${name} on ${TAG}"
+    exit 1
+  fi
+done
 
-# Download each archive and compute SHA256
 compute_sha256() {
-  local asset_name="$1"
-  local url="https://github.com/${CLI_REPO}/releases/download/v${VERSION}/${asset_name}"
-  local tmp
+  local url="$1" tmp
   tmp="$(mktemp)"
-  echo "Downloading ${asset_name}..." >&2
+  echo "Downloading ${url} ..." >&2
   curl -fsSL "$url" -o "$tmp"
   if command -v sha256sum > /dev/null 2>&1; then
     sha256sum "$tmp" | awk '{print $1}'
@@ -71,46 +72,51 @@ compute_sha256() {
   rm -f "$tmp"
 }
 
-echo "Computing SHA256 hashes for v${VERSION}..."
+echo "Computing SHA256 hashes for ${TAG} ..."
+SHA_DARWIN_ARM64="$(compute_sha256 "$URL_DARWIN_ARM64")"
+SHA_DARWIN_X64="$(compute_sha256 "$URL_DARWIN_X64")"
+SHA_LINUX_ARM64="$(compute_sha256 "$URL_LINUX_ARM64")"
+SHA_LINUX_X64="$(compute_sha256 "$URL_LINUX_X64")"
 
-SHA_DARWIN_ARM64="$(compute_sha256 "tigris-darwin-arm64.tar.gz")"
-SHA_DARWIN_X64="$(compute_sha256 "tigris-darwin-x64.tar.gz")"
-SHA_LINUX_ARM64="$(compute_sha256 "tigris-linux-arm64.tar.gz")"
-SHA_LINUX_X64="$(compute_sha256 "tigris-linux-x64.tar.gz")"
-
-echo "  darwin-arm64: ${SHA_DARWIN_ARM64}"
-echo "  darwin-x64:   ${SHA_DARWIN_X64}"
-echo "  linux-arm64:  ${SHA_LINUX_ARM64}"
-echo "  linux-x64:    ${SHA_LINUX_X64}"
-
-# Generate the formula from the template
+# Generate the formula. Use '|' as the sed delimiter since the download URLs
+# contain '/' (they never contain '|').
 FORMULA="$(sed \
-  -e "s/VERSION_PLACEHOLDER/${VERSION}/g" \
-  -e "s/SHA_DARWIN_ARM64_PLACEHOLDER/${SHA_DARWIN_ARM64}/g" \
-  -e "s/SHA_DARWIN_X64_PLACEHOLDER/${SHA_DARWIN_X64}/g" \
-  -e "s/SHA_LINUX_ARM64_PLACEHOLDER/${SHA_LINUX_ARM64}/g" \
-  -e "s/SHA_LINUX_X64_PLACEHOLDER/${SHA_LINUX_X64}/g" \
+  -e "s|VERSION_PLACEHOLDER|${VERSION}|g" \
+  -e "s|URL_DARWIN_ARM64_PLACEHOLDER|${URL_DARWIN_ARM64}|g" \
+  -e "s|URL_DARWIN_X64_PLACEHOLDER|${URL_DARWIN_X64}|g" \
+  -e "s|URL_LINUX_ARM64_PLACEHOLDER|${URL_LINUX_ARM64}|g" \
+  -e "s|URL_LINUX_X64_PLACEHOLDER|${URL_LINUX_X64}|g" \
+  -e "s|SHA_DARWIN_ARM64_PLACEHOLDER|${SHA_DARWIN_ARM64}|g" \
+  -e "s|SHA_DARWIN_X64_PLACEHOLDER|${SHA_DARWIN_X64}|g" \
+  -e "s|SHA_LINUX_ARM64_PLACEHOLDER|${SHA_LINUX_ARM64}|g" \
+  -e "s|SHA_LINUX_X64_PLACEHOLDER|${SHA_LINUX_X64}|g" \
   "$TEMPLATE")"
 
-echo ""
 echo "Generated formula:"
 echo "---"
 echo "$FORMULA"
 echo "---"
 
-# Clone the tap repo, update the formula, and push
+# --- Push to the tap and open a PR (uses HOMEBREW_TAP_TOKEN) ---
+export GH_TOKEN="${HOMEBREW_TAP_TOKEN:?HOMEBREW_TAP_TOKEN is required}"
+CLONE_URL="https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/${TAP_REPO}.git"
+
+# Early exit: a PR is already open for this version.
+EXISTING_PR="$(gh pr list --repo "$TAP_REPO" --head "$BRANCH" --state open --json number --jq '.[0].number // empty' 2>/dev/null || true)"
+if [ -n "$EXISTING_PR" ]; then
+  echo "PR #${EXISTING_PR} already exists for ${BRANCH}."
+  exit 0
+fi
+
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-echo ""
-echo "Cloning ${TAP_REPO}..."
+echo "Cloning ${TAP_REPO} ..."
 git clone --depth 1 "$CLONE_URL" "$TMP_DIR/tap"
-
 cd "$TMP_DIR/tap"
 
 mkdir -p Formula
-echo "$FORMULA" > Formula/tigris.rb
-
+printf '%s\n' "$FORMULA" > Formula/tigris.rb
 git add Formula/tigris.rb
 
 if git diff --cached --quiet; then
@@ -123,14 +129,12 @@ git -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.
   commit -m "tigris ${VERSION}"
 git push origin "$BRANCH"
 
-echo ""
-echo "Creating pull request..."
+echo "Creating pull request ..."
 gh pr create \
   --repo "$TAP_REPO" \
   --base main \
   --head "$BRANCH" \
   --title "tigris ${VERSION}" \
-  --body "Update Tigris CLI formula to [v${VERSION}](https://github.com/${CLI_REPO}/releases/tag/v${VERSION})."
+  --body "Update Tigris CLI formula to ${VERSION} ([release](${RELEASE_URL}))."
 
-echo ""
-echo "Pull request created for v${VERSION}"
+echo "Pull request created for ${VERSION}"

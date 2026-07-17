@@ -1,17 +1,17 @@
 #!/bin/sh
 # Tigris CLI installer
-# Usage: curl -fsSL https://github.com/tigrisdata/cli/releases/latest/download/install.sh | sh
+# Usage: curl -fsSL https://raw.githubusercontent.com/tigrisdata/storage/main/packages/cli/scripts/install.sh | sh
 #
 # Environment variables:
 #   TIGRIS_INSTALL_DIR  - Installation directory (default: /usr/local/bin)
 #   TIGRIS_VERSION      - Specific version to install (default: latest)
-#   TIGRIS_REPO         - GitHub repo (default: tigrisdata/cli)
+#   TIGRIS_REPO         - GitHub repo (default: tigrisdata/storage)
 #   TIGRIS_DOWNLOAD_URL - Direct download URL (skips version detection, for testing)
 #   TIGRIS_SKIP_PATH    - Set to 1 to skip PATH modification (for testing)
 
 set -e
 
-REPO="${TIGRIS_REPO:-tigrisdata/cli}"
+REPO="${TIGRIS_REPO:-tigrisdata/storage}"
 BINARY_NAME="tigris"
 DEFAULT_INSTALL_DIR="/usr/local/bin"
 
@@ -71,14 +71,39 @@ detect_platform() {
   PLATFORM="${OS}-${ARCH}"
 }
 
-get_latest_version() {
+http_get() {
   if command -v curl > /dev/null 2>&1; then
-    curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/'
+    curl -fsSL "$1"
   elif command -v wget > /dev/null 2>&1; then
-    wget -qO- "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/'
+    wget -qO- "$1"
   else
     error "Neither curl nor wget found. Please install one of them."
   fi
+}
+
+# Resolve the download URL for an asset from the newest (or $TIGRIS_VERSION)
+# @tigrisdata/cli release. In this monorepo `releases/latest` is whatever
+# package shipped last, not the CLI — so we list releases and match on the
+# asset filename (only CLI releases carry tigris-<platform> archives) and copy
+# GitHub's own browser_download_url verbatim rather than assembling the
+# @tigrisdata/cli@<version> path (its '/' and '@' don't encode consistently).
+resolve_asset_url() {
+  asset="$1"
+  body="$(http_get "https://api.github.com/repos/${REPO}/releases?per_page=100")"
+  matches="$(printf '%s\n' "$body" \
+    | grep '"browser_download_url"' \
+    | sed -E 's/.*"browser_download_url": ?"([^"]+)".*/\1/' \
+    | grep -F "/${asset}" || true)"
+  if [ -n "${TIGRIS_VERSION:-}" ]; then
+    # Pin to the EXACT version. The version is the tail of the release tag and
+    # is always immediately followed by "/<asset>" in the URL, so anchor on
+    # "<version>/<asset>": a bare "grep -F <version>" would also match e.g.
+    # 3.4.10 when 3.4.1 was requested. This holds regardless of how the tag's
+    # '@'/'/' are encoded (only the segment after the version matters here),
+    # and matches the exact-tag equality the PowerShell installer uses.
+    matches="$(printf '%s\n' "$matches" | grep -F "${TIGRIS_VERSION}/${asset}" || true)"
+  fi
+  printf '%s\n' "$matches" | head -n 1
 }
 
 download_file() {
@@ -220,12 +245,7 @@ EOF
 
 install_skill() {
   SKILL_DIR="$HOME/.claude/skills/tigris"
-  # Use the release tag when available, fall back to main
-  if [ -n "$VERSION" ] && [ "$VERSION" != "local" ]; then
-    SKILL_URL="https://raw.githubusercontent.com/${REPO}/${VERSION}/SKILL.md"
-  else
-    SKILL_URL="https://raw.githubusercontent.com/${REPO}/main/SKILL.md"
-  fi
+  SKILL_URL="https://raw.githubusercontent.com/${REPO}/main/packages/cli/SKILL.md"
 
   # Only attempt if ~/.claude exists (Claude Code is installed)
   if [ ! -d "$HOME/.claude" ]; then
@@ -277,16 +297,17 @@ main() {
     VERSION="local"
     info "Using direct download URL (testing mode)"
   else
-    # Fetch from GitHub releases
-    VERSION="${TIGRIS_VERSION:-}"
-    if [ -z "$VERSION" ]; then
-      info "Fetching latest version..."
-      VERSION="$(get_latest_version)"
-      if [ -z "$VERSION" ]; then
-        error "Failed to determine latest version"
-      fi
+    if [ -n "${TIGRIS_VERSION:-}" ]; then
+      info "Resolving @tigrisdata/cli@${TIGRIS_VERSION}..."
+      VERSION="$TIGRIS_VERSION"
+    else
+      info "Resolving latest @tigrisdata/cli release..."
+      VERSION="latest"
     fi
-    DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${ARCHIVE_NAME}"
+    DOWNLOAD_URL="$(resolve_asset_url "$ARCHIVE_NAME")"
+    if [ -z "$DOWNLOAD_URL" ]; then
+      error "Could not find a ${ARCHIVE_NAME} asset in ${REPO} @tigrisdata/cli releases"
+    fi
   fi
 
   info "Installing version: $VERSION"

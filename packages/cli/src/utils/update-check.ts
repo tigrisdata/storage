@@ -121,11 +121,11 @@ export function getUpdateCommand(): string {
   }
   // Standalone binary on Windows
   else if (process.platform === 'win32') {
-    return 'irm https://github.com/tigrisdata/cli/releases/latest/download/install.ps1 | iex';
+    return 'irm https://raw.githubusercontent.com/tigrisdata/storage/main/packages/cli/scripts/install.ps1 | iex';
   }
   // Standalone binary on macOS/Linux (installed via curl)
   else {
-    return 'curl -fsSL https://github.com/tigrisdata/cli/releases/latest/download/install.sh | sh';
+    return 'curl -fsSL https://raw.githubusercontent.com/tigrisdata/storage/main/packages/cli/scripts/install.sh | sh';
   }
 }
 
