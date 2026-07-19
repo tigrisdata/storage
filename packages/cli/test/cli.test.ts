@@ -377,6 +377,28 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     console.log(`Cleaning up second test bucket: ${otherBucket}`);
     runCli(`rm ${t3(otherBucket)}/* -f`);
     runCli(`rm ${t3(otherBucket)} -f`);
+
+    // Catch-all: delete every bucket this run created. All test bucket names
+    // are prefixed with testPrefix, so this guarantees the suite cleans up
+    // after itself even if a nested block's teardown was skipped by a failure.
+    // Keeping leftovers to a minimum keeps the beforeAll stale-bucket sweep
+    // fast (a growing sweep is what caused the setup hook to time out).
+    const listResult = runCli('buckets list --format json');
+    if (listResult.exitCode === 0 && listResult.stdout.trim()) {
+      try {
+        const parsed = JSON.parse(listResult.stdout.trim()) as {
+          items: Array<{ name: string }>;
+        };
+        for (const bucket of parsed.items) {
+          if (!bucket.name.startsWith(testPrefix)) continue;
+          console.log(`Cleaning up leftover test bucket: ${bucket.name}`);
+          runCli(`rm ${t3(bucket.name)}/* -r -f`);
+          runCli(`rm ${t3(bucket.name)} -f`);
+        }
+      } catch {
+        // Best-effort — don't fail teardown on cleanup errors.
+      }
+    }
   });
 
   describe('ls command', () => {
