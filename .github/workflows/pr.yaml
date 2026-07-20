@@ -4,10 +4,28 @@ on:
   pull_request:
     branches:
       - main
+    # `labeled` lets adding the `test` label trigger a run without a new push.
+    # The default types (opened, synchronize, reopened) are listed explicitly
+    # because naming any type replaces the defaults.
+    types: [opened, synchronize, reopened, labeled]
+  # Manual "Run workflow" button — always runs the full suite, tests included.
+  workflow_dispatch:
+
+# Cancel superseded runs on the same PR/branch so rapid pushes don't stack up
+# (and don't spend runner time testing commits that are already outdated).
+concurrency:
+  group: pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   checks:
     runs-on: ubuntu-24.04
+    # Skip the whole job when the trigger is an unrelated label being added —
+    # only the `test` label should cause a `labeled` event to do any work.
+    # Every non-labeled event (push, dispatch, open) still runs normally.
+    if: >-
+      github.event.action != 'labeled' ||
+      github.event.label.name == 'test'
     steps:
       - uses: actions/checkout@v7
         with:
@@ -33,7 +51,41 @@ jobs:
       - name: Publint
         run: pnpm -r --if-present run publint
 
+      # The test suite hits real Tigris buckets, so running it adds noticeable
+      # time to the pipeline. Decide whether to run it. It runs when ANY of
+      # these is true:
+      #   1. the workflow was dispatched manually,
+      #   2. the PR carries the `test` label, or
+      #   3. the PR adds a changeset (something is shipping to npm).
+      # Otherwise it's skipped — cheap checks (lint/build/publint) still gate
+      # every PR, and the job reports green so branch protection is unaffected.
+      - name: Decide whether to run tests
+        id: gate
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HAS_TEST_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'test') }}
+        run: |
+          run_tests=false
+          reason="no changeset, no 'test' label — skipping tests to keep the pipeline short"
+
+          # A changeset is any .md in .changeset/ other than README.md
+          # (config.json is the only other permanent file there).
+          changeset_count=$(find .changeset -maxdepth 1 -name '*.md' ! -iname 'README.md' | wc -l | tr -d ' ')
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            run_tests=true; reason="manual workflow_dispatch"
+          elif [ "$HAS_TEST_LABEL" = "true" ]; then
+            run_tests=true; reason="'test' label present on the PR"
+          elif [ "$changeset_count" -gt 0 ]; then
+            run_tests=true; reason="$changeset_count changeset(s) present"
+          fi
+
+          echo "run_tests=$run_tests" >> "$GITHUB_OUTPUT"
+          echo "Run tests: $run_tests ($reason)"
+          echo "### Test suite: $run_tests — $reason" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Run tests
+        if: ${{ steps.gate.outputs.run_tests == 'true' }}
         env:
           TIGRIS_STORAGE_BUCKET: ${{ secrets.TIGRIS_STORAGE_BUCKET }}
           TIGRIS_STORAGE_ACCESS_KEY_ID: ${{ secrets.TIGRIS_STORAGE_ACCESS_KEY_ID }}

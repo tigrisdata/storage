@@ -6,9 +6,9 @@ import { mergeFork } from '../lib/fork/merge';
 import { rebaseFork } from '../lib/fork/rebase';
 import { get } from '../lib/object/get';
 import { put } from '../lib/object/put';
-import { shouldSkipIntegrationTests } from './setup';
+import { shouldSkipForkTests } from './setup';
 
-const skipTests = shouldSkipIntegrationTests();
+const skipTests = shouldSkipForkTests();
 
 const config = getConfig();
 
