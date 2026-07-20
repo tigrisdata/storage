@@ -3,6 +3,7 @@ import { classifyError } from './errors.js';
 import type { MessageContext, MessageVariables } from './messages.js';
 import { interpolate, printFailure } from './messages.js';
 import { getCommandSpec } from './specs.js';
+import { captureError } from './telemetry.js';
 
 function isJsonMode(): boolean {
   return globalThis.__TIGRIS_JSON_MODE === true;
@@ -24,7 +25,11 @@ function isStdoutTTY(): boolean {
  * - TTY mode: prints "Next steps:" hints to stderr
  * - Always exits with the classified exit code
  */
-export function exitWithError(error: unknown, context?: MessageContext): never {
+export function exitWithError(
+  error: unknown,
+  context?: MessageContext,
+  opts?: { skipCapture?: boolean }
+): never {
   const classified = classifyError(error);
 
   if (isJsonMode()) {
@@ -49,6 +54,18 @@ export function exitWithError(error: unknown, context?: MessageContext): never {
         console.error(`  → ${action.command}  ${action.description}`);
       }
     }
+  }
+
+  // Best-effort capture on the synchronous command path: the exit below halts
+  // immediately (callers rely on this `never` contract), so the event may not
+  // flush in time. Crashes are captured and flushed reliably by the global
+  // handlers in setupErrorHandlers(), which pass skipCapture to avoid a double
+  // report here.
+  if (!opts?.skipCapture) {
+    captureError(error, {
+      category: classified.category,
+      command: context?.command,
+    });
   }
 
   process.exit(classified.exitCode);

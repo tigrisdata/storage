@@ -4,6 +4,11 @@
 
 import { exitWithError } from '@utils/exit.js';
 import { printDeprecated } from '@utils/messages.js';
+import {
+  captureError,
+  flushTelemetry,
+  initTelemetry,
+} from '@utils/telemetry.js';
 import { Command as CommanderCommand, Option } from 'commander';
 
 import type { Argument, CommandSpec, Specs } from './types.js';
@@ -80,16 +85,27 @@ export interface CLIConfig {
  * Setup global error handlers
  */
 export function setupErrorHandlers() {
+  initTelemetry();
+
+  // Crash path: capture and flush before exiting. These handlers run at the top
+  // of the stack, so unlike the synchronous exitWithError() used by commands
+  // they can afford to await the flush. skipCapture avoids a double report.
+  const reportCrashAndExit = async (error: unknown) => {
+    captureError(error, { crash: true });
+    await flushTelemetry();
+    exitWithError(error, undefined, { skipCapture: true });
+  };
+
   process.on('unhandledRejection', (reason) => {
     if (reason === '' || reason === undefined) {
       console.error('\nOperation cancelled');
       process.exit(1);
     }
-    exitWithError(reason);
+    void reportCrashAndExit(reason);
   });
 
   process.on('uncaughtException', (error) => {
-    exitWithError(error);
+    void reportCrashAndExit(error);
   });
 }
 
