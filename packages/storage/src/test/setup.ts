@@ -58,3 +58,24 @@ export function shouldSkipIntegrationTests(): boolean {
 
   return false;
 }
+
+// The fork merge/rebase suite creates multiple buckets (with snapshots), forks
+// one off another, and waits out eventual consistency, which adds noticeable
+// time to the pipeline. Keep it out of the default run to keep the pipeline
+// short; opt in explicitly with RUN_FORK_INTEGRATION_TESTS=true (it still needs
+// the integration env vars).
+export function shouldSkipForkTests(): boolean {
+  if (shouldSkipIntegrationTests()) {
+    return true;
+  }
+
+  if (getEnvVar('RUN_FORK_INTEGRATION_TESTS') !== 'true') {
+    console.warn(
+      'Skipping fork merge/rebase integration tests - set ' +
+        'RUN_FORK_INTEGRATION_TESTS=true to run them'
+    );
+    return true;
+  }
+
+  return false;
+}
