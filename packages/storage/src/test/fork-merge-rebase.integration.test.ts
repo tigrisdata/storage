@@ -28,6 +28,8 @@ describe.skipIf(skipTests)('mergeFork integration', () => {
   const bucketsToCleanup: string[] = [];
 
   beforeAll(async () => {
+    // Track before creating so a create/assert failure still cleans up.
+    bucketsToCleanup.push(sourceBucket);
     const src = await createBucket(sourceBucket, {
       enableSnapshot: true,
       config,
@@ -36,7 +38,6 @@ describe.skipIf(skipTests)('mergeFork integration', () => {
       src.error,
       `source bucket create failed: ${src.error?.message}`
     ).toBeUndefined();
-    bucketsToCleanup.push(sourceBucket);
 
     // Seed the source with an object that exists before either fork is made.
     const seed = await put('base.txt', 'base', {
@@ -44,6 +45,7 @@ describe.skipIf(skipTests)('mergeFork integration', () => {
     });
     expect(seed.error).toBeUndefined();
 
+    bucketsToCleanup.push(forkBucket);
     const fork = await createBucket(forkBucket, {
       sourceBucketName: sourceBucket,
       config,
@@ -52,7 +54,6 @@ describe.skipIf(skipTests)('mergeFork integration', () => {
       fork.error,
       `fork create failed: ${fork.error?.message}`
     ).toBeUndefined();
-    bucketsToCleanup.push(forkBucket);
 
     await waitForConsistency();
   }, 60_000);
@@ -126,24 +127,25 @@ describe.skipIf(skipTests)('rebaseFork integration', () => {
   const bucketsToCleanup: string[] = [];
 
   beforeAll(async () => {
+    // Track before creating so a create/assert failure still cleans up.
+    bucketsToCleanup.push(sourceBucket);
     const src = await createBucket(sourceBucket, {
       enableSnapshot: true,
       config,
     });
     expect(src.error).toBeUndefined();
-    bucketsToCleanup.push(sourceBucket);
 
     const seed = await put('base.txt', 'base', {
       config: bucketConfig(sourceBucket),
     });
     expect(seed.error).toBeUndefined();
 
+    bucketsToCleanup.push(forkBucket);
     const fork = await createBucket(forkBucket, {
       sourceBucketName: sourceBucket,
       config,
     });
     expect(fork.error).toBeUndefined();
-    bucketsToCleanup.push(forkBucket);
 
     await waitForConsistency();
   }, 60_000);

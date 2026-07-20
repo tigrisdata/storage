@@ -190,11 +190,19 @@ describe.skipIf(skipTests)('createForks / teardownForks', () => {
 
   afterEach(async () => {
     if (forkSet) {
-      await teardownForks(forkSet);
+      try {
+        await teardownForks(forkSet);
+      } catch {
+        // best-effort — don't let a cleanup failure mask the test result
+      }
       forkSet = undefined;
     }
     for (const bucket of extraBucketsToCleanup) {
-      await removeBucket(bucket, { force: true });
+      try {
+        await removeBucket(bucket, { force: true });
+      } catch {
+        // best-effort
+      }
     }
     extraBucketsToCleanup.length = 0;
   });
@@ -202,11 +210,12 @@ describe.skipIf(skipTests)('createForks / teardownForks', () => {
   it('should create forks from a base bucket', async () => {
     // Create a base bucket with snapshots and data
     const baseBucket = uniqueName('forks-base');
+    // Track before creating so a mid-create failure still cleans it up.
+    extraBucketsToCleanup.push(baseBucket);
     const wsResult = await createWorkspace(baseBucket, {
       enableSnapshots: true,
     });
     expect(wsResult.error).toBeUndefined();
-    extraBucketsToCleanup.push(baseBucket);
 
     await put('dataset.json', '{"items": [1,2,3]}', {
       config: { bucket: baseBucket },
@@ -216,14 +225,17 @@ describe.skipIf(skipTests)('createForks / teardownForks', () => {
     const result = await createForks(baseBucket, 2, {
       prefix: uniqueName('fork'),
     });
+    // Capture the handle before asserting so teardown revokes keys and deletes
+    // fork buckets even if an assertion below throws.
+    forkSet = result.data;
 
     expect(result.error).toBeUndefined();
     expect(result.data!.forks).toHaveLength(2);
     expect(result.data!.snapshotId).toBeTruthy();
-    forkSet = result.data!;
+    const forks = result.data!;
 
     // Verify each fork has the data from the base bucket
-    for (const fork of forkSet.forks) {
+    for (const fork of forks.forks) {
       const getResult = await get('dataset.json', 'string', {
         config: { bucket: fork.bucket },
       });
@@ -233,40 +245,44 @@ describe.skipIf(skipTests)('createForks / teardownForks', () => {
 
     // Verify forks are isolated — write to fork 0, fork 1 unchanged
     await put('fork-0-only.txt', 'only in fork 0', {
-      config: { bucket: forkSet.forks[0].bucket },
+      config: { bucket: forks.forks[0].bucket },
     });
 
     const fork1Check = await get('fork-0-only.txt', 'string', {
-      config: { bucket: forkSet.forks[1].bucket },
+      config: { bucket: forks.forks[1].bucket },
     });
     expect(fork1Check.error).toBeDefined();
   });
 
   it('should create forks with scoped credentials', async () => {
     const baseBucket = uniqueName('forks-creds');
+    // Track before creating so a mid-create failure still cleans it up.
+    extraBucketsToCleanup.push(baseBucket);
     const wsResult = await createWorkspace(baseBucket, {
       enableSnapshots: true,
     });
     expect(wsResult.error).toBeUndefined();
-    extraBucketsToCleanup.push(baseBucket);
 
     const result = await createForks(baseBucket, 2, {
       prefix: uniqueName('fork-cred'),
       credentials: { role: 'Editor' },
     });
+    // Capture the handle before asserting so teardown revokes the forks'
+    // access keys even if an assertion below throws.
+    forkSet = result.data;
 
     expect(result.error).toBeUndefined();
-    forkSet = result.data!;
+    const forks = result.data!;
 
     // Each fork should have its own credentials
-    for (const fork of forkSet.forks) {
+    for (const fork of forks.forks) {
       expect(fork.credentials).toBeDefined();
       expect(fork.credentials!.accessKeyId).toBeTruthy();
       expect(fork.credentials!.secretAccessKey).toBeTruthy();
     }
 
     // Verify scoped credentials can write to their own fork
-    const fork = forkSet.forks[0];
+    const fork = forks.forks[0];
     const putResult = await put('scoped-write.txt', 'written with scoped key', {
       config: {
         bucket: fork.bucket,
@@ -279,16 +295,20 @@ describe.skipIf(skipTests)('createForks / teardownForks', () => {
 
   it('should teardown forks cleanly', async () => {
     const baseBucket = uniqueName('forks-td');
+    // Track before creating so a mid-create failure still cleans it up.
+    extraBucketsToCleanup.push(baseBucket);
     const wsResult = await createWorkspace(baseBucket, {
       enableSnapshots: true,
     });
     expect(wsResult.error).toBeUndefined();
-    extraBucketsToCleanup.push(baseBucket);
 
     const result = await createForks(baseBucket, 2, {
       prefix: uniqueName('fork-td'),
       credentials: { role: 'Editor' },
     });
+    // Capture the handle before asserting so teardown revokes keys / deletes
+    // fork buckets if an assertion below throws.
+    forkSet = result.data;
     expect(result.error).toBeUndefined();
     const created = result.data!;
 
@@ -297,15 +317,14 @@ describe.skipIf(skipTests)('createForks / teardownForks', () => {
     // Teardown
     const teardown = await teardownForks(created);
     expect(teardown.error).toBeUndefined();
+    // Torn down explicitly; prevent afterEach from double-tearing-down.
+    forkSet = undefined;
 
     // Verify forks are deleted
     for (const bucket of forkBuckets) {
       const info = await getBucketInfo(bucket);
       expect(info.error).toBeDefined();
     }
-
-    // Forks cleaned up, don't double-teardown in afterEach
-    forkSet = undefined;
   });
 });
 

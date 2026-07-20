@@ -928,8 +928,14 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
     });
 
     afterAll(async () => {
+      // Per-item guard: force-removing an already-soft-deleted bucket can
+      // error, and one failure must not strand the remaining buckets.
       for (const bucket of bucketsToCleanup) {
-        await removeBucket(bucket, { force: true, config });
+        try {
+          await removeBucket(bucket, { force: true, config });
+        } catch {
+          // best-effort cleanup
+        }
       }
     });
 

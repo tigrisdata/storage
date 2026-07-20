@@ -24,7 +24,11 @@ export default defineConfig({
       NODE_ENV: 'test',
     },
     testTimeout: 30000,
-    hookTimeout: 30000,
+    // Integration setup/teardown hooks do live-gateway work (bucket
+    // create/delete, plus a best-effort sweep of stale buckets), which can
+    // exceed 30s under load. Give hooks more headroom so a slow setup doesn't
+    // fail the whole suite.
+    hookTimeout: 120000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
