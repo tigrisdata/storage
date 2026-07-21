@@ -91,7 +91,19 @@ export function setupErrorHandlers() {
   // Crash path: capture and flush before exiting. These handlers run at the top
   // of the stack, so unlike the synchronous exitWithError() used by commands
   // they can afford to await the flush. skipCapture avoids a double report.
+  let handlingCrash = false;
   const reportCrashAndExit = async (error: unknown) => {
+    // Re-entrancy guard: if reporting or exiting itself throws (e.g.
+    // console.error hitting EPIPE on a closed stderr), the rejection would
+    // re-enter this handler via unhandledRejection and loop forever without
+    // exiting. On the second entry, exit hard instead. captureError and
+    // flushTelemetry swallow their own errors, so the only re-entry source is
+    // exitWithError below.
+    if (handlingCrash) {
+      process.exit(1);
+    }
+    handlingCrash = true;
+
     captureError(error, {
       crash: true,
       exitCode: classifyError(error).exitCode,
