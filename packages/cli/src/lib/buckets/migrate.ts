@@ -34,11 +34,11 @@ interface MigrationItem {
   size: number;
 }
 
-interface InFlightItem extends MigrationItem {
+export interface InFlightItem extends MigrationItem {
   checkFailures: number;
 }
 
-interface MigrationState {
+export interface MigrationState {
   total: number;
   totalBytes: number;
   scheduled: number;
@@ -47,6 +47,10 @@ interface MigrationState {
   failed: number;
   inFlight: InFlightItem[];
   inFlightBytes: number;
+  /** Rotating cursor into inFlight so drainCompleted sweeps the whole set. */
+  drainOffset: number;
+  /** In-flight items checked since the last completion (for backoff). */
+  drainSweepMisses: number;
   errors: Array<{ name: string; error: string }>;
   startTime: number;
 }
@@ -227,18 +231,29 @@ async function flushScheduleBatch(
   }
 }
 
-async function drainCompleted(
+export async function drainCompleted(
   state: MigrationState,
   config: Record<string, unknown>,
   bucket: string
 ): Promise<void> {
-  if (state.inFlight.length === 0) return;
+  const n = state.inFlight.length;
+  if (n === 0) return;
 
-  // Check oldest items first (FIFO), up to CONCURRENCY at a time
-  const toCheck = state.inFlight.slice(0, CONCURRENCY);
+  // Poll a rotating window across the WHOLE in-flight set — never a fixed head.
+  // Migrations don't complete in FIFO order, so only checking the oldest items
+  // lets a slow object at the front hide the completed objects behind it: their
+  // bytes are never freed, inFlightBytes stays pinned at the cap, and the whole
+  // migration deadlocks (head-of-line blocking). The cursor advances each call
+  // so every in-flight object is polled over successive rounds.
+  const start = state.drainOffset % n;
+  const window: InFlightItem[] = [];
+  for (let k = 0; k < Math.min(CONCURRENCY, n); k++) {
+    window.push(state.inFlight[(start + k) % n]);
+  }
+  state.drainOffset = start + window.length;
 
   const results = await executeWithConcurrency(
-    toCheck.map(
+    window.map(
       (item) => () =>
         isMigrated(item.name, {
           config: { ...config, bucket },
@@ -250,7 +265,7 @@ async function drainCompleted(
   const completedKeys = new Set<string>();
   for (let i = 0; i < results.length; i++) {
     const result = results[i];
-    const item = toCheck[i];
+    const item = window[i];
 
     if (result.error) {
       item.checkFailures++;
@@ -275,10 +290,17 @@ async function drainCompleted(
     state.inFlight = state.inFlight.filter(
       (item) => !completedKeys.has(item.name)
     );
+    state.drainSweepMisses = 0;
+    return;
   }
 
-  // If nothing completed, wait before next check
-  if (completedKeys.size === 0) {
+  // No completions in this window: advance to the next one instead of sleeping
+  // right away, so a slow head can't stall polling of the rest. Only back off
+  // once we've swept the whole in-flight set without a single completion —
+  // i.e. we are genuinely waiting on the gateway.
+  state.drainSweepMisses += window.length;
+  if (state.drainSweepMisses >= n) {
+    state.drainSweepMisses = 0;
     await sleep(CHECK_INTERVAL_MS);
   }
 }
@@ -363,6 +385,8 @@ export default async function migrate(
       failed: 0,
       inFlight: [],
       inFlightBytes: 0,
+      drainOffset: 0,
+      drainSweepMisses: 0,
       errors: [],
       startTime: Date.now(),
     };
