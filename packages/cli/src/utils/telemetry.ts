@@ -43,7 +43,7 @@ function telemetryDisabled(): boolean {
   return (
     // Product opt-out, matching the repo's TIGRIS_NO_* convention.
     process.env.TIGRIS_NO_TELEMETRY === '1' ||
-    // Cross-tool standard (https://consoledonottrack.com).
+    // Cross-tool standard
     process.env.DO_NOT_TRACK === '1' ||
     process.env.NODE_ENV === 'test' ||
     process.env.TIGRIS_ENV === 'development'
@@ -52,20 +52,6 @@ function telemetryDisabled(): boolean {
 
 const environment =
   process.env.TIGRIS_ENV === 'development' ? 'development' : 'production';
-
-// Credential-bearing flags whose following value must be redacted from any
-// captured argv.
-const SECRET_FLAGS: ReadonlySet<string> = new Set([
-  '--secret-access-key',
-  '--secret-key',
-  '--secret',
-  '--access-key-id',
-  '--access-key',
-  '--token',
-  '--session-token',
-  '--refresh-token',
-  '--password',
-]);
 
 const SECRET_PATTERNS: RegExp[] = [
   // JWTs / opaque bearer tokens.
@@ -88,30 +74,31 @@ export function redactSecrets(text: string): string {
 }
 
 /**
- * Redact secret values from a captured argv: both `--flag value` and
- * `--flag=value` forms, plus any token that itself looks like a secret.
+ * Extract only the option/flag NAMES from an argv (e.g. `--format`, `-r`),
+ * dropping every value and positional. Positionals and flag values can be user
+ * data — bucket names, object keys, file paths, emails — which must never be
+ * sent to telemetry; the flag names alone tell us how the CLI was invoked.
  */
-export function scrubArgv(argv: string[]): string[] {
-  const out: string[] = [];
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    const eq = arg.indexOf('=');
-    if (
-      arg.startsWith('--') &&
-      eq !== -1 &&
-      SECRET_FLAGS.has(arg.slice(0, eq))
-    ) {
-      out.push(`${arg.slice(0, eq)}=[redacted]`);
-      continue;
-    }
-    out.push(redactSecrets(arg));
-    if (SECRET_FLAGS.has(arg) && i + 1 < argv.length) {
-      out.push('[redacted]');
-      i++;
-    }
-  }
-  return out;
+export function invocationFlags(argv: string[]): string[] {
+  return argv
+    .filter((arg) => arg.startsWith('-'))
+    .map((arg) => arg.split('=')[0]);
 }
+
+// Sentry default integrations we deliberately drop:
+// - OnUncaughtException / OnUnhandledRejection: we own process exit ourselves.
+// - LocalVariables(Async): captures local variable values (e.g. credentials)
+//   into stack frames, which beforeSend does not scrub.
+// - Console / ChildProcess: record breadcrumbs that can carry user data
+//   (printed output, spawned command lines).
+const DISABLED_INTEGRATIONS: ReadonlySet<string> = new Set([
+  'OnUncaughtException',
+  'OnUnhandledRejection',
+  'LocalVariables',
+  'LocalVariablesAsync',
+  'Console',
+  'ChildProcess',
+]);
 
 /**
  * Final scrub before an event leaves the process: drop the machine hostname and
@@ -159,14 +146,11 @@ export function initTelemetry(): void {
       // Error reporting only — no performance tracing.
       tracesSampleRate: 0,
       sendDefaultPii: false,
-      // We own process exit via our own handlers; drop Sentry's so it can't
-      // race us to process.exit and swallow our classified exit codes.
+      // Drop integrations that either fight our exit handling or capture user
+      // data we don't scrub (local variables, console/child-process
+      // breadcrumbs). See DISABLED_INTEGRATIONS.
       integrations: (defaults) =>
-        defaults.filter(
-          (i) =>
-            i.name !== 'OnUncaughtException' &&
-            i.name !== 'OnUnhandledRejection'
-        ),
+        defaults.filter((i) => !DISABLED_INTEGRATIONS.has(i.name)),
       beforeSend,
     });
 
@@ -176,8 +160,9 @@ export function initTelemetry(): void {
       platform: process.platform,
       arch: process.arch,
     });
+    // Only the flag names — never values or positionals, which can be user data.
     Sentry.setContext('invocation', {
-      command: scrubArgv(process.argv.slice(2)).join(' '),
+      flags: invocationFlags(process.argv.slice(2)),
     });
 
     enabled = true;

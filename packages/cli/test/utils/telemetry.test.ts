@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   beforeSend,
+  invocationFlags,
   redactSecrets,
-  scrubArgv,
 } from '../../src/utils/telemetry.js';
 
 describe('redactSecrets', () => {
@@ -41,30 +41,37 @@ describe('redactSecrets', () => {
   });
 });
 
-describe('scrubArgv', () => {
-  it('redacts the value after a credential flag (space form)', () => {
+describe('invocationFlags', () => {
+  it('keeps flag names and drops positionals (bucket names, keys, paths)', () => {
     expect(
-      scrubArgv(['configure', '--secret-access-key', 'SsUpErSeCrEt'])
-    ).toEqual(['configure', '--secret-access-key', '[redacted]']);
+      invocationFlags([
+        'cp',
+        './private.txt',
+        't3://bucket/customer-data/key',
+        '--format',
+        'json',
+      ])
+    ).toEqual(['--format']);
   });
 
-  it('redacts the value in the --flag=value form', () => {
-    expect(scrubArgv(['configure', '--token=abc123xyz'])).toEqual([
-      'configure',
-      '--token=[redacted]',
+  it('strips the value from --flag=value', () => {
+    expect(invocationFlags(['stat', '--region=us-east-1'])).toEqual([
+      '--region',
     ]);
   });
 
-  it('preserves non-secret flags and positionals', () => {
+  it('drops values that follow a flag (space form)', () => {
+    // 'user@example.com' is a positional value, not a flag → dropped entirely.
     expect(
-      scrubArgv(['cp', './file.txt', 't3://bucket/key', '--format', 'json'])
-    ).toEqual(['cp', './file.txt', 't3://bucket/key', '--format', 'json']);
+      invocationFlags(['login', '--username', 'user@example.com'])
+    ).toEqual(['--username']);
   });
 
-  it('redacts a secret-looking token even without a flag', () => {
-    const out = scrubArgv(['login', 'Bearer sk_live_deadbeefcafe']);
-    expect(out[1]).not.toContain('sk_live_deadbeefcafe');
-    expect(out[1]).toContain('[redacted]');
+  it('keeps short flags and returns empty when there are none', () => {
+    expect(invocationFlags(['buckets', 'create', 'my-bucket', '-y'])).toEqual([
+      '-y',
+    ]);
+    expect(invocationFlags(['ls', 't3://bucket/secret-prefix'])).toEqual([]);
   });
 });
 
