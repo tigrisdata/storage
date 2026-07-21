@@ -89,6 +89,17 @@ describe('scrubArgv', () => {
     ).toEqual(['iam', 'teams', 'create', '--name', '[redacted]']);
   });
 
+  it('redacts the -t short alias for the webhook --token', () => {
+    // A webhook token is arbitrary and won't match the secret-shape patterns,
+    // so it must be caught by the flag alias.
+    expect(
+      scrubArgv(['buckets', 'set-notifications', 'b', '-t', 'wht_arbitrary123'])
+    ).toEqual(['buckets', 'set-notifications', 'b', '-t', '[redacted]']);
+    expect(
+      scrubArgv(['buckets', 'set-notifications', 'b', '-t=wht_x'])
+    ).toEqual(['buckets', 'set-notifications', 'b', '-t=[redacted]']);
+  });
+
   it('redacts the --key alias for --access-key but not --key-marker', () => {
     // `--key` is the documented alias for the access-key credential.
     expect(scrubArgv(['configure', '--key', 'MyCustomAccessKey'])).toEqual([

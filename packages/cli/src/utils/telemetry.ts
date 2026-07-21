@@ -91,6 +91,15 @@ export function redactSecrets(text: string): string {
 const SENSITIVE_FLAG_RE =
   /secret|password|token|credential|auth|user(name)?|e-?mail|owner|name|key$/i;
 
+// Sensitive flags too short to pattern-match. `-t` is the webhook `--token`
+// alias; it also aliases `--default-tier` on bucket commands, but redacting a
+// tier value is harmless. Extend this as new sensitive short aliases appear.
+const SENSITIVE_SHORT_FLAGS: ReadonlySet<string> = new Set(['-t']);
+
+function isSensitiveFlag(flag: string): boolean {
+  return SENSITIVE_FLAG_RE.test(flag) || SENSITIVE_SHORT_FLAGS.has(flag);
+}
+
 /**
  * Scrub a captured argv for telemetry. The command and its arguments are kept
  * (bucket names, object keys, and paths are useful for debugging), but the
@@ -112,7 +121,7 @@ export function scrubArgv(argv: string[]): string[] {
     if (arg.startsWith('-') && eq !== -1) {
       const name = arg.slice(0, eq);
       out.push(
-        SENSITIVE_FLAG_RE.test(name)
+        isSensitiveFlag(name)
           ? `${name}=[redacted]`
           : `${name}=${redactSecrets(arg.slice(eq + 1))}`
       );
@@ -123,7 +132,7 @@ export function scrubArgv(argv: string[]): string[] {
     // redact the following value when the flag name is sensitive.
     if (
       arg.startsWith('-') &&
-      SENSITIVE_FLAG_RE.test(arg) &&
+      isSensitiveFlag(arg) &&
       i + 1 < argv.length &&
       !argv[i + 1].startsWith('-')
     ) {
