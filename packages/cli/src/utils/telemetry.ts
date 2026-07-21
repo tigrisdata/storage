@@ -160,26 +160,36 @@ const DISABLED_INTEGRATIONS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Recursively redact every string value in a value tree. Sentry events are
+ * plain JSON (no cycles), so a straightforward walk is safe. Non-string leaves
+ * (numbers, booleans, null) are returned unchanged.
+ */
+function deepRedact(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return redactSecrets(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map(deepRedact);
+  }
+  if (value !== null && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    for (const key of Object.keys(obj)) {
+      obj[key] = deepRedact(obj[key]);
+    }
+    return obj;
+  }
+  return value;
+}
+
+/**
  * Final scrub before an event leaves the process: drop the machine hostname and
- * redact secrets that may have reached exception messages or breadcrumbs.
+ * recursively redact credentials/PII from every string field. This covers not
+ * just exception values and messages but also structured breadcrumb `data`
+ * (e.g. request URLs) and any other field a default integration may attach.
  */
 export function beforeSend(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
   event.server_name = undefined;
-
-  for (const exception of event.exception?.values ?? []) {
-    if (exception.value) {
-      exception.value = redactSecrets(exception.value);
-    }
-  }
-  if (event.message) {
-    event.message = redactSecrets(event.message);
-  }
-  for (const crumb of event.breadcrumbs ?? []) {
-    if (crumb.message) {
-      crumb.message = redactSecrets(crumb.message);
-    }
-  }
-  return event;
+  return deepRedact(event) as Sentry.ErrorEvent;
 }
 
 /**

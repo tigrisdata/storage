@@ -165,13 +165,17 @@ describe('invocationCommand', () => {
 });
 
 describe('beforeSend', () => {
+  // beforeSend takes a Sentry ErrorEvent; the tests pass minimal shapes.
+  const scrub = (event: unknown) =>
+    beforeSend(event as Parameters<typeof beforeSend>[0]);
+
   it('drops the machine hostname', () => {
-    const event = beforeSend({ server_name: 'my-laptop.local' });
+    const event = scrub({ server_name: 'my-laptop.local' });
     expect(event.server_name).toBeUndefined();
   });
 
   it('redacts secrets in exception values, message, and breadcrumbs', () => {
-    const event = beforeSend({
+    const event = scrub({
       message: 'failed with token=tok_supersecret',
       exception: {
         values: [{ value: 'Auth failed: Bearer abc123.def456' }],
@@ -189,8 +193,38 @@ describe('beforeSend', () => {
     expect(event.breadcrumbs?.[0].message).not.toContain('SsUpErSeCrEt');
   });
 
+  it('redacts secrets in structured breadcrumb data and nested fields', () => {
+    const event = scrub({
+      breadcrumbs: [
+        {
+          message: 'http request',
+          data: {
+            url: 'https://t3.storage.dev/b/o?token=tsec_leak',
+            status: 200,
+          },
+        },
+      ],
+      contexts: {
+        invocation: { command: 'login credentials tid_AaBb' },
+      },
+    });
+
+    const data = event.breadcrumbs?.[0].data as
+      | { url: string; status: number }
+      | undefined;
+    expect(data?.url).toContain('[redacted]');
+    expect(data?.url).not.toContain('tsec_leak');
+    // Non-string leaves are preserved.
+    expect(data?.status).toBe(200);
+    // Nested context strings are scrubbed too.
+    const invocation = event.contexts?.invocation as
+      | { command: string }
+      | undefined;
+    expect(invocation?.command).toContain('[redacted]');
+  });
+
   it('handles an event with no secrets or optional fields', () => {
-    const event = beforeSend({
+    const event = scrub({
       exception: { values: [{ value: 'Invalid path' }] },
     });
     expect(event.exception?.values?.[0].value).toBe('Invalid path');
