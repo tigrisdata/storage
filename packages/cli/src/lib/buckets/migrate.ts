@@ -17,6 +17,13 @@ const context = msg('buckets', 'migrate');
 /** Max total bytes of in-flight (scheduled but not confirmed) migrations */
 const MAX_IN_FLIGHT_BYTES = 10 * 1024 * 1024 * 1024; // 10 GB
 
+/**
+ * Max number of in-flight objects, independent of size. Keeps the poll set
+ * bounded so a run with millions of tiny files can't balloon in-flight (which
+ * would make each drain sweep huge), and paces how far ahead we schedule.
+ */
+const MAX_IN_FLIGHT_OBJECTS = 1000;
+
 /** Max concurrent migrate() or isMigrated() calls */
 const CONCURRENCY = 50;
 
@@ -29,6 +36,15 @@ const SCHEDULE_BATCH_SIZE = 50;
 /** Max consecutive isMigrated failures before marking item as failed */
 const MAX_CHECK_FAILURES = 3;
 
+/**
+ * Surface the oldest in-flight object once it has been pulling this long, so a
+ * slow/large transfer is visibly named instead of looking like a stall.
+ */
+const SLOW_IN_FLIGHT_MS = 30_000;
+
+/** Window over which the displayed confirmed-object/byte rate is averaged. */
+const RATE_WINDOW_MS = 5_000;
+
 interface MigrationItem {
   name: string;
   size: number;
@@ -36,6 +52,8 @@ interface MigrationItem {
 
 export interface InFlightItem extends MigrationItem {
   checkFailures: number;
+  /** ms epoch when scheduled; used for the oldest-in-flight display. */
+  scheduledAt: number;
 }
 
 export interface MigrationState {
@@ -51,8 +69,55 @@ export interface MigrationState {
   drainOffset: number;
   /** In-flight items checked since the last completion (for backoff). */
   drainSweepMisses: number;
+  /** Rolling anchor for the displayed confirmed-object/byte rate. */
+  rate: {
+    anchorTime: number;
+    anchorConfirmed: number;
+    anchorBytes: number;
+    objPerSec: number;
+    bytesPerSec: number;
+  };
   errors: Array<{ name: string; error: string }>;
   startTime: number;
+}
+
+/**
+ * Migrate smallest objects first. This front-loads visible progress — the
+ * object count climbs fast while the many small files flow — and pushes large
+ * files to the end, where a slow pull reads as "finishing the big ones" rather
+ * than a mid-run stall. Sorts in place; ties keep their relative order.
+ */
+export function orderForMigration(items: MigrationItem[]): MigrationItem[] {
+  items.sort((a, b) => a.size - b.size);
+  return items;
+}
+
+/**
+ * Whether scheduling `itemSize` more bytes should wait for the in-flight set to
+ * drain. Blocks when the object-count cap is hit, or when the byte budget would
+ * be exceeded and there is something to drain. A single file larger than the
+ * whole byte budget is admitted once the queue empties (it can never otherwise
+ * fit) instead of deadlocking.
+ */
+export function atCapacity(state: MigrationState, itemSize: number): boolean {
+  if (state.inFlight.length >= MAX_IN_FLIGHT_OBJECTS) {
+    return true;
+  }
+  return (
+    state.inFlightBytes + itemSize > MAX_IN_FLIGHT_BYTES &&
+    state.inFlight.length > 0
+  );
+}
+
+/** The in-flight item that has been pulling longest, or null if none. */
+export function oldestInFlight(inFlight: InFlightItem[]): InFlightItem | null {
+  let oldest: InFlightItem | null = null;
+  for (const item of inFlight) {
+    if (oldest === null || item.scheduledAt < oldest.scheduledAt) {
+      oldest = item;
+    }
+  }
+  return oldest;
 }
 
 // ---------------------------------------------------------------------------
@@ -179,22 +244,60 @@ function formatElapsed(ms: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
+/** Recompute the rolling confirmed rate once per RATE_WINDOW_MS. */
+function updateRate(state: MigrationState, now: number): void {
+  const dt = now - state.rate.anchorTime;
+  if (dt < RATE_WINDOW_MS) return;
+  state.rate.objPerSec =
+    ((state.confirmed - state.rate.anchorConfirmed) * 1000) / dt;
+  state.rate.bytesPerSec =
+    ((state.confirmedBytes - state.rate.anchorBytes) * 1000) / dt;
+  state.rate.anchorTime = now;
+  state.rate.anchorConfirmed = state.confirmed;
+  state.rate.anchorBytes = state.confirmedBytes;
+}
+
 function printProgress(state: MigrationState, bucket: string): void {
   if (!process.stderr.isTTY || globalThis.__TIGRIS_JSON_MODE) return;
 
-  const elapsed = formatElapsed(Date.now() - state.startTime);
-  const line =
-    `\rMigrating ${bucket}: ` +
-    `${state.confirmed.toLocaleString()} / ${state.total.toLocaleString()} objects | ` +
-    `In-flight: ${formatSize(state.inFlightBytes)} | ` +
-    `${elapsed}`;
+  const now = Date.now();
+  updateRate(state, now);
 
-  process.stderr.write(line + ' '.repeat(Math.max(0, 100 - line.length)));
+  const pct =
+    state.total > 0 ? Math.floor((state.confirmed / state.total) * 100) : 0;
+
+  const parts = [
+    `Migrating ${bucket}: ${state.confirmed.toLocaleString()} / ${state.total.toLocaleString()} (${pct}%)`,
+    `${Math.round(state.rate.objPerSec).toLocaleString()} obj/s, ${formatSize(state.rate.bytesPerSec)}/s`,
+    `in-flight ${state.inFlight.length.toLocaleString()} (${formatSize(state.inFlightBytes)})`,
+    formatElapsed(now - state.startTime),
+  ];
+
+  // Name the oldest in-flight object once it has been pulling a while, so a
+  // slow/large transfer is visibly attributed instead of looking like a stall.
+  const oldest = oldestInFlight(state.inFlight);
+  if (oldest && now - oldest.scheduledAt >= SLOW_IN_FLIGHT_MS) {
+    const label =
+      oldest.name.length > 40 ? `…${oldest.name.slice(-39)}` : oldest.name;
+    parts.push(
+      `pulling ${label} (${formatSize(oldest.size)}, ${formatElapsed(now - oldest.scheduledAt)})`
+    );
+  }
+
+  const width = process.stderr.columns ?? 100;
+  let text = parts.join(' | ');
+  if (text.length > width) {
+    text = `${text.slice(0, width - 1)}…`;
+  }
+  process.stderr.write(
+    `\r${text}${' '.repeat(Math.max(0, width - text.length))}`
+  );
 }
 
 function clearProgress(): void {
   if (!process.stderr.isTTY || globalThis.__TIGRIS_JSON_MODE) return;
-  process.stderr.write(`\r${' '.repeat(100)}\r`);
+  const width = process.stderr.columns ?? 100;
+  process.stderr.write(`\r${' '.repeat(width)}\r`);
 }
 
 async function flushScheduleBatch(
@@ -224,7 +327,11 @@ async function flushScheduleBatch(
         error: result.error.message,
       });
     } else {
-      state.inFlight.push({ ...item, checkFailures: 0 });
+      state.inFlight.push({
+        ...item,
+        checkFailures: 0,
+        scheduledAt: Date.now(),
+      });
       state.inFlightBytes += item.size;
       state.scheduled++;
     }
@@ -375,7 +482,12 @@ export default async function migrate(
       );
     }
 
+    // Migrate smallest first so progress climbs quickly and large files finish
+    // last (a slow pull there reads as "finishing up", not a mid-run stall).
+    orderForMigration(diff);
+
     // Phase 2: Migration loop
+    const now = Date.now();
     const state: MigrationState = {
       total: diff.length,
       totalBytes,
@@ -387,8 +499,15 @@ export default async function migrate(
       inFlightBytes: 0,
       drainOffset: 0,
       drainSweepMisses: 0,
+      rate: {
+        anchorTime: now,
+        anchorConfirmed: 0,
+        anchorBytes: 0,
+        objPerSec: 0,
+        bytesPerSec: 0,
+      },
       errors: [],
-      startTime: Date.now(),
+      startTime: now,
     };
 
     let batch: MigrationItem[] = [];
@@ -396,12 +515,8 @@ export default async function migrate(
     for (const item of diff) {
       if (interrupted) break;
 
-      // Throttle: wait until capacity is available
-      while (
-        state.inFlightBytes + item.size > MAX_IN_FLIGHT_BYTES &&
-        state.inFlight.length > 0 &&
-        !interrupted
-      ) {
+      // Throttle: wait until capacity (object count and bytes) is available
+      while (atCapacity(state, item.size) && !interrupted) {
         await drainCompleted(state, config, bucket);
         printProgress(state, bucket);
       }

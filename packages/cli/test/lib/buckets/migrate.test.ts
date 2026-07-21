@@ -9,8 +9,11 @@ vi.mock('@tigrisdata/storage', () => ({
 
 import { isMigrated } from '@tigrisdata/storage';
 import {
+  atCapacity,
   drainCompleted,
   type MigrationState,
+  oldestInFlight,
+  orderForMigration,
 } from '../../../src/lib/buckets/migrate.js';
 
 function makeState(items: { name: string; size: number }[]): MigrationState {
@@ -22,14 +25,76 @@ function makeState(items: { name: string; size: number }[]): MigrationState {
     confirmed: 0,
     confirmedBytes: 0,
     failed: 0,
-    inFlight: items.map((i) => ({ ...i, checkFailures: 0 })),
+    inFlight: items.map((i) => ({ ...i, checkFailures: 0, scheduledAt: 0 })),
     inFlightBytes: bytes,
     drainOffset: 0,
     drainSweepMisses: 0,
+    rate: {
+      anchorTime: 0,
+      anchorConfirmed: 0,
+      anchorBytes: 0,
+      objPerSec: 0,
+      bytesPerSec: 0,
+    },
     errors: [],
     startTime: 0,
   };
 }
+
+const GB = 1024 * 1024 * 1024;
+
+describe('orderForMigration', () => {
+  it('sorts smallest first', () => {
+    const items = [
+      { name: 'big', size: 100 },
+      { name: 'small', size: 1 },
+      { name: 'mid', size: 10 },
+    ];
+    expect(orderForMigration(items).map((i) => i.name)).toEqual([
+      'small',
+      'mid',
+      'big',
+    ]);
+  });
+});
+
+describe('atCapacity', () => {
+  it('allows scheduling when under both caps', () => {
+    expect(atCapacity(makeState([{ name: 'a', size: 1 }]), 1)).toBe(false);
+  });
+
+  it('blocks at the object-count cap (regardless of size)', () => {
+    // MAX_IN_FLIGHT_OBJECTS is 1000; a full queue of tiny objects still blocks.
+    const items = Array.from({ length: 1000 }, (_, i) => ({
+      name: `k${i}`,
+      size: 1,
+    }));
+    expect(atCapacity(makeState(items), 1)).toBe(true);
+  });
+
+  it('blocks when the byte budget would be exceeded with items in flight', () => {
+    expect(atCapacity(makeState([{ name: 'a', size: 10 * GB }]), 1)).toBe(true);
+  });
+
+  it('admits a single file larger than the whole budget once the queue is empty', () => {
+    expect(atCapacity(makeState([]), 20 * GB)).toBe(false);
+  });
+});
+
+describe('oldestInFlight', () => {
+  it('returns the item scheduled earliest, or null when empty', () => {
+    const state = makeState([
+      { name: 'a', size: 1 },
+      { name: 'b', size: 1 },
+      { name: 'c', size: 1 },
+    ]);
+    state.inFlight[0].scheduledAt = 300;
+    state.inFlight[1].scheduledAt = 100;
+    state.inFlight[2].scheduledAt = 200;
+    expect(oldestInFlight(state.inFlight)?.name).toBe('b');
+    expect(oldestInFlight([])).toBeNull();
+  });
+});
 
 describe('drainCompleted — head-of-line blocking', () => {
   it('frees completed objects behind a slow/stuck head instead of deadlocking', async () => {
