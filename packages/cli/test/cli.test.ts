@@ -2334,7 +2334,9 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       expect(result.stdout).toContain(forkBucket);
     }, 120_000);
 
-    it('should rebase the fork onto its source', () => {
+    // Disabled: rebase/merge snapshot the fork, and those snapshots block the
+    // fork's teardown, leaking the fork and its (undeletable) source bucket.
+    it.skip('should rebase the fork onto its source', () => {
       const result = runCli(`buckets rebase ${forkBucket} --yes --format json`);
       expect(result.exitCode).toBe(0);
       const parsed = JSON.parse(result.stdout.trim());
@@ -2343,7 +2345,8 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       expect(parsed).toHaveProperty('snapshotVersion');
     }, 120_000);
 
-    it('should merge the fork back into its source (auto-resolved parent)', () => {
+    // Disabled: see the rebase test above — merge snapshots block teardown.
+    it.skip('should merge the fork back into its source (auto-resolved parent)', () => {
       // merge auto-resolves the parent from the fork's info, which is
       // eventually consistent — retry until it resolves.
       let result = { stdout: '', stderr: '', exitCode: 1 };

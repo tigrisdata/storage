@@ -29,6 +29,12 @@ export default defineConfig({
     // exceed 30s under load. Give hooks more headroom so a slow setup doesn't
     // fail the whole suite.
     hookTimeout: 120000,
+    // Integration tests drive the CLI end-to-end against a live,
+    // eventually-consistent gateway, so a transient network blip (e.g. the
+    // org-wide getStats request behind `stat`) can fail an otherwise-correct
+    // run. Retry to absorb those flakes; deterministic failures still fail
+    // every attempt and are not masked. Mirrors packages/storage.
+    retry: 2,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
