@@ -22,7 +22,10 @@ describe.skipIf(skipTests)('createBucket Integration Tests', () => {
   const POLL = { timeout: 15000, interval: 1000 };
 
   afterEach(async () => {
-    for (const bucket of bucketsToCleanup) {
+    // Delete in reverse (LIFO): a fork is pushed after its source bucket, and a
+    // source cannot be removed while a dependent fork still exists — deleting
+    // source-first fails and leaks the source.
+    for (const bucket of [...bucketsToCleanup].reverse()) {
       await removeBucket(bucket, { force: true, config });
     }
     bucketsToCleanup.length = 0;

@@ -115,7 +115,10 @@ describe.skipIf(skipTests)('checkpoint / restore / listCheckpoints', () => {
   const bucketsToCleanup: string[] = [];
 
   afterEach(async () => {
-    for (const bucket of bucketsToCleanup) {
+    // Delete in reverse (LIFO): a restore creates a fork of its source, and the
+    // fork is pushed after the source. A source cannot be removed while a
+    // dependent fork exists, so deleting source-first fails and leaks it.
+    for (const bucket of [...bucketsToCleanup].reverse()) {
       await removeBucket(bucket, { force: true });
     }
     bucketsToCleanup.length = 0;
