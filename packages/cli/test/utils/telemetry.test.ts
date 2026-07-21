@@ -118,6 +118,19 @@ describe('scrubArgv', () => {
       scrubArgv(['buckets', 'create', 'my-bucket', '--region', 'iad'])
     ).toEqual(['buckets', 'create', 'my-bucket', '--region', 'iad']);
   });
+
+  it('scrubs a secret value in a non-sensitive --flag=value without touching the next arg', () => {
+    // The value is a secret: redact it, and do NOT redact the next positional.
+    expect(scrubArgv(['mk', '--note=tsec_realSecretAAA', 'my-bucket'])).toEqual(
+      ['mk', '--note=[redacted]', 'my-bucket']
+    );
+    // A sensitive substring in a non-secret value must not redact the next arg.
+    expect(scrubArgv(['mk', '--label=api-key-x', 'keep-this-bucket'])).toEqual([
+      'mk',
+      '--label=api-key-x',
+      'keep-this-bucket',
+    ]);
+  });
 });
 
 describe('invocationCommand', () => {

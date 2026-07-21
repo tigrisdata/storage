@@ -100,15 +100,24 @@ export function scrubArgv(argv: string[]): string[] {
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const eq = arg.indexOf('=');
-    // `--flag=value`: redact the value when the flag name is sensitive.
+
+    // `--flag=value`: handled entirely here. Redact the value outright when the
+    // flag name is sensitive, otherwise still scrub any secret/PII-shaped value
+    // inside it. This must `continue` — falling through to the space-form branch
+    // (which tests the whole token) would let a sensitive substring in the value
+    // both skip redaction and mis-redact the next positional.
     if (arg.startsWith('-') && eq !== -1) {
       const name = arg.slice(0, eq);
-      if (SENSITIVE_FLAG_RE.test(name)) {
-        out.push(`${name}=[redacted]`);
-        continue;
-      }
+      out.push(
+        SENSITIVE_FLAG_RE.test(name)
+          ? `${name}=[redacted]`
+          : `${name}=${redactSecrets(arg.slice(eq + 1))}`
+      );
+      continue;
     }
-    // `--flag value`: redact the following value when the flag name is sensitive.
+
+    // `--flag value` (bare flag only — `--flag=value` already continued above):
+    // redact the following value when the flag name is sensitive.
     if (
       arg.startsWith('-') &&
       SENSITIVE_FLAG_RE.test(arg) &&
@@ -119,7 +128,8 @@ export function scrubArgv(argv: string[]): string[] {
       i++;
       continue;
     }
-    // Otherwise keep the token, redacting any secret/PII-shaped value in it.
+
+    // Positional (or valueless bare flag): redact any secret/PII-shaped value.
     out.push(redactSecrets(arg));
   }
   return out;
