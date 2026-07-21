@@ -109,6 +109,28 @@ export function atCapacity(state: MigrationState, itemSize: number): boolean {
   );
 }
 
+/**
+ * Whether the pending schedule batch should be flushed before adding `itemSize`.
+ * Flushing moves the batch's bytes into `inFlight` where the byte/object budget
+ * is actually enforced — without this, a batch that hasn't reached
+ * SCHEDULE_BATCH_SIZE (e.g. a run with only a couple of objects) is scheduled
+ * all at once at the end, blowing the in-flight budget and letting a huge file
+ * be scheduled alongside others instead of running on its own.
+ */
+export function shouldFlushBatch(
+  state: MigrationState,
+  batchLength: number,
+  batchBytes: number,
+  itemSize: number
+): boolean {
+  if (batchLength === 0) return false;
+  return (
+    batchLength >= SCHEDULE_BATCH_SIZE ||
+    state.inFlight.length + batchLength >= MAX_IN_FLIGHT_OBJECTS ||
+    state.inFlightBytes + batchBytes + itemSize > MAX_IN_FLIGHT_BYTES
+  );
+}
+
 /** The in-flight item that has been pulling longest, or null if none. */
 export function oldestInFlight(inFlight: InFlightItem[]): InFlightItem | null {
   let oldest: InFlightItem | null = null;
@@ -511,11 +533,22 @@ export default async function migrate(
     };
 
     let batch: MigrationItem[] = [];
+    let batchBytes = 0;
 
     for (const item of diff) {
       if (interrupted) break;
 
-      // Throttle: wait until capacity (object count and bytes) is available
+      // Flush the pending batch before it would exceed the in-flight budget (or
+      // fill a batch), so scheduled bytes are accounted and a large file isn't
+      // scheduled alongside a full batch.
+      if (shouldFlushBatch(state, batch.length, batchBytes, item.size)) {
+        await flushScheduleBatch(batch, state, config, bucket);
+        batch = [];
+        batchBytes = 0;
+        printProgress(state, bucket);
+      }
+
+      // Throttle: wait until in-flight capacity (object count and bytes) frees.
       while (atCapacity(state, item.size) && !interrupted) {
         await drainCompleted(state, config, bucket);
         printProgress(state, bucket);
@@ -524,12 +557,7 @@ export default async function migrate(
       if (interrupted) break;
 
       batch.push(item);
-
-      if (batch.length >= SCHEDULE_BATCH_SIZE) {
-        await flushScheduleBatch(batch, state, config, bucket);
-        batch = [];
-        printProgress(state, bucket);
-      }
+      batchBytes += item.size;
     }
 
     // Flush remaining batch

@@ -14,6 +14,7 @@ import {
   type MigrationState,
   oldestInFlight,
   orderForMigration,
+  shouldFlushBatch,
 } from '../../../src/lib/buckets/migrate.js';
 
 function makeState(items: { name: string; size: number }[]): MigrationState {
@@ -42,6 +43,27 @@ function makeState(items: { name: string; size: number }[]): MigrationState {
 }
 
 const GB = 1024 * 1024 * 1024;
+const MB = 1024 * 1024;
+
+describe('shouldFlushBatch', () => {
+  it('never flushes an empty batch', () => {
+    expect(shouldFlushBatch(makeState([]), 0, 0, 20 * GB)).toBe(false);
+  });
+
+  it('flushes before a large item would blow the byte budget', () => {
+    // The exact 2-object case from the bug report: an 877 MB batch, then a
+    // ~21.9 GB file would push in-flight to 22.8 GB — flush the 877 MB first.
+    expect(shouldFlushBatch(makeState([]), 1, 877 * MB, 21.9 * GB)).toBe(true);
+  });
+
+  it('keeps batching small items until the batch is full', () => {
+    expect(shouldFlushBatch(makeState([]), 10, 10 * MB, 1 * MB)).toBe(false);
+  });
+
+  it('flushes once the batch reaches the batch-size limit', () => {
+    expect(shouldFlushBatch(makeState([]), 50, 50 * MB, 1 * MB)).toBe(true);
+  });
+});
 
 describe('orderForMigration', () => {
   it('sorts smallest first', () => {
