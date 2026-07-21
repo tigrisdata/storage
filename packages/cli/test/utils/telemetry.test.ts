@@ -89,6 +89,23 @@ describe('scrubArgv', () => {
     ).toEqual(['iam', 'teams', 'create', '--name', '[redacted]']);
   });
 
+  it('redacts the --key alias for --access-key but not --key-marker', () => {
+    // `--key` is the documented alias for the access-key credential.
+    expect(scrubArgv(['configure', '--key', 'MyCustomAccessKey'])).toEqual([
+      'configure',
+      '--key',
+      '[redacted]',
+    ]);
+    expect(scrubArgv(['configure', '--key=MyCustomAccessKey'])).toEqual([
+      'configure',
+      '--key=[redacted]',
+    ]);
+    // `--key-marker` is a pagination cursor, not a credential — keep it.
+    expect(scrubArgv(['ls', 'my-bucket', '--key-marker', 'cursor123'])).toEqual(
+      ['ls', 'my-bucket', '--key-marker', 'cursor123']
+    );
+  });
+
   it('redacts emails/keys in positionals but keeps buckets and paths', () => {
     expect(
       scrubArgv([

@@ -84,9 +84,12 @@ export function redactSecrets(text: string): string {
 }
 
 // Flag names whose VALUE is a credential or PII and must be redacted. Matched
-// loosely (substring) so we don't depend on an exact, drift-prone list.
+// loosely so we don't depend on an exact, drift-prone list. `key$` covers the
+// key family — `--key` (the CLI's alias for --access-key), `--access-key`,
+// `--secret-key` — without matching non-secret flags like `--key-marker`.
+// Object keys are positional args, so they never reach this flag check.
 const SENSITIVE_FLAG_RE =
-  /secret|password|token|credential|api-?key|access-key|auth|user(name)?|e-?mail|owner|name/i;
+  /secret|password|token|credential|auth|user(name)?|e-?mail|owner|name|key$/i;
 
 /**
  * Scrub a captured argv for telemetry. The command and its arguments are kept
