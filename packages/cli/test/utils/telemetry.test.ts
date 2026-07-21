@@ -7,24 +7,27 @@ import {
 } from '../../src/utils/telemetry.js';
 
 describe('redactSecrets', () => {
-  it('redacts JWT / opaque bearer tokens', () => {
+  it('redacts a JWT mid-string without injecting the match offset', () => {
     const jwt =
       'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';
-    const out = redactSecrets(`token is ${jwt} here`);
-    expect(out).not.toContain(jwt);
-    expect(out).toContain('[redacted]');
+    // Exact match: a group-less pattern must emit '[redacted]', never
+    // '<offset>[redacted]' from the replacer's offset argument.
+    expect(redactSecrets(`token is ${jwt} here`)).toBe(
+      'token is [redacted] here'
+    );
+    expect(redactSecrets(jwt)).toBe('[redacted]');
   });
 
-  it('redacts Bearer authorization values', () => {
-    const out = redactSecrets('Authorization: Bearer abc123.def-456_ghi');
-    expect(out).not.toContain('abc123.def-456_ghi');
-    expect(out).toContain('[redacted]');
+  it('redacts Bearer authorization values (exact, mid-string)', () => {
+    expect(redactSecrets('Authorization: Bearer abc123.def-456_ghi')).toBe(
+      'Authorization: [redacted]'
+    );
   });
 
-  it('redacts AWS-style access key ids', () => {
-    const out = redactSecrets('key AKIAIOSFODNN7EXAMPLE failed');
-    expect(out).not.toContain('AKIAIOSFODNN7EXAMPLE');
-    expect(out).toContain('[redacted]');
+  it('redacts AWS-style access key ids (exact, mid-string)', () => {
+    expect(redactSecrets('key AKIAIOSFODNN7EXAMPLE failed')).toBe(
+      'key [redacted] failed'
+    );
   });
 
   it('redacts the value in secret=value / secret: value forms', () => {

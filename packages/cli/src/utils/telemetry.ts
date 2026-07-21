@@ -66,8 +66,12 @@ const SECRET_PATTERNS: RegExp[] = [
 export function redactSecrets(text: string): string {
   let out = text;
   for (const pattern of SECRET_PATTERNS) {
-    out = out.replace(pattern, (_match, prefix?: string) =>
-      prefix ? `${prefix}[redacted]` : '[redacted]'
+    // Patterns with a leading capture group (e.g. `secret=`) preserve it and
+    // redact the value; patterns without one redact the whole match. The second
+    // replacer arg is the capture only when it's a string — for group-less
+    // patterns it's the match offset (a number), which must not be emitted.
+    out = out.replace(pattern, (_match, prefix?: string | number) =>
+      typeof prefix === 'string' ? `${prefix}[redacted]` : '[redacted]'
     );
   }
   return out;
