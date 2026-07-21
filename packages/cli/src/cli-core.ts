@@ -2,6 +2,7 @@
  * Shared CLI core functionality used by both cli.ts (npm) and cli-binary.ts (binary)
  */
 
+import { classifyError } from '@utils/errors.js';
 import { exitWithError } from '@utils/exit.js';
 import { printDeprecated } from '@utils/messages.js';
 import {
@@ -91,7 +92,10 @@ export function setupErrorHandlers() {
   // of the stack, so unlike the synchronous exitWithError() used by commands
   // they can afford to await the flush. skipCapture avoids a double report.
   const reportCrashAndExit = async (error: unknown) => {
-    captureError(error, { crash: true });
+    captureError(error, {
+      crash: true,
+      exitCode: classifyError(error).exitCode,
+    });
     await flushTelemetry();
     exitWithError(error, undefined, { skipCapture: true });
   };

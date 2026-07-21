@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   beforeSend,
-  invocationFlags,
+  invocationCommand,
   redactSecrets,
+  scrubArgv,
 } from '../../src/utils/telemetry.js';
 
 describe('redactSecrets', () => {
@@ -30,6 +31,21 @@ describe('redactSecrets', () => {
     );
   });
 
+  it('redacts email addresses (PII), including inside object keys', () => {
+    expect(redactSecrets('invite alice@example.com now')).toBe(
+      'invite [redacted] now'
+    );
+    expect(redactSecrets('t3://bucket/users/bob@corp.io/data')).toBe(
+      't3://bucket/users/[redacted]/data'
+    );
+  });
+
+  it('redacts Tigris access-key ids and secrets (tid_/tsec_)', () => {
+    expect(redactSecrets('key tid_AaBb secret tsec_XxYy')).toBe(
+      'key [redacted] secret [redacted]'
+    );
+  });
+
   it('redacts the value in secret=value / secret: value forms', () => {
     expect(redactSecrets('secret-access-key=SsUpErSeCrEt123')).toBe(
       'secret-access-key=[redacted]'
@@ -44,37 +60,77 @@ describe('redactSecrets', () => {
   });
 });
 
-describe('invocationFlags', () => {
-  it('keeps flag names and drops positionals (bucket names, keys, paths)', () => {
+describe('scrubArgv', () => {
+  it('redacts credential flag values (space and = forms)', () => {
     expect(
-      invocationFlags([
+      scrubArgv([
+        'configure',
+        '--access-key',
+        'tid_AaBb',
+        '--access-secret',
+        'tsec_XxYy',
+      ])
+    ).toEqual([
+      'configure',
+      '--access-key',
+      '[redacted]',
+      '--access-secret',
+      '[redacted]',
+    ]);
+    expect(scrubArgv(['login', '--access-secret=tsec_XxYy'])).toEqual([
+      'login',
+      '--access-secret=[redacted]',
+    ]);
+  });
+
+  it('redacts PII flag values (name/username)', () => {
+    expect(
+      scrubArgv(['iam', 'teams', 'create', '--name', 'Alice Smith'])
+    ).toEqual(['iam', 'teams', 'create', '--name', '[redacted]']);
+  });
+
+  it('redacts emails/keys in positionals but keeps buckets and paths', () => {
+    expect(
+      scrubArgv([
         'cp',
-        './private.txt',
-        't3://bucket/customer-data/key',
+        './report.pdf',
+        't3://my-bucket/customer/report.pdf',
         '--format',
         'json',
       ])
-    ).toEqual(['--format']);
-  });
-
-  it('strips the value from --flag=value', () => {
-    expect(invocationFlags(['stat', '--region=us-east-1'])).toEqual([
-      '--region',
+    ).toEqual([
+      'cp',
+      './report.pdf',
+      't3://my-bucket/customer/report.pdf',
+      '--format',
+      'json',
+    ]);
+    expect(scrubArgv(['iam', 'users', 'invite', 'alice@example.com'])).toEqual([
+      'iam',
+      'users',
+      'invite',
+      '[redacted]',
     ]);
   });
 
-  it('drops values that follow a flag (space form)', () => {
-    // 'user@example.com' is a positional value, not a flag → dropped entirely.
+  it('keeps non-sensitive flags and their values', () => {
     expect(
-      invocationFlags(['login', '--username', 'user@example.com'])
-    ).toEqual(['--username']);
+      scrubArgv(['buckets', 'create', 'my-bucket', '--region', 'iad'])
+    ).toEqual(['buckets', 'create', 'my-bucket', '--region', 'iad']);
+  });
+});
+
+describe('invocationCommand', () => {
+  it('returns the top-level command name', () => {
+    expect(invocationCommand(['buckets', 'create', 'my-bucket'])).toBe(
+      'buckets'
+    );
+    expect(invocationCommand(['stat', 't3://b/k'])).toBe('stat');
   });
 
-  it('keeps short flags and returns empty when there are none', () => {
-    expect(invocationFlags(['buckets', 'create', 'my-bucket', '-y'])).toEqual([
-      '-y',
-    ]);
-    expect(invocationFlags(['ls', 't3://bucket/secret-prefix'])).toEqual([]);
+  it('returns undefined when the first arg is a flag or missing', () => {
+    expect(invocationCommand(['--version'])).toBeUndefined();
+    expect(invocationCommand([])).toBeUndefined();
   });
 });
 

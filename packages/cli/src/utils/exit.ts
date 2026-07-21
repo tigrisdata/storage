@@ -65,6 +65,7 @@ export function exitWithError(
     captureError(error, {
       category: classified.category,
       command: context?.command,
+      exitCode: classified.exitCode,
     });
   }
 

@@ -53,7 +53,13 @@ function telemetryDisabled(): boolean {
 const environment =
   process.env.TIGRIS_ENV === 'development' ? 'development' : 'production';
 
+// Patterns for sensitive VALUES that may appear anywhere in the captured
+// command — as a positional or a flag value — and are redacted wherever found.
 const SECRET_PATTERNS: RegExp[] = [
+  // Email addresses (PII).
+  /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,
+  // Tigris access-key ids and secrets (tid_… / tsec_…).
+  /\bt(?:id|sec)_[A-Za-z0-9]+/gi,
   // JWTs / opaque bearer tokens.
   /eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}/g,
   /Bearer\s+[A-Za-z0-9._-]+/gi,
@@ -77,16 +83,52 @@ export function redactSecrets(text: string): string {
   return out;
 }
 
+// Flag names whose VALUE is a credential or PII and must be redacted. Matched
+// loosely (substring) so we don't depend on an exact, drift-prone list.
+const SENSITIVE_FLAG_RE =
+  /secret|password|token|credential|api-?key|access-key|auth|user(name)?|e-?mail|owner|name/i;
+
 /**
- * Extract only the option/flag NAMES from an argv (e.g. `--format`, `-r`),
- * dropping every value and positional. Positionals and flag values can be user
- * data — bucket names, object keys, file paths, emails — which must never be
- * sent to telemetry; the flag names alone tell us how the CLI was invoked.
+ * Scrub a captured argv for telemetry. The command and its arguments are kept
+ * (bucket names, object keys, and paths are useful for debugging), but the
+ * values of credential/PII flags are redacted, and any credential- or
+ * PII-shaped value (access keys, tokens, JWTs, emails) is redacted wherever it
+ * appears — including in positionals.
  */
-export function invocationFlags(argv: string[]): string[] {
-  return argv
-    .filter((arg) => arg.startsWith('-'))
-    .map((arg) => arg.split('=')[0]);
+export function scrubArgv(argv: string[]): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    const eq = arg.indexOf('=');
+    // `--flag=value`: redact the value when the flag name is sensitive.
+    if (arg.startsWith('-') && eq !== -1) {
+      const name = arg.slice(0, eq);
+      if (SENSITIVE_FLAG_RE.test(name)) {
+        out.push(`${name}=[redacted]`);
+        continue;
+      }
+    }
+    // `--flag value`: redact the following value when the flag name is sensitive.
+    if (
+      arg.startsWith('-') &&
+      SENSITIVE_FLAG_RE.test(arg) &&
+      i + 1 < argv.length &&
+      !argv[i + 1].startsWith('-')
+    ) {
+      out.push(arg, '[redacted]');
+      i++;
+      continue;
+    }
+    // Otherwise keep the token, redacting any secret/PII-shaped value in it.
+    out.push(redactSecrets(arg));
+  }
+  return out;
+}
+
+/** The top-level command name (first non-flag arg), used as a searchable tag. */
+export function invocationCommand(argv: string[]): string | undefined {
+  const first = argv[0];
+  return first && !first.startsWith('-') ? first : undefined;
 }
 
 // Sentry default integrations we deliberately drop:
@@ -164,10 +206,18 @@ export function initTelemetry(): void {
       platform: process.platform,
       arch: process.arch,
     });
-    // Only the flag names — never values or positionals, which can be user data.
+    // The full command with credentials and PII (access keys, tokens, emails,
+    // names) redacted. Kept for debugging; identifies the command on the crash
+    // path too, where there is no MessageContext.
+    const argv = process.argv.slice(2);
     Sentry.setContext('invocation', {
-      flags: invocationFlags(process.argv.slice(2)),
+      command: scrubArgv(argv).join(' '),
     });
+    // Searchable tag for the top-level command (a fixed CLI keyword, not data).
+    const command = invocationCommand(argv);
+    if (command) {
+      Sentry.setTag('command', command);
+    }
 
     enabled = true;
   } catch {
@@ -182,13 +232,18 @@ export function initTelemetry(): void {
  */
 export function captureError(
   error: unknown,
-  opts: { category?: ErrorCategory; command?: string; crash?: boolean } = {}
+  opts: {
+    category?: ErrorCategory;
+    command?: string;
+    crash?: boolean;
+    exitCode?: number;
+  } = {}
 ): void {
   if (!enabled) {
     return;
   }
 
-  const { category, command, crash } = opts;
+  const { category, command, crash, exitCode } = opts;
   if (!crash && category && !REPORTABLE_CATEGORIES.has(category)) {
     return;
   }
@@ -201,6 +256,9 @@ export function captureError(
       }
       if (command) {
         scope.setTag('command', command);
+      }
+      if (exitCode !== undefined) {
+        scope.setTag('exit_code', exitCode);
       }
       return scope;
     });
