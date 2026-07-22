@@ -60,6 +60,7 @@
   "license": "MIT",
   "dependencies": {
     "@aws-sdk/credential-providers": "^3.1038.0",
+    "@clack/prompts": "^0.11.0",
     "@sentry/node": "^10.66.0",
     "@smithy/shared-ini-file-loader": "^4.4.9",
     "@tigrisdata/iam": "workspace:^",

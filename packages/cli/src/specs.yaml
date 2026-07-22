@@ -91,6 +91,29 @@ definitions:
 
 commands:
   #########################
+  # Onboarding
+  #########################
+  # init
+  - name: init
+    alias: start
+    description: Connect Tigris to your AI coding agent — MCP server config and agent skills
+    examples:
+      - "tigris init"
+      - "npx @tigrisdata/cli init"
+      - "tigris init --agent --getting-started"
+    messages:
+      onStart: ''
+      onSuccess: ''
+      onFailure: 'Setup failed'
+    arguments:
+      - name: agent
+        description: Emit a JSON onboarding plan for an AI coding agent (pair with --getting-started)
+        type: flag
+      - name: getting-started
+        description: '[--agent] Emit the getting-started plan (default)'
+        type: flag
+
+  #########################
   # Authentication
   #########################
   # configure
