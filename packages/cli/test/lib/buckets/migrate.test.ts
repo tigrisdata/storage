@@ -9,6 +9,7 @@ vi.mock('@tigrisdata/storage', () => ({
 
 import { isMigrated } from '@tigrisdata/storage';
 import {
+  activityLabel,
   atCapacity,
   drainCompleted,
   type MigrationState,
@@ -30,13 +31,8 @@ function makeState(items: { name: string; size: number }[]): MigrationState {
     inFlightBytes: bytes,
     drainOffset: 0,
     drainSweepMisses: 0,
-    rate: {
-      anchorTime: 0,
-      anchorConfirmed: 0,
-      anchorBytes: 0,
-      objPerSec: 0,
-      bytesPerSec: 0,
-    },
+    checkBackoffMs: 5_000,
+    spinnerFrame: 0,
     errors: [],
     startTime: 0,
   };
@@ -118,6 +114,30 @@ describe('oldestInFlight', () => {
   });
 });
 
+describe('activityLabel', () => {
+  it('names the file being migrated when something is in flight', () => {
+    const state = makeState([{ name: 'Videos/big.mp4', size: 21.9 * GB }]);
+    const label = activityLabel(state.inFlight[0], 60_000);
+    expect(label).toContain('migrating');
+    expect(label).toContain('Videos/big.mp4');
+    expect(label).not.toContain('obj/s');
+  });
+
+  it('truncates a long key to the available width, keeping the tail', () => {
+    const state = makeState([
+      { name: 'Videos/some/really/long/nested/path/merged.jsonl', size: GB },
+    ]);
+    const label = activityLabel(state.inFlight[0], 0, 15);
+    expect(label).toContain('…');
+    expect(label).toContain('merged.jsonl'); // tail preserved
+    expect(label).not.toContain('Videos/some'); // head dropped
+  });
+
+  it('falls back to a waiting indicator with no in-flight work', () => {
+    expect(activityLabel(null, 0)).toBe('waiting…');
+  });
+});
+
 describe('drainCompleted — head-of-line blocking', () => {
   it('frees completed objects behind a slow/stuck head instead of deadlocking', async () => {
     // 120 in-flight (1 MB each). The first 50 — a full CONCURRENCY window —
@@ -176,5 +196,46 @@ describe('drainCompleted — head-of-line blocking', () => {
     expect(state.confirmed).toBe(130);
     expect(state.inFlight.length).toBe(0);
     expect(state.inFlightBytes).toBe(0);
+  });
+});
+
+describe('drainCompleted — poll backoff', () => {
+  it('grows the poll backoff after each all-stuck sweep, up to the cap', async () => {
+    // Nothing ever migrates. An already-aborted signal makes the backoff sleep
+    // resolve instantly, so we can observe the interval growing without waiting.
+    vi.mocked(isMigrated).mockResolvedValue({
+      data: false,
+    } as Awaited<ReturnType<typeof isMigrated>>);
+    const aborted = new AbortController();
+    aborted.abort();
+
+    const state = makeState([{ name: 'a', size: 1 }]);
+    expect(state.checkBackoffMs).toBe(5_000);
+
+    const seen: number[] = [];
+    for (let i = 0; i < 4; i++) {
+      await drainCompleted(state, {}, 'bucket', aborted.signal);
+      seen.push(state.checkBackoffMs);
+    }
+    // 5s → 10s → 20s → 30s (capped at MAX_CHECK_INTERVAL_MS).
+    expect(seen).toEqual([10_000, 20_000, 30_000, 30_000]);
+  });
+
+  it('resets the poll backoff once something completes', async () => {
+    // 'a' migrates, 'b' is stuck — the completion resets the backoff.
+    vi.mocked(isMigrated).mockImplementation(
+      async (name: string) =>
+        ({ data: name === 'a' }) as Awaited<ReturnType<typeof isMigrated>>
+    );
+
+    const state = makeState([
+      { name: 'a', size: 1 },
+      { name: 'b', size: 1 },
+    ]);
+    state.checkBackoffMs = 20_000; // as if we'd already backed off
+
+    await drainCompleted(state, {}, 'bucket');
+
+    expect(state.checkBackoffMs).toBe(5_000);
   });
 });
