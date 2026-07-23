@@ -15,6 +15,11 @@ export default async function restoreInfo(options: Record<string, unknown>) {
   const bucketArg = getOption<string>(options, ['bucket']);
   const keyArg = getOption<string>(options, ['key']);
   const versionId = getOption<string>(options, ['version-id', 'versionId']);
+  const snapshotVersion = getOption<string>(options, [
+    'snapshot-version',
+    'snapshotVersion',
+    'snapshot',
+  ]);
 
   if (!bucketArg) {
     failWithError(context, 'Bucket name or path is required');
@@ -30,6 +35,7 @@ export default async function restoreInfo(options: Record<string, unknown>) {
 
   const { data, error } = await getRestoreInfo(key, {
     ...(versionId ? { versionId } : {}),
+    ...(snapshotVersion ? { snapshotVersion } : {}),
     config: {
       ...config,
       bucket,

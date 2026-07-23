@@ -14,6 +14,11 @@ export default async function restore(options: Record<string, unknown>) {
   const bucketArg = getOption<string>(options, ['bucket']);
   const keyArg = getOption<string>(options, ['key']);
   const versionId = getOption<string>(options, ['version-id', 'versionId']);
+  const snapshotVersion = getOption<string>(options, [
+    'snapshot-version',
+    'snapshotVersion',
+    'snapshot',
+  ]);
   const daysArg = getOption<string | number>(options, ['days', 'd']);
 
   if (!bucketArg) {
@@ -39,6 +44,7 @@ export default async function restore(options: Record<string, unknown>) {
   const { error } = await restoreObject(key, {
     ...(days !== undefined ? { days } : {}),
     ...(versionId ? { versionId } : {}),
+    ...(snapshotVersion ? { snapshotVersion } : {}),
     config: {
       ...config,
       bucket,
