@@ -100,17 +100,14 @@ commands:
     examples:
       - "tigris init"
       - "npx @tigrisdata/cli init"
-      - "tigris init --agent --getting-started"
+      - "tigris init --agent"
     messages:
       onStart: ''
       onSuccess: ''
       onFailure: 'Setup failed'
     arguments:
       - name: agent
-        description: Emit a JSON onboarding plan for an AI coding agent (pair with --getting-started)
-        type: flag
-      - name: getting-started
-        description: '[--agent] Emit the getting-started plan (default)'
+        description: Print a setup recipe for an AI coding agent to follow instead of running the interactive wizard
         type: flag
 
   #########################

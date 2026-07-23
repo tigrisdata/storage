@@ -16,6 +16,7 @@ import {
   SUPPORTED_EDITORS,
   skillsDirsFor,
   TIGRIS_SKILLS,
+  upsertTomlServer,
 } from './shared.js';
 
 /**
@@ -58,7 +59,7 @@ export async function runInteractive() {
       {
         value: 'defaults',
         label: 'Defaults',
-        hint: 'CLI (global), MCP server (global), agent skills (project)',
+        hint: 'CLI - Global, MCP - Global, Skills - Project',
       },
       { value: 'custom', label: 'Customize installation' },
     ],
@@ -74,15 +75,16 @@ export async function runInteractive() {
     skillsLocation = await location('Agent skills:', 'project');
   }
 
-  // 3. Which skills to install.
-  let skillIds: string[] = TIGRIS_SKILLS.filter((s) => s.recommended).map(
-    (s) => s.id
-  );
-  if (skillsLocation !== 'skip') {
+  // 3. Which skills to install. Defaults installs every skill without asking;
+  // only the custom flow prompts (recommended ones pre-checked).
+  let skillIds: string[] = TIGRIS_SKILLS.map((s) => s.id);
+  if (mode === 'custom' && skillsLocation !== 'skip') {
     const picked = await p.multiselect({
       message: 'Which skills should your agent get? (space to toggle)',
       options: TIGRIS_SKILLS.map((s) => ({ value: s.id, label: s.label })),
-      initialValues: skillIds,
+      initialValues: TIGRIS_SKILLS.filter((s) => s.recommended).map(
+        (s) => s.id
+      ),
       required: false,
     });
     if (p.isCancel(picked)) return cancel();
@@ -114,7 +116,7 @@ export async function runInteractive() {
       `Installing ${skillIds.length} Tigris skill(s) (${skillsLocation})`
     );
     if (result.ok) {
-      for (const dir of skillsDirsFor(editors, skillsLocation, cwd, home)) {
+      for (const dir of skillsDirsFor(editors, skillsLocation, cwd)) {
         p.log.success(`Skills → ${prettyPath(dir, home)}`);
       }
     } else if (result.output) {
@@ -124,8 +126,8 @@ export async function runInteractive() {
 
   // 7. Hand off to the agent — use the installed CLI, or npx if unavailable.
   const runner = cliAvailable
-    ? 'tigris init --agent --getting-started'
-    : 'npx @tigrisdata/cli init --agent --getting-started';
+    ? 'tigris init --agent'
+    : 'npx @tigrisdata/cli init --agent';
   p.note(runner, 'Paste this to your AI coding agent to finish setup');
   p.outro('Your agent will authenticate with Tigris in-browser on first use.');
 }
@@ -156,49 +158,83 @@ function prettyPath(path: string, home: string): string {
   return path.startsWith(home) ? `~${path.slice(home.length)}` : path;
 }
 
-/** Merge the Tigris remote MCP entry into an editor's config at the chosen scope. */
+/** Write the Tigris remote MCP entry into an editor's config at the chosen scope. */
 function writeMcp(
   editor: EditorInfo,
   requested: 'global' | 'project',
   cwd: string,
   home: string
 ): void {
-  const target = resolveMcpTarget(editor, requested, cwd, home);
-  if (!target) {
+  const mcp = editor.mcp;
+  const target = resolveMcpTarget(editor, requested, cwd);
+  if (!mcp || !target) {
     p.log.warn(`${editor.label}: no writable MCP config — skipped.`);
     return;
   }
 
-  const existing = existsSync(target.path)
-    ? readFileSync(target.path, 'utf8')
-    : null;
-  let merged: { content: string; replaced: boolean };
-  try {
-    merged = mergeMcpServers(
-      existing,
-      editor.mcpKey,
-      MCP_SERVER_NAME,
-      editor.mcpEntry
-    );
-  } catch {
-    p.log.error(
-      `${editor.label}: could not parse ${target.path} as JSON — skipped.`
-    );
+  // Prefer an existing JSONC sibling (e.g. opencode.jsonc) over creating a
+  // second `.json` config the editor would then ignore or merge unexpectedly.
+  let targetPath = target.path;
+  if (
+    !existsSync(targetPath) &&
+    targetPath.endsWith('.json') &&
+    existsSync(`${targetPath}c`)
+  ) {
+    targetPath = `${targetPath}c`;
+  }
+
+  const dir = dirname(targetPath);
+  // App-managed locations (e.g. Cline's VS Code globalStorage): only write when
+  // the editor is actually installed, so we don't create a junk config tree.
+  if (mcp.createDirs === false && !existsSync(dirname(dir))) {
+    p.log.warn(`${editor.label}: not installed — skipped.`);
     return;
   }
 
-  mkdirSync(dirname(target.path), { recursive: true });
-  writeFileSync(target.path, merged.content);
+  // Read → merge → write per editor, so one editor's failure (unparseable or
+  // incompatible existing config, permission error, full disk) is reported and
+  // skipped without aborting the remaining editors.
+  try {
+    const existing = existsSync(targetPath)
+      ? readFileSync(targetPath, 'utf8')
+      : null;
+    const written =
+      mcp.format === 'toml'
+        ? upsertTomlServer(
+            existing,
+            mcp.key,
+            MCP_SERVER_NAME,
+            stringFields(mcp.entry)
+          )
+        : mergeMcpServers(existing, mcp.key, MCP_SERVER_NAME, mcp.entry);
 
-  const scopeNote = target.scope === requested ? '' : ` (${target.scope}-only)`;
-  p.log.success(
-    `${editor.label}: MCP → ${prettyPath(target.path, home)}${scopeNote}`
-  );
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(targetPath, written.content);
+
+    const scopeNote =
+      target.scope === requested ? '' : ` (${target.scope}-only)`;
+    p.log.success(
+      `${editor.label}: MCP → ${prettyPath(targetPath, home)}${scopeNote}`
+    );
+  } catch {
+    p.log.error(
+      `${editor.label}: could not update ${prettyPath(targetPath, home)} (incompatible or unwritable) — skipped.`
+    );
+  }
+}
+
+/** Keep only string-valued fields (TOML upsert writes `k = "v"`). */
+function stringFields(entry: Record<string, unknown>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(entry)) {
+    if (typeof v === 'string') out[k] = v;
+  }
+  return out;
 }
 
 /** The globally-installed `tigris` CLI version, or null if not on PATH. */
 function getInstalledCliVersion(): string | null {
-  const r = spawnSync('tigris', ['--version'], { encoding: 'utf8' });
+  const r = spawnSync('tigris', ['--version'], spawnOpts());
   if (r.error || r.status !== 0 || !r.stdout) return null;
   const v = r.stdout.trim().split('\n')[0].trim();
   return /^\d+\.\d+\.\d+/.test(v) ? v : null;
@@ -207,43 +243,82 @@ function getInstalledCliVersion(): string | null {
 /**
  * Ensure the Tigris CLI is present and current: install it if missing, update
  * it if a newer version is published, and do nothing (no step) if it's already
- * the latest. Returns whether the `tigris` command is available afterwards.
+ * the latest. Returns whether an up-to-date `tigris` command is available
+ * afterwards (false if an install/update was attempted and failed).
  */
 async function ensureCli(): Promise<boolean> {
   const installed = getInstalledCliVersion();
-
-  let latest: string | null;
-  try {
-    // Cap the registry check so a slow network can't stall the wizard.
-    latest = await Promise.race([
-      fetchLatestVersion({ unref: true }),
-      new Promise<string>((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 3000)
-      ),
-    ]);
-  } catch {
-    latest = null;
-  }
+  const latest = await fetchLatestVersionCapped(3000);
 
   if (!installed) {
-    return runCommand(
+    const result = runCommand(
       'npm',
       ['install', '-g', '@tigrisdata/cli', '--ignore-scripts'],
       'Installing Tigris CLI (global)'
-    ).ok;
+    );
+    if (!reportIfFailed(result)) return false;
+    // A zero exit doesn't guarantee `tigris` is resolvable — npm's global bin
+    // may not be on PATH. Confirm before recommending it over `npx`.
+    if (getInstalledCliVersion() === null) {
+      p.log.warn(
+        'Tigris CLI installed but not on PATH — the agent handoff will use npx.'
+      );
+      return false;
+    }
+    return true;
   }
 
   if (latest && isNewerVersion(installed, latest)) {
-    runCommand(
-      'npm',
-      ['install', '-g', '@tigrisdata/cli@latest', '--ignore-scripts'],
-      `Updating Tigris CLI ${installed} → ${latest}`
+    // Delegate to the installed CLI's own updater so we respect how it was
+    // installed (npm / Homebrew / standalone binary) rather than forcing npm,
+    // which could fail or leave a second copy on PATH. If it fails, report
+    // unavailable so the handoff falls back to `npx` (an outdated CLI may
+    // predate `init`).
+    return reportIfFailed(
+      runCommand(
+        'tigris',
+        ['update'],
+        `Updating Tigris CLI ${installed} → ${latest}`
+      )
     );
-    return true;
   }
 
   // Installed and current (or latest unknown) — no CLI step shown.
   return true;
+}
+
+/**
+ * Latest published version, or null if the registry check errors or exceeds
+ * `ms`. Never rejects: a late `fetchLatestVersion` failure is swallowed (so it
+ * can't surface as an unhandled rejection). The timeout timer is intentionally
+ * left ref'd — it's what keeps the process alive during this await (the fetch
+ * socket is unref'd) — and is always cleared in `finally`, so the fetch winning
+ * adds no delay and a still-pending fetch can't hold the process open after.
+ */
+async function fetchLatestVersionCapped(ms: number): Promise<string | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      fetchLatestVersion({ unref: true }).catch(() => null),
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/**
+ * spawnSync options. On Windows npm/npx/tigris are `.cmd` shims that need a
+ * shell to resolve; use `shell: true` (cmd.exe) rather than PowerShell, which
+ * treats a leading `@` (as in `@tigrisdata/cli`) as its splat operator.
+ */
+function spawnOpts() {
+  return {
+    encoding: 'utf8' as const,
+    ...(process.platform === 'win32' ? { shell: true } : {}),
+  };
 }
 
 /** Run a command under a spinner; capture output and surface it on failure. */
@@ -254,11 +329,23 @@ function runCommand(
 ): { ok: boolean; output?: string } {
   const s = p.spinner();
   s.start(startMsg);
-  const r = spawnSync(cmd, args, { encoding: 'utf8' });
+  const r = spawnSync(cmd, args, spawnOpts());
   if (r.status === 0) {
     s.stop(`${startMsg} — done`);
     return { ok: true };
   }
   s.stop(`${startMsg} — failed`);
-  return { ok: false, output: (r.stderr || r.stdout || '').trim() };
+  // Include spawnSync's own error (e.g. ENOENT) — stderr/stdout are empty then.
+  return {
+    ok: false,
+    output: (r.stderr || r.stdout || r.error?.message || '').trim(),
+  };
+}
+
+/** Surface a failed command's captured output (last lines) and return its ok. */
+function reportIfFailed(result: { ok: boolean; output?: string }): boolean {
+  if (!result.ok && result.output) {
+    p.log.error(result.output.split('\n').slice(-6).join('\n'));
+  }
+  return result.ok;
 }

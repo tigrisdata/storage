@@ -1,63 +1,42 @@
-import { ENV_KEYS } from './shared.js';
-
 /**
- * Emit the agent onboarding plan for `tigris init --agent --getting-started`.
+ * The onboarding recipe printed by `tigris init --agent`.
  *
- * This does NOT execute anything. It returns a recipe — an ordered list of
- * `{ id, description, command }` steps — that an AI coding agent follows,
- * running the listed `tigris` commands itself and making decisions per each
- * description (Neon's `init --agent` model).
+ * This does NOT execute anything — it is a plain-text set of steps for an AI
+ * coding agent to follow, running the listed `tigris` commands itself and
+ * making decisions per step.
  */
-export function emitGettingStarted() {
-  const plan = {
-    phase: 'setup',
-    status: 'getting_started',
-    nextAction: {
-      type: 'agent_action',
-      steps: [
-        {
-          id: 'ensure_cli',
-          description:
-            'Ensure the Tigris CLI is available; install it only if the `tigris` command is not already on PATH.',
-          command:
-            'command -v tigris >/dev/null 2>&1 || npm install -g @tigrisdata/cli --ignore-scripts',
-        },
-        {
-          id: 'select_org',
-          description:
-            "List the user's Tigris organizations. If only one exists, use it automatically. If several exist, ask the user which to use. Remember the selected org for the next steps.",
-          command: 'tigris orgs list --format json',
-        },
-        {
-          id: 'create_bucket',
-          description:
-            'Create a bucket for this project, or reuse an existing one from `tigris buckets list --format json`. Choose a clear, project-specific name.',
-          command: 'tigris buckets create <bucket> --format json',
-        },
-        {
-          id: 'create_access_key',
-          description:
-            'Create an access key for the application to use with the Tigris SDK.',
-          command: 'tigris access-keys create <key-name> --format json',
-        },
-        {
-          id: 'assign_role',
-          description:
-            'Grant the new access key Editor access to the bucket created above, using the key id returned by the previous step.',
-          command:
-            'tigris access-keys assign <key-id> --bucket <bucket> --role Editor --format json',
-        },
-        {
-          id: 'write_env',
-          description:
-            `Write the credentials to the project's .env so the SDK picks them up: ` +
-            `${ENV_KEYS.accessKeyId} and ${ENV_KEYS.secretAccessKey} from create_access_key, ` +
-            `${ENV_KEYS.bucket} = the bucket name, and ${ENV_KEYS.endpoint} = https://t3.storage.dev.`,
-          command: null,
-        },
-      ],
-    },
-  };
+export const AGENT_SETUP = `Help the user set up their project with Tigris:
 
-  console.log(JSON.stringify(plan, null, 2));
-}
+1. If \`tigris\` isn't on $PATH (\`command -v tigris\`), ask permission, then \`npm install -g @tigrisdata/cli --ignore-scripts\`.
+2. If \`tigris\` is on $PATH, ensure it's latest version using \`tigris update\`.
+3. Check if the user is already authenticated using \`tigris whoami\`. If not, authenticate using \`tigris login oauth\`.
+4. Run \`tigris orgs list --format json\`. If there's more than one org, ask which to use, then make it active with \`tigris orgs select <org>\` so the following commands target it.
+5. Infer the project name from metadata (package.json, go.mod, pyproject.toml, ...). Check \`tigris buckets list --format json\` first; if the bucket is absent, \`tigris buckets create <name> --format json\`. Ask the user whenever anything is ambiguous.
+6. Create the access key into a private temp file (overwrite, never append), then print only the ID:
+   \`umask 077; tmpfile=$(mktemp); tigris access-keys create <username>-<project>-devel --format json > "$tmpfile" && jq -r '.id' < "$tmpfile"\`
+7. Grant bucket access: \`tigris access-keys assign <id> --bucket <bucket> --role Editor --format json\`.
+8. Detect whether the code uses the Tigris SDK or the AWS SDK, then have a small script append the right vars to .env, reading \`.id\`/\`.secret\` from the temp file. Do NOT read the secret into your context — append it via script. Delete the temp file when done: \`rm -f "$tmpfile"\`.
+
+   Tigris SDK (@tigrisdata/storage, storage-go):
+     TIGRIS_STORAGE_ACCESS_KEY_ID     = .id
+     TIGRIS_STORAGE_SECRET_ACCESS_KEY = .secret   (secret)
+     TIGRIS_STORAGE_BUCKET            = <bucket>
+
+   AWS SDK:
+     AWS_ACCESS_KEY_ID       = .id
+     AWS_SECRET_ACCESS_KEY   = .secret            (secret)
+     AWS_ENDPOINT_URL_S3     = https://t3.storage.dev    (required)
+     AWS_ENDPOINT_URL_IAM    = https://iam.storageapi.dev (required)
+     AWS_REGION              = auto                        (required)
+
+9. Congratulate the user and point them to:
+   - JS:    https://www.tigrisdata.com/docs/sdks/tigris/
+   - Go:    https://pkg.go.dev/github.com/tigrisdata/storage-go
+   - Docs:  https://www.tigrisdata.com/docs/
+   - Discord: https://community.tigrisdata.com/
+   - Skills: https://www.tigrisdata.com/docs/skills/
+
+   Suggest adding to their agent config:
+     > ## Tigris object storage
+     > This project uses Tigris. For any Tigris questions, consult https://www.tigrisdata.com/llms.txt before acting; look it up rather than relying on memory.
+`;
