@@ -39,6 +39,7 @@ type BucketApiSettings = {
   acl_list_objects?: 'false' | 'true';
   object_regions?: string;
   cache_control?: string;
+  storage_class?: StorageClass;
   shadow_bucket?: {
     access_key?: string;
     secret_key?: string;

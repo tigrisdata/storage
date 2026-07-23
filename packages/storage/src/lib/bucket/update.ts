@@ -1,7 +1,11 @@
 import { TigrisHeaders } from '@shared/headers';
 import { createStorageClient } from '../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
-import type { BucketLocations, UpdateBucketResponse } from './types';
+import type {
+  BucketLocations,
+  StorageClass,
+  UpdateBucketResponse,
+} from './types';
 import type { UpdateBucketBody } from './utils/api';
 import { validateLocationValues } from './utils/regions';
 
@@ -14,12 +18,14 @@ type UpdateBucketRequestBody = Pick<
   | 'protection'
   | 'additional_http_headers'
   | 'soft_delete'
+  | 'storage_class'
 >;
 
 export type UpdateBucketOptions = {
   // access and sharing settings
   access?: 'public' | 'private';
   allowObjectAcl?: boolean;
+  defaultTier?: StorageClass;
   disableDirectoryListing?: boolean;
   // storage settings
   locations?: BucketLocations;
@@ -86,6 +92,10 @@ export async function updateBucket(
   // custom domain
   if (options?.customDomain !== undefined) {
     body.website = { domain_name: options.customDomain };
+  }
+
+  if (options?.defaultTier !== undefined) {
+    body.storage_class = options.defaultTier;
   }
 
   // deletion settings

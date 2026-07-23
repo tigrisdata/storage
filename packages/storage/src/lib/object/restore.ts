@@ -4,6 +4,7 @@ import { handleError, TigrisHeaders } from '@shared/index';
 import { getConfig } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import { addSnapshotVersionMiddleware } from './middleware';
 
 export type RestoreObjectOptions = {
   /**
@@ -15,6 +16,7 @@ export type RestoreObjectOptions = {
    * Restore a specific object version instead of the current one.
    */
   versionId?: string;
+  snapshotVersion?: string;
   config?: TigrisStorageConfig;
 };
 
@@ -45,6 +47,13 @@ export async function restoreObject(
       Days: options?.days ?? 1,
     },
   });
+
+  if (options?.snapshotVersion) {
+    addSnapshotVersionMiddleware(
+      restore.middlewareStack,
+      options.snapshotVersion
+    );
+  }
 
   try {
     return tigrisClient
@@ -83,6 +92,7 @@ export type RestoreInfo = {
 export type GetRestoreInfoOptions = {
   /** Inspect a specific object version instead of the current one. */
   versionId?: string;
+  snapshotVersion?: string;
   config?: TigrisStorageConfig;
 };
 
@@ -109,6 +119,10 @@ export async function getRestoreInfo(
     Key: path,
     VersionId: options?.versionId,
   });
+
+  if (options?.snapshotVersion) {
+    addSnapshotVersionMiddleware(head.middlewareStack, options.snapshotVersion);
+  }
 
   let responseHeaders: Record<string, string> = {};
 

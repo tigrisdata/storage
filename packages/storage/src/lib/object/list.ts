@@ -4,6 +4,7 @@ import { TigrisHeaders } from '@shared/index';
 import { getConfig, missingConfigError } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import { addSnapshotVersionMiddleware } from './middleware';
 
 export type ListOptions = {
   delimiter?: string;
@@ -53,20 +54,7 @@ export async function list(
   });
 
   if (options?.snapshotVersion) {
-    list.middlewareStack.add(
-      (next) => async (args) => {
-        const req = args.request as HttpRequest;
-        req.headers[TigrisHeaders.SNAPSHOT_VERSION] =
-          `${options.snapshotVersion}`;
-        const result = await next(args);
-        return result;
-      },
-      {
-        name: 'X-Tigris-Snapshot-Middleware',
-        step: 'build',
-        override: true,
-      }
-    );
+    addSnapshotVersionMiddleware(list.middlewareStack, options.snapshotVersion);
   }
 
   if (options?.source) {
