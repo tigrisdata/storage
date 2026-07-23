@@ -1,5 +1,58 @@
 # @tigrisdata/cli
 
+## 3.5.0
+
+### Minor Changes
+
+- [#203](https://github.com/tigrisdata/storage/pull/203) [`fa9292c`](https://github.com/tigrisdata/storage/commit/fa9292c4518d0d2d6cabe32136bdf56105b9b089) Thanks [@designcode](https://github.com/designcode)! - Add `tigris init` to connect Tigris to AI coding agents. The interactive wizard
+  detects installed editors, installs/updates the CLI, writes the Tigris remote
+  MCP server config for 10 editors (Claude Code, Cursor, VS Code, Windsurf, Codex,
+  Antigravity CLI, Cline, Zed, Roo Code, opencode), and installs the Tigris agent
+  skills. `tigris init --agent` instead prints a plain-text setup recipe for a
+  coding agent to run itself.
+
+- [#200](https://github.com/tigrisdata/storage/pull/200) [`e64d887`](https://github.com/tigrisdata/storage/commit/e64d8871b29524530a1758e0ea94722fef039312) Thanks [@designcode](https://github.com/designcode)! - Add Sentry error telemetry to the CLI. Crashes (uncaught exceptions and
+  unhandled rejections) are reported and flushed reliably; unexpected "general"
+  and network errors on the handled path are captured best-effort. Events are
+  enriched with the command, error category, exit code, CLI version, and platform.
+  Secrets (access keys, tokens, credential flags) and the machine hostname are
+  scrubbed before any event is sent. Telemetry is off in dev/test and when no DSN
+  is configured, and can be disabled with `TIGRIS_NO_TELEMETRY=1` or the standard
+  `DO_NOT_TRACK=1`.
+
+### Patch Changes
+
+- [#202](https://github.com/tigrisdata/storage/pull/202) [`af315f4`](https://github.com/tigrisdata/storage/commit/af315f4f360d9e9934b7dfb855637665b7b4eeba) Thanks [@designcode](https://github.com/designcode)! - Fix a deadlock in `tigris buckets migrate` that stalled large migrations, and
+  overhaul how migrations are paced and displayed.
+
+  - **Deadlock fix:** the drain step only polled the oldest in-flight objects, so
+    a slow object at the head hid the completed objects behind it — their bytes
+    were never freed, the in-flight budget stayed pinned at its cap, and the
+    migration wedged (progress frozen with in-flight stuck at ~10 GB). It now
+    polls a rotating window across the whole in-flight set, so completions are
+    observed regardless of position.
+  - **Smallest-first:** objects migrate smallest-first, so progress climbs quickly
+    and large files finish at the end instead of stalling mid-run.
+  - **In-flight caps:** in-flight work is bounded by both object count and total
+    bytes, and the byte budget is enforced across the pending schedule batch, so a
+    large file can't be scheduled alongside a full batch and blow the budget.
+  - **Poll backoff:** the `isMigrated` poll backs off (5s up to 30s) after sweeps
+    where nothing completed, and resets on the next completion, so an idle
+    migration stops hammering the gateway with status checks.
+  - **Multi-line, live progress:** progress renders as a sticky multi-line block —
+    bucket and elapsed clock, file and byte percentages, and the file currently
+    being pulled (name, size, and how long it has been going) plus the in-flight
+    count. It redraws in place instead of duplicating lines on window resize, and
+    truncates each line to the terminal width so nothing wraps. There is no
+    throughput figure: confirmations are lumpy binary flips (the gateway does the
+    transfer), not a byte stream, so an "obj/s · MB/s" rate would misrepresent
+    progress.
+  - **Responsive cancel:** Ctrl-C stops scheduling and polling and prints a
+    summary of what was confirmed; objects already scheduled remain queued for
+    migration server-side, so re-running resumes from there. It is felt
+    immediately (the poll wait is abortable rather than blocking until it
+    elapses), and a second Ctrl-C forces an immediate exit.
+
 ## 3.4.3
 
 ### Patch Changes
