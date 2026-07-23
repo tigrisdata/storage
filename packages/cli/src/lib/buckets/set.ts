@@ -1,5 +1,9 @@
 import { getStorageConfigWithOrg } from '@auth/provider.js';
-import { type UpdateBucketOptions, updateBucket } from '@tigrisdata/storage';
+import {
+  type StorageClass,
+  type UpdateBucketOptions,
+  updateBucket,
+} from '@tigrisdata/storage';
 import { failWithError } from '@utils/exit.js';
 import { parseLocations } from '@utils/locations.js';
 import { msg, printStart, printSuccess } from '@utils/messages.js';
@@ -14,6 +18,10 @@ export default async function set(options: Record<string, unknown>) {
 
   const name = getOption<string>(options, ['name']);
   const access = getOption<string>(options, ['access']);
+  const defaultTier = getOption<string>(options, [
+    'default-tier',
+    'defaultTier',
+  ]);
   const locations = getOption<string | string[]>(options, ['locations']);
   const allowObjectAcl = getOption<string | boolean>(options, [
     'allow-object-acl',
@@ -52,6 +60,7 @@ export default async function set(options: Record<string, unknown>) {
   // Check if at least one setting is provided
   if (
     access === undefined &&
+    defaultTier === undefined &&
     locations === undefined &&
     allowObjectAcl === undefined &&
     disableDirectoryListing === undefined &&
@@ -69,6 +78,10 @@ export default async function set(options: Record<string, unknown>) {
 
   if (access !== undefined) {
     updateOptions.access = access as 'public' | 'private';
+  }
+
+  if (defaultTier !== undefined) {
+    updateOptions.defaultTier = defaultTier as StorageClass;
   }
 
   if (locations !== undefined) {

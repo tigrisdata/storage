@@ -914,10 +914,11 @@ commands:
               - my-bucket
       # set
       - name: set
-        description: Update settings on an existing bucket such as access level, location, caching, or custom domain
+        description: Update settings on an existing bucket such as access level, default tier, location, caching, or custom domain
         alias: s
         examples:
           - "tigris buckets set my-bucket --access public"
+          - "tigris buckets set my-bucket --default-tier GLACIER"
           - "tigris buckets set my-bucket --locations iad,fra --cache-control 'max-age=3600'"
           - "tigris buckets set my-bucket --custom-domain assets.example.com"
           - "tigris buckets set my-bucket --soft-delete enable --retention-days 30"
@@ -936,6 +937,9 @@ commands:
           - name: access
             description: Bucket access level
             options: *access_options
+          - name: default-tier
+            description: Change the default storage tier for objects uploaded to the bucket
+            options: *tier_options
           - name: region
             removed: true
             replaced_by: --locations
@@ -1666,6 +1670,7 @@ commands:
           - "tigris objects restore my-bucket archived.bin"
           - "tigris objects restore my-bucket archived.bin --days 3"
           - "tigris objects restore t3://my-bucket/archived.bin --days 7"
+          - "tigris objects restore my-bucket archived.bin --snapshot-version 1765889000501544464"
         messages:
           onStart: 'Requesting restore...'
           onSuccess: "Restore requested for '{{key}}'"
@@ -1684,6 +1689,9 @@ commands:
             default: 1
           - name: version-id
             description: Restore a specific object version (requires bucket versioning). Omit to restore the current version
+          - name: snapshot-version
+            description: Restore the object as of a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
+            alias: snapshot
           - name: format
             description: Output format
             options: [json, table, xml]
@@ -1695,6 +1703,7 @@ commands:
         examples:
           - "tigris objects restore-info my-bucket archived.bin"
           - "tigris objects restore-info t3://my-bucket/archived.bin --format json"
+          - "tigris objects restore-info my-bucket archived.bin --snapshot-version 1765889000501544464"
         messages:
           onStart: ''
           onSuccess: ''
@@ -1710,6 +1719,9 @@ commands:
             description: Key of the object (omit if bucket contains the full path)
           - name: version-id
             description: Inspect a specific object version (requires bucket versioning). Omit to read the current version
+          - name: snapshot-version
+            description: Inspect the object as of a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
+            alias: snapshot
           - name: format
             description: Output format
             options: [json, table, xml]
