@@ -1,10 +1,9 @@
 import { HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import type { HttpRequest } from '@aws-sdk/types';
-import { TigrisHeaders } from '@shared/index';
 import { getConfig } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import { addSnapshotVersionMiddleware } from './middleware';
 
 export type HeadOptions = {
   snapshotVersion?: string;
@@ -41,20 +40,7 @@ export async function head(
   });
 
   if (options?.snapshotVersion) {
-    head.middlewareStack.add(
-      (next) => async (args) => {
-        const req = args.request as HttpRequest;
-        req.headers[TigrisHeaders.SNAPSHOT_VERSION] =
-          `${options.snapshotVersion}`;
-        const result = await next(args);
-        return result;
-      },
-      {
-        name: 'X-Tigris-Snapshot-Middleware',
-        step: 'build',
-        override: true,
-      }
-    );
+    addSnapshotVersionMiddleware(head.middlewareStack, options.snapshotVersion);
   }
 
   try {
