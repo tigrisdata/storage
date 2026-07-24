@@ -15,9 +15,9 @@ export type ListPoliciesResponse = {
 };
 
 type ListPoliciesApiResponse = {
-  IsTruncated: boolean;
-  Marker?: string;
   ListPoliciesResult: {
+    IsTruncated: boolean;
+    Marker?: string;
     Policies: Array<{
       Arn: string;
       AttachmentCount: number;
@@ -75,8 +75,9 @@ export async function listPolicies(
 
   return {
     data: {
-      paginationToken:
-        response.data.Marker !== '' ? response.data.Marker : undefined,
+      paginationToken: response.data.ListPoliciesResult?.IsTruncated
+        ? response.data.ListPoliciesResult.Marker || undefined
+        : undefined,
       policies:
         response.data.ListPoliciesResult?.Policies?.map((policy) => ({
           attachmentCount: policy.AttachmentCount,
