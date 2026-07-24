@@ -86,6 +86,12 @@ You can override service endpoints independently:
 
 AWS_ endpoint variables take priority over TIGRIS_ endpoint variables.
 
+### Other variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `TIGRIS_FORCE_PATH_STYLE` | Use S3 path-style addressing (bucket in the URL path instead of the host). Set to `1`, `true`, `yes`, or `on` to enable. Useful behind gateways or proxies that don't support virtual-hosted-style requests. | `false` |
+
 ## AWS Profile
 
 If you have Tigris credentials configured in `~/.aws/credentials`, the CLI picks them up automatically when `AWS_PROFILE` is set.

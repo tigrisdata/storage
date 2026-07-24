@@ -66,7 +66,9 @@ describe('messages', () => {
       setTTY(true);
       printFailure(ctx, 'something went wrong');
       expect(errorSpy).toHaveBeenCalled();
-      const allArgs = errorSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+      const allArgs = errorSpy.mock.calls
+        .map((c: unknown[]) => c.join(' '))
+        .join('\n');
       expect(allArgs).toContain('✖');
       expect(allArgs).toContain('something went wrong');
     });

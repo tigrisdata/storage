@@ -57,6 +57,7 @@ const ENV_KEYS = [
   'TIGRIS_STORAGE_ACCESS_KEY_ID',
   'TIGRIS_STORAGE_SECRET_ACCESS_KEY',
   'TIGRIS_STORAGE_ENDPOINT',
+  'TIGRIS_FORCE_PATH_STYLE',
 ];
 
 describe('resolveAuthMethod', () => {
@@ -363,5 +364,99 @@ describe('resolveAuthMethod', () => {
       secretAccessKey: 'AWS-SK',
       source: 'aws',
     });
+  });
+});
+
+describe('getEnvForcePathStyle', () => {
+  let saved: string | undefined;
+
+  beforeEach(() => {
+    saved = process.env.TIGRIS_FORCE_PATH_STYLE;
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    if (saved !== undefined) {
+      process.env.TIGRIS_FORCE_PATH_STYLE = saved;
+    } else {
+      delete process.env.TIGRIS_FORCE_PATH_STYLE;
+    }
+  });
+
+  it.each(['1', 'true', 'TRUE', 'yes', 'on', '  On  '])(
+    'is true for %j',
+    async (value) => {
+      process.env.TIGRIS_FORCE_PATH_STYLE = value;
+      const { getEnvForcePathStyle } = await import(
+        '../../src/auth/provider.js'
+      );
+      expect(getEnvForcePathStyle()).toBe(true);
+    }
+  );
+
+  it.each(['0', 'false', 'no', 'off', '', 'nope'])(
+    'is false for %j',
+    async (value) => {
+      process.env.TIGRIS_FORCE_PATH_STYLE = value;
+      const { getEnvForcePathStyle } = await import(
+        '../../src/auth/provider.js'
+      );
+      expect(getEnvForcePathStyle()).toBe(false);
+    }
+  );
+
+  it('is false when unset', async () => {
+    delete process.env.TIGRIS_FORCE_PATH_STYLE;
+    const { getEnvForcePathStyle } = await import('../../src/auth/provider.js');
+    expect(getEnvForcePathStyle()).toBe(false);
+  });
+});
+
+describe('getStorageConfig forcePathStyle overlay', () => {
+  let savedEnv: Record<string, string | undefined>;
+
+  beforeEach(() => {
+    tempHome = mkdtempSync(join(tmpdir(), 'tigris-test-'));
+    vi.resetModules();
+    savedEnv = {};
+    for (const key of ENV_KEYS) {
+      savedEnv[key] = process.env[key];
+      delete process.env[key];
+    }
+  });
+
+  afterEach(() => {
+    rmSync(tempHome, { recursive: true, force: true });
+    for (const key of ENV_KEYS) {
+      if (savedEnv[key] !== undefined) {
+        process.env[key] = savedEnv[key];
+      } else {
+        delete process.env[key];
+      }
+    }
+  });
+
+  it('adds forcePathStyle when TIGRIS_FORCE_PATH_STYLE is truthy', async () => {
+    writeRawConfig({ version: 2 });
+    process.env.TIGRIS_STORAGE_ACCESS_KEY_ID = 'TIG-AK';
+    process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY = 'TIG-SK';
+    process.env.TIGRIS_FORCE_PATH_STYLE = 'true';
+
+    const { getStorageConfig } = await import('../../src/auth/provider.js');
+    const config = await getStorageConfig();
+
+    expect(config.forcePathStyle).toBe(true);
+    expect(config.accessKeyId).toBe('TIG-AK');
+  });
+
+  it('omits forcePathStyle when TIGRIS_FORCE_PATH_STYLE is unset', async () => {
+    writeRawConfig({ version: 2 });
+    process.env.TIGRIS_STORAGE_ACCESS_KEY_ID = 'TIG-AK';
+    process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY = 'TIG-SK';
+
+    const { getStorageConfig } = await import('../../src/auth/provider.js');
+    const config = await getStorageConfig();
+
+    expect(config.forcePathStyle).toBeUndefined();
   });
 });

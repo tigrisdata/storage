@@ -109,7 +109,7 @@ describe('exitWithError', () => {
     setJsonMode(true);
     exitWithError(new Error('access denied'));
 
-    const jsonCalls = errorSpy.mock.calls.filter((call) => {
+    const jsonCalls = errorSpy.mock.calls.filter((call: unknown[]) => {
       try {
         JSON.parse(call[0] as string);
         return true;
@@ -132,7 +132,7 @@ describe('exitWithError', () => {
     setJsonMode(true);
     exitWithError(new Error('something went wrong'));
 
-    const jsonCalls = errorSpy.mock.calls.filter((call) => {
+    const jsonCalls = errorSpy.mock.calls.filter((call: unknown[]) => {
       try {
         JSON.parse(call[0] as string);
         return true;
@@ -150,7 +150,9 @@ describe('exitWithError', () => {
     setStderrTTY(true);
     exitWithError(new Error('access denied'));
 
-    const allOutput = errorSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    const allOutput = errorSpy.mock.calls
+      .map((c: unknown[]) => c.join(' '))
+      .join('\n');
     expect(allOutput).toContain('Next steps:');
     expect(allOutput).toContain('access-keys list');
   });
@@ -160,7 +162,9 @@ describe('exitWithError', () => {
     setJsonMode(false);
     exitWithError(new Error('access denied'));
 
-    const allOutput = errorSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    const allOutput = errorSpy.mock.calls
+      .map((c: unknown[]) => c.join(' '))
+      .join('\n');
     expect(allOutput).not.toContain('Next steps:');
   });
 });
@@ -220,7 +224,9 @@ describe('printNextActions', () => {
       { name: 'my-bucket' }
     );
 
-    const allOutput = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    const allOutput = logSpy.mock.calls
+      .map((c: unknown[]) => c.join(' '))
+      .join('\n');
     expect(allOutput).toContain('Next steps:');
     expect(allOutput).toContain('my-bucket');
   });
