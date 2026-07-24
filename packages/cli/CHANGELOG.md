@@ -1,5 +1,19 @@
 # @tigrisdata/cli
 
+## 3.6.0
+
+### Minor Changes
+
+- [#204](https://github.com/tigrisdata/storage/pull/204) [`bb29d3a`](https://github.com/tigrisdata/storage/commit/bb29d3a6141ec232a322b6982d5bcab4e31304d6) Thanks [@designcode](https://github.com/designcode)! - Add `--default-tier` to `tigris buckets set` and `--snapshot-version` (alias `--snapshot`) to `tigris objects restore` / `tigris objects restore-info`.
+
+- [#207](https://github.com/tigrisdata/storage/pull/207) [`f252179`](https://github.com/tigrisdata/storage/commit/f252179242f620f6f329324ee07c2798e3a14921) Thanks [@designcode](https://github.com/designcode)! - Add `TIGRIS_FORCE_PATH_STYLE` env var to force S3 path-style addressing (bucket in the URL path instead of the host), applied across every auth method. Useful behind gateways or proxies that don't support virtual-hosted-style requests. Also namespace the Auth0 env overrides (`AUTH0_DOMAIN`/`AUTH0_CLIENT_ID`/`AUTH0_AUDIENCE` → `TIGRIS_AUTH0_*`) for consistency with the other `TIGRIS_*` variables.
+
+### Patch Changes
+
+- Updated dependencies [[`e44ef8a`](https://github.com/tigrisdata/storage/commit/e44ef8a784d32d9733196ae754b2fdd519552698), [`55a3b54`](https://github.com/tigrisdata/storage/commit/55a3b54ba9181d528c8a1c56ac52f002be296869)]:
+  - @tigrisdata/iam@2.2.2
+  - @tigrisdata/storage@3.18.0
+
 ## 3.5.0
 
 ### Minor Changes

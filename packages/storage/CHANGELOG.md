@@ -1,5 +1,11 @@
 # @tigrisdata/storage
 
+## 3.18.0
+
+### Minor Changes
+
+- [#204](https://github.com/tigrisdata/storage/pull/204) [`55a3b54`](https://github.com/tigrisdata/storage/commit/55a3b54ba9181d528c8a1c56ac52f002be296869) Thanks [@designcode](https://github.com/designcode)! - Add `defaultTier` to `updateBucket` for changing an existing bucket's default storage tier, and `snapshotVersion` to `restoreObject` / `getRestoreInfo` to target a point-in-time bucket snapshot.
+
 ## 3.17.2
 
 ### Patch Changes
