@@ -1,5 +1,17 @@
 # @tigrisdata/cli
 
+## 3.6.0
+
+### Minor Changes
+
+- [#204](https://github.com/tigrisdata/storage/pull/204) [`bb29d3a`](https://github.com/tigrisdata/storage/commit/bb29d3a6141ec232a322b6982d5bcab4e31304d6) Thanks [@designcode](https://github.com/designcode)! - Add `--default-tier` to `tigris buckets set` and `--snapshot-version` (alias `--snapshot`) to `tigris objects restore` / `tigris objects restore-info`.
+
+### Patch Changes
+
+- Updated dependencies [[`e44ef8a`](https://github.com/tigrisdata/storage/commit/e44ef8a784d32d9733196ae754b2fdd519552698), [`55a3b54`](https://github.com/tigrisdata/storage/commit/55a3b54ba9181d528c8a1c56ac52f002be296869)]:
+  - @tigrisdata/iam@2.2.2
+  - @tigrisdata/storage@3.18.0
+
 ## 3.5.0
 
 ### Minor Changes

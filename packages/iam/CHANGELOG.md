@@ -1,5 +1,11 @@
 # @tigrisdata/iam
 
+## 2.2.2
+
+### Patch Changes
+
+- [#206](https://github.com/tigrisdata/storage/pull/206) [`e44ef8a`](https://github.com/tigrisdata/storage/commit/e44ef8a784d32d9733196ae754b2fdd519552698) Thanks [@designcode](https://github.com/designcode)! - Fix `listPolicies` never returning a `paginationToken`. The `IsTruncated` and `Marker` fields are nested inside `ListPoliciesResult` in the API response, but were being read from the top level, so the next-page token was always `undefined`.
+
 ## 2.2.1
 
 ### Patch Changes
