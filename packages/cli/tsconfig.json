@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022"],
-    "types": ["node"],
+    "types": ["node", "vitest/globals"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
@@ -17,6 +17,6 @@
       "@utils/*": ["./src/utils/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "test"],
   "exclude": ["src/cli-binary.ts", "src/command-registry.ts"]
 }

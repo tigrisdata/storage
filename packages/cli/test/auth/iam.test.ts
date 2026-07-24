@@ -62,7 +62,7 @@ describe('getOAuthIAMConfig', () => {
       getAccessToken: vi.fn(),
     };
     vi.mocked(getAuthClient).mockReturnValue(
-      mockClient as ReturnType<typeof getAuthClient>
+      mockClient as unknown as ReturnType<typeof getAuthClient>
     );
 
     await expect(getOAuthIAMConfig(context)).rejects.toThrow(
@@ -78,7 +78,7 @@ describe('getOAuthIAMConfig', () => {
       getAccessToken: vi.fn().mockResolvedValue('tok-123'),
     };
     vi.mocked(getAuthClient).mockReturnValue(
-      mockClient as ReturnType<typeof getAuthClient>
+      mockClient as unknown as ReturnType<typeof getAuthClient>
     );
 
     const config = await getOAuthIAMConfig(context);
@@ -98,7 +98,7 @@ describe('getOAuthIAMConfig', () => {
       getAccessToken: vi.fn().mockResolvedValue('tok-123'),
     };
     vi.mocked(getAuthClient).mockReturnValue(
-      mockClient as ReturnType<typeof getAuthClient>
+      mockClient as unknown as ReturnType<typeof getAuthClient>
     );
 
     const config = await getOAuthIAMConfig(context);
@@ -117,7 +117,7 @@ describe('getIAMConfig', () => {
       getAccessToken: vi.fn().mockResolvedValue('tok-456'),
     };
     vi.mocked(getAuthClient).mockReturnValue(
-      mockClient as ReturnType<typeof getAuthClient>
+      mockClient as unknown as ReturnType<typeof getAuthClient>
     );
     vi.mocked(getSelectedOrganization).mockReturnValue('org-1');
 

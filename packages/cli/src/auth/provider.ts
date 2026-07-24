@@ -44,6 +44,20 @@ export function getTigrisConfig(): TigrisConfig {
   };
 }
 
+/**
+ * Whether to force S3 path-style addressing (bucket in the URL path rather
+ * than the host), read from TIGRIS_FORCE_PATH_STYLE. Useful against gateways
+ * or proxies that don't support virtual-hosted-style requests.
+ *
+ * Truthy values: `1`, `true`, `yes`, `on` (case-insensitive). Anything else
+ * — including unset — is false. Read per-call so it stays overridable at
+ * runtime, matching how the endpoint vars are consulted.
+ */
+export function getEnvForcePathStyle(): boolean {
+  const raw = process.env.TIGRIS_FORCE_PATH_STYLE?.trim().toLowerCase();
+  return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
+}
+
 const tigrisConfig = getTigrisConfig();
 const auth0Config = getAuth0Config();
 
@@ -198,6 +212,7 @@ export type TigrisStorageConfig = {
   accessKeyId?: string;
   secretAccessKey?: string;
   endpoint?: string;
+  forcePathStyle?: boolean;
   sessionToken?: string;
   organizationId?: string;
   iamEndpoint?: string;
@@ -211,6 +226,14 @@ export type TigrisStorageConfig = {
 };
 
 export async function getStorageConfig(options?: {
+  withCredentialProvider?: boolean;
+}): Promise<TigrisStorageConfig> {
+  const config = await resolveStorageConfig(options);
+  // Transport-level override that applies regardless of auth method.
+  return getEnvForcePathStyle() ? { ...config, forcePathStyle: true } : config;
+}
+
+async function resolveStorageConfig(options?: {
   withCredentialProvider?: boolean;
 }): Promise<TigrisStorageConfig> {
   const method = await resolveAuthMethod();
@@ -293,7 +316,7 @@ export async function getStorageConfig(options?: {
     case 'none': {
       // No valid auth method found — try auto-login in interactive terminals
       if (await triggerAutoLogin()) {
-        return getStorageConfig(options);
+        return resolveStorageConfig(options);
       }
       throw new Error(
         'Not authenticated. Please run "tigris login" or "tigris configure" first.'
