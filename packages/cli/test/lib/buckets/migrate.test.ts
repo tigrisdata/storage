@@ -7,13 +7,15 @@ vi.mock('@tigrisdata/storage', () => ({
   list: vi.fn(),
 }));
 
-import { isMigrated } from '@tigrisdata/storage';
+import { isMigrated, migrate } from '@tigrisdata/storage';
 import {
-  activityLabel,
   atCapacity,
   drainCompleted,
+  flushScheduleBatch,
+  formatInFlightRow,
+  inFlightView,
   type MigrationState,
-  oldestInFlight,
+  orderForDisplay,
   orderForMigration,
   shouldFlushBatch,
 } from '../../../src/lib/buckets/migrate.js';
@@ -61,6 +63,37 @@ describe('shouldFlushBatch', () => {
   });
 });
 
+describe('flushScheduleBatch', () => {
+  it('stamps each item with its own scheduleMigration resolution time, not a shared post-batch one', async () => {
+    // 'slow' takes longer to schedule than 'fast'. If scheduledAt were assigned
+    // once after the whole batch settles (the old bug), both would get the same
+    // timestamp — understating how long 'fast' had actually been queued.
+    // Stamping inside each task must give 'fast' a strictly earlier scheduledAt.
+    vi.mocked(migrate).mockImplementation(async (name: string) => {
+      const delayMs = name === 'slow' ? 30 : 0;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      return { data: undefined } as Awaited<ReturnType<typeof migrate>>;
+    });
+
+    const state = makeState([]);
+    await flushScheduleBatch(
+      [
+        { name: 'fast', size: 1 },
+        { name: 'slow', size: 1 },
+      ],
+      state,
+      {},
+      'bucket'
+    );
+
+    const fast = state.inFlight.find((i) => i.name === 'fast');
+    const slow = state.inFlight.find((i) => i.name === 'slow');
+    expect(fast).toBeDefined();
+    expect(slow).toBeDefined();
+    expect(fast?.scheduledAt).toBeLessThan(slow?.scheduledAt as number);
+  });
+});
+
 describe('orderForMigration', () => {
   it('sorts smallest first', () => {
     const items = [
@@ -99,42 +132,124 @@ describe('atCapacity', () => {
   });
 });
 
-describe('oldestInFlight', () => {
-  it('returns the item scheduled earliest, or null when empty', () => {
+describe('orderForDisplay', () => {
+  it('orders longest-queued (oldest scheduledAt) first, ties broken by name', () => {
+    const state = makeState([
+      { name: 'a', size: 1 },
+      { name: 'b', size: 1 },
+      { name: 'c', size: 1 },
+      { name: 'd', size: 1 },
+    ]);
+    state.inFlight[0].scheduledAt = 300; // a
+    state.inFlight[1].scheduledAt = 100; // b
+    state.inFlight[2].scheduledAt = 200; // c
+    state.inFlight[3].scheduledAt = 100; // d — ties with b, name breaks it
+    expect(orderForDisplay(state.inFlight).map((i) => i.name)).toEqual([
+      'b',
+      'd',
+      'c',
+      'a',
+    ]);
+  });
+
+  it('returns a copy and does not reorder the live in-flight array', () => {
+    const state = makeState([
+      { name: 'a', size: 1 },
+      { name: 'b', size: 1 },
+    ]);
+    state.inFlight[0].scheduledAt = 200;
+    state.inFlight[1].scheduledAt = 100;
+    orderForDisplay(state.inFlight);
+    // drainCompleted's rotating cursor relies on this order being untouched.
+    expect(state.inFlight.map((i) => i.name)).toEqual(['a', 'b']);
+  });
+});
+
+describe('inFlightView', () => {
+  it('shows every object when the count is within the row budget', () => {
     const state = makeState([
       { name: 'a', size: 1 },
       { name: 'b', size: 1 },
       { name: 'c', size: 1 },
     ]);
-    state.inFlight[0].scheduledAt = 300;
-    state.inFlight[1].scheduledAt = 100;
-    state.inFlight[2].scheduledAt = 200;
-    expect(oldestInFlight(state.inFlight)?.name).toBe('b');
-    expect(oldestInFlight([])).toBeNull();
+    const { shown, hidden } = inFlightView(state.inFlight, 20);
+    expect(shown.length).toBe(3);
+    expect(hidden.length).toBe(0);
+  });
+
+  it('collapses the overflow into hidden, reserving a row for the summary', () => {
+    // 30 in flight, MAX_INFLIGHT_ROWS (10) is the cap: 9 shown + 1 overflow row.
+    const items = Array.from({ length: 30 }, (_, i) => ({
+      name: `k${String(i).padStart(2, '0')}`,
+      size: 1,
+    }));
+    const { shown, hidden } = inFlightView(makeState(items).inFlight, 20);
+    expect(shown.length).toBe(9);
+    expect(hidden.length).toBe(21);
+    expect(shown.length + hidden.length).toBe(30);
+  });
+
+  it('clamps the shown count to a tight terminal row budget', () => {
+    const items = Array.from({ length: 30 }, (_, i) => ({
+      name: `k${i}`,
+      size: 1,
+    }));
+    // Only 4 rows fit: 3 shown + 1 overflow.
+    const { shown, hidden } = inFlightView(makeState(items).inFlight, 4);
+    expect(shown.length).toBe(3);
+    expect(hidden.length).toBe(27);
+  });
+
+  it('shows nothing but the overflow line when only 1 row fits', () => {
+    // cap === 1 with overflow: the reservation for the "+ N more" line must
+    // consume the whole budget (0 shown), or the caller emits 2 lines
+    // (1 shown + 1 overflow) against a 1-line budget.
+    const items = Array.from({ length: 5 }, (_, i) => ({
+      name: `k${i}`,
+      size: 1,
+    }));
+    const { shown, hidden } = inFlightView(makeState(items).inFlight, 1);
+    expect(shown.length).toBe(0);
+    expect(hidden.length).toBe(5);
   });
 });
 
-describe('activityLabel', () => {
-  it('names the file being migrated when something is in flight', () => {
-    const state = makeState([{ name: 'Videos/big.mp4', size: 21.9 * GB }]);
-    const label = activityLabel(state.inFlight[0], 60_000);
-    expect(label).toContain('migrating');
-    expect(label).toContain('Videos/big.mp4');
-    expect(label).not.toContain('obj/s');
+describe('formatInFlightRow', () => {
+  it('shows size and the queued duration, and fits the width', () => {
+    const [item] = makeState([
+      { name: 'Videos/big.mp4', size: 21.9 * GB },
+    ]).inFlight;
+    const row = formatInFlightRow(item, 60_000, 80);
+    expect(row).toContain('Videos/big.mp4');
+    expect(row).toContain('GB');
+    expect(row).toContain('queued 1m 0s');
+    expect(row).not.toContain('%');
+    expect(row.length).toBeLessThanOrEqual(80);
   });
 
   it('truncates a long key to the available width, keeping the tail', () => {
-    const state = makeState([
+    const [item] = makeState([
       { name: 'Videos/some/really/long/nested/path/merged.jsonl', size: GB },
-    ]);
-    const label = activityLabel(state.inFlight[0], 0, 15);
-    expect(label).toContain('…');
-    expect(label).toContain('merged.jsonl'); // tail preserved
-    expect(label).not.toContain('Videos/some'); // head dropped
+    ]).inFlight;
+    const row = formatInFlightRow(item, 0, 48);
+    expect(row).toContain('…');
+    expect(row).toContain('merged.jsonl'); // tail (filename) preserved
+    expect(row).not.toContain('Videos/some'); // head dropped
+    expect(row).toContain('queued 0s');
   });
 
-  it('falls back to a waiting indicator with no in-flight work', () => {
-    expect(activityLabel(null, 0)).toBe('waiting…');
+  it('keeps the queued column aligned for a 9-char size at a unit boundary', () => {
+    // formatSize's toFixed(1) rounds a value just under 1 MB up to "1024.0 KB"
+    // (9 chars) — SIZE_COL must reserve 9, or this row's queued column would
+    // start one character later than a normal (7-8 char) size.
+    const [normal, boundary] = makeState([
+      { name: 'normal.bin', size: 21.9 * GB },
+      { name: 'boundary.bin', size: 1024 * 1024 - 50 },
+    ]).inFlight;
+    const normalRow = formatInFlightRow(normal, 0, 80);
+    const boundaryRow = formatInFlightRow(boundary, 0, 80);
+    expect(boundaryRow).toContain('1024.0 KB');
+    expect(boundaryRow.indexOf('queued')).toBe(normalRow.indexOf('queued'));
   });
 });
 

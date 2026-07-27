@@ -39,6 +39,14 @@ const SCHEDULE_BATCH_SIZE = 50;
 /** Max consecutive isMigrated failures before marking item as failed */
 const MAX_CHECK_FAILURES = 3;
 
+/**
+ * Preferred number of in-flight objects to list individually before collapsing
+ * the remainder into a "+ N more" summary. The count actually shown is clamped
+ * further to fit the terminal height so the sticky block never fills the screen
+ * (which would break the cursor-up redraw).
+ */
+const MAX_INFLIGHT_ROWS = 10;
+
 /** Spinner frames for the live progress indicator. */
 const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
@@ -52,7 +60,10 @@ interface MigrationItem {
 
 export interface InFlightItem extends MigrationItem {
   checkFailures: number;
-  /** ms epoch when scheduled; used for the oldest-in-flight display. */
+  /**
+   * ms epoch when scheduled; drives the per-object "queued Xs" duration and the
+   * longest-queued-first ordering of the in-flight list.
+   */
   scheduledAt: number;
 }
 
@@ -127,41 +138,88 @@ export function shouldFlushBatch(
   );
 }
 
-/** The in-flight item that has been pulling longest, or null if none. */
-export function oldestInFlight(inFlight: InFlightItem[]): InFlightItem | null {
-  let oldest: InFlightItem | null = null;
-  for (const item of inFlight) {
-    if (oldest === null || item.scheduledAt < oldest.scheduledAt) {
-      oldest = item;
-    }
-  }
-  return oldest;
+/**
+ * In-flight objects ordered for display: longest-queued (oldest `scheduledAt`)
+ * first, ties broken by name for a stable order. Returns a copy — the live
+ * `state.inFlight` order matters to drainCompleted's rotating cursor and must
+ * not be reordered by a render. Longest-queued-first surfaces the objects that
+ * look stuck (a small key that has sat for minutes floats to the top) and, at
+ * the tail of a run, the large files that are legitimately still transferring.
+ */
+export function orderForDisplay(inFlight: InFlightItem[]): InFlightItem[] {
+  return [...inFlight].sort(
+    (a, b) =>
+      a.scheduledAt - b.scheduledAt ||
+      (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)
+  );
 }
 
 /**
- * The activity segment of the progress line: the oldest in-flight object (the
- * one scheduled-but-unconfirmed the longest), or a waiting indicator. The time
- * shown is how long we have been *waiting* for that file since it was scheduled
- * (`now - scheduledAt`), NOT an active-transfer time — the gateway exposes no
- * per-object progress, so we can only report how long it has been in-flight.
- * There is likewise no throughput figure: confirmations are lumpy binary flips
- * of isMigrated (the gateway does the transfer), not a byte stream, so an
- * "obj/s · MB/s" rate would misrepresent progress.
+ * Split the in-flight set into the rows to list individually and the remainder
+ * to collapse into a "+ N more" summary. `rowBudget` is how many list lines the
+ * terminal can fit; the shown count is the smaller of that and MAX_INFLIGHT_ROWS.
+ * When anything is hidden, one row is reserved for the overflow summary line.
  */
-export function activityLabel(
-  oldest: InFlightItem | null,
-  now: number,
-  maxNameLen = 40
-): string {
-  if (oldest) {
-    // Keep the tail of the key (the filename) when truncating.
-    const name =
-      oldest.name.length > maxNameLen
-        ? `…${oldest.name.slice(-Math.max(1, maxNameLen - 1))}`
-        : oldest.name;
-    return `migrating ${name} (${formatSize(oldest.size)}, waiting ${formatElapsed(now - oldest.scheduledAt)})`;
+export function inFlightView(
+  inFlight: InFlightItem[],
+  rowBudget: number
+): { shown: InFlightItem[]; hidden: InFlightItem[] } {
+  const sorted = orderForDisplay(inFlight);
+  const cap = Math.min(MAX_INFLIGHT_ROWS, Math.max(1, rowBudget));
+  if (sorted.length <= cap) {
+    return { shown: sorted, hidden: [] };
   }
-  return 'waiting…';
+  // Reserve a line for the "+ N more" summary. When cap is 1 (an extremely
+  // short terminal), that reservation must consume the entire budget — 0 shown
+  // rows, 1 overflow row — or the caller would emit 2 lines against a 1-line
+  // budget and the sticky block could exceed the screen height.
+  const shownCount = Math.max(0, cap - 1);
+  return {
+    shown: sorted.slice(0, shownCount),
+    hidden: sorted.slice(shownCount),
+  };
+}
+
+/**
+ * Width reserved for the size column (right-aligned, e.g. "380.0 MB"). 9, not
+ * 8: formatSize's toFixed(1) rounds up at unit boundaries (e.g. a value just
+ * under 1 GB can print as "1024.0 MB", 9 chars) — 8 would misalign that row.
+ */
+const SIZE_COL = 9;
+
+/**
+ * Width reserved for the trailing "queued …" column when sizing the key column.
+ * Fits e.g. "queued 120m 59s"; the column is last, so a rare longer value only
+ * lengthens that one row (the renderer trims it), never shifting the columns
+ * before it.
+ */
+const QUEUED_COL = 15;
+
+/**
+ * One in-flight row: `key   size   queued Xs`. The key column is sized from the
+ * terminal width alone (fixed size/queued reservations), so it is identical on
+ * every row and the size/queued columns line up. The key is truncated keeping
+ * its tail (the filename) when it doesn't fit. The duration is time since the
+ * object was scheduled — how long it has been queued, NOT an active-transfer
+ * time: the gateway exposes no per-object progress and confirmation is a lumpy
+ * binary flip of isMigrated, so there is deliberately no per-file percentage,
+ * throughput, or ETA.
+ */
+export function formatInFlightRow(
+  item: InFlightItem,
+  now: number,
+  width: number
+): string {
+  // 4 (indent) + name + 2 + size + 2 + queued. Depends only on `width`, so the
+  // key column width is the same for every row → the columns align.
+  const nameCol = Math.max(8, width - 4 - 2 - SIZE_COL - 2 - QUEUED_COL);
+  const name =
+    item.name.length > nameCol
+      ? `…${item.name.slice(-Math.max(1, nameCol - 1))}`
+      : item.name.padEnd(nameCol);
+  const size = formatSize(item.size).padStart(SIZE_COL);
+  const queued = `queued ${formatElapsed(now - item.scheduledAt)}`;
+  return `    ${name}  ${size}  ${queued}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -310,31 +368,58 @@ function formatElapsed(ms: number): string {
  * The multi-line progress block. Each line is kept to one row (the renderer
  * truncates to the terminal width) so nothing wraps — wrapping is what let the
  * old single-line `\r` redraw leave duplicated rows behind on Ctrl-C and resize.
+ *
+ * Every value shown is a fact we actually have: counts of confirmed/failed
+ * files, bytes confirmed vs. bytes still in flight, and — per in-flight object —
+ * its size and how long it has been queued. There is no percentage, throughput,
+ * or ETA: the gateway does the transfer and exposes no per-object progress, so a
+ * large file mid-migration has no partial state to report. Listing each queued
+ * object with its wait time is what keeps a slow large file from reading as a
+ * hung process — it shows the run working through named files, not a frozen bar.
  */
 function progressLines(state: MigrationState, bucket: string): string[] {
   const now = Date.now();
   state.spinnerFrame = (state.spinnerFrame + 1) % SPINNER.length;
   const spin = SPINNER[state.spinnerFrame];
 
-  const filePct =
-    state.total > 0 ? Math.floor((state.confirmed / state.total) * 100) : 0;
-  const bytePct =
-    state.totalBytes > 0
-      ? Math.floor((state.confirmedBytes / state.totalBytes) * 100)
-      : 0;
   const elapsed = formatElapsed(now - state.startTime);
-  const oldest = oldestInFlight(state.inFlight);
   const width = process.stderr.columns ?? 80;
 
-  return [
+  const lines = [
     `${spin} Migrating ${bucket} · ${elapsed} elapsed`,
-    // File count climbs fast (smallest-first); the byte figure shows how much
-    // data has actually moved (the big files are last).
-    `  ${state.confirmed.toLocaleString()} / ${state.total.toLocaleString()} files (${filePct}%)` +
-      ` · ${formatSize(state.confirmedBytes)} / ${formatSize(state.totalBytes)} (${bytePct}%)`,
-    `  ${activityLabel(oldest, now, Math.max(20, width - 45))}` +
-      ` · in-flight ${state.inFlight.length.toLocaleString()} (${formatSize(state.inFlightBytes)})`,
+    `  ${state.confirmed.toLocaleString()} / ${state.total.toLocaleString()} files done` +
+      ` · ${state.failed.toLocaleString()} failed` +
+      ` · ${formatSize(state.confirmedBytes)} confirmed, ${formatSize(state.inFlightBytes)} in flight`,
   ];
+
+  const n = state.inFlight.length;
+  if (n === 0) {
+    lines.push('  0 in flight');
+    return lines;
+  }
+
+  // Rows the list + overflow line may occupy: the terminal height minus the two
+  // lines above, the in-flight header line, and one spare row — so the whole
+  // block stays under the screen height and the cursor-up redraw stays correct.
+  const rowBudget = Math.max(1, (process.stderr.rows ?? 24) - 1 - 3);
+  const { shown, hidden } = inFlightView(state.inFlight, rowBudget);
+
+  lines.push(
+    hidden.length === 0
+      ? `  ${n.toLocaleString()} in flight:`
+      : `  ${n.toLocaleString()} in flight (showing ${shown.length} longest-queued):`
+  );
+  for (const item of shown) {
+    lines.push(formatInFlightRow(item, now, width));
+  }
+  if (hidden.length > 0) {
+    const hiddenBytes = hidden.reduce((sum, item) => sum + item.size, 0);
+    lines.push(
+      `    + ${hidden.length.toLocaleString()} more in flight (${formatSize(hiddenBytes)})`
+    );
+  }
+
+  return lines;
 }
 
 // Lines the sticky renderer last drew, so it can move the cursor up and clear
@@ -370,24 +455,30 @@ function clearProgress(): void {
   process.stderr.write('\r\x1b[K');
 }
 
-async function flushScheduleBatch(
+export async function flushScheduleBatch(
   batch: MigrationItem[],
   state: MigrationState,
   config: Record<string, unknown>,
   bucket: string
 ): Promise<void> {
+  // Capture the timestamp inside each task, right when its own scheduleMigration
+  // call resolves — not after the whole batch settles. With CONCURRENCY (50)
+  // requests in flight at once, individual latency varies (network, gateway
+  // load); stamping all of them with one post-batch Date.now() would understate
+  // the queued duration of whichever items finished first and isn't the actual
+  // time they were scheduled.
   const results = await executeWithConcurrency(
-    batch.map(
-      (item) => () =>
-        scheduleMigration(item.name, {
-          config: { ...config, bucket },
-        })
-    ),
+    batch.map((item) => async () => ({
+      result: await scheduleMigration(item.name, {
+        config: { ...config, bucket },
+      }),
+      scheduledAt: Date.now(),
+    })),
     CONCURRENCY
   );
 
   for (let i = 0; i < results.length; i++) {
-    const result = results[i];
+    const { result, scheduledAt } = results[i];
     const item = batch[i];
 
     if (result.error) {
@@ -400,7 +491,7 @@ async function flushScheduleBatch(
       state.inFlight.push({
         ...item,
         checkFailures: 0,
-        scheduledAt: Date.now(),
+        scheduledAt,
       });
       state.inFlightBytes += item.size;
       state.scheduled++;
