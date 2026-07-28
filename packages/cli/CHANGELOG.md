@@ -1,5 +1,11 @@
 # @tigrisdata/cli
 
+## 3.6.1
+
+### Patch Changes
+
+- [#216](https://github.com/tigrisdata/storage/pull/216) [`3ace326`](https://github.com/tigrisdata/storage/commit/3ace326aab41891366f11f8cf8ae1a324709e6d3) Thanks [@designcode](https://github.com/designcode)! - `buckets migrate` now shows a live list of in-flight objects (name, size, time queued) instead of file/byte percentage bars. The gateway performs the migration server-side and exposes no per-object transfer progress, so a percentage computed against total bytes made a large in-flight file look like a stalled run — the per-file queued duration reflects what the CLI actually knows.
+
 ## 3.6.0
 
 ### Minor Changes
