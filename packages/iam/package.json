@@ -31,7 +31,7 @@
     "dev": "tsc --noEmit && tsup --watch",
     "publint": "publint",
     "prepublishOnly": "npm run build",
-    "test": "echo 'No tests yet'",
+    "test": "vitest run --config vitest.config.ts",
     "clean": "rm -rf dist"
   },
   "keywords": [
