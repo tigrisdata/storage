@@ -1,5 +1,7 @@
+import { spawnSync } from 'node:child_process';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { delimiter, join, normalize, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   applyEdits,
   modify,
@@ -18,6 +20,117 @@ export type AgentTarget =
   | 'zed'
   | 'roo'
   | 'opencode';
+
+// ---------------------------------------------------------------------------
+// Installed CLI
+// ---------------------------------------------------------------------------
+
+/**
+ * spawnSync options. On Windows npm/npx/tigris are `.cmd` shims that need a
+ * shell to resolve; use `shell: true` (cmd.exe) rather than PowerShell, which
+ * treats a leading `@` (as in `@tigrisdata/cli`) as its splat operator.
+ */
+export function spawnOpts() {
+  return {
+    encoding: 'utf8' as const,
+    ...(process.platform === 'win32' ? { shell: true } : {}),
+  };
+}
+
+/**
+ * The `node_modules/.bin` this process is running out of, or null when it isn't
+ * inside a `node_modules` tree (a compiled binary, or the repo during dev).
+ *
+ * Package runners all work the same way: unpack the package into a throwaway
+ * tree and put that tree's `.bin` on PATH for one run. Deriving the directory
+ * from our own location catches every one of them — `npx`, `pnpm dlx`,
+ * `yarn dlx`, `bunx` — without tracking cache layouts that differ per manager
+ * and move between versions.
+ *
+ * Harmless for a global npm install: its module lives in
+ * `<prefix>/lib/node_modules/`, while the `tigris` on PATH is linked into
+ * `<prefix>/bin/`, so the directory named here isn't the one that matters.
+ */
+function ownPackageBinDir(): string | null {
+  let self: string;
+  try {
+    self = fileURLToPath(import.meta.url);
+  } catch {
+    return null;
+  }
+  // First `node_modules`, not last: under pnpm the real file sits deeper, in
+  // `node_modules/.pnpm/<pkg>/node_modules/...`, and it's the outermost tree
+  // whose `.bin` the runner exposes.
+  const i = self.indexOf(`${sep}node_modules${sep}`);
+  return i === -1 ? null : join(self.slice(0, i), 'node_modules', '.bin');
+}
+
+/**
+ * A PATH entry that looks like a package runner's cache even when it isn't the
+ * one we're running from — `npx` unpacks into `~/.npm/_npx/<hash>/`, `pnpm dlx`
+ * into `<cache>/dlx/<hash>/<id>/`, older `yarn dlx` into `dlx-<n>/`. A backstop
+ * behind ownPackageBinDir, which is the mechanism that actually generalises.
+ */
+const EPHEMERAL_BIN_DIR = /[\\/](?:_npx|dlx(?:-[^\\/]*)?)(?:[\\/]|$)/;
+
+/**
+ * `PATH` with package-runner bin directories dropped.
+ *
+ * `npx tigris init` puts its own throwaway `.bin` first on PATH, so probing for
+ * `tigris` finds the very copy that disappears the moment npx exits — and init
+ * would tell the agent to `tigris update` a CLI that was never installed.
+ * Nothing init spawns wants that copy: it either needs the persistent CLI or
+ * needs to know there isn't one.
+ *
+ * `ownBinDir` is injectable so this stays a pure function under test.
+ */
+export function withoutEphemeralBins(
+  path: string | undefined,
+  ownBinDir: string | null = ownPackageBinDir()
+): string {
+  const own = ownBinDir === null ? null : canonicalDir(ownBinDir);
+  return (path ?? '')
+    .split(delimiter)
+    .filter(
+      (dir) =>
+        dir !== '' &&
+        !EPHEMERAL_BIN_DIR.test(dir) &&
+        (own === null || canonicalDir(dir) !== own)
+    )
+    .join(delimiter);
+}
+
+/**
+ * A PATH entry in comparable form — normalized, no trailing separator, and
+ * case-folded on Windows, where paths are case-insensitive. PATH entries are
+ * hand-written often enough that `.../.bin` and `.../.bin/` both show up.
+ */
+function canonicalDir(dir: string): string {
+  const n = normalize(dir);
+  const trimmed = n.length > 1 ? n.replace(/[\\/]+$/, '') : n;
+  return process.platform === 'win32' ? trimmed.toLowerCase() : trimmed;
+}
+
+/** The globally-installed `tigris` CLI version, or null if not on PATH. */
+export function getInstalledCliVersion(): string | null {
+  const r = spawnSync('tigris', ['--version'], spawnOpts());
+  if (r.error || r.status !== 0 || !r.stdout) return null;
+  const v = r.stdout.trim().split('\n')[0].trim();
+  return /^\d+\.\d+\.\d+/.test(v) ? v : null;
+}
+
+/**
+ * What the wizard's "Defaults" option promises to do. The CLI is only listed
+ * when it isn't installed yet — advertising a step this run won't take reads
+ * as though `init` is about to reinstall a CLI the user already has.
+ */
+export function defaultsHint(cliInstalled: boolean): string {
+  return [
+    ...(cliInstalled ? [] : ['CLI - Global']),
+    'MCP - Global',
+    'Skills - Project',
+  ].join(', ');
+}
 
 // ---------------------------------------------------------------------------
 // Platform paths

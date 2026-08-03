@@ -208,6 +208,12 @@ importers:
         specifier: ^17.4.2
         version: 17.4.2
 
+  packages/tigris:
+    dependencies:
+      '@tigrisdata/cli':
+        specifier: workspace:^
+        version: link:../cli
+
   shared:
     dependencies:
       '@aws-crypto/sha256-js':
@@ -1097,6 +1103,12 @@ packages:
   '@publint/pack@0.1.6':
     resolution: {integrity: sha512-3uVNyGcVplhPZSLVyeIpL7+cIRn1YCSNHLG/rUIlBQMVH8YuN9++YF+5+UDIIO9RW98dujiUoTltO7RDB5bFJA==}
     engines: {node: '>=18'}
+
+  '@rolldown/binding-android-arm64@1.2.2':
+    resolution: {integrity: sha512-l7x215OGvo1s52JWmR8U/DAVzEDWBCIbTm28aeJV/WDTSHgcKXaZTuBT0hJMs5NggilfJTW3clZVvd24yfKJxA==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    cpu: [arm64]
+    os: [android]
 
   '@rolldown/binding-darwin-arm64@1.2.2':
     resolution: {integrity: sha512-9u9Xv6c1AJZT0FfwH5vrMG5Jjcwhc1MlyrPu0XfTqkzsmqfks2M6W/o5XwAJgVVN/jHpqqngC1WevHKKTIUtIA==}
@@ -4316,6 +4328,9 @@ snapshots:
     dependencies:
       tinyexec: 1.3.0
 
+  '@rolldown/binding-android-arm64@1.2.2':
+    optional: true
+
   '@rolldown/binding-darwin-arm64@1.2.2':
     optional: true
 
@@ -6013,6 +6028,7 @@ snapshots:
       '@oxc-project/types': 0.142.0
       '@rolldown/pluginutils': 1.0.1
     optionalDependencies:
+      '@rolldown/binding-android-arm64': 1.2.2
       '@rolldown/binding-darwin-arm64': 1.2.2
       '@rolldown/binding-darwin-x64': 1.2.2
       '@rolldown/binding-freebsd-x64': 1.2.2

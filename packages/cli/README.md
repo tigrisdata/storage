@@ -14,6 +14,13 @@ You can also install CLI using brew
 brew install tigrisdata/tap/tigris
 ```
 
+To try it without installing anything, run it through the unscoped
+[`tigris`](https://www.npmjs.com/package/tigris) alias:
+
+```bash
+npx tigris init
+```
+
 ## Usage
 
 ```

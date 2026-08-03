@@ -1,0 +1,37 @@
+{
+  "name": "tigris",
+  "version": "3.6.1",
+  "description": "Unscoped alias for @tigrisdata/cli — the command line interface for Tigris object storage",
+  "type": "module",
+  "bin": {
+    "tigris": "./bin.js",
+    "t3": "./bin.js"
+  },
+  "files": [
+    "bin.js",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "publint": "publint"
+  },
+  "keywords": [
+    "cli",
+    "object",
+    "storage",
+    "tigris",
+    "blob"
+  ],
+  "author": "Tigris Data",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tigrisdata/storage.git",
+    "directory": "packages/tigris"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@tigrisdata/cli": "workspace:^"
+  }
+}

@@ -99,7 +99,7 @@ commands:
     description: Connect Tigris to your AI coding agent — MCP server config and agent skills
     examples:
       - "tigris init"
-      - "npx @tigrisdata/cli init"
+      - "npx tigris init"
       - "tigris init --agent"
     messages:
       onStart: ''

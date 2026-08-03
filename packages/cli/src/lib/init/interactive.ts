@@ -3,27 +3,30 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import * as p from '@clack/prompts';
-import { fetchLatestVersion, isNewerVersion } from '@utils/update-check.js';
 
 import {
   buildSkillsArgs,
+  defaultsHint,
   detectEditors,
   type EditorInfo,
+  getInstalledCliVersion,
   type InstallLocation,
   MCP_SERVER_NAME,
   mergeMcpServers,
   resolveMcpTarget,
   SUPPORTED_EDITORS,
   skillsDirsFor,
+  spawnOpts,
   TIGRIS_SKILLS,
   upsertTomlServer,
 } from './shared.js';
 
 /**
- * Interactive setup (`tigris init`): pick the AI editor(s), optionally install
- * the CLI, point the editors at the Tigris remote MCP server, and install the
- * chosen agent skills — then hand the user a command to give their AI agent.
- * No login: the remote MCP server authenticates in-browser on first connect.
+ * Interactive setup (`tigris init`): pick the AI editor(s), install the CLI if
+ * it's missing, point the editors at the Tigris remote MCP server, and install
+ * the chosen agent skills — then hand the user a command to give their AI
+ * agent. No login: the remote MCP server authenticates in-browser on first
+ * connect.
  */
 export async function runInteractive() {
   if (!process.stdin.isTTY) {
@@ -52,14 +55,18 @@ export async function runInteractive() {
   if (p.isCancel(editorIds)) return cancel();
   const editors = SUPPORTED_EDITORS.filter((e) => editorIds.includes(e.id));
 
-  // 2. Defaults or customize (installation targets/scopes).
+  // 2. Is `tigris` already on PATH? Decides whether this run installs the CLI
+  // at all — and so whether the defaults hint below advertises a CLI step.
+  const installedCli = getInstalledCliVersion();
+
+  // 3. Defaults or customize (installation targets/scopes).
   const mode = await p.select({
     message: 'What would you like to install?',
     options: [
       {
         value: 'defaults',
         label: 'Defaults',
-        hint: 'CLI - Global, MCP - Global, Skills - Project',
+        hint: defaultsHint(installedCli !== null),
       },
       { value: 'custom', label: 'Customize installation' },
     ],
@@ -75,7 +82,7 @@ export async function runInteractive() {
     skillsLocation = await location('Agent skills:', 'project');
   }
 
-  // 3. Which skills to install. Defaults installs every skill without asking;
+  // 4. Which skills to install. Defaults installs every skill without asking;
   // only the custom flow prompts (recommended ones pre-checked).
   let skillIds: string[] = TIGRIS_SKILLS.map((s) => s.id);
   if (mode === 'custom' && skillsLocation !== 'skip') {
@@ -91,10 +98,18 @@ export async function runInteractive() {
     skillIds = picked;
   }
 
-  // 4. Tigris CLI — install if missing, update if outdated, skip if current.
-  const cliAvailable = await ensureCli();
+  // 5. Tigris CLI — install it when missing, otherwise bring it up to date.
+  // A successful update leaves a CLI new enough for the handoff; only when it
+  // fails is it worth checking what's actually there.
+  let cliAvailable: boolean;
+  if (installedCli) {
+    cliAvailable =
+      updateCli(installedCli) || installedCliCanHandOff(installedCli);
+  } else {
+    cliAvailable = installCli();
+  }
 
-  // 5. Point each editor at the remote MCP server.
+  // 6. Point each editor at the remote MCP server.
   if (mcpLocation === 'skip') {
     p.log.info('MCP server: skipped');
   } else {
@@ -103,7 +118,7 @@ export async function runInteractive() {
     }
   }
 
-  // 6. Install the chosen Tigris agent skills. Output is captured (the skills
+  // 7. Install the chosen Tigris agent skills. Output is captured (the skills
   // tool prints a big banner); we report the destination dirs ourselves.
   if (skillsLocation === 'skip' || skillIds.length === 0) {
     p.log.info('Agent skills: skipped');
@@ -124,10 +139,10 @@ export async function runInteractive() {
     }
   }
 
-  // 7. Hand off to the agent — use the installed CLI, or npx if unavailable.
+  // 8. Hand off to the agent — use the installed CLI, or npx if unavailable.
   const runner = cliAvailable
     ? 'tigris init --agent'
-    : 'npx @tigrisdata/cli init --agent';
+    : 'npx tigris init --agent';
   p.note(runner, 'Paste this to your AI coding agent to finish setup');
   p.outro('Your agent will authenticate with Tigris in-browser on first use.');
 }
@@ -232,93 +247,69 @@ function stringFields(entry: Record<string, unknown>): Record<string, string> {
   return out;
 }
 
-/** The globally-installed `tigris` CLI version, or null if not on PATH. */
-function getInstalledCliVersion(): string | null {
-  const r = spawnSync('tigris', ['--version'], spawnOpts());
-  if (r.error || r.status !== 0 || !r.stdout) return null;
-  const v = r.stdout.trim().split('\n')[0].trim();
-  return /^\d+\.\d+\.\d+/.test(v) ? v : null;
-}
-
 /**
- * Ensure the Tigris CLI is present and current: install it if missing, update
- * it if a newer version is published, and do nothing (no step) if it's already
- * the latest. Returns whether an up-to-date `tigris` command is available
- * afterwards (false if an install/update was attempted and failed).
+ * Install the Tigris CLI globally. Returns whether a `tigris` command is
+ * available afterwards — a zero exit doesn't guarantee it, since npm's global
+ * bin may not be on PATH, and the handoff should fall back to `npx` if so.
  */
-async function ensureCli(): Promise<boolean> {
-  const installed = getInstalledCliVersion();
-  const latest = await fetchLatestVersionCapped(3000);
-
-  if (!installed) {
-    const result = runCommand(
-      'npm',
-      ['install', '-g', '@tigrisdata/cli', '--ignore-scripts'],
-      'Installing Tigris CLI (global)'
+function installCli(): boolean {
+  const result = runCommand(
+    'npm',
+    ['install', '-g', '@tigrisdata/cli', '--ignore-scripts'],
+    'Installing Tigris CLI (global)'
+  );
+  if (!reportIfFailed(result)) return false;
+  if (getInstalledCliVersion() === null) {
+    p.log.warn(
+      'Tigris CLI installed but not on PATH — the agent handoff will use npx.'
     );
-    if (!reportIfFailed(result)) return false;
-    // A zero exit doesn't guarantee `tigris` is resolvable — npm's global bin
-    // may not be on PATH. Confirm before recommending it over `npx`.
-    if (getInstalledCliVersion() === null) {
-      p.log.warn(
-        'Tigris CLI installed but not on PATH — the agent handoff will use npx.'
-      );
-      return false;
-    }
-    return true;
+    return false;
   }
-
-  if (latest && isNewerVersion(installed, latest)) {
-    // Delegate to the installed CLI's own updater so we respect how it was
-    // installed (npm / Homebrew / standalone binary) rather than forcing npm,
-    // which could fail or leave a second copy on PATH. If it fails, report
-    // unavailable so the handoff falls back to `npx` (an outdated CLI may
-    // predate `init`).
-    return reportIfFailed(
-      runCommand(
-        'tigris',
-        ['update'],
-        `Updating Tigris CLI ${installed} → ${latest}`
-      )
-    );
-  }
-
-  // Installed and current (or latest unknown) — no CLI step shown.
   return true;
 }
 
 /**
- * Latest published version, or null if the registry check errors or exceeds
- * `ms`. Never rejects: a late `fetchLatestVersion` failure is swallowed (so it
- * can't surface as an unhandled rejection). The timeout timer is intentionally
- * left ref'd — it's what keeps the process alive during this await (the fetch
- * socket is unref'd) — and is always cleared in `finally`, so the fetch winning
- * adds no delay and a still-pending fetch can't hold the process open after.
+ * Bring an existing CLI up to date. Delegates to the CLI's own `update`, which
+ * runs its own registry check and picks the upgrade path matching how it was
+ * installed (npm / Homebrew / standalone binary) — forcing `npm install -g`
+ * here could fail or leave a second copy on PATH. A no-op when already current,
+ * so there's nothing to check before calling it.
  */
-async function fetchLatestVersionCapped(ms: number): Promise<string | null> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      fetchLatestVersion({ unref: true }).catch(() => null),
-      new Promise<null>((resolve) => {
-        timer = setTimeout(() => resolve(null), ms);
-      }),
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
+function updateCli(installed: string): boolean {
+  const ok = reportIfFailed(
+    runCommand(
+      'tigris',
+      ['update'],
+      `Checking for Tigris CLI updates (${installed})`
+    )
+  );
+  if (!ok) return false;
+  // Report the jump only when there was one — `update` is usually a no-op.
+  const updated = getInstalledCliVersion();
+  if (updated && updated !== installed) {
+    p.log.success(`Tigris CLI ${installed} → ${updated}`);
   }
+  return true;
 }
 
 /**
- * spawnSync options. On Windows npm/npx/tigris are `.cmd` shims that need a
- * shell to resolve; use `shell: true` (cmd.exe) rather than PowerShell, which
- * treats a leading `@` (as in `@tigrisdata/cli`) as its splat operator.
+ * Whether the CLI on PATH can serve the agent handoff. Only consulted when
+ * `update` failed (offline, no write permission), which can leave a CLI
+ * predating `init --agent` (< 3.5.0) in place — still a perfectly good
+ * `tigris`, but handing the agent `tigris init --agent` would just error, so
+ * the handoff falls back to `npx`. Probed rather than version-matched, so it
+ * stays correct as the recipe moves; `--agent` only writes to stdout, which is
+ * captured and discarded.
  */
-function spawnOpts() {
-  return {
-    encoding: 'utf8' as const,
-    ...(process.platform === 'win32' ? { shell: true } : {}),
-  };
+function installedCliCanHandOff(installed: string): boolean {
+  const r = spawnSync('tigris', ['init', '--agent'], spawnOpts());
+  if (r.error || r.status !== 0) {
+    p.log.warn(
+      `Tigris CLI ${installed} predates \`init --agent\` — the agent handoff will use npx.`
+    );
+    return false;
+  }
+  return true;
 }
 
 /** Run a command under a spinner; capture output and surface it on failure. */
