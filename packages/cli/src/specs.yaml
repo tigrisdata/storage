@@ -1075,6 +1075,7 @@ commands:
           - "tigris buckets migrate my-bucket"
           - "tigris buckets migrate my-bucket/images/"
           - "tigris buckets migrate t3://my-bucket/prefix/"
+          - "tigris buckets migrate my-bucket --max-in-flight-gb 100"
         messages:
           onStart: ''
           onSuccess: ''
@@ -1088,6 +1089,9 @@ commands:
               - my-bucket
               - my-bucket/images/
               - t3://my-bucket/prefix/
+          - name: max-in-flight-gb
+            description: Max total gigabytes of scheduled-but-unconfirmed migrations to keep in flight. Accepts 1-100
+            default: '50'
       # set-transition
       - name: set-transition
         removed: true

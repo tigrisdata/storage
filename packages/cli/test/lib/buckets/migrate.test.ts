@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+import * as YAML from 'yaml';
 
 // Mock the SDK so drainCompleted's isMigrated() calls are controllable.
 vi.mock('@tigrisdata/storage', () => ({
@@ -17,10 +20,22 @@ import {
   type MigrationState,
   orderForDisplay,
   orderForMigration,
+  parseMaxInFlightBytes,
   shouldFlushBatch,
 } from '../../../src/lib/buckets/migrate.js';
+import type { Specs } from '../../../src/types.js';
+import { getArgumentSpec, setSpecs } from '../../../src/utils/specs.js';
 
-function makeState(items: { name: string; size: number }[]): MigrationState {
+const GB = 1024 * 1024 * 1024;
+const MB = 1024 * 1024;
+
+/** The default in-flight byte budget (50 GB) unless a test overrides it. */
+const DEFAULT_BUDGET = 50 * GB;
+
+function makeState(
+  items: { name: string; size: number }[],
+  maxInFlightBytes: number = DEFAULT_BUDGET
+): MigrationState {
   const bytes = items.reduce((s, i) => s + i.size, 0);
   return {
     total: items.length,
@@ -31,6 +46,7 @@ function makeState(items: { name: string; size: number }[]): MigrationState {
     failed: 0,
     inFlight: items.map((i) => ({ ...i, checkFailures: 0, scheduledAt: 0 })),
     inFlightBytes: bytes,
+    maxInFlightBytes,
     drainOffset: 0,
     drainSweepMisses: 0,
     checkBackoffMs: 5_000,
@@ -40,18 +56,33 @@ function makeState(items: { name: string; size: number }[]): MigrationState {
   };
 }
 
-const GB = 1024 * 1024 * 1024;
-const MB = 1024 * 1024;
-
 describe('shouldFlushBatch', () => {
   it('never flushes an empty batch', () => {
     expect(shouldFlushBatch(makeState([]), 0, 0, 20 * GB)).toBe(false);
   });
 
   it('flushes before a large item would blow the byte budget', () => {
-    // The exact 2-object case from the bug report: an 877 MB batch, then a
-    // ~21.9 GB file would push in-flight to 22.8 GB — flush the 877 MB first.
-    expect(shouldFlushBatch(makeState([]), 1, 877 * MB, 21.9 * GB)).toBe(true);
+    // The exact 2-object case from the bug report, against a 10 GB budget: an
+    // 877 MB batch, then a ~21.9 GB file would push in-flight to 22.8 GB —
+    // flush the 877 MB first.
+    expect(
+      shouldFlushBatch(makeState([], 10 * GB), 1, 877 * MB, 21.9 * GB)
+    ).toBe(true);
+  });
+
+  it('keeps batching that same pair under the raised 50 GB default', () => {
+    // Same shapes as above: 22.8 GB fits the default budget, so there is no
+    // reason to flush early — this is what raising the default buys.
+    expect(shouldFlushBatch(makeState([]), 1, 877 * MB, 21.9 * GB)).toBe(false);
+  });
+
+  it('respects a lowered budget from --max-in-flight-gb', () => {
+    const budget = parseMaxInFlightBytes('1');
+    expect(budget.ok).toBe(true);
+    if (!budget.ok) return;
+    expect(
+      shouldFlushBatch(makeState([], budget.bytes), 1, 600 * MB, 600 * MB)
+    ).toBe(true);
   });
 
   it('keeps batching small items until the batch is full', () => {
@@ -124,11 +155,97 @@ describe('atCapacity', () => {
   });
 
   it('blocks when the byte budget would be exceeded with items in flight', () => {
-    expect(atCapacity(makeState([{ name: 'a', size: 10 * GB }]), 1)).toBe(true);
+    // 50 GB already queued against the 50 GB default: one more byte must wait.
+    expect(atCapacity(makeState([{ name: 'a', size: 50 * GB }]), 1)).toBe(true);
+  });
+
+  it('still admits 10 GB in flight now that the default is 50 GB', () => {
+    expect(atCapacity(makeState([{ name: 'a', size: 10 * GB }]), 1)).toBe(
+      false
+    );
   });
 
   it('admits a single file larger than the whole budget once the queue is empty', () => {
-    expect(atCapacity(makeState([]), 20 * GB)).toBe(false);
+    expect(atCapacity(makeState([]), 120 * GB)).toBe(false);
+  });
+
+  it('blocks against a lowered budget from --max-in-flight-gb', () => {
+    const budget = parseMaxInFlightBytes('1');
+    expect(budget.ok).toBe(true);
+    if (!budget.ok) return;
+    expect(
+      atCapacity(makeState([{ name: 'a', size: 1 * GB }], budget.bytes), 1)
+    ).toBe(true);
+  });
+});
+
+describe('parseMaxInFlightBytes', () => {
+  it('defaults to 50 GB when the flag is absent', () => {
+    expect(parseMaxInFlightBytes(undefined)).toEqual({
+      ok: true,
+      bytes: 50 * GB,
+    });
+  });
+
+  it('accepts the bounds themselves', () => {
+    expect(parseMaxInFlightBytes('1')).toEqual({ ok: true, bytes: 1 * GB });
+    expect(parseMaxInFlightBytes('100')).toEqual({ ok: true, bytes: 100 * GB });
+  });
+
+  it('accepts a fractional value inside the range', () => {
+    expect(parseMaxInFlightBytes('2.5')).toEqual({ ok: true, bytes: 2.5 * GB });
+  });
+
+  it('rejects values below the 1 GB minimum', () => {
+    for (const raw of ['0', '0.5', '-5']) {
+      const result = parseMaxInFlightBytes(raw);
+      expect(result.ok).toBe(false);
+      expect(result.ok === false && result.error).toContain(
+        'between 1 and 100'
+      );
+    }
+  });
+
+  it('rejects values above the 100 GB maximum', () => {
+    const result = parseMaxInFlightBytes('101');
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.error).toContain('between 1 and 100');
+  });
+
+  it('rejects non-numeric values', () => {
+    for (const raw of ['abc', '50GB']) {
+      expect(parseMaxInFlightBytes(raw).ok).toBe(false);
+    }
+  });
+
+  it('treats an empty value as absent', () => {
+    // commander can hand back an empty string; falling through to the default
+    // beats reading it as Number('') === 0.
+    expect(parseMaxInFlightBytes('')).toEqual({ ok: true, bytes: 50 * GB });
+  });
+
+  it('rejects a bare flag with no value', () => {
+    // The option registers as `[value]`, so `--max-in-flight-gb` alone arrives
+    // as boolean true. Number(true) is 1, which would silently mean 1 GB.
+    const result = parseMaxInFlightBytes(true);
+    expect(result.ok).toBe(false);
+  });
+
+  it('keeps the spec default in step with the in-code default', () => {
+    // The spec default is what commander actually supplies at runtime, so if it
+    // drifts from DEFAULT_MAX_IN_FLIGHT_GB the constant becomes dead code and
+    // the CLI quietly runs the spec's number instead.
+    setSpecs(
+      YAML.parse(
+        readFileSync(join(process.cwd(), 'src', 'specs.yaml'), 'utf8'),
+        { schema: 'core' }
+      ) as Specs
+    );
+    const arg = getArgumentSpec('buckets', 'max-in-flight-gb', 'migrate');
+    expect(arg).not.toBeNull();
+    expect(parseMaxInFlightBytes(arg?.default)).toEqual(
+      parseMaxInFlightBytes(undefined)
+    );
   });
 });
 
