@@ -5,7 +5,7 @@
     { "repo": "tigrisdata/storage" }
   ],
   "commit": false,
-  "fixed": [],
+  "fixed": [["@tigrisdata/cli", "tigris"]],
   "linked": [],
   "access": "public",
   "baseBranch": "main",
