@@ -14,6 +14,22 @@ on:
         default: "beta"
         type: string
 
+# Renovate lands `chore(deps): …` commits on main in bursts (up to 4/hour, and
+# a whole batch after each weekend run), and every push to main starts a full
+# release pipeline. Bucket those into their own concurrency group with
+# cancel-in-progress so a burst leaves only the newest deps run alive.
+#
+# Everything else — feature merges and, critically, the `chore(release): …`
+# merge that actually runs `changeset publish` — gets a per-run group key
+# (`github.run_id` is unique), so those runs are never cancelled and never
+# queued behind one another. A deps merge landing mid-publish cannot kill it.
+#
+# `head_commit` is null for workflow_dispatch, so a manual beta run evaluates
+# to the non-deps branch of both expressions.
+concurrency:
+  group: release-${{ github.ref }}-${{ startsWith(github.event.head_commit.message, 'chore(deps)') && 'deps' || github.run_id }}
+  cancel-in-progress: ${{ startsWith(github.event.head_commit.message, 'chore(deps)') }}
+
 permissions:
   id-token: write
   contents: write
