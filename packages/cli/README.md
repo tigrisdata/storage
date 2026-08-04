@@ -678,14 +678,19 @@ tigris buckets set-migration my-bucket --disable
 Actively migrate all objects from a shadow bucket to Tigris by scheduling server-side migration for unmigrated objects
 
 ```
-tigris buckets migrate <path>
+tigris buckets migrate <path> [flags]
 ```
+
+| Flag | Description |
+|------|-------------|
+| `--max-in-flight-gb` | Max total gigabytes of scheduled-but-unconfirmed migrations to keep in flight. Accepts 1-100 (default: 50) |
 
 **Examples:**
 ```bash
 tigris buckets migrate my-bucket
 tigris buckets migrate my-bucket/images/
 tigris buckets migrate t3://my-bucket/prefix/
+tigris buckets migrate my-bucket --max-in-flight-gb 100
 ```
 
 #### `tigris buckets lifecycle` (lc)

@@ -14,8 +14,17 @@ import { parseAnyPath } from '@utils/path.js';
 
 const context = msg('buckets', 'migrate');
 
-/** Max total bytes of in-flight (scheduled but not confirmed) migrations */
-const MAX_IN_FLIGHT_BYTES = 10 * 1024 * 1024 * 1024; // 10 GB
+const BYTES_PER_GB = 1024 * 1024 * 1024;
+
+/**
+ * Default cap on total bytes of in-flight (scheduled but not confirmed)
+ * migrations. Overridable per run with --max-in-flight-gb.
+ */
+const DEFAULT_MAX_IN_FLIGHT_GB = 50;
+
+/** Bounds accepted for the --max-in-flight-gb override. */
+const MIN_MAX_IN_FLIGHT_GB = 1;
+const MAX_MAX_IN_FLIGHT_GB = 100;
 
 /**
  * Max number of in-flight objects, independent of size. Keeps the poll set
@@ -76,6 +85,13 @@ export interface MigrationState {
   failed: number;
   inFlight: InFlightItem[];
   inFlightBytes: number;
+  /**
+   * Byte budget for the in-flight set — DEFAULT_MAX_IN_FLIGHT_GB unless the run
+   * overrode it with --max-in-flight-gb. Lives on the state (not a module
+   * constant) because it is per-run configuration that both capacity checks
+   * read.
+   */
+  maxInFlightBytes: number;
   /** Rotating cursor into inFlight so drainCompleted sweeps the whole set. */
   drainOffset: number;
   /** In-flight items checked since the last completion (for backoff). */
@@ -100,6 +116,45 @@ export function orderForMigration(items: MigrationItem[]): MigrationItem[] {
 }
 
 /**
+ * Resolve the in-flight byte budget from a raw --max-in-flight-gb value.
+ * Absent → the default. Values outside [MIN_MAX_IN_FLIGHT_GB,
+ * MAX_MAX_IN_FLIGHT_GB] are rejected rather than clamped: a run silently using
+ * a budget the user didn't ask for would keep far more or far less data queued
+ * than the flag says. Note the flag registers as `[value]` (commander makes the
+ * value optional), so a bare `--max-in-flight-gb` arrives as `true` — that is
+ * an error, not 1 GB.
+ */
+export function parseMaxInFlightBytes(
+  raw: unknown
+): { ok: true; bytes: number } | { ok: false; error: string } {
+  if (raw === undefined || raw === null || raw === '') {
+    return { ok: true, bytes: DEFAULT_MAX_IN_FLIGHT_GB * BYTES_PER_GB };
+  }
+
+  const gb =
+    typeof raw === 'number'
+      ? raw
+      : typeof raw === 'string'
+        ? Number(raw.trim())
+        : Number.NaN;
+
+  if (!Number.isFinite(gb)) {
+    return {
+      ok: false,
+      error: '--max-in-flight-gb must be a number of gigabytes',
+    };
+  }
+  if (gb < MIN_MAX_IN_FLIGHT_GB || gb > MAX_MAX_IN_FLIGHT_GB) {
+    return {
+      ok: false,
+      error: `--max-in-flight-gb must be between ${MIN_MAX_IN_FLIGHT_GB} and ${MAX_MAX_IN_FLIGHT_GB} (got ${gb})`,
+    };
+  }
+
+  return { ok: true, bytes: Math.round(gb * BYTES_PER_GB) };
+}
+
+/**
  * Whether scheduling `itemSize` more bytes should wait for the in-flight set to
  * drain. Blocks when the object-count cap is hit, or when the byte budget would
  * be exceeded and there is something to drain. A single file larger than the
@@ -111,7 +166,7 @@ export function atCapacity(state: MigrationState, itemSize: number): boolean {
     return true;
   }
   return (
-    state.inFlightBytes + itemSize > MAX_IN_FLIGHT_BYTES &&
+    state.inFlightBytes + itemSize > state.maxInFlightBytes &&
     state.inFlight.length > 0
   );
 }
@@ -134,7 +189,7 @@ export function shouldFlushBatch(
   return (
     batchLength >= SCHEDULE_BATCH_SIZE ||
     state.inFlight.length + batchLength >= MAX_IN_FLIGHT_OBJECTS ||
-    state.inFlightBytes + batchBytes + itemSize > MAX_IN_FLIGHT_BYTES
+    state.inFlightBytes + batchBytes + itemSize > state.maxInFlightBytes
   );
 }
 
@@ -599,6 +654,15 @@ export default async function migrate(
     failWithError(context, 'Invalid path');
   }
 
+  // Validate before touching the network so a bad flag fails immediately
+  // instead of after discovery has listed the whole bucket.
+  const maxInFlight = parseMaxInFlightBytes(
+    getOption(options, ['max-in-flight-gb', 'maxInFlightGb'])
+  );
+  if (!maxInFlight.ok) {
+    failWithError(context, maxInFlight.error);
+  }
+
   const config = await getStorageConfig();
 
   // Handle SIGINT: the first Ctrl-C stops scheduling and polling, prints a
@@ -697,6 +761,7 @@ export default async function migrate(
       failed: 0,
       inFlight: [],
       inFlightBytes: 0,
+      maxInFlightBytes: maxInFlight.bytes,
       drainOffset: 0,
       drainSweepMisses: 0,
       checkBackoffMs: CHECK_INTERVAL_MS,
