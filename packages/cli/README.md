@@ -33,6 +33,7 @@ Run `tigris help` to see all available commands, or `tigris <command> help` for 
 
 | Command | Description |
 |---------|-------------|
+| `tigris init` (start) | Connect Tigris to your AI coding agent — MCP server config and agent skills |
 | `tigris configure` (c) | Save access-key credentials to ~/.tigris/config.json for persistent use across all commands |
 | `tigris login` (l) | Start a session via OAuth (default) or temporary credentials. Session state is cleared on logout |
 | `tigris whoami` (w) | Print the currently authenticated user, organization, and auth method |
@@ -56,6 +57,25 @@ Run `tigris help` to see all available commands, or `tigris <command> help` for 
 | `tigris iam` | Identity and Access Management - manage policies, users, and permissions |
 
 ---
+
+### `tigris init` (start)
+
+Connect Tigris to your AI coding agent — MCP server config and agent skills
+
+```
+tigris init [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--agent` | Print a setup recipe for an AI coding agent to follow instead of running the interactive wizard |
+
+**Examples:**
+```bash
+tigris init
+npx tigris init
+tigris init --agent
+```
 
 ### `tigris configure` (c)
 
@@ -457,10 +477,12 @@ Create, inspect, update, and delete buckets. Buckets are top-level containers th
 |---------|-------------|
 | `tigris buckets list` (l) | List all buckets in the current organization |
 | `tigris buckets create` (c) | Create a new bucket with optional access, tier, and location settings |
+| `tigris buckets rebase` | Update a fork with the latest changes from its source bucket |
+| `tigris buckets merge` | Merge a fork's changes back into its source bucket |
 | `tigris buckets get` (g) | Show details for a bucket including access level, region, tier, and custom domain |
 | `tigris buckets delete` (d) | Delete one or more buckets by name. The bucket must be empty or delete-protection must be off |
 | `tigris buckets restore` | Restore a soft-deleted bucket within its retention window. List recoverable buckets with "tigris buckets list --deleted" |
-| `tigris buckets set` (s) | Update settings on an existing bucket such as access level, location, caching, or custom domain |
+| `tigris buckets set` (s) | Update settings on an existing bucket such as access level, default tier, location, caching, or custom domain |
 | `tigris buckets enable-snapshots` | Enable snapshots on an existing bucket, converting it to a snapshot bucket |
 | `tigris buckets disable-snapshots` | Disable snapshots on an existing bucket, converting it back to a regular bucket. Rejected while the bucket has dependent forks |
 | `tigris buckets set-locations` | Set the data locations for a bucket |
@@ -525,6 +547,41 @@ tigris buckets create my-fork --fork-of my-bucket
 tigris buckets create my-fork --fork-of my-bucket --source-snapshot 1765889000501544464
 ```
 
+#### `tigris buckets rebase`
+
+Update a fork with the latest changes from its source bucket
+
+```
+tigris buckets rebase <fork>
+```
+
+**Examples:**
+```bash
+tigris buckets rebase my-fork
+tigris buckets rebase my-fork --yes
+```
+
+#### `tigris buckets merge`
+
+Merge a fork's changes back into its source bucket
+
+```
+tigris buckets merge <fork> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-source, --into` | Source bucket to merge into. Defaults to the fork's parent source bucket |
+| `-from-snap, --from-snapshot` | Merge from a specific snapshot of the fork rather than its current state. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464) |
+
+**Examples:**
+```bash
+tigris buckets merge my-fork
+tigris buckets merge my-fork --into my-bucket
+tigris buckets merge my-fork --from-snapshot 1765889000501544464
+tigris buckets merge my-fork --yes
+```
+
 #### `tigris buckets get` (g)
 
 Show details for a bucket including access level, region, tier, and custom domain
@@ -575,7 +632,7 @@ tigris buckets restore my-bucket
 
 #### `tigris buckets set` (s)
 
-Update settings on an existing bucket such as access level, location, caching, or custom domain
+Update settings on an existing bucket such as access level, default tier, location, caching, or custom domain
 
 ```
 tigris buckets set <name> [flags]
@@ -584,6 +641,7 @@ tigris buckets set <name> [flags]
 | Flag | Description |
 |------|-------------|
 | `--access` | Bucket access level |
+| `--default-tier` | Change the default storage tier for objects uploaded to the bucket |
 | `--locations` | Bucket location (see https://www.tigrisdata.com/docs/buckets/locations/ for more details) |
 | `--allow-object-acl` | Enable object-level ACL |
 | `--disable-directory-listing` | Disable directory listing |
@@ -597,6 +655,7 @@ tigris buckets set <name> [flags]
 **Examples:**
 ```bash
 tigris buckets set my-bucket --access public
+tigris buckets set my-bucket --default-tier GLACIER
 tigris buckets set my-bucket --locations iad,fra --cache-control 'max-age=3600'
 tigris buckets set my-bucket --custom-domain assets.example.com
 tigris buckets set my-bucket --soft-delete enable --retention-days 30
@@ -881,7 +940,7 @@ Low-level object operations for listing, downloading, uploading, and deleting in
 | `tigris objects list` (l) | List objects in a bucket, optionally filtered by a key prefix |
 | `tigris objects list-versions` (lv) | List object versions and delete markers in a bucket (requires bucket versioning). Returns both arrays separately to match the S3 ListObjectVersions response |
 | `tigris objects get` (g) | Download an object by key. Prints to stdout by default, or saves to a file with --output |
-| `tigris objects put` (p) | Upload a local file as an object. Content-type is auto-detected from extension unless overridden |
+| `tigris objects put` (p) | Upload a local file — or data piped via stdin — as an object. Content-type is auto-detected from the file extension unless overridden |
 | `tigris objects delete` (d) | Delete one or more objects by key from the given bucket. On a versioned bucket, the default creates a delete marker; use --version-id or --all-versions to hard-delete versions |
 | `tigris objects set` (s) | (Deprecated) Update settings on an existing object such as access level. Use `tigris objects set-access` for ACL changes and `tigris mv` to rename |
 | `tigris objects set-access` (sa) | Set the access level (public or private) on an existing object |
@@ -964,7 +1023,7 @@ tigris objects get my-bucket archive.zip --output ./archive.zip --mode stream
 
 #### `tigris objects put` (p)
 
-Upload a local file as an object. Content-type is auto-detected from extension unless overridden
+Upload a local file — or data piped via stdin — as an object. Content-type is auto-detected from the file extension unless overridden
 
 ```
 tigris objects put <bucket> [key] [file] [flags]
@@ -981,6 +1040,8 @@ tigris objects put <bucket> [key] [file] [flags]
 tigris objects put my-bucket report.pdf ./report.pdf
 tigris objects put t3://my-bucket/report.pdf ./report.pdf
 tigris objects put my-bucket logo.png ./logo.png --access public --content-type image/png
+echo 'hello' | tigris objects put t3://my-bucket/hello.txt
+cat report.pdf | tigris objects put my-bucket report.pdf --content-type application/pdf
 ```
 
 #### `tigris objects delete` (d)
@@ -1078,6 +1139,7 @@ tigris objects restore <bucket> [key] [flags]
 |------|-------------|
 | `-d, --days` | How many days the restored copy stays available before reverting to its archived tier (default: 1) |
 | `--version-id` | Restore a specific object version (requires bucket versioning). Omit to restore the current version |
+| `-snapshot, --snapshot-version` | Restore the object as of a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464) |
 | `--format` | Output format (default: table) |
 
 **Examples:**
@@ -1085,6 +1147,7 @@ tigris objects restore <bucket> [key] [flags]
 tigris objects restore my-bucket archived.bin
 tigris objects restore my-bucket archived.bin --days 3
 tigris objects restore t3://my-bucket/archived.bin --days 7
+tigris objects restore my-bucket archived.bin --snapshot-version 1765889000501544464
 ```
 
 #### `tigris objects restore-info` (ri)
@@ -1098,12 +1161,14 @@ tigris objects restore-info <bucket> [key] [flags]
 | Flag | Description |
 |------|-------------|
 | `--version-id` | Inspect a specific object version (requires bucket versioning). Omit to read the current version |
+| `-snapshot, --snapshot-version` | Inspect the object as of a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464) |
 | `--format` | Output format (default: table) |
 
 **Examples:**
 ```bash
 tigris objects restore-info my-bucket archived.bin
 tigris objects restore-info t3://my-bucket/archived.bin --format json
+tigris objects restore-info my-bucket archived.bin --snapshot-version 1765889000501544464
 ```
 
 ### `tigris access-keys` (keys)
