@@ -11,7 +11,7 @@ describe('buildAgentSetup', () => {
   it('leads with an update, not an install, when the CLI is on PATH', () => {
     const recipe = buildAgentSetup(true);
     expect(recipe).toMatch(
-      /^1\. Ensure the CLI is on the latest version: `tigris update`\.$/m
+      /^1\. Update the CLI to the latest version: `tigris update`\.$/m
     );
     expect(recipe).not.toContain('npm install -g @tigrisdata/cli');
   });
@@ -19,7 +19,7 @@ describe('buildAgentSetup', () => {
   it('leads with an install, not an update, when the CLI is missing', () => {
     const recipe = buildAgentSetup(false);
     expect(recipe).toMatch(
-      /^1\. Ask permission, then install the CLI: `npm install -g @tigrisdata\/cli --ignore-scripts`\.$/m
+      /^1\. Ask the user for permission\. Then install the CLI: `npm install -g @tigrisdata\/cli --ignore-scripts`\.$/m
     );
     expect(recipe).not.toContain('tigris update');
   });
@@ -28,9 +28,7 @@ describe('buildAgentSetup', () => {
     for (const cliInstalled of [true, false]) {
       const recipe = buildAgentSetup(cliInstalled);
       // Step 2 onwards is the shared setup, which never touches the CLI itself.
-      expect(recipe).toMatch(
-        /^2\. Check if the user is already authenticated/m
-      );
+      expect(recipe).toMatch(/^2\. Run `tigris whoami`/m);
     }
   });
 

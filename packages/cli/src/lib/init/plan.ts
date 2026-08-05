@@ -14,17 +14,20 @@
  * was installed, so it's safe to run unconditionally.
  */
 const INSTALL_STEP =
-  'Ask permission, then install the CLI: `npm install -g @tigrisdata/cli --ignore-scripts`.';
-const UPDATE_STEP = 'Ensure the CLI is on the latest version: `tigris update`.';
+  'Ask the user for permission. Then install the CLI: `npm install -g @tigrisdata/cli --ignore-scripts`.';
+const UPDATE_STEP = 'Update the CLI to the latest version: `tigris update`.';
 
 const SETUP_STEPS = [
-  'Check if the user is already authenticated using `tigris whoami`. If not, authenticate using `tigris login oauth`.',
-  "Run `tigris orgs list --format json`. If there's more than one org, ask which to use, then make it active with `tigris orgs select <org>` so the following commands target it.",
-  'Infer the project name from metadata (package.json, go.mod, pyproject.toml, ...). Check `tigris buckets list --format json` first; if the bucket is absent, `tigris buckets create <name> --format json`. Ask the user whenever anything is ambiguous.',
-  `Create the access key into a private temp file (overwrite, never append), then print only the ID:
+  'Run `tigris whoami` to get the authentication state. If the user is not authenticated, run `tigris login oauth`.',
+  'Run `tigris orgs list --format json`. If there is more than one org, ask the user which org to use. Then run `tigris orgs select <org>` to make that org active. The commands that come after target the active org.',
+  'Read the project name from a metadata file, for example package.json, go.mod, or pyproject.toml. Run `tigris buckets list --format json` first. If the bucket is absent, run `tigris buckets create <name> --format json`. If anything is ambiguous, ask the user.',
+  `Create the access key in a private temporary file. Use \`>\` to overwrite the file. Do not use \`>>\` to append. Then print only the ID:
    \`umask 077; tmpfile=$(mktemp); tigris access-keys create <username>-<project>-devel --format json > "$tmpfile" && jq -r '.id' < "$tmpfile"\``,
-  'Grant bucket access: `tigris access-keys assign <id> --bucket <bucket> --role Editor --format json`.',
-  `Detect whether the code uses the Tigris SDK or the AWS SDK, then have a small script append the right vars to .env, reading \`.id\`/\`.secret\` from the temp file. Do NOT read the secret into your context — append it via script. Delete the temp file when done: \`rm -f "$tmpfile"\`.
+  'Give the access key the Editor role on the bucket: `tigris access-keys assign <id> --bucket <bucket> --role Editor --format json`.',
+  `Identify the SDK that the code uses: the Tigris SDK, or the AWS SDK. Then use a small script to append the correct variables to \`.env\`:
+   - The script reads \`.id\` and \`.secret\` from the temporary file.
+   - Do not read the secret into your own context. Only the script reads the secret.
+   - When the script is complete, delete the temporary file: \`rm -f "$tmpfile"\`.
 
    Tigris SDK (@tigrisdata/storage, storage-go):
      TIGRIS_STORAGE_ACCESS_KEY_ID     = .id
@@ -38,16 +41,16 @@ const SETUP_STEPS = [
      AWS_ENDPOINT_URL_IAM    = https://iam.storageapi.dev (required)
      AWS_REGION              = auto                        (required)
 `,
-  `Congratulate the user and point them to:
+  `Congratulate the user. Then give these links:
    - JS:    https://www.tigrisdata.com/docs/sdks/tigris/
    - Go:    https://pkg.go.dev/github.com/tigrisdata/storage-go
    - Docs:  https://www.tigrisdata.com/docs/
    - Discord: https://community.tigrisdata.com/
    - Skills: https://www.tigrisdata.com/docs/skills/
 
-   Suggest adding to their agent config:
+   Suggest that the user adds these lines to the agent configuration file:
      > ## Tigris object storage
-     > This project uses Tigris. For any Tigris questions, consult https://www.tigrisdata.com/llms.txt before acting; look it up rather than relying on memory.`,
+     > This project uses Tigris. Read https://www.tigrisdata.com/llms.txt before you answer a question about Tigris. Do not answer from memory.`,
 ];
 
 /**
@@ -58,5 +61,5 @@ const SETUP_STEPS = [
 export function buildAgentSetup(cliInstalled: boolean): string {
   const steps = [cliInstalled ? UPDATE_STEP : INSTALL_STEP, ...SETUP_STEPS];
   const body = steps.map((step, i) => `${i + 1}. ${step}`).join('\n');
-  return `Help the user set up their project with Tigris:\n\n${body}\n`;
+  return `Help the user configure Tigris for this project:\n\n${body}\n`;
 }
