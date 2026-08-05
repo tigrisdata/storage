@@ -11,3 +11,11 @@ export const UPDATE_NOTIFY_INTERVAL_MS = 1 * 60 * 60 * 1000; // Show update noti
 // is expected. Overridable via TIGRIS_SENTRY_DSN. Empty keeps telemetry inert.
 export const SENTRY_DSN =
   'https://c3a84c6a2811c557d70e42412cda4ffa@o4507410155896832.ingest.us.sentry.io/4511767771545600';
+
+// PostHog project for CLI usage analytics — the same project the console
+// reports to, so a user's CLI and web activity join on one person record. Like
+// a Sentry DSN, a PostHog project API key is write-only and not a secret.
+// Overridable via TIGRIS_POSTHOG_KEY / TIGRIS_POSTHOG_HOST. Empty key keeps
+// analytics inert.
+export const POSTHOG_KEY = 'phc_6a2zd9w9hGzIqYl527bL4dXk3Wz8J9pEHyXTwP1hHq4';
+export const POSTHOG_HOST = 'https://ph.tigrisdata.com';

@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import https from 'node:https';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -9,6 +9,7 @@ import {
   UPDATE_CHECK_INTERVAL_MS,
   UPDATE_NOTIFY_INTERVAL_MS,
 } from '../constants.js';
+import { getInstallMethod } from './install-method.js';
 
 interface UpdateCheckCache {
   latestVersion: string;
@@ -92,40 +93,20 @@ export function isNewerVersion(current: string, latest: string): boolean {
   return false;
 }
 
-function isHomebrewInstall(): boolean {
-  if (process.platform === 'win32') return false;
-  try {
-    const resolved = realpathSync(process.execPath);
-    return resolved.includes('/Cellar/') || resolved.includes('/Caskroom/');
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Returns the platform-appropriate shell command for updating the CLI.
  */
 export function getUpdateCommand(): string {
-  const isBinary =
-    (globalThis as { __TIGRIS_BINARY?: boolean }).__TIGRIS_BINARY === true;
-
-  // npm install — process.execPath is Node, not our binary.
-  // Must come before isHomebrewInstall() to avoid false positives
-  // when Node itself was installed via Homebrew.
-  if (!isBinary) {
-    return 'npm install -g @tigrisdata/cli';
-  }
-  // Standalone binary installed via Homebrew (execPath resolves to /Cellar/ or /Caskroom/)
-  else if (isHomebrewInstall()) {
-    return 'brew upgrade tigris';
-  }
-  // Standalone binary on Windows
-  else if (process.platform === 'win32') {
-    return 'irm https://raw.githubusercontent.com/tigrisdata/storage/main/packages/cli/scripts/install.ps1 | iex';
-  }
-  // Standalone binary on macOS/Linux (installed via curl)
-  else {
-    return 'curl -fsSL https://raw.githubusercontent.com/tigrisdata/storage/main/packages/cli/scripts/install.sh | sh';
+  switch (getInstallMethod()) {
+    case 'npm':
+      return 'npm install -g @tigrisdata/cli';
+    case 'homebrew':
+      return 'brew upgrade tigris';
+    default:
+      // Standalone binary installed via the curl/irm script.
+      return process.platform === 'win32'
+        ? 'irm https://raw.githubusercontent.com/tigrisdata/storage/main/packages/cli/scripts/install.ps1 | iex'
+        : 'curl -fsSL https://raw.githubusercontent.com/tigrisdata/storage/main/packages/cli/scripts/install.sh | sh';
   }
 }
 

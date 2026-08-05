@@ -272,6 +272,44 @@ commands:
 
 
   #########################
+  # Telemetry
+  #########################
+  # telemetry
+  - name: telemetry
+    description: Show or change whether the CLI sends usage analytics and error reports
+    default: status
+    examples:
+      - "tigris telemetry"
+      - "tigris telemetry status"
+      - "tigris telemetry disable"
+      - "tigris telemetry enable"
+    commands:
+      - name: status
+        description: Show whether telemetry is enabled, what is collected, and which setting is in effect
+        examples:
+          - "tigris telemetry status"
+        messages:
+          onStart: ''
+          onSuccess: ''
+          onFailure: 'Failed to read telemetry settings'
+      - name: disable
+        description: Turn off usage analytics and error reports on this machine
+        examples:
+          - "tigris telemetry disable"
+        messages:
+          onStart: ''
+          onSuccess: 'Telemetry disabled. The CLI will not send usage analytics or error reports.'
+          onFailure: 'Failed to disable telemetry'
+      - name: enable
+        description: Turn usage analytics and error reports back on for this machine
+        examples:
+          - "tigris telemetry enable"
+        messages:
+          onStart: ''
+          onSuccess: 'Telemetry enabled. Thanks for helping us improve the CLI.'
+          onFailure: 'Failed to enable telemetry'
+
+  #########################
   # Unix style commands
   #########################
   # ls

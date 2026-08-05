@@ -2,6 +2,7 @@
  * Shared CLI core functionality used by both cli.ts (npm) and cli-binary.ts (binary)
  */
 
+import { trackCommand } from '@utils/analytics.js';
 import { classifyError } from '@utils/errors.js';
 import { exitWithError } from '@utils/exit.js';
 import { printDeprecated } from '@utils/messages.js';
@@ -558,6 +559,12 @@ async function loadAndExecuteCommand(
     console.error(`Command not implemented: ${pathParts.join(' ')}`);
     process.exit(1);
   }
+
+  // Usage analytics, recorded at the start of the command so the request
+  // overlaps the command's own work and survives the synchronous exits that
+  // most commands take. Never awaited: it must add neither latency nor a
+  // failure mode to the command path.
+  trackCommand(pathParts);
 
   await commandFunction({ ...options, _positional: positionalArgs });
 }
