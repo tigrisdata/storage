@@ -40,6 +40,7 @@ Run `tigris help` to see all available commands, or `tigris <command> help` for 
 | `tigris update` | Update the CLI to the latest version |
 | `tigris logout` | End the current session and clear login state. Credentials saved via 'configure' are kept |
 | `tigris credentials` (creds) | Test whether your current credentials can reach Tigris and optionally verify access to a specific bucket |
+| `tigris telemetry` | Show or change whether the CLI sends usage analytics and error reports |
 | `tigris ls` (list) | List all buckets (no arguments) or objects under a bucket/prefix path. Accepts bare names or t3:// URIs |
 | `tigris mk` (create) | Create a bucket (bare name) or a folder inside a bucket (bucket/folder/ with trailing slash) |
 | `tigris touch` | Create an empty (zero-byte) object at the given bucket/key path |
@@ -210,6 +211,55 @@ tigris credentials test [flags]
 ```bash
 tigris credentials test
 tigris credentials test --bucket my-bucket
+```
+
+### `tigris telemetry`
+
+Show or change whether the CLI sends usage analytics and error reports
+
+| Command | Description |
+|---------|-------------|
+| `tigris telemetry status` | Show whether telemetry is enabled, what is collected, and which setting is in effect |
+| `tigris telemetry disable` | Turn off usage analytics and error reports on this machine |
+| `tigris telemetry enable` | Turn usage analytics and error reports back on for this machine |
+
+#### `tigris telemetry status`
+
+Show whether telemetry is enabled, what is collected, and which setting is in effect
+
+```
+tigris telemetry status
+```
+
+**Examples:**
+```bash
+tigris telemetry status
+```
+
+#### `tigris telemetry disable`
+
+Turn off usage analytics and error reports on this machine
+
+```
+tigris telemetry disable
+```
+
+**Examples:**
+```bash
+tigris telemetry disable
+```
+
+#### `tigris telemetry enable`
+
+Turn usage analytics and error reports back on for this machine
+
+```
+tigris telemetry enable
+```
+
+**Examples:**
+```bash
+tigris telemetry enable
 ```
 
 ### `tigris ls` (list)
@@ -1695,6 +1745,20 @@ tigris iam teams edit team_id --name platform
 tigris iam teams edit team_id --description 'Platform team'
 tigris iam teams edit team_id --members a@example.com,b@example.com
 ```
+
+## Telemetry
+
+The CLI reports usage analytics and error reports to improve quality.
+Credentials are never collected. You can opt out at any time:
+
+```bash
+tigris telemetry disable   # persists to ~/.tigris/telemetry.json
+tigris telemetry status    # current setting, and exactly what is collected
+tigris telemetry enable
+```
+
+`TIGRIS_NO_TELEMETRY=1` or `DO_NOT_TRACK=1` also disable it and take precedence
+over the stored setting. Telemetry is off in development builds and test runs.
 
 ## License
 
