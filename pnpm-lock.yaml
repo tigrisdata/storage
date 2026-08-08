@@ -113,7 +113,7 @@ importers:
         version: 2.4.1
       jose:
         specifier: ^6.2.3
-        version: 6.2.7
+        version: 6.2.8
       jsonc-parser:
         specifier: ^3.3.1
         version: 3.3.1
@@ -281,6 +281,9 @@ packages:
   '@aws-sdk/core@3.977.4':
     resolution: {integrity: sha512-CEkcQlMOQJCvul60U7wdAOACjtdgFWDsfJI+6wUOGdhGNV2lGbuJpi/R50QLpFG3Tp+sQxa/RmzC3X7KHbhuTA==}
     engines: {node: '>=20.0.0'}
+    deprecated: |-
+      Deprecated due to Document number parsing bug in JSON, see
+        https://github.com/aws/aws-sdk-js-v3/issues/8246. Newer version available.
 
   '@aws-sdk/credential-provider-cognito-identity@3.972.64':
     resolution: {integrity: sha512-bilBheDT6GKnFkPnovgt1HL5spmnTCntm8w+hO3bmjnlZ8qMhqfQ1RJYPRTNsPlXaCcBXWUtg+zn/NM6WQUXoA==}
@@ -2261,8 +2264,8 @@ packages:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
     hasBin: true
 
-  jose@6.2.7:
-    resolution: {integrity: sha512-hq1OB1bALKfydZNoViyg6hPVGV4i93ny9Op+n4zP5RSf7SCZEXa/TsG2O3IEr7+WlHRTPnpqDmHfMH6qXAD60w==}
+  jose@6.2.8:
+    resolution: {integrity: sha512-Bsdjwm3Qsd/P0jR+BHDe3LytDfY7WBq2HmCCLIwuVRHMuEC9ae7/R474GIUdF1NgCyZjzVo/A9DOiOBtXq8ZoQ==}
 
   joycon@3.1.1:
     resolution: {integrity: sha512-34wB/Y7MW7bzjKRjUKTa46I2Z7eV62Rkhva+KkopW7Qvv/OSWBqvkSY7vusOPrNuZcUG3tApvdVgNB8POj3SPw==}
@@ -3379,7 +3382,7 @@ snapshots:
 
   '@auth0/auth0-auth-js@1.12.0':
     dependencies:
-      jose: 6.2.7
+      jose: 6.2.8
       openid-client: 6.8.4
 
   '@auth0/auth0-spa-js@2.24.1':
@@ -5434,7 +5437,7 @@ snapshots:
 
   jiti@2.6.1: {}
 
-  jose@6.2.7: {}
+  jose@6.2.8: {}
 
   joycon@3.1.1: {}
 
@@ -5803,7 +5806,7 @@ snapshots:
 
   openid-client@6.8.4:
     dependencies:
-      jose: 6.2.7
+      jose: 6.2.8
       oauth4webapi: 3.8.6
 
   outdent@0.5.0: {}
