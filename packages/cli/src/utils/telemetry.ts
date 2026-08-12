@@ -2,6 +2,8 @@ import * as Sentry from '@sentry/node';
 import { version } from '../../package.json';
 import { SENTRY_DSN } from '../constants.js';
 import type { ErrorCategory } from './errors.js';
+import { redactSecrets, scrubArgv } from './redact.js';
+import { isTelemetryDisabled } from './telemetry-config.js';
 
 /**
  * Error telemetry (Sentry) for the CLI.
@@ -12,8 +14,9 @@ import type { ErrorCategory } from './errors.js';
  * noise, not bugs.
  *
  * Telemetry is a strict no-op unless a DSN is configured, and stays disabled in
- * dev/test and whenever the user opts out. It must never change the CLI's
- * behavior or throw into the command path.
+ * dev/test and whenever the user opts out (the shared gate lives in
+ * telemetry-config.ts and covers usage analytics too). It must never change the
+ * CLI's behavior or throw into the command path.
  */
 
 // Categories worth reporting for a handled (failWithError) exit. Crashes are
@@ -34,118 +37,13 @@ function resolveDsn(): string {
   return process.env.TIGRIS_SENTRY_DSN?.trim() || SENTRY_DSN;
 }
 
-/**
- * Honor explicit opt-out and the community-standard DO_NOT_TRACK, and stay
- * silent in dev/test so our own runs never pollute production data. (Customer
- * CI is deliberately *not* excluded — that is real usage worth tracking.)
- */
-function telemetryDisabled(): boolean {
-  return (
-    // Product opt-out, matching the repo's TIGRIS_NO_* convention.
-    process.env.TIGRIS_NO_TELEMETRY === '1' ||
-    // Cross-tool standard
-    process.env.DO_NOT_TRACK === '1' ||
-    process.env.NODE_ENV === 'test' ||
-    process.env.TIGRIS_ENV === 'development'
-  );
-}
-
 const environment =
   process.env.TIGRIS_ENV === 'development' ? 'development' : 'production';
 
-// Patterns for sensitive VALUES that may appear anywhere in the captured
-// command — as a positional or a flag value — and are redacted wherever found.
-const SECRET_PATTERNS: RegExp[] = [
-  // Email addresses (PII).
-  /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,
-  // Tigris access-key ids and secrets (tid_… / tsec_…).
-  /\bt(?:id|sec)_[A-Za-z0-9]+/gi,
-  // JWTs / opaque bearer tokens.
-  /eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}/g,
-  /Bearer\s+[A-Za-z0-9._-]+/gi,
-  // AWS-style access key ids.
-  /AKIA[0-9A-Z]{16}/g,
-  // key=value / key: value where the key names a secret.
-  /((?:secret[-_ ]?access[-_ ]?key|secret|password|token|authorization)["']?\s*[:=]\s*["']?)([^\s"',]+)/gi,
-];
-
-export function redactSecrets(text: string): string {
-  let out = text;
-  for (const pattern of SECRET_PATTERNS) {
-    // Patterns with a leading capture group (e.g. `secret=`) preserve it and
-    // redact the value; patterns without one redact the whole match. The second
-    // replacer arg is the capture only when it's a string — for group-less
-    // patterns it's the match offset (a number), which must not be emitted.
-    out = out.replace(pattern, (_match, prefix?: string | number) =>
-      typeof prefix === 'string' ? `${prefix}[redacted]` : '[redacted]'
-    );
-  }
-  return out;
-}
-
-// Flag names whose VALUE is a credential or PII and must be redacted. Matched
-// loosely so we don't depend on an exact, drift-prone list. `key$` covers the
-// key family — `--key` (the CLI's alias for --access-key), `--access-key`,
-// `--secret-key` — without matching non-secret flags like `--key-marker`.
-// Object keys are positional args, so they never reach this flag check.
-const SENSITIVE_FLAG_RE =
-  /secret|password|token|credential|auth|user(name)?|e-?mail|owner|name|key$/i;
-
-// Sensitive flags too short to pattern-match. `-t` is the webhook `--token`
-// alias; it also aliases `--default-tier` on bucket commands, but redacting a
-// tier value is harmless. Extend this as new sensitive short aliases appear.
-const SENSITIVE_SHORT_FLAGS: ReadonlySet<string> = new Set(['-t']);
-
-function isSensitiveFlag(flag: string): boolean {
-  return SENSITIVE_FLAG_RE.test(flag) || SENSITIVE_SHORT_FLAGS.has(flag);
-}
-
-/**
- * Scrub a captured argv for telemetry. The command and its arguments are kept
- * (bucket names, object keys, and paths are useful for debugging), but the
- * values of credential/PII flags are redacted, and any credential- or
- * PII-shaped value (access keys, tokens, JWTs, emails) is redacted wherever it
- * appears — including in positionals.
- */
-export function scrubArgv(argv: string[]): string[] {
-  const out: string[] = [];
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    const eq = arg.indexOf('=');
-
-    // `--flag=value`: handled entirely here. Redact the value outright when the
-    // flag name is sensitive, otherwise still scrub any secret/PII-shaped value
-    // inside it. This must `continue` — falling through to the space-form branch
-    // (which tests the whole token) would let a sensitive substring in the value
-    // both skip redaction and mis-redact the next positional.
-    if (arg.startsWith('-') && eq !== -1) {
-      const name = arg.slice(0, eq);
-      out.push(
-        isSensitiveFlag(name)
-          ? `${name}=[redacted]`
-          : `${name}=${redactSecrets(arg.slice(eq + 1))}`
-      );
-      continue;
-    }
-
-    // `--flag value` (bare flag only — `--flag=value` already continued above):
-    // redact the following value when the flag name is sensitive.
-    if (
-      arg.startsWith('-') &&
-      isSensitiveFlag(arg) &&
-      i + 1 < argv.length &&
-      !argv[i + 1].startsWith('-')
-    ) {
-      out.push(arg, '[redacted]');
-      i++;
-      continue;
-    }
-
-    // Positional (or valueless bare flag): redact any secret/PII-shaped value.
-    out.push(redactSecrets(arg));
-  }
-  return out;
-}
+// The redaction policy lives in redact.ts so error reports and usage analytics
+// share exactly one implementation. Re-exported here because this module's
+// public surface (and its tests) have always exposed them.
+export { redactSecrets, scrubArgv };
 
 /** The top-level command name (first non-flag arg), used as a searchable tag. */
 export function invocationCommand(argv: string[]): string | undefined {
@@ -212,7 +110,7 @@ export function initTelemetry(): void {
   initialized = true;
 
   const dsn = resolveDsn();
-  if (!dsn || telemetryDisabled()) {
+  if (!dsn || isTelemetryDisabled()) {
     return;
   }
 

@@ -3,6 +3,7 @@ import {
   clearTemporaryCredentials,
   storeSelectedOrganization,
 } from '@auth/storage.js';
+import { identifyOnLogin } from '@utils/analytics.js';
 import { exitWithError, printNextActions } from '@utils/exit.js';
 import {
   msg,
@@ -60,6 +61,10 @@ export async function oauth(
       printSuccess(context, { org: 'none' });
       printNextActions(context);
     }
+
+    // Attach this machine's pre-login CLI activity to the user who just signed
+    // in. Not awaited — login must never wait on analytics.
+    void identifyOnLogin();
   } catch (error) {
     printFailure(context);
     exitWithError(error, context);

@@ -175,19 +175,29 @@ function updateReadme(docsContent: string): void {
   const readmePath = join(__dirname, '..', 'README.md');
   const readmeContent = readFileSync(readmePath, 'utf-8');
 
-  const usageStart = readmeContent.indexOf('## Usage');
-  const licenseStart = readmeContent.indexOf('## License');
+  // Hand-written sections that trail the generated command reference. The
+  // generated block ends at whichever appears first, so adding a section here
+  // is all it takes to protect it — otherwise the next `pnpm updatedocs`
+  // silently deletes anything sitting between ## Usage and ## License.
+  const TRAILING_SECTIONS = ['## Telemetry', '## License'];
 
-  if (usageStart === -1 || licenseStart === -1) {
+  const usageStart = readmeContent.indexOf('## Usage');
+  const trailingStarts = TRAILING_SECTIONS.map((heading) =>
+    readmeContent.indexOf(heading)
+  ).filter((index) => index !== -1);
+
+  if (usageStart === -1 || trailingStarts.length === 0) {
     console.error('Could not find ## Usage or ## License section in README.md');
     process.exit(1);
   }
+
+  const trailingStart = Math.min(...trailingStarts);
 
   const newReadme =
     readmeContent.slice(0, usageStart) +
     docsContent +
     '\n' +
-    readmeContent.slice(licenseStart);
+    readmeContent.slice(trailingStart);
 
   writeFileSync(readmePath, newReadme);
   console.log('README.md updated successfully!');
