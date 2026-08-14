@@ -108,6 +108,38 @@ export function resolveObjectArgs(
   return { bucket: parsed.bucket, key: parsed.path };
 }
 
+/**
+ * Folder markers are zero-byte keys ending in `/`. They exist so an
+ * otherwise-empty prefix still shows up as a folder; `ls` hides them, so
+ * cp/mv/rm carry them along without ever listing them as objects.
+ */
+export function isFolderMarker(key: string): boolean {
+  return key.endsWith('/');
+}
+
+/**
+ * User-facing object count for a bulk cp/mv/rm.
+ *
+ * Folder markers never count as objects — `ls` hides them, so counting them
+ * would report more than the user can see. The exception is a prefix holding
+ * nothing but markers: operating on an empty folder still does something, so
+ * it reports as one rather than zero.
+ *
+ * @param scope every key the command set out to handle
+ * @param done the keys it actually handled. Defaults to `scope`, which is what
+ * the confirmation prompt wants; running the prompt and the final tally through
+ * this same function keeps the two numbers from disagreeing. Passing `done`
+ * separately means a run whose objects all failed reports `0` even if the
+ * folder marker happened to succeed.
+ */
+export function countObjects(scope: string[], done: string[] = scope): number {
+  const scopeHasObjects = scope.some((key) => !isFolderMarker(key));
+  if (!scopeHasObjects) {
+    return done.length > 0 ? 1 : 0;
+  }
+  return done.filter((key) => !isFolderMarker(key)).length;
+}
+
 export type ListItem = {
   id: string;
   name: string;

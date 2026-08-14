@@ -4,7 +4,9 @@ import { exitWithError } from '@utils/exit.js';
 import { confirm, requireInteractive } from '@utils/interactive.js';
 import { getFormat, getOption } from '@utils/options.js';
 import {
+  countObjects,
   globToRegex,
+  isFolderMarker,
   isPathFolder,
   isRemotePath,
   listAllItems,
@@ -106,6 +108,9 @@ export default async function rm(options: Record<string, unknown>) {
       const filePattern = path.split('/').pop()!;
       const regex = globToRegex(filePattern);
       itemsToRemove = itemsToRemove.filter((item) => {
+        // The folder's own marker is not a file inside the folder, so a
+        // wildcard never matches it - `rm folder/*` leaves `folder/` behind.
+        if (item.name === prefix) return false;
         const rel = prefix ? item.name.slice(prefix.length) : item.name;
         if (!recursive && rel.includes('/')) return false;
         return regex.test(rel.split('/').pop()!);
@@ -133,9 +138,12 @@ export default async function rm(options: Record<string, unknown>) {
         markerData?.items?.some((item) => item.name === folderMarker) || false;
     }
 
-    const totalItems = itemsToRemove.length + (hasSeparateFolderMarker ? 1 : 0);
+    const keysToRemove = [
+      ...itemsToRemove.map((item) => item.name),
+      ...(hasSeparateFolderMarker ? [folderMarker] : []),
+    ];
 
-    if (totalItems === 0) {
+    if (keysToRemove.length === 0) {
       if (_jsonMode) {
         console.log(JSON.stringify({ action: 'removed', count: 0 }));
       } else {
@@ -143,6 +151,8 @@ export default async function rm(options: Record<string, unknown>) {
       }
       return;
     }
+
+    const totalItems = countObjects(keysToRemove);
 
     if (!force) {
       requireInteractive('Use --yes to skip confirmation');
@@ -155,7 +165,7 @@ export default async function rm(options: Record<string, unknown>) {
       }
     }
 
-    let removed = 0;
+    const removedKeys: string[] = [];
 
     // Remove all items (including folder marker if in list)
     for (const item of itemsToRemove) {
@@ -169,8 +179,10 @@ export default async function rm(options: Record<string, unknown>) {
       if (removeError) {
         console.error(`Failed to remove ${item.name}: ${removeError.message}`);
       } else {
-        if (!_jsonMode) console.log(`Removed t3://${bucket}/${item.name}`);
-        removed++;
+        // Folder markers go away with the folder but aren't listed.
+        if (!_jsonMode && !isFolderMarker(item.name))
+          console.log(`Removed t3://${bucket}/${item.name}`);
+        removedKeys.push(item.name);
       }
     }
 
@@ -188,10 +200,11 @@ export default async function rm(options: Record<string, unknown>) {
           `Failed to remove ${folderMarker}: ${removeError.message}`
         );
       } else {
-        if (!_jsonMode) console.log(`Removed t3://${bucket}/${folderMarker}`);
-        removed++;
+        removedKeys.push(folderMarker);
       }
     }
+
+    const removed = countObjects(keysToRemove, removedKeys);
 
     if (_jsonMode) {
       console.log(JSON.stringify({ action: 'removed', count: removed }));

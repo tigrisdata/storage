@@ -18,7 +18,9 @@ import { formatSize } from '@utils/format.js';
 import { getContentType } from '@utils/mime.js';
 import { getFormat, getOption } from '@utils/options.js';
 import {
+  countObjects,
   globToRegex,
+  isFolderMarker,
   isPathFolder,
   isRemotePath,
   listAllItems,
@@ -706,21 +708,22 @@ async function copyRemoteToRemote(
 
       if (copyResult.error) {
         console.error(`Failed to copy ${item.name}: ${copyResult.error}`);
-        return false;
+        return null;
       } else {
-        if (!_jsonMode)
+        // Nested folder markers copy with the data but aren't listed.
+        if (!_jsonMode && !isFolderMarker(item.name))
           console.log(
             `Copied t3://${srcParsed.bucket}/${item.name} -> t3://${destParsed.bucket}/${destKey}`
           );
-        return true;
+        return item.name;
       }
     });
     const copyResults = await executeWithConcurrency(copyTasks, 8);
-    let copied = copyResults.filter(Boolean).length;
+    const copiedKeys = copyResults.filter((key) => key !== null);
 
-    // Copy folder marker if exists
-    let copiedMarker = false;
-    if (effectiveDestPrefix && prefix) {
+    // Copy folder marker if exists. Skipped for wildcards, which name files
+    // inside the folder rather than the folder itself.
+    if (effectiveDestPrefix && prefix && !isWildcard) {
       const { data: markerData } = await list({
         prefix,
         limit: 1,
@@ -742,16 +745,19 @@ async function copyRemoteToRemote(
         if (markerResult.error) {
           console.error(`Failed to copy folder marker: ${markerResult.error}`);
         } else {
-          copiedMarker = true;
+          copiedKeys.push(prefix);
         }
       }
     }
 
-    if (copied === 0 && copiedMarker) {
-      copied = 1;
-    }
+    const copied = countObjects(
+      itemsToCopy.map((item) => item.name),
+      copiedKeys
+    );
 
-    if (copied === 0) {
+    // Nothing matched at all. When items matched but every copy failed, fall
+    // through and report `0` — the per-object errors are already on stderr.
+    if (itemsToCopy.length === 0 && copiedKeys.length === 0) {
       if (_jsonMode) {
         console.log(
           JSON.stringify({
