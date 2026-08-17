@@ -246,6 +246,7 @@ describe('CLI Help Commands', () => {
     expect(result.stdout).toContain('Commands:');
     expect(result.stdout).toContain('list');
     expect(result.stdout).toContain('take');
+    expect(result.stdout).toContain('delete');
   });
 
   it('should show access-keys help', () => {
@@ -304,6 +305,12 @@ describe('Destructive commands require --yes in non-TTY', () => {
 
   it('buckets delete should require confirmation in non-TTY', () => {
     const result = runCli('buckets delete fake-bucket');
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Use --yes to skip confirmation');
+  });
+
+  it('snapshots delete should require confirmation in non-TTY', () => {
+    const result = runCli('snapshots delete fake-bucket 1765889000501544464');
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain('Use --yes to skip confirmation');
   });
@@ -2440,6 +2447,78 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       }
       expect(result.exitCode).toBe(1);
       expect(result.stderr.toLowerCase()).toContain('fork');
+    }, 120_000);
+  });
+
+  describe('snapshot delete', () => {
+    // Deliberately a separate bucket from the fork lifecycle above: that
+    // block reuses its snapshot version across several later tests and has a
+    // fork depending on it, so deleting snapshots there would be destructive.
+    const snapDelBucket = `${testPrefix}-snapdel`;
+
+    beforeAll(() => {
+      runCli(`mk ${snapDelBucket} --enable-snapshots`);
+      runCli(`touch ${snapDelBucket}/snapdel-file.txt`);
+    });
+
+    afterAll(() => {
+      runCli(`rm ${t3(snapDelBucket)}/snapdel-file.txt -f`);
+      runCli(`rm ${t3(snapDelBucket)} -f`);
+    });
+
+    function listSnapshotVersions(): string[] {
+      const list = runCli(`snapshots list ${snapDelBucket} --format json`);
+      // An empty snapshot list prints the onEmpty message, not JSON.
+      if (!list.stdout.trim()) return [];
+      return (
+        JSON.parse(list.stdout.trim()).items as { version: string }[]
+      ).map((s) => s.version);
+    }
+
+    // Take a snapshot and resolve its version by diffing the list before and
+    // after, rather than indexing into it — that stays correct regardless of
+    // which end of the list the newest snapshot lands on.
+    function takeSnapshotVersion(): string {
+      const before = new Set(listSnapshotVersions());
+      const take = runCli(`snapshots take ${snapDelBucket}`);
+      expect(take.exitCode).toBe(0);
+      const added = listSnapshotVersions().filter((v) => !before.has(v));
+      expect(added).toHaveLength(1);
+      return added[0];
+    }
+
+    it('should delete a snapshot by version', () => {
+      const version = takeSnapshotVersion();
+      const result = runCli(
+        `snapshots delete ${snapDelBucket} ${version} --yes --format json`
+      );
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(parsed.action).toBe('deleted');
+      expect(parsed.bucket).toBe(snapDelBucket);
+      expect(parsed.versions).toContain(version);
+      expect(parsed.errors).toEqual([]);
+    }, 120_000);
+
+    it('should drop the deleted snapshot from snapshots list', () => {
+      const version = takeSnapshotVersion();
+      const del = runCli(`snapshots delete ${snapDelBucket} ${version} --yes`);
+      expect(del.exitCode).toBe(0);
+      expect(listSnapshotVersions()).not.toContain(version);
+    }, 120_000);
+
+    it('should delete multiple snapshots from a comma separated list', () => {
+      const first = takeSnapshotVersion();
+      const second = takeSnapshotVersion();
+      const result = runCli(
+        `snapshots delete ${snapDelBucket} ${first},${second} --yes --format json`
+      );
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(parsed.versions).toEqual([first, second]);
+      const remaining = listSnapshotVersions();
+      expect(remaining).not.toContain(first);
+      expect(remaining).not.toContain(second);
     }, 120_000);
   });
 

@@ -52,7 +52,7 @@ Run `tigris help` to see all available commands, or `tigris <command> help` for 
 | `tigris bundle` | Download multiple objects as a streaming tar archive in a single request. Designed for batch workloads that need many objects without per-object HTTP overhead |
 | `tigris organizations` (orgs) | List, create, and switch between organizations. An organization is a workspace that contains your resources like buckets and access keys |
 | `tigris buckets` (b) | Create, inspect, update, and delete buckets. Buckets are top-level containers that hold objects |
-| `tigris snapshots` (s) | List and take snapshots. A snapshot is a point-in-time, read-only copy of a bucket's state |
+| `tigris snapshots` (s) | List, take, and delete snapshots. A snapshot is a point-in-time, read-only copy of a bucket's state |
 | `tigris objects` (o) | Low-level object operations for listing, downloading, uploading, and deleting individual objects in a bucket |
 | `tigris access-keys` (keys) | Create, list, inspect, delete, and assign roles to access keys. Access keys are credentials used for programmatic API access |
 | `tigris iam` | Identity and Access Management - manage policies, users, and permissions |
@@ -940,12 +940,13 @@ tigris buckets set-cors my-bucket --reset
 
 ### `tigris snapshots` (s)
 
-List and take snapshots. A snapshot is a point-in-time, read-only copy of a bucket's state
+List, take, and delete snapshots. A snapshot is a point-in-time, read-only copy of a bucket's state
 
 | Command | Description |
 |---------|-------------|
 | `tigris snapshots list` (l) | List all snapshots for the given bucket, ordered by creation time |
 | `tigris snapshots take` (t) | Take a new snapshot of the bucket's current state. Optionally provide a name for the snapshot |
+| `tigris snapshots delete` (d) | Delete one or more snapshots of a bucket by version. Deletion is permanent; forks already created from a snapshot are unaffected |
 
 #### `tigris snapshots list` (l)
 
@@ -979,6 +980,24 @@ tigris snapshots take <name> [snapshot-name]
 ```bash
 tigris snapshots take my-bucket
 tigris snapshots take my-bucket my-snapshot
+```
+
+#### `tigris snapshots delete` (d)
+
+Delete one or more snapshots of a bucket by version. Deletion is permanent; forks already created from a snapshot are unaffected
+
+```
+tigris snapshots delete <name> <version> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--force` | Skip confirmation prompts (alias for --yes) |
+
+**Examples:**
+```bash
+tigris snapshots delete my-bucket 1765889000501544464 --yes
+tigris snapshots delete my-bucket 1765889000501544464,1765889000501544465 --yes
 ```
 
 ### `tigris objects` (o)

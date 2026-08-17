@@ -1342,11 +1342,12 @@ commands:
   # Manage snapshots
   #########################
   - name: snapshots
-    description: List and take snapshots. A snapshot is a point-in-time, read-only copy of a bucket's state
+    description: List, take, and delete snapshots. A snapshot is a point-in-time, read-only copy of a bucket's state
     alias: s
     examples:
       - "tigris snapshots list my-bucket"
       - "tigris snapshots take my-bucket"
+      - "tigris snapshots delete my-bucket 1765889000501544464"
     commands:
       # list
       - name: list
@@ -1400,6 +1401,39 @@ commands:
             required: false
             examples:
               - my-snapshot
+      # delete
+      - name: delete
+        description: Delete one or more snapshots of a bucket by version. Deletion is permanent; forks already created from a snapshot are unaffected
+        alias: d
+        examples:
+          - "tigris snapshots delete my-bucket 1765889000501544464 --yes"
+          - "tigris snapshots delete my-bucket 1765889000501544464,1765889000501544465 --yes"
+        messages:
+          onStart: 'Deleting snapshot...'
+          onSuccess: "Snapshot '{{version}}' deleted from bucket '{{name}}'"
+          onFailure: "Failed to delete snapshot '{{version}}'"
+          nextActions:
+            - command: 'tigris snapshots list {{name}}'
+              description: 'List remaining snapshots'
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: positional
+            required: true
+            examples:
+              - my-bucket
+          - name: version
+            description: Snapshot version, or comma separated list of versions. Find versions with "tigris snapshots list"
+            type: positional
+            required: true
+            multiple: true
+            examples:
+              # Quoted: an unquoted 19-digit literal parses as a float and
+              # loses its trailing digits in help output.
+              - "1765889000501544464"
+          - name: force
+            type: flag
+            description: Skip confirmation prompts (alias for --yes)
 
   #########################
   # Manage objects
