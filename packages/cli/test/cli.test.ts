@@ -932,6 +932,71 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
   });
 
+  // A wildcard names files inside a folder, not the folder itself, so the
+  // folder's own marker has to survive it. `stat` on a trailing-slash path is
+  // the only way to observe a marker directly: `ls` reports the prefix whenever
+  // objects still sit under it, whether or not a marker exists.
+  describe('wildcard folder marker preservation', () => {
+    const wcmFolder = 'wcm-folder';
+    const wcmCopied = 'wcm-copied';
+
+    beforeAll(() => {
+      runCli(`mk ${testBucket}/${wcmFolder}/`);
+      runCli(`touch ${testBucket}/${wcmFolder}/keep.jpg`);
+      runCli(`touch ${testBucket}/${wcmFolder}/one.txt`);
+      runCli(`touch ${testBucket}/${wcmFolder}/two.txt`);
+    });
+
+    it('should count only matched files when copying with a wildcard', () => {
+      const result = runCli(
+        `cp '${t3(testBucket)}/${wcmFolder}/*.txt' ${t3(testBucket)}/${wcmCopied}/`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('2 object(s)');
+    });
+
+    it('should not create a folder marker at the wildcard destination', () => {
+      const result = runCli(`stat ${t3(testBucket)}/${wcmCopied}/`);
+      expect(result.exitCode).not.toBe(0);
+    });
+
+    it('should report nothing to move when a wildcard matches no files', () => {
+      const result = runCli(
+        `mv '${t3(testBucket)}/${wcmFolder}/*.zip' ${t3(testBucket)}/wcm-moved/ -f`
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('No objects to move');
+    });
+
+    it('should keep the source marker after a zero-match wildcard move', () => {
+      const result = runCli(`stat ${t3(testBucket)}/${wcmFolder}/`);
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should empty a folder with a wildcard without deleting the folder', () => {
+      const result = runCli(`rm '${t3(testBucket)}/${wcmFolder}/*' -f`);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('3 object(s)');
+    });
+
+    it('should leave the emptied folder in place', () => {
+      const result = runCli(`stat ${t3(testBucket)}/${wcmFolder}/`);
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should remove the folder itself when no wildcard is used', () => {
+      const result = runCli(`rm ${t3(testBucket)}/${wcmFolder}/ -r -f`);
+      expect(result.exitCode).toBe(0);
+
+      const stat = runCli(`stat ${t3(testBucket)}/${wcmFolder}/`);
+      expect(stat.exitCode).not.toBe(0);
+    });
+
+    afterAll(() => {
+      runCli(`rm ${t3(testBucket)}/${wcmCopied}/ -r -f`);
+    });
+  });
+
   // ─── Section A: Missing branches in already-tested commands ───
 
   describe('mk command - bucket creation variants', () => {
