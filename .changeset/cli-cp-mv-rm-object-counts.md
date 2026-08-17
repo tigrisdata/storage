@@ -14,8 +14,9 @@ always agree.
 - `mv` and `rm` no longer count the folder's own marker, or the markers of any
   nested subfolders, as objects. The markers are still moved and deleted as
   before; they're just not counted or printed.
-- A folder holding nothing but markers still reports `1`, so moving or deleting
-  an empty folder doesn't read as a no-op.
+- An operation whose scope is nothing but markers reports the folders it
+  handled, so an empty folder counts as `1` rather than reading as a no-op, and
+  clearing three sibling empty folders reports `3` rather than `1`.
 - `cp` remote-to-remote no longer counts nested folder markers, and a run whose
   object copies all failed now reports `0` instead of `No objects to copy`.
 

@@ -121,9 +121,10 @@ export function isFolderMarker(key: string): boolean {
  * User-facing object count for a bulk cp/mv/rm.
  *
  * Folder markers never count as objects — `ls` hides them, so counting them
- * would report more than the user can see. The exception is a prefix holding
- * nothing but markers: operating on an empty folder still does something, so
- * it reports as one rather than zero.
+ * would report more than the user can see. The exception is a scope holding
+ * nothing but markers: those runs operate on folders rather than objects, so
+ * they report the folders handled rather than a bare zero, which would read as
+ * a no-op.
  *
  * @param scope every key the command set out to handle
  * @param done the keys it actually handled. Defaults to `scope`, which is what
@@ -135,7 +136,8 @@ export function isFolderMarker(key: string): boolean {
 export function countObjects(scope: string[], done: string[] = scope): number {
   const scopeHasObjects = scope.some((key) => !isFolderMarker(key));
   if (!scopeHasObjects) {
-    return done.length > 0 ? 1 : 0;
+    // Folders-only run: one empty folder reports 1, three siblings report 3.
+    return done.length;
   }
   return done.filter((key) => !isFolderMarker(key)).length;
 }

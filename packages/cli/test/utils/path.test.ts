@@ -380,7 +380,13 @@ describe('countObjects', () => {
 
   it('counts an empty folder as a single object', () => {
     expect(countObjects(['test-folder/'])).toBe(1);
-    expect(countObjects(['test-folder/', 'test-folder/sub/'])).toBe(1);
+  });
+
+  it('counts every folder when the scope holds only markers', () => {
+    // Sibling empty folders have no shared parent in scope, so reporting 1
+    // would undercount a run that removes all three.
+    expect(countObjects(['a/', 'b/', 'c/'])).toBe(3);
+    expect(countObjects(['test-folder/', 'test-folder/sub/'])).toBe(2);
   });
 
   it('returns zero when there is nothing at all', () => {
