@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  countObjects,
   globToRegex,
+  isFolderMarker,
   isRemotePath,
   parseAnyPath,
   parsePath,
@@ -165,6 +167,14 @@ describe('globToRegex', () => {
   it('should not match across slashes', () => {
     const regex = globToRegex('*');
     expect(regex.test('folder/file.txt')).toBe(false);
+  });
+
+  it('matches the empty string, which is why cp/mv/rm exclude the marker', () => {
+    // A folder marker's name relative to its own prefix is '', so `*` matches
+    // the folder itself. The commands filter that key out explicitly so
+    // `rm folder/*` empties the folder without deleting it.
+    expect(globToRegex('*').test('')).toBe(true);
+    expect(globToRegex('*.txt').test('')).toBe(false);
   });
 
   it('should match wildcard with extension', () => {
@@ -333,6 +343,76 @@ describe('resolveObjectArgs', () => {
         key: '',
       });
     });
+  });
+});
+
+describe('isFolderMarker', () => {
+  it('treats keys ending in a slash as markers', () => {
+    expect(isFolderMarker('folder/')).toBe(true);
+    expect(isFolderMarker('folder/sub/')).toBe(true);
+  });
+
+  it('treats regular keys as objects', () => {
+    expect(isFolderMarker('folder/file.txt')).toBe(false);
+    expect(isFolderMarker('file.txt')).toBe(false);
+  });
+});
+
+describe('countObjects', () => {
+  it('does not count the folder marker alongside objects', () => {
+    const keys = [
+      'test-folder/',
+      'test-folder/file_1.txt',
+      'test-folder/file_2.txt',
+    ];
+    expect(countObjects(keys)).toBe(2);
+  });
+
+  it('does not count nested folder markers', () => {
+    const keys = [
+      'test-folder/',
+      'test-folder/file_1.txt',
+      'test-folder/sub/',
+      'test-folder/sub/file_2.txt',
+    ];
+    expect(countObjects(keys)).toBe(2);
+  });
+
+  it('counts an empty folder as a single object', () => {
+    expect(countObjects(['test-folder/'])).toBe(1);
+  });
+
+  it('counts every folder when the scope holds only markers', () => {
+    // Sibling empty folders have no shared parent in scope, so reporting 1
+    // would undercount a run that removes all three.
+    expect(countObjects(['a/', 'b/', 'c/'])).toBe(3);
+    expect(countObjects(['test-folder/', 'test-folder/sub/'])).toBe(2);
+  });
+
+  it('returns zero when there is nothing at all', () => {
+    expect(countObjects([])).toBe(0);
+  });
+
+  it('counts flat objects with no markers involved', () => {
+    expect(countObjects(['a.txt', 'b.txt', 'c.txt'])).toBe(3);
+  });
+
+  it('counts only what succeeded when done is passed', () => {
+    const scope = ['folder/', 'folder/a.txt', 'folder/b.txt'];
+    expect(countObjects(scope, ['folder/', 'folder/a.txt'])).toBe(1);
+  });
+
+  it('reports zero when every object failed but the marker succeeded', () => {
+    const scope = ['folder/', 'folder/a.txt', 'folder/b.txt'];
+    expect(countObjects(scope, ['folder/'])).toBe(0);
+  });
+
+  it('still reports one for an empty folder that succeeded', () => {
+    expect(countObjects(['folder/'], ['folder/'])).toBe(1);
+  });
+
+  it('reports zero for an empty folder that failed', () => {
+    expect(countObjects(['folder/'], [])).toBe(0);
   });
 });
 

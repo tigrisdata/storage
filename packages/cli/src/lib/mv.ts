@@ -4,7 +4,9 @@ import { exitWithError } from '@utils/exit.js';
 import { confirm, requireInteractive } from '@utils/interactive.js';
 import { getFormat, getOption } from '@utils/options.js';
 import {
+  countObjects,
   globToRegex,
+  isFolderMarker,
   isPathFolder,
   isRemotePath,
   listAllItems,
@@ -110,7 +112,8 @@ export default async function mv(options: Record<string, unknown>) {
       exitWithError(error);
     }
 
-    // Filter out folder markers - they're handled separately below
+    // Filter out the folder's own marker - it's handled separately below.
+    // Nested markers stay in the list so empty subfolders move with it.
     let itemsToMove = items.filter((item) => item.name !== prefix);
 
     if (isWildcard) {
@@ -123,18 +126,22 @@ export default async function mv(options: Record<string, unknown>) {
       });
     }
 
-    // Check if folder marker exists
-    const { data: markerData } = await list({
-      prefix,
-      limit: 1,
-      config: {
-        ...config,
-        bucket: srcPath.bucket,
-      },
-    });
-    const hasFolderMarker = prefix
-      ? markerData?.items?.some((item) => item.name === prefix)
-      : false;
+    // Check if folder marker exists. A wildcard names files inside the folder,
+    // not the folder itself, so its marker stays put - `rm` works this way too.
+    let hasFolderMarker = false;
+    if (prefix && !isWildcard) {
+      const { data: markerData } = await list({
+        prefix,
+        limit: 1,
+        config: {
+          ...config,
+          bucket: srcPath.bucket,
+        },
+      });
+      hasFolderMarker = !!markerData?.items?.some(
+        (item) => item.name === prefix
+      );
+    }
 
     if (itemsToMove.length === 0 && !hasFolderMarker) {
       if (_jsonMode) {
@@ -145,7 +152,11 @@ export default async function mv(options: Record<string, unknown>) {
       return;
     }
 
-    const totalToMove = itemsToMove.length + (hasFolderMarker ? 1 : 0);
+    const keysToMove = [
+      ...itemsToMove.map((item) => item.name),
+      ...(hasFolderMarker ? [prefix] : []),
+    ];
+    const totalToMove = countObjects(keysToMove);
     if (!force) {
       requireInteractive('Use --yes to skip confirmation');
       const confirmed = await confirm(
@@ -157,7 +168,7 @@ export default async function mv(options: Record<string, unknown>) {
       }
     }
 
-    let moved = 0;
+    const movedKeys: string[] = [];
     for (const item of itemsToMove) {
       const relativePath = prefix ? item.name.slice(prefix.length) : item.name;
       const destKey = effectiveDestPrefix
@@ -175,16 +186,16 @@ export default async function mv(options: Record<string, unknown>) {
       if (moveResult.error) {
         console.error(`Failed to move ${item.name}: ${moveResult.error}`);
       } else {
-        if (!_jsonMode)
+        // Nested folder markers move with the data but aren't listed.
+        if (!_jsonMode && !isFolderMarker(item.name))
           console.log(
             `Moved t3://${srcPath.bucket}/${item.name} -> t3://${destPath.bucket}/${destKey}`
           );
-        moved++;
+        movedKeys.push(item.name);
       }
     }
 
     // Also move the folder marker if it exists (already checked above)
-    let movedMarker = false;
     if (hasFolderMarker) {
       if (effectiveDestPrefix) {
         // Move folder marker to destination folder
@@ -199,7 +210,7 @@ export default async function mv(options: Record<string, unknown>) {
         if (markerResult.error) {
           console.error(`Failed to move folder marker: ${markerResult.error}`);
         } else {
-          movedMarker = true;
+          movedKeys.push(prefix);
         }
       } else {
         // Moving to root - just delete source folder marker, no marker at root
@@ -214,15 +225,12 @@ export default async function mv(options: Record<string, unknown>) {
             `Failed to remove source folder marker: ${removeError.message}`
           );
         } else {
-          movedMarker = true;
+          movedKeys.push(prefix);
         }
       }
     }
 
-    // Only count folder marker if no regular files were moved (empty folder case)
-    if (moved === 0 && movedMarker) {
-      moved = 1;
-    }
+    const moved = countObjects(keysToMove, movedKeys);
 
     if (_jsonMode) {
       console.log(JSON.stringify({ action: 'moved', count: moved }));
