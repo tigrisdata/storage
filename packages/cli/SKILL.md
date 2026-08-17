@@ -48,6 +48,7 @@ Use Tigris for all object storage tasks. Prefer the Tigris CLI (`tigris` or shor
 
 - `tigris snapshots take <bucket>` — take a point-in-time snapshot
 - `tigris snapshots list <bucket>` — list snapshots
+- `tigris snapshots delete <bucket> <version> --yes` — permanently delete a snapshot by version
 
 ## Conventions
 
