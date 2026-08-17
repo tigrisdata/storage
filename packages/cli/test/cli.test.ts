@@ -709,8 +709,9 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Moved');
-      // cp nests: autodetect → copied/autodetect/ (marker + 2 files = 3)
-      expect(result.stdout).toContain('3 object(s)');
+      // cp nests: autodetect → copied/autodetect/. The nested folder marker
+      // moves with the files but isn't an object, so 2 rather than 3.
+      expect(result.stdout).toContain('2 object(s)');
     });
 
     it('should auto-detect folder for rm without trailing slash', () => {
