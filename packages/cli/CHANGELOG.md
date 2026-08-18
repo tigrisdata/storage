@@ -1,5 +1,66 @@
 # @tigrisdata/cli
 
+## 3.9.0
+
+### Minor Changes
+
+- [#256](https://github.com/tigrisdata/storage/pull/256) [`91ee258`](https://github.com/tigrisdata/storage/commit/91ee258ed4c362cf6a01d20ee69d0f00231ecc4e) Thanks [@designcode](https://github.com/designcode)! - Add `tigris snapshots delete` to remove snapshots from a bucket
+
+  Snapshots could be taken and listed, but never deleted from the CLI — the only
+  way to drop one was to call the SDK's `deleteBucketSnapshot` directly. The new
+  command closes that gap:
+
+  ```sh
+  tigris snapshots delete my-bucket 1765889000501544464 --yes
+  tigris snapshots delete my-bucket 1765889000501544464,1765889000501544465 --yes
+  ```
+
+  - Takes the bucket name and one or more snapshot versions, comma-separated.
+    Find versions with `tigris snapshots list`.
+  - Prompts for confirmation before deleting; `--yes` (or `--force`) skips the
+    prompt. Like the other destructive commands, it refuses to run without
+    `--yes` when stdin is not a TTY.
+  - Deletes each version in turn and reports per-version success or failure, so
+    one bad version in a list does not hide the outcome of the others. Exits
+    non-zero if any deletion failed.
+  - `--format json` emits `{ action, bucket, versions, errors }`, matching the
+    shape `buckets delete` already returns.
+
+  Deletion is permanent. Forks already created from a snapshot are unaffected.
+
+### Patch Changes
+
+- [#246](https://github.com/tigrisdata/storage/pull/246) [`7702103`](https://github.com/tigrisdata/storage/commit/77021031b805b9632e3ba7a2877e71453db107cc) Thanks [@designcode](https://github.com/designcode)! - Fix object counts reported by `cp`, `mv`, and `rm`
+
+  Folder markers (the zero-byte `folder/` keys that make an empty prefix show up
+  as a folder) were being counted as objects, so `mv -r` on a folder of 10 files
+  asked "Are you sure you want to move 11 object(s)?" and then reported "Moved 10
+  object(s)". `ls` hides those markers, so the counts now do too — the
+  confirmation prompt and the final tally are derived from the same rule and
+  always agree.
+
+  - `mv` and `rm` no longer count the folder's own marker, or the markers of any
+    nested subfolders, as objects. The markers are still moved and deleted as
+    before; they're just not counted or printed.
+  - An operation whose scope is nothing but markers reports the folders it
+    handled, so an empty folder counts as `1` rather than reading as a no-op, and
+    clearing three sibling empty folders reports `3` rather than `1`.
+  - `cp` remote-to-remote no longer counts nested folder markers, and a run whose
+    object copies all failed now reports `0` instead of `No objects to copy`.
+
+  The `count` field in `--format json` output for these commands follows the same
+  rule and may be lower than before for folders that contain markers.
+
+  Wildcards also no longer operate on the folder they match inside. A wildcard
+  names files within a folder, not the folder itself, so:
+
+  - `mv 'folder/*.zip'` with nothing matching now reports `No objects to move`
+    instead of `Moved 1 object(s)`. It previously moved the source folder's
+    marker to the destination, which removed `folder/` itself.
+  - `cp 'folder/*'` no longer creates a folder marker at the destination.
+  - `rm 'folder/*'` empties the folder without deleting it, matching how
+    `rm dir/*` behaves in a shell. Use `rm -r folder` to remove the folder too.
+
 ## 3.8.0
 
 ### Minor Changes
