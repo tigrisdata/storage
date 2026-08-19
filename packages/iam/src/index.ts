@@ -72,6 +72,11 @@ export {
   createTeam,
 } from './lib/team/create';
 export {
+  type DeleteTeamOptions,
+  type DeleteTeamResponse,
+  deleteTeam,
+} from './lib/team/delete';
+export {
   type EditTeamOptions,
   type EditTeamResponse,
   editTeam,
