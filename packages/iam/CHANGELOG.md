@@ -1,5 +1,11 @@
 # @tigrisdata/iam
 
+## 2.3.0
+
+### Minor Changes
+
+- [#257](https://github.com/tigrisdata/storage/pull/257) [`6b090d4`](https://github.com/tigrisdata/storage/commit/6b090d4a6ec16908db636ae1a5a30232a77f5fb4) Thanks [@designcode](https://github.com/designcode)! - Introduces deleteTeam method in iam package
+
 ## 2.2.2
 
 ### Patch Changes
