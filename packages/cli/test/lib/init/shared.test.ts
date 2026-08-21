@@ -2,7 +2,12 @@ import { delimiter } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  type AgentTarget,
+  buildSkillsArgs,
   defaultsHint,
+  rejectedAgents,
+  SUPPORTED_EDITORS,
+  splitRejectedEditors,
   withoutEphemeralBins,
 } from '../../../src/lib/init/shared.js';
 
@@ -121,5 +126,134 @@ describe('withoutEphemeralBins', () => {
   it('drops empty entries and tolerates an unset PATH', () => {
     expect(byPattern(path('', '/usr/bin', ''))).toBe('/usr/bin');
     expect(byPattern(undefined)).toBe('');
+  });
+});
+
+describe('buildSkillsArgs', () => {
+  it('pins the installer to @latest', () => {
+    // A bare `skills` lets npx reuse a cached release that may not know every
+    // agent name we pass, which fails the install for every editor at once.
+    expect(
+      buildSkillsArgs(['tigris-sdk-guide'], ['claude-code'], false)
+    ).toEqual([
+      '-y',
+      'skills@latest',
+      'add',
+      'github.com/tigrisdata/skills',
+      '--skill',
+      'tigris-sdk-guide',
+      '-a',
+      'claude-code',
+      '--yes',
+    ]);
+  });
+
+  it('adds -g for a global install and repeats each skill and agent', () => {
+    const args = buildSkillsArgs(['a', 'b'], ['claude-code', 'zed'], true);
+    expect(args.filter((a) => a === '--skill')).toHaveLength(2);
+    expect(args.filter((a) => a === '-a')).toHaveLength(2);
+    expect(args).toContain('-g');
+  });
+});
+
+describe('rejectedAgents', () => {
+  const OURS = ['claude-code', 'cursor', 'zed', 'antigravity-cli'];
+
+  it("picks the agents named on the installer's invalid-agents line", () => {
+    // The real failure: an older `skills` release predating Zed support.
+    const output = [
+      'ERROR Invalid agents: zed',
+      'Valid agents: amp, antigravity, claude-code, cline, codex, cursor, roo',
+    ].join('\n');
+    expect(rejectedAgents(output, OURS)).toEqual(['zed']);
+  });
+
+  it('never harvests names from the valid-agents list', () => {
+    const output = [
+      'Invalid agents: zed',
+      'Valid agents: claude-code, cursor, antigravity-cli',
+    ].join('\n');
+    expect(rejectedAgents(output, OURS)).toEqual(['zed']);
+  });
+
+  it('stops at a valid-agents list that shares the line', () => {
+    const output = 'Invalid agents: zed. Valid agents: claude-code, cursor';
+    expect(rejectedAgents(output, OURS)).toEqual(['zed']);
+  });
+
+  it('reads several rejected agents', () => {
+    const output = 'Invalid agents: zed, antigravity-cli\n';
+    expect(rejectedAgents(output, OURS)).toEqual(['zed', 'antigravity-cli']);
+  });
+
+  it('reads the singular form', () => {
+    expect(rejectedAgents('Invalid agent: zed', OURS)).toEqual(['zed']);
+  });
+
+  it("sees through the installer's colour codes", () => {
+    // A colour sequence ends in a letter, so without stripping it the name
+    // beside it fails the whole-word check.
+    const esc = String.fromCharCode(27);
+    const output = `${esc}[31mInvalid agents:${esc}[39m ${esc}[36mzed${esc}[39m`;
+    expect(rejectedAgents(output, OURS)).toEqual(['zed']);
+  });
+
+  it('matches whole names, so a prefix of one is not the other', () => {
+    // `antigravity` (upstream's name) must not condemn our `antigravity-cli`.
+    expect(rejectedAgents('Invalid agents: antigravity', OURS)).toEqual([]);
+    expect(
+      rejectedAgents('Invalid agents: antigravity-cli', ['antigravity-cli'])
+    ).toEqual(['antigravity-cli']);
+  });
+
+  it('returns nothing for unrelated failures', () => {
+    // A network or clone failure must not be read as an unsupported editor —
+    // dropping editors then would silently install less than asked.
+    for (const output of [
+      '',
+      'ERROR fatal: could not read from remote repository',
+      'Valid agents: claude-code, cursor, zed',
+    ]) {
+      expect(rejectedAgents(output, OURS)).toEqual([]);
+    }
+  });
+});
+
+describe('splitRejectedEditors', () => {
+  const editors = (...ids: AgentTarget[]) =>
+    SUPPORTED_EDITORS.filter((e) => ids.includes(e.id));
+  const ids = (list: { id: AgentTarget }[]) => list.map((e) => e.id);
+
+  // Verbatim from `skills add -a bogus-editor`; `zed` stands in for the agent an
+  // older release doesn't know yet.
+  const failure = [
+    '✖  Invalid agents: zed',
+    '➜  Valid agents: amp, antigravity, antigravity-cli, claude-code, cline, codex, cursor, roo, windsurf, opencode',
+  ].join('\n');
+
+  it('keeps the editors the installer supports and drops the rest', () => {
+    const { kept, dropped } = splitRejectedEditors(
+      editors('claude-code', 'cursor', 'zed'),
+      failure
+    );
+    expect(ids(kept)).toEqual(['claude-code', 'cursor']);
+    expect(ids(dropped)).toEqual(['zed']);
+  });
+
+  it('drops everything when no selected editor is supported', () => {
+    // The caller reports a skip rather than retrying with an empty agent list.
+    const { kept, dropped } = splitRejectedEditors(editors('zed'), failure);
+    expect(kept).toEqual([]);
+    expect(ids(dropped)).toEqual(['zed']);
+  });
+
+  it('keeps every editor when the failure has another cause', () => {
+    const selected = editors('claude-code', 'zed');
+    const { kept, dropped } = splitRejectedEditors(
+      selected,
+      'ERROR Failed to clone repository: network unreachable'
+    );
+    expect(kept).toEqual(selected);
+    expect(dropped).toEqual([]);
   });
 });

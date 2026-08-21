@@ -709,9 +709,17 @@ export const TIGRIS_SKILLS: SkillInfo[] = [
 ];
 
 /**
+ * The upstream installer, pinned to `@latest`. Given a bare `skills`, npx reuses
+ * whatever version is already in its cache without consulting the registry — and
+ * a stale one rejects agent names added since (`Invalid agents: zed`), which
+ * fails the install for every editor, not just the unknown one.
+ */
+const SKILLS_PACKAGE = 'skills@latest';
+
+/**
  * Args for the `npx` skills installer — non-interactive: installs the chosen
  * skills to the given agents in one call. Run as `npx <args>`, e.g.
- * `npx -y skills add github.com/tigrisdata/skills --skill tigris-sdk-guide -a claude-code`.
+ * `npx -y skills@latest add github.com/tigrisdata/skills --skill tigris-sdk-guide -a claude-code`.
  * `global` adds `-g` (user directory) instead of the default project scope.
  */
 export function buildSkillsArgs(
@@ -721,10 +729,73 @@ export function buildSkillsArgs(
 ): string[] {
   // Leading `-y` is npx's auto-install; trailing `--yes` makes the skills tool
   // itself non-interactive (it prompts by default).
-  const args = ['-y', 'skills', 'add', TIGRIS_SKILLS_REPO];
+  const args = ['-y', SKILLS_PACKAGE, 'add', TIGRIS_SKILLS_REPO];
   for (const skill of skillIds) args.push('--skill', skill);
   if (global) args.push('-g');
   for (const agent of skillsAgents) args.push('-a', agent);
   args.push('--yes');
   return args;
 }
+
+/**
+ * Which of `agents` the skills installer refused, read off its failure output
+ * (`Invalid agents: zed`). It validates every `-a` name before doing any work,
+ * so one name it doesn't know — an installer predating an editor, or a name
+ * renamed upstream — installs nothing for anybody; init drops these and retries
+ * with the rest.
+ *
+ * Scoped to the `Invalid agents:` line, because the installer follows it with a
+ * `Valid agents:` list naming most of ours. Matched against the names we passed
+ * rather than by parsing the list, so an unrelated failure (no network, clone
+ * refused) drops nobody.
+ */
+export function rejectedAgents(output: string, agents: string[]): string[] {
+  const plain = output.replace(ANSI_ESCAPE, '');
+  const start = plain.search(/Invalid agents?:/i);
+  if (start === -1) return [];
+  const lineEnd = plain.indexOf('\n', start);
+  let line = plain.slice(start, lineEnd === -1 ? undefined : lineEnd);
+  // Should the valid list ever share the line, stop before it. `\b` keeps this
+  // off the `Invalid agents:` header itself — "nv" is not a word boundary.
+  const validList = line.search(/\bvalid agents?:/i);
+  if (validList !== -1) line = line.slice(0, validList);
+  // Word-ish boundaries so `antigravity` can't match `antigravity-cli`.
+  return agents.filter((agent) =>
+    new RegExp(`(?<![\\w-])${escapeRegExp(agent)}(?![\\w-])`).test(line)
+  );
+}
+
+/**
+ * Split the editors an install was requested for by whether the installer can
+ * reach them, given its failure output. `dropped` is what to warn about and
+ * leave out; `kept` is what to retry with. Both are empty-safe: output that
+ * doesn't name any of our agents keeps everything, so a failure with another
+ * cause (offline, clone refused) is reported as-is rather than read as an
+ * unsupported editor.
+ */
+export function splitRejectedEditors(
+  editors: EditorInfo[],
+  output: string
+): { kept: EditorInfo[]; dropped: EditorInfo[] } {
+  const rejected = rejectedAgents(
+    output,
+    editors.map((e) => e.skillsAgent)
+  );
+  const isRejected = (e: EditorInfo) => rejected.includes(e.skillsAgent);
+  return {
+    kept: editors.filter((e) => !isRejected(e)),
+    dropped: editors.filter(isRejected),
+  };
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * SGR colour sequences, which the installer wraps its output in. They have to
+ * go before matching agent names: a sequence ends in a letter (`ESC[36m`), so
+ * `zed` in a coloured list would look like part of a longer word. Built from the
+ * escape's code point rather than written as a literal control character.
+ */
+const ANSI_ESCAPE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');

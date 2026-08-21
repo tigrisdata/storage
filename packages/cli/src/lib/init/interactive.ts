@@ -17,6 +17,7 @@ import {
   SUPPORTED_EDITORS,
   skillsDirsFor,
   spawnOpts,
+  splitRejectedEditors,
   TIGRIS_SKILLS,
   upsertTomlServer,
 } from './shared.js';
@@ -118,25 +119,11 @@ export async function runInteractive() {
     }
   }
 
-  // 7. Install the chosen Tigris agent skills. Output is captured (the skills
-  // tool prints a big banner); we report the destination dirs ourselves.
+  // 7. Install the chosen Tigris agent skills.
   if (skillsLocation === 'skip' || skillIds.length === 0) {
     p.log.info('Agent skills: skipped');
   } else {
-    const agents = editors.map((e) => e.skillsAgent);
-    const args = buildSkillsArgs(skillIds, agents, skillsLocation === 'global');
-    const result = runCommand(
-      'npx',
-      args,
-      `Installing ${skillIds.length} Tigris skill(s) (${skillsLocation})`
-    );
-    if (result.ok) {
-      for (const dir of skillsDirsFor(editors, skillsLocation, cwd)) {
-        p.log.success(`Skills → ${prettyPath(dir, home)}`);
-      }
-    } else if (result.output) {
-      p.log.error(result.output.split('\n').slice(-6).join('\n'));
-    }
+    installSkills(editors, skillIds, skillsLocation, cwd, home);
   }
 
   // 8. Hand off to the agent — use the installed CLI, or npx if unavailable.
@@ -238,6 +225,79 @@ function writeMcp(
   }
 }
 
+/**
+ * Install the chosen skills for the chosen editors, via the upstream `skills`
+ * installer. Output is captured (the tool prints a big banner of its own); we
+ * report the destination dirs ourselves.
+ *
+ * The installer takes every editor in one call and validates all of the `-a`
+ * names up front, so a single name it doesn't recognise — an older release that
+ * predates one of the editors we support — means nobody gets skills. When that
+ * happens, drop the editors it named and install for the rest: an editor the
+ * installer can't reach is worth a warning, not a failed step.
+ *
+ * `run` is the one seam the tests need: everything else here is a decision about
+ * what to run next and what to report, and only the spawn has to be faked.
+ */
+export function installSkills(
+  editors: EditorInfo[],
+  skillIds: string[],
+  scope: 'global' | 'project',
+  cwd: string,
+  home: string,
+  run: RunCommand = runCommand
+): void {
+  const attempt = (targets: EditorInfo[], startMsg: string) =>
+    run(
+      'npx',
+      buildSkillsArgs(
+        skillIds,
+        [...new Set(targets.map((e) => e.skillsAgent))],
+        scope === 'global'
+      ),
+      startMsg
+    );
+
+  let targets = editors;
+  let result = attempt(
+    targets,
+    `Installing ${skillIds.length} Tigris skill(s) (${scope})`
+  );
+
+  if (!result.ok) {
+    const { kept, dropped } = splitRejectedEditors(
+      targets,
+      result.output ?? ''
+    );
+    if (dropped.length > 0) {
+      p.log.warn(
+        `Skills: installer has no support for ${labels(dropped)} — skipped.`
+      );
+      if (kept.length === 0) {
+        p.log.info('Agent skills: skipped (no supported editor selected)');
+        return;
+      }
+      targets = kept;
+      result = attempt(
+        targets,
+        `Installing ${skillIds.length} Tigris skill(s) for ${labels(targets)}`
+      );
+    }
+  }
+
+  if (result.ok) {
+    for (const dir of skillsDirsFor(targets, scope, cwd)) {
+      p.log.success(`Skills → ${prettyPath(dir, home)}`);
+    }
+  } else if (result.output) {
+    p.log.error(result.output.split('\n').slice(-6).join('\n'));
+  }
+}
+
+function labels(editors: EditorInfo[]): string {
+  return editors.map((e) => e.label).join(', ');
+}
+
 /** Keep only string-valued fields (TOML upsert writes `k = "v"`). */
 function stringFields(entry: Record<string, unknown>): Record<string, string> {
   const out: Record<string, string> = {};
@@ -311,6 +371,13 @@ function installedCliCanHandOff(installed: string): boolean {
   }
   return true;
 }
+
+/** What `installSkills` needs of a command runner, so a test can stand in. */
+export type RunCommand = (
+  cmd: string,
+  args: string[],
+  startMsg: string
+) => { ok: boolean; output?: string };
 
 /** Run a command under a spinner; capture output and surface it on failure. */
 function runCommand(
