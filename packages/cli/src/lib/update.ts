@@ -12,8 +12,8 @@ import {
   getUpdateCommand,
   isNewerVersion,
 } from '@utils/update-check.js';
-
 import { version as currentVersion } from '../../package.json';
+import { NO_BANNER_ENV } from '../constants.js';
 
 const context = msg('update');
 
@@ -50,6 +50,9 @@ export default async function update(
       console.log('Updating...');
       execSync(updateCommand, {
         stdio: 'inherit',
+        // The npm path re-runs our postinstall; its banner greets a first-time
+        // install and only repeats what this command already reports.
+        env: { ...process.env, [NO_BANNER_ENV]: '1' },
         ...(process.platform === 'win32' ? { shell: 'powershell.exe' } : {}),
       });
       printSuccess(context, { latestVersion });

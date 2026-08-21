@@ -21,6 +21,12 @@ try {
 }
 
 // --- Show banner ---
+// Skipped when the CLI is installing or updating itself (`tigris init` and
+// `tigris update` set TIGRIS_NO_BANNER — see src/constants.ts). The banner goes
+// straight to /dev/tty, so it escapes the parent's captured stdio and would be
+// painted over the `init` wizard, and "To get started" is wrong for an update.
+if (process.env.TIGRIS_NO_BANNER === '1') process.exit(0);
+
 try {
   const tty = openSync('/dev/tty', 'w');
 
