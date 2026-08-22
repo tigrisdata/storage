@@ -113,7 +113,7 @@ importers:
         version: 2.4.1
       jose:
         specifier: ^6.2.3
-        version: 6.2.9
+        version: 6.2.10
       jsonc-parser:
         specifier: ^3.3.1
         version: 3.3.1
@@ -2261,8 +2261,8 @@ packages:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
     hasBin: true
 
-  jose@6.2.9:
-    resolution: {integrity: sha512-XrchZOFZUl/T3vTwRe8XK+cJrGtMF4th1ARnDfwbBXFKThGhlsxEE4Zu03AD/bjJSt/9jT/mxrOCkJWOg77aPA==}
+  jose@6.2.10:
+    resolution: {integrity: sha512-iiW7J9qRFlGxvCOIBDBDxFePQSn7ZMAnrYGhrrOo6siO/MIqwfyilLR27pkfDgUk+raLuzADS8A3S/KLBisc0g==}
 
   joycon@3.1.1:
     resolution: {integrity: sha512-34wB/Y7MW7bzjKRjUKTa46I2Z7eV62Rkhva+KkopW7Qvv/OSWBqvkSY7vusOPrNuZcUG3tApvdVgNB8POj3SPw==}
@@ -3383,7 +3383,7 @@ snapshots:
 
   '@auth0/auth0-auth-js@1.12.1':
     dependencies:
-      jose: 6.2.9
+      jose: 6.2.10
       openid-client: 6.8.5
 
   '@auth0/auth0-spa-js@2.24.1':
@@ -5438,7 +5438,7 @@ snapshots:
 
   jiti@2.6.1: {}
 
-  jose@6.2.9: {}
+  jose@6.2.10: {}
 
   joycon@3.1.1: {}
 
@@ -5807,7 +5807,7 @@ snapshots:
 
   openid-client@6.8.5:
     dependencies:
-      jose: 6.2.9
+      jose: 6.2.10
       oauth4webapi: 3.8.7
 
   outdent@0.5.0: {}
