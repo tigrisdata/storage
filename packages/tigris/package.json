@@ -1,6 +1,6 @@
 {
   "name": "tigris",
-  "version": "3.9.0",
+  "version": "3.9.1",
   "description": "Unscoped alias for @tigrisdata/cli — the command line interface for Tigris object storage",
   "type": "module",
   "bin": {
