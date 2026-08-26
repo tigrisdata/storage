@@ -28,6 +28,7 @@ export default async function listObjectVersions(
     'versionIdMarker',
   ]);
   const format = getFormat(options);
+  const deleted = !!getOption<boolean>(options, ['deleted']);
   const { limit } = getPaginationOptions(options);
 
   if (!bucketArg) {
@@ -43,6 +44,7 @@ export default async function listObjectVersions(
   const { data, error } = await listVersions({
     prefix,
     ...(delimiter ? { delimiter } : {}),
+    ...(deleted ? { deleted } : {}),
     ...(limit !== undefined ? { limit } : {}),
     ...(keyMarker ? { keyMarker } : {}),
     ...(versionIdMarker ? { versionIdMarker } : {}),

@@ -3,6 +3,7 @@ import { handleError } from '@shared/utils';
 import { getConfig, missingConfigError } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import { addSoftDeleteMiddleware } from './middleware';
 
 export type ListVersionsOptions = {
   delimiter?: string;
@@ -14,6 +15,13 @@ export type ListVersionsOptions = {
    * `keyMarker` is not also set, so passing it alone returns an error.
    */
   versionIdMarker?: string;
+  /**
+   * List the recoverable versions of the bucket's soft-deleted objects instead
+   * of its live ones. Use this to pick the `versionId` to hand to
+   * `restoreDeletedObject` or `purgeDeletedObject`; discover which keys are
+   * deleted in the first place with `list({ deleted: true })`.
+   */
+  deleted?: boolean;
   config?: TigrisStorageConfig;
 };
 
@@ -69,6 +77,10 @@ export async function listVersions(
     KeyMarker: options?.keyMarker,
     VersionIdMarker: options?.versionIdMarker,
   });
+
+  if (options?.deleted) {
+    addSoftDeleteMiddleware(command.middlewareStack);
+  }
 
   try {
     return tigrisClient

@@ -1007,7 +1007,7 @@ Low-level object operations for listing, downloading, uploading, and deleting in
 | Command | Description |
 |---------|-------------|
 | `tigris objects list` (l) | List objects in a bucket, optionally filtered by a key prefix |
-| `tigris objects list-versions` (lv) | List object versions and delete markers in a bucket (requires bucket versioning). Returns both arrays separately to match the S3 ListObjectVersions response |
+| `tigris objects list-versions` (lv) | List object versions and delete markers in a bucket (requires bucket versioning), or with --deleted the recoverable versions of soft-deleted objects. Returns both arrays separately to match the S3 ListObjectVersions response |
 | `tigris objects get` (g) | Download an object by key. Prints to stdout by default, or saves to a file with --output |
 | `tigris objects put` (p) | Upload a local file — or data piped via stdin — as an object. Content-type is auto-detected from the file extension unless overridden |
 | `tigris objects delete` (d) | Delete one or more objects by key from the given bucket. On a versioned bucket, the default creates a delete marker; use --version-id or --all-versions to hard-delete versions |
@@ -1016,6 +1016,8 @@ Low-level object operations for listing, downloading, uploading, and deleting in
 | `tigris objects info` (i) | Show metadata for an object (content type, size, modified date) |
 | `tigris objects restore` (rs) | Restore an archived object (e.g. one in the GLACIER tier) into an actively-readable copy for a number of days |
 | `tigris objects restore-info` (ri) | Show the restore state of an archived object (archived, in-progress, or restored) |
+| `tigris objects restore-deleted` (rd) | Restore a soft-deleted object within its retention window. List recoverable objects with "tigris objects list --deleted", then pick a version with "tigris objects list-versions --deleted" |
+| `tigris objects purge` (pg) | Permanently destroy a soft-deleted object version before its retention period expires. This cannot be undone — the version can no longer be restored with "tigris objects restore-deleted" |
 
 #### `tigris objects list` (l)
 
@@ -1033,6 +1035,7 @@ tigris objects list <bucket> [flags]
 | `--limit` | Maximum number of items to return per page |
 | `-pt, --page-token` | Pagination token from a previous request to fetch the next page |
 | `--source` | List objects from a specific storage source on buckets with shadow migration enabled |
+| `--deleted` | List soft-deleted objects instead of live ones. Requires soft delete on the bucket. Not the recovery path for snapshot buckets — use "tigris objects list-versions" for those |
 
 **Examples:**
 ```bash
@@ -1041,11 +1044,12 @@ tigris objects list t3://my-bucket
 tigris objects list t3://my-bucket/images/
 tigris objects list my-bucket --prefix images/
 tigris objects list my-bucket --format json
+tigris objects list my-bucket --deleted
 ```
 
 #### `tigris objects list-versions` (lv)
 
-List object versions and delete markers in a bucket (requires bucket versioning). Returns both arrays separately to match the S3 ListObjectVersions response
+List object versions and delete markers in a bucket (requires bucket versioning), or with --deleted the recoverable versions of soft-deleted objects. Returns both arrays separately to match the S3 ListObjectVersions response
 
 ```
 tigris objects list-versions <bucket> [flags]
@@ -1059,6 +1063,7 @@ tigris objects list-versions <bucket> [flags]
 | `--limit` | Maximum number of items to return per page |
 | `--key-marker` | Pagination marker — the key to start listing from (from a prior nextKeyMarker) |
 | `--version-id-marker` | Pagination marker — the version id to start listing from (from a prior nextVersionIdMarker) |
+| `--deleted` | List the recoverable versions of soft-deleted objects. Use the version id with "tigris objects restore-deleted" or "tigris objects purge" |
 
 **Examples:**
 ```bash
@@ -1066,6 +1071,7 @@ tigris objects list-versions my-bucket
 tigris objects list-versions t3://my-bucket/logs/
 tigris objects list-versions my-bucket --prefix images/
 tigris objects list-versions my-bucket --format json
+tigris objects list-versions my-bucket --prefix report.pdf --deleted
 ```
 
 #### `tigris objects get` (g)
@@ -1123,7 +1129,7 @@ tigris objects delete <bucket> [key] [flags]
 
 | Flag | Description |
 |------|-------------|
-| `--version-id` | Hard-delete a specific object version (requires bucket versioning). Targets a single key |
+| `--version-id` | Hard-delete a specific object version (requires bucket versioning). Targets a single key. To destroy a soft-deleted version, use "tigris objects purge" |
 | `--all-versions` | Hard-delete every version and delete marker for the given key(s). Mutually exclusive with --version-id |
 | `--force` | Skip confirmation prompts (alias for --yes) |
 
@@ -1146,7 +1152,7 @@ tigris objects set <bucket> [key] [flags]
 
 | Flag | Description |
 |------|-------------|
-| `-a, --access` | Access level |
+| `-a, --access` | Access level **(required)** |
 | `-n, --new-key` | Rename the object to a new key |
 
 **Examples:**
@@ -1238,6 +1244,45 @@ tigris objects restore-info <bucket> [key] [flags]
 tigris objects restore-info my-bucket archived.bin
 tigris objects restore-info t3://my-bucket/archived.bin --format json
 tigris objects restore-info my-bucket archived.bin --snapshot-version 1765889000501544464
+```
+
+#### `tigris objects restore-deleted` (rd)
+
+Restore a soft-deleted object within its retention window. List recoverable objects with "tigris objects list --deleted", then pick a version with "tigris objects list-versions --deleted"
+
+```
+tigris objects restore-deleted <bucket> [key] [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--version-id` | The soft-deleted version to bring back, from "tigris objects list-versions --deleted" **(required)** |
+| `--format` | Output format (default: table) |
+
+**Examples:**
+```bash
+tigris objects restore-deleted my-bucket report.pdf --version-id 1787749774802410496
+tigris objects restore-deleted t3://my-bucket/report.pdf --version-id 1787749774802410496
+```
+
+#### `tigris objects purge` (pg)
+
+Permanently destroy a soft-deleted object version before its retention period expires. This cannot be undone — the version can no longer be restored with "tigris objects restore-deleted"
+
+```
+tigris objects purge <bucket> [key] [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--version-id` | The soft-deleted version to destroy, from "tigris objects list-versions --deleted" **(required)** |
+| `--force` | Skip confirmation prompts (alias for --yes) |
+| `--format` | Output format (default: table) |
+
+**Examples:**
+```bash
+tigris objects purge my-bucket report.pdf --version-id 1787749774802410496 --yes
+tigris objects purge t3://my-bucket/report.pdf --version-id 1787749774802410496 --yes
 ```
 
 ### `tigris access-keys` (keys)
@@ -1667,7 +1712,7 @@ tigris iam users update-role [resource] [flags]
 
 | Flag | Description |
 |------|-------------|
-| `-r, --role` | Role(s) to assign (comma-separated). Each role pairs with the corresponding user ID. If one role is given, it applies to all users |
+| `-r, --role` | Role(s) to assign (comma-separated). Each role pairs with the corresponding user ID. If one role is given, it applies to all users **(required)** |
 
 **Examples:**
 ```bash

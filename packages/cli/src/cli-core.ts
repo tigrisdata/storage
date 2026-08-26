@@ -477,6 +477,13 @@ export function validateRequiredWhen(
 
     if (arg.required && !getOptionValue(options, arg.name, args)) {
       console.error(`--${arg.name} is required`);
+      // `required` is invisible in --help and the generated docs for
+      // non-positional arguments, so the description is the only place that
+      // says what a valid value is or where to get one. Echo it here rather
+      // than making the user go and run --help.
+      if (arg.description) {
+        console.error(`  ${arg.description}`);
+      }
       return false;
     }
   }
@@ -655,7 +662,10 @@ export function registerCommands(
               allArguments.length > 0 &&
               !validateRequiredWhen(allArguments, extracted)
             ) {
-              return;
+              // validateRequiredWhen has already printed the reason. Exit
+              // non-zero so scripts can tell a rejected invocation from a
+              // successful one — returning here reported success.
+              process.exit(1);
             }
 
             checkRemovedArguments(allArguments, extracted);
@@ -706,7 +716,9 @@ export function registerCommands(
           spec.arguments &&
           !validateRequiredWhen(spec.arguments, extracted)
         ) {
-          return;
+          // See the matching branch above: exit non-zero rather than
+          // returning, so a rejected invocation is visible to callers.
+          process.exit(1);
         }
 
         checkRemovedArguments(spec.arguments, extracted);

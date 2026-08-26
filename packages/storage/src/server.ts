@@ -151,14 +151,23 @@ export {
   getPresignedUrl,
 } from './lib/object/presigned-url';
 export { type PutOptions, type PutResponse, put } from './lib/object/put';
-export { type RemoveOptions, remove } from './lib/object/remove';
+export {
+  type PurgeDeletedObjectOptions,
+  type PurgeDeletedObjectResponse,
+  purgeDeletedObject,
+  type RemoveOptions,
+  remove,
+} from './lib/object/remove';
 export {
   type GetRestoreInfoOptions,
   getRestoreInfo,
+  type RestoreDeletedObjectOptions,
+  type RestoreDeletedObjectResponse,
   type RestoreInfo,
   type RestoreObjectOptions,
   type RestoreObjectResponse,
   RestoreStatus,
+  restoreDeletedObject,
   restoreObject,
 } from './lib/object/restore';
 export {
