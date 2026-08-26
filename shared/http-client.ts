@@ -9,10 +9,10 @@ import {
 } from './hooks';
 import {
   computeRetryDelay,
+  isRetryableFailure,
   type ResolvedRetry,
   type RetryConfig,
   resolveRetry,
-  shouldRetryFailure,
   sleep,
 } from './retry';
 import type { TigrisResponse } from './types';
@@ -376,15 +376,19 @@ export function createTigrisHttpClient(
             error,
           };
 
-          if (shouldRetryFailure(retry, context)) {
+          // Evaluated once: a caller's `shouldRetry` may have side effects,
+          // and it also decides the reported source below.
+          const retryable = isRetryableFailure(retry, context);
+
+          if (retryable && attempt < retry.attempts) {
             const delayMs = computeRetryDelay(retry, attempt);
             emitRetry(attempt, delayMs, error.message, error);
-            await sleep(delayMs);
+            await sleep(delayMs, req.signal);
             continue;
           }
 
           emitError(
-            attempt > 1 ? 'retries_exhausted' : 'network_error',
+            retryable ? 'retries_exhausted' : 'network_error',
             attempt,
             error.message,
             error
@@ -411,19 +415,21 @@ export function createTigrisHttpClient(
             status: response.status,
           };
 
-          if (shouldRetryFailure(retry, context)) {
+          const retryable = isRetryableFailure(retry, context);
+
+          if (retryable && attempt < retry.attempts) {
             const delayMs = computeRetryDelay(
               retry,
               attempt,
               response.headers.get('retry-after')
             );
             emitRetry(attempt, delayMs, message, error, response.status);
-            await sleep(delayMs);
+            await sleep(delayMs, req.signal);
             continue;
           }
 
           emitError(
-            attempt > 1 ? 'retries_exhausted' : 'http_error',
+            retryable ? 'retries_exhausted' : 'http_error',
             attempt,
             message,
             error,
@@ -471,7 +477,13 @@ export function createTigrisHttpClient(
           // Read as text first: endpoints like `POST ?restore` answer 200 with
           // an empty body while still advertising JSON, and `response.json()`
           // throws on ''. Parse only when there is something to parse.
-          const text = await safeText(response);
+          //
+          // Deliberately not `safeText` here. On a 2xx the body *is* the
+          // result, so a mid-stream read failure is the real error and must
+          // propagate — swallowing it to '' would be indistinguishable from a
+          // legitimately empty body and would hand the caller a bogus `{}`
+          // that later normalizes into plausible-looking defaults.
+          const text = await response.text();
           data = (text ? JSON.parse(text) : {}) as TResponse;
         } else {
           data = (await response.text()) as TResponse;

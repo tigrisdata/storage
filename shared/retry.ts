@@ -55,6 +55,10 @@ export interface RetryOptions {
    * Full override for the retry decision. When supplied, it replaces both
    * `retryableStatuses` and `retryNetworkErrors` — the attempt ceiling still
    * applies.
+   *
+   * Called once per failed attempt, including the final one, where its result
+   * decides whether the failure is reported as `retries_exhausted` rather than
+   * a plain error. Keep it pure: it is a classification, not a hook.
    */
   shouldRetry?: (context: RetryContext) => boolean;
 }
@@ -144,15 +148,20 @@ export function resolveRetry(
   };
 }
 
-/** Whether the failure described by `context` earns another attempt. */
-export function shouldRetryFailure(
+/**
+ * Whether the failure described by `context` is retryable *by policy*,
+ * ignoring how many attempts are left.
+ *
+ * Kept separate from the attempt ceiling so a caller can tell the two reasons
+ * for giving up apart: a retryable failure that ran out of attempts is
+ * `retries_exhausted`, while a failure that was never retryable is not — even
+ * when it happens on a later attempt. Conflating them reports an exhausted
+ * budget for, say, a `503` followed by a `403`.
+ */
+export function isRetryableFailure(
   retry: ResolvedRetry,
   context: RetryContext
 ): boolean {
-  if (context.attempt >= retry.attempts) {
-    return false;
-  }
-
   if (retry.shouldRetry) {
     return retry.shouldRetry(context);
   }
@@ -217,9 +226,42 @@ export function computeRetryDelay(
   return Math.round(random() * exponential);
 }
 
-export function sleep(ms: number): Promise<void> {
+/** The value a runtime would reject an aborted operation with. */
+function abortReason(signal: AbortSignal): unknown {
+  return (
+    signal.reason ?? new DOMException('The operation was aborted', 'AbortError')
+  );
+}
+
+/**
+ * Wait `ms`, rejecting early if `signal` aborts.
+ *
+ * Backoff has to observe cancellation: a `Retry-After` can hold the caller for
+ * the whole of `maxDelayMs`, and without this an abort would wait that out and
+ * then burn a signing pass and a `fetch` that is going to reject anyway.
+ */
+export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) {
+    return Promise.reject(abortReason(signal));
+  }
+
   if (ms <= 0) {
     return Promise.resolve();
   }
-  return new Promise((resolve) => setTimeout(resolve, ms));
+
+  return new Promise((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout>;
+
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(abortReason(signal as AbortSignal));
+    };
+
+    timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 }

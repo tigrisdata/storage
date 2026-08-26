@@ -161,8 +161,12 @@ describe('retry', () => {
     });
     await client.request({ method: 'GET', path: '/bucket' });
 
-    expect(seen).toHaveLength(1);
-    expect(`${seen[0].origin}${seen[0].path}`).toBe(fetchMock.mock.calls[0][0]);
+    // Once per failed attempt — including the last, where the result decides
+    // whether this reports as `retries_exhausted`.
+    expect(seen).toHaveLength(2);
+    for (const { origin, path } of seen) {
+      expect(`${origin}${path}`).toBe(fetchMock.mock.calls[0][0]);
+    }
   });
 
   it('re-signs every attempt so x-amz-date stays inside its window', async () => {
@@ -277,6 +281,30 @@ describe('transport failures', () => {
     );
   });
 
+  it('cuts the backoff short when the caller aborts mid-wait', async () => {
+    // A Retry-After can hold the caller for the whole of maxDelayMs; an abort
+    // must not have to wait that out and then burn another signing pass.
+    fetchMock.mockImplementation(() =>
+      json(429, { Message: 'slow down' }, { headers: { 'retry-after': '30' } })
+    );
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 20);
+
+    const client = makeClient({
+      retry: { attempts: 3, baseDelayMs: 5000, maxDelayMs: 30_000 },
+    });
+
+    const started = Date.now();
+    await expect(
+      client.request({ method: 'GET', path: '/x', signal: controller.signal })
+    ).rejects.toThrow();
+    const elapsed = Date.now() - started;
+
+    expect(elapsed).toBeLessThan(1000);
+    // Only the first attempt ran; the retry never fired.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('forwards an AbortSignal to fetch', async () => {
     fetchMock.mockImplementation(() => json(200, { ok: true }));
     const controller = new AbortController();
@@ -371,6 +399,27 @@ describe('body parsing', () => {
 
     expect(response.error).toBeUndefined();
     expect(response.data).toEqual({});
+  });
+
+  it('propagates a mid-stream body failure instead of returning empty data', async () => {
+    // The 2xx body *is* the result, so a read that dies partway through is the
+    // real error. Swallowing it would be indistinguishable from an empty body
+    // and would hand the caller a `{}` that normalizes into bogus defaults.
+    fetchMock.mockImplementation(
+      () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(new Error('connection reset mid-body'));
+            },
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+    );
+
+    await expect(
+      makeClient().request({ method: 'GET', path: '/x' })
+    ).rejects.toThrow();
   });
 
   it('returns non-JSON bodies as text', async () => {
@@ -480,6 +529,42 @@ describe('hooks', () => {
       attempt: 3,
       attempts: 3,
       status: 500,
+    });
+  });
+
+  it('does not claim retries_exhausted when a later attempt is non-retryable', async () => {
+    // 503 (retried) then 403 (not retryable) with budget to spare: the reason
+    // we stopped is the status, not an exhausted budget. Reporting otherwise
+    // points telemetry at capacity when the real cause is auth.
+    fetchMock
+      .mockImplementationOnce(() => json(503, { Message: 'unavailable' }))
+      .mockImplementationOnce(() => json(403, { Message: 'denied' }));
+    const onError = vi.fn();
+    setTigrisHttpHooks({ onError });
+
+    const client = makeClient({ retry: { attempts: 3, baseDelayMs: 0 } });
+    await client.request({ method: 'GET', path: '/x' });
+
+    expect(onError.mock.calls[0][0]).toMatchObject({
+      source: 'http_error',
+      status: 403,
+      attempt: 2,
+      attempts: 3,
+    });
+  });
+
+  it('reports retries_exhausted only when the budget actually ran out', async () => {
+    fetchMock.mockImplementation(() => json(503, { Message: 'unavailable' }));
+    const onError = vi.fn();
+    setTigrisHttpHooks({ onError });
+
+    const client = makeClient({ retry: { attempts: 2, baseDelayMs: 0 } });
+    await client.request({ method: 'GET', path: '/x' });
+
+    expect(onError.mock.calls[0][0]).toMatchObject({
+      source: 'retries_exhausted',
+      attempt: 2,
+      attempts: 2,
     });
   });
 

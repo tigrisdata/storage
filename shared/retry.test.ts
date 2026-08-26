@@ -2,13 +2,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   computeRetryDelay,
   DEFAULT_RETRYABLE_STATUSES,
+  isRetryableFailure,
   parseRetryAfter,
   resolveRetry,
-  shouldRetryFailure,
 } from './retry';
 
 const context = (
-  overrides: Partial<Parameters<typeof shouldRetryFailure>[1]>
+  overrides: Partial<Parameters<typeof isRetryableFailure>[1]>
 ) => ({
   method: 'POST',
   origin: 'https://t3.storage.dev',
@@ -91,20 +91,20 @@ describe('resolveRetry', () => {
   });
 });
 
-describe('shouldRetryFailure', () => {
+describe('isRetryableFailure', () => {
   it('retries the default transient statuses', () => {
     const retry = resolveRetry(true, 'GET');
 
     for (const status of DEFAULT_RETRYABLE_STATUSES) {
-      expect(shouldRetryFailure(retry, context({ status }))).toBe(true);
+      expect(isRetryableFailure(retry, context({ status }))).toBe(true);
     }
   });
 
   it('never retries 400 or 403', () => {
     const retry = resolveRetry(true, 'GET');
 
-    expect(shouldRetryFailure(retry, context({ status: 400 }))).toBe(false);
-    expect(shouldRetryFailure(retry, context({ status: 403 }))).toBe(false);
+    expect(isRetryableFailure(retry, context({ status: 400 }))).toBe(false);
+    expect(isRetryableFailure(retry, context({ status: 403 }))).toBe(false);
   });
 
   it('retries statuses identically for every method', () => {
@@ -114,37 +114,39 @@ describe('shouldRetryFailure', () => {
     for (const method of ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE']) {
       const retry = resolveRetry(true, method);
 
-      expect(shouldRetryFailure(retry, context({ method, status: 503 }))).toBe(
+      expect(isRetryableFailure(retry, context({ method, status: 503 }))).toBe(
         true
       );
-      expect(shouldRetryFailure(retry, context({ method, status: 429 }))).toBe(
+      expect(isRetryableFailure(retry, context({ method, status: 429 }))).toBe(
         true
       );
-      expect(shouldRetryFailure(retry, context({ method, status: 403 }))).toBe(
+      expect(isRetryableFailure(retry, context({ method, status: 403 }))).toBe(
         false
       );
     }
   });
 
-  it('stops at the attempt ceiling', () => {
+  it('ignores the attempt ceiling — that is the caller"s check', () => {
+    // Separating the two lets the caller tell "ran out of attempts" from
+    // "was never retryable", which is what the reported source depends on.
     const retry = resolveRetry({ attempts: 2 }, 'GET');
 
     expect(
-      shouldRetryFailure(retry, context({ status: 500, attempt: 1 }))
+      isRetryableFailure(retry, context({ status: 500, attempt: 1 }))
     ).toBe(true);
     expect(
-      shouldRetryFailure(retry, context({ status: 500, attempt: 2 }))
-    ).toBe(false);
+      isRetryableFailure(retry, context({ status: 500, attempt: 9 }))
+    ).toBe(true);
   });
 
   it('retries transport errors only when enabled', () => {
     const error = new Error('connection reset');
 
     expect(
-      shouldRetryFailure(resolveRetry(true, 'GET'), context({ error }))
+      isRetryableFailure(resolveRetry(true, 'GET'), context({ error }))
     ).toBe(true);
     expect(
-      shouldRetryFailure(
+      isRetryableFailure(
         resolveRetry({ retryNetworkErrors: false }, 'GET'),
         context({ error })
       )
@@ -157,14 +159,14 @@ describe('shouldRetryFailure', () => {
       'GET'
     );
 
-    expect(shouldRetryFailure(retry, context({ status: 403 }))).toBe(true);
-    expect(shouldRetryFailure(retry, context({ status: 500 }))).toBe(false);
+    expect(isRetryableFailure(retry, context({ status: 403 }))).toBe(true);
+    expect(isRetryableFailure(retry, context({ status: 500 }))).toBe(false);
   });
 
-  it('applies the attempt ceiling even with a custom shouldRetry', () => {
+  it('defers to a custom shouldRetry regardless of attempt', () => {
     const retry = resolveRetry({ attempts: 2, shouldRetry: () => true }, 'GET');
 
-    expect(shouldRetryFailure(retry, context({ attempt: 2 }))).toBe(false);
+    expect(isRetryableFailure(retry, context({ attempt: 2 }))).toBe(true);
   });
 });
 
