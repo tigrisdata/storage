@@ -4,6 +4,9 @@
   "private": true,
   "description": "Internal shared source for @tigrisdata/* packages. Consumed via the @shared/* TS path alias and tsup esbuild alias; never built or published.",
   "type": "module",
+  "scripts": {
+    "test": "vitest run --config vitest.config.ts"
+  },
   "dependencies": {
     "@aws-crypto/sha256-js": "^5.2.0",
     "@smithy/signature-v4": "^5.3.14",
