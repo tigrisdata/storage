@@ -1,5 +1,29 @@
 # @tigrisdata/cli
 
+## 3.10.0
+
+### Minor Changes
+
+- [#272](https://github.com/tigrisdata/storage/pull/272) [`ce88477`](https://github.com/tigrisdata/storage/commit/ce88477ee61d073710f6cf1e3726799946ca29e8) Thanks [@designcode](https://github.com/designcode)! - Surface soft-delete object recovery in the CLI.
+
+  - `tigris objects list <bucket> --deleted` lists soft-deleted objects.
+  - `tigris objects list-versions <bucket> --deleted` lists their recoverable versions.
+  - `tigris objects restore-deleted <bucket> <key> --version-id <id>` brings one back.
+  - `tigris objects purge <bucket> <key> --version-id <id>` destroys one for good.
+
+  Also documents that soft delete should not be relied on for snapshot buckets — those keep deleted objects as versions, recoverable with `tigris objects list-versions`.
+
+### Patch Changes
+
+- [#272](https://github.com/tigrisdata/storage/pull/272) [`ce88477`](https://github.com/tigrisdata/storage/commit/ce88477ee61d073710f6cf1e3726799946ca29e8) Thanks [@designcode](https://github.com/designcode)! - Fix commands exiting 0 when a required argument was missing.
+
+  A command declaring an argument as required printed the reason (e.g. `--access is required`) and then exited 0, so a rejected invocation was indistinguishable from a successful one and scripts carried on as if the command had worked. It now exits 1. Affects `tigris objects set --access` and `tigris iam users update-role --role`.
+
+  The error also now prints the argument's description, since a required flag was previously indistinguishable from an optional one. Required flags are marked as such in the generated command reference for the same reason.
+
+- Updated dependencies [[`ce88477`](https://github.com/tigrisdata/storage/commit/ce88477ee61d073710f6cf1e3726799946ca29e8), [`ce88477`](https://github.com/tigrisdata/storage/commit/ce88477ee61d073710f6cf1e3726799946ca29e8)]:
+  - @tigrisdata/storage@3.20.0
+
 ## 3.9.1
 
 ### Patch Changes
