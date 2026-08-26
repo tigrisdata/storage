@@ -79,5 +79,6 @@ export function createIAMClient(
     organizationId,
     accessKeyId,
     secretAccessKey,
+    retry: options?.retry ?? config.retry,
   });
 }

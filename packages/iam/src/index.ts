@@ -1,3 +1,13 @@
+export {
+  type HttpErrorContext,
+  type HttpErrorSource,
+  type RetryConfig,
+  type RetryContext,
+  type RetryHookContext,
+  type RetryOptions,
+  setTigrisHttpHooks,
+  type TigrisHttpHooks,
+} from '@shared/index';
 export type { TigrisConfig } from '@shared/types';
 export {
   type AssignBucketRolesOptions,

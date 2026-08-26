@@ -33,5 +33,6 @@ export function createStorageClient(
     organizationId,
     accessKeyId,
     secretAccessKey,
+    retry: options?.retry ?? config.retry,
   });
 }
