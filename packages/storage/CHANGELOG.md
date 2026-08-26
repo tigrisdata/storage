@@ -1,5 +1,26 @@
 # @tigrisdata/storage
 
+## 3.20.0
+
+### Minor Changes
+
+- [#272](https://github.com/tigrisdata/storage/pull/272) [`ce88477`](https://github.com/tigrisdata/storage/commit/ce88477ee61d073710f6cf1e3726799946ca29e8) Thanks [@designcode](https://github.com/designcode)! - Add soft-delete object recovery: list deleted objects, restore one, or purge it for good.
+
+  - `list({ deleted: true })` and `listVersions({ deleted: true })` read the bucket's soft-delete view instead of its live objects.
+  - `restoreDeletedObject(path, versionId)` brings a deleted object back.
+  - `purgeDeletedObject(path, versionId)` permanently destroys a deleted version before its retention period expires.
+
+### Patch Changes
+
+- [#272](https://github.com/tigrisdata/storage/pull/272) [`ce88477`](https://github.com/tigrisdata/storage/commit/ce88477ee61d073710f6cf1e3726799946ca29e8) Thanks [@designcode](https://github.com/designcode)! - Surface soft-delete object recovery in the CLI.
+
+  - `tigris objects list <bucket> --deleted` lists soft-deleted objects.
+  - `tigris objects list-versions <bucket> --deleted` lists their recoverable versions.
+  - `tigris objects restore-deleted <bucket> <key> --version-id <id>` brings one back.
+  - `tigris objects purge <bucket> <key> --version-id <id>` destroys one for good.
+
+  Also documents that soft delete should not be relied on for snapshot buckets — those keep deleted objects as versions, recoverable with `tigris objects list-versions`.
+
 ## 3.19.0
 
 ### Minor Changes
