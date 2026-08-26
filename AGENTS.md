@@ -200,3 +200,46 @@ access-key auth:
   `=`, `&`) — catches the `uriEscapePath` regression. Unit tests on
   `encodeObjectKey` alone aren't enough; the bug only shows up when
   the signer's canonicalization pass runs end-to-end.
+
+### Object soft delete does not take effect immediately
+
+Scope: object-level soft delete — `updateBucket(name, { softDelete })`,
+`list({ deleted: true })`, `listVersions({ deleted: true })`,
+`restoreDeletedObject`, and `purgeDeletedObject`.
+
+Enabling soft delete on a bucket does not reach the data plane straight
+away. A delete issued inside that window is an ordinary **hard** delete:
+nothing lands in the soft-delete view, and no amount of polling makes it
+appear, because there is nothing to find. Measured on a fresh bucket, a
+delete at +389ms after `updateBucket` was unrecoverable, while every
+delete from +4.8s onward was recoverable.
+
+**Rule for tests**: never `put` → `remove` → assert immediately after
+enabling soft delete. Retry the whole put/delete cycle until a
+recoverable copy actually appears — see `softDeleteObject()` in
+`packages/storage/src/test/soft-delete.integration.test.ts`.
+
+Symptoms that point at this:
+
+- `list({ deleted: true })` and `listVersions({ deleted: true })` both
+  return empty for a key you just deleted, and stay empty however long
+  you wait.
+- The same test passes when run on its own (more elapsed time before the
+  first delete) but fails in a suite, or vice versa.
+
+Other behaviour worth knowing before you debug it as a bug:
+
+- The listing view and the versions view are **separate indexes that
+  settle independently**. Waiting for a key to appear in
+  `listVersions({ deleted: true })` does not mean `list({ deleted: true })`
+  reports it yet. Assert against whichever view the test is about.
+- `retentionDays` must be between 7 and 90; the gateway rejects anything
+  outside that range.
+- Soft delete produced no recoverable copies at all on snapshot buckets
+  in testing. Those retain deleted objects as versions and delete
+  markers, recoverable through `listVersions()` and
+  `remove(path, { versionId })` instead.
+- To destroy a soft-deleted version use `purgeDeletedObject`, not
+  `remove(path, { versionId })` — a versioned delete aimed at a
+  soft-deleted version is rejected with `400 InvalidArgument` unless it
+  targets the soft-delete view.

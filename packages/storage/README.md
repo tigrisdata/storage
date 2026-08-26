@@ -437,6 +437,7 @@ list(options?: ListOptions): Promise<TigrisStorageResponse<ListResponse, Error>>
 | limit           | No           | The maximum number of objects to return. By default, returns up to 100 objects.  |
 | paginationToken | No           | The pagination token to continue listing objects from the previous request.      |
 | snapshotVersion | No           | Snapshot version of the bucket.                                                  |
+| deleted         | No           | List [soft-deleted objects](#recovering-deleted-objects) instead of live ones.   |
 | config          | No           | A configuration object to override the [default configuration](#authentication). |
 
 In case of successful `list`, the `data` property will be set to the list of objects and contains the following properties:
@@ -485,6 +486,127 @@ if (currentPage.data) {
 
 console.log(allFiles);
 ```
+
+## Recovering deleted objects
+
+When a bucket has soft delete enabled, deleting an object keeps a recoverable
+copy for the bucket's retention period instead of destroying it. Enable it with
+`updateBucket`:
+
+```ts
+await updateBucket('my-bucket', {
+  softDelete: { enabled: true, retentionDays: 30 },
+});
+```
+
+`retentionDays` must be between 7 and 90. Note that enabling soft delete takes
+a few seconds to take effect — an object deleted immediately afterwards may
+still be deleted for good.
+
+Recovering an object is a three-step flow: find the deleted keys, pick the
+version to act on, then restore or purge it.
+
+### 1. Find deleted objects
+
+Pass `deleted: true` to [`list`](#listing-objects). This is a separate view
+rather than an addition — the response contains only deleted objects, and live
+objects are left out. `prefix`, `delimiter`, `limit` and `paginationToken` all
+work as they normally do.
+
+```ts
+const result = await list({ deleted: true, prefix: 'Data/' });
+
+if (result.error) {
+  console.error('Error listing deleted objects:', result.error);
+} else {
+  console.log('Deleted objects:', result.data.items);
+}
+```
+
+### 2. Pick a version
+
+Pass `deleted: true` to `listVersions` to see the recoverable versions of a
+deleted object. Restoring and purging both act on a single version, so this is
+where you choose which one.
+
+```ts
+const { data } = await listVersions({
+  prefix: 'Data/small.txt',
+  deleted: true,
+});
+
+const versionId = data?.versions[0]?.versionId;
+```
+
+### 3. Restore or purge it
+
+#### `restoreDeletedObject`
+
+```ts
+restoreDeletedObject(path: string, versionId: string, options?: RestoreDeletedObjectOptions): Promise<TigrisStorageResponse<RestoreDeletedObjectResponse, Error>>;
+```
+
+Brings a deleted object back as a live object. This is unrelated to
+`restoreObject`, which thaws an archived (`GLACIER`) object.
+
+`restoreDeletedObject` accepts the following parameters:
+
+- `path`: (Required) A string specifying the path to the object
+- `versionId`: (Required) The soft-deleted version to bring back, from `listVersions({ deleted: true })`
+- `options`: (Optional) A JSON object with the following optional parameters:
+
+#### `options`
+
+| **Parameter** | **Required** | **Values**                                                                       |
+| ------------- | ------------ | -------------------------------------------------------------------------------- |
+| config        | No           | A configuration object to override the [default configuration](#authentication). |
+
+```ts
+const result = await restoreDeletedObject('Data/small.txt', versionId);
+
+if (result.error) {
+  console.error('Error restoring object:', result.error);
+} else {
+  console.log('Object restored:', result.data.path);
+}
+```
+
+#### `purgeDeletedObject`
+
+```ts
+purgeDeletedObject(path: string, versionId: string, options?: PurgeDeletedObjectOptions): Promise<TigrisStorageResponse<PurgeDeletedObjectResponse, Error>>;
+```
+
+Permanently destroys one deleted version before its retention period would
+have expired. This cannot be undone — the version can no longer be restored.
+
+`purgeDeletedObject` accepts the following parameters:
+
+- `path`: (Required) A string specifying the path to the object
+- `versionId`: (Required) The soft-deleted version to destroy, from `listVersions({ deleted: true })`
+- `options`: (Optional) A JSON object with the following optional parameters:
+
+#### `options`
+
+| **Parameter** | **Required** | **Values**                                                                       |
+| ------------- | ------------ | -------------------------------------------------------------------------------- |
+| config        | No           | A configuration object to override the [default configuration](#authentication). |
+
+```ts
+const result = await purgeDeletedObject('Data/small.txt', versionId);
+
+if (result.error) {
+  console.error('Error purging object:', result.error);
+} else {
+  console.log('Object purged for good:', result.data.path);
+}
+```
+
+Note this is not the same call as `remove(path, { versionId })`. A versioned
+delete aimed at a soft-deleted version is rejected with `400 InvalidArgument`
+unless it targets the soft-delete view, which is what this function does.
+`remove(path, { versionId })` is still the right call for hard-deleting a live
+object's versions on a versioned bucket.
 
 ## Creating a bucket
 

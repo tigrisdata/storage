@@ -4,7 +4,10 @@ import { TigrisHeaders } from '@shared/index';
 import { getConfig, missingConfigError } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
-import { addSnapshotVersionMiddleware } from './middleware';
+import {
+  addSnapshotVersionMiddleware,
+  addSoftDeleteMiddleware,
+} from './middleware';
 
 export type ListOptions = {
   delimiter?: string;
@@ -13,6 +16,17 @@ export type ListOptions = {
   paginationToken?: string;
   snapshotVersion?: string;
   source?: 'tigris' | 'shadow';
+  /**
+   * List the bucket's soft-deleted objects instead of its live ones. This is a
+   * separate view, not an addition: the response contains only recoverable
+   * deleted objects, and live objects are left out entirely.
+   *
+   * Requires soft delete to be enabled on the bucket
+   * (`updateBucket(name, { softDelete })`). To act on one of these entries,
+   * look up its recoverable versions with `listVersions({ deleted: true })`,
+   * then pass a `versionId` to `restoreDeletedObject` or `purgeDeletedObject`.
+   */
+  deleted?: boolean;
   config?: TigrisStorageConfig;
 };
 
@@ -55,6 +69,10 @@ export async function list(
 
   if (options?.snapshotVersion) {
     addSnapshotVersionMiddleware(list.middlewareStack, options.snapshotVersion);
+  }
+
+  if (options?.deleted) {
+    addSoftDeleteMiddleware(list.middlewareStack);
   }
 
   if (options?.source) {

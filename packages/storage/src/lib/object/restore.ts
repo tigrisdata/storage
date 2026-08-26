@@ -4,7 +4,10 @@ import { handleError, TigrisHeaders } from '@shared/index';
 import { getConfig } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
-import { addSnapshotVersionMiddleware } from './middleware';
+import {
+  addSnapshotVersionMiddleware,
+  addSoftDeleteRestoreMiddleware,
+} from './middleware';
 
 export type RestoreObjectOptions = {
   /**
@@ -65,6 +68,72 @@ export async function restoreObject(
           },
         };
       })
+      .catch(handleError);
+  } catch (error) {
+    return handleError(error as Error);
+  }
+}
+
+export type RestoreDeletedObjectOptions = {
+  config?: TigrisStorageConfig;
+};
+
+export type RestoreDeletedObjectResponse = {
+  path: string;
+  versionId: string;
+};
+
+/**
+ * Bring a soft-deleted object back as a live object.
+ *
+ * This is the undelete counterpart to `restoreBucket`, and is unrelated to
+ * `restoreObject` — that one thaws an archived (e.g. `GLACIER`) object, while
+ * this one recovers a deleted one within its retention window.
+ *
+ * Soft delete must be enabled on the bucket
+ * (`updateBucket(name, { softDelete })`). `versionId` comes from
+ * `listVersions({ deleted: true, prefix })`; find the deleted keys themselves
+ * with `list({ deleted: true })`.
+ */
+export async function restoreDeletedObject(
+  path: string,
+  versionId: string,
+  options?: RestoreDeletedObjectOptions
+): Promise<TigrisStorageResponse<RestoreDeletedObjectResponse, Error>> {
+  if (!path) {
+    return { error: new Error('Object path is required') };
+  }
+
+  if (!versionId) {
+    return { error: new Error('versionId is required') };
+  }
+
+  const config = getConfig();
+  const { data: tigrisClient, error } = createTigrisClient(options?.config);
+
+  if (error) {
+    return { error };
+  }
+
+  // Deliberately no `RestoreRequest`: the archive-thaw body would be
+  // meaningless here, and the gateway keys off the restore-type header
+  // instead.
+  const restore = new RestoreObjectCommand({
+    Bucket: options?.config?.bucket ?? config.bucket,
+    Key: path,
+  });
+
+  addSoftDeleteRestoreMiddleware(restore.middlewareStack, versionId);
+
+  try {
+    return tigrisClient
+      .send(restore)
+      .then(() => ({
+        data: {
+          path,
+          versionId,
+        },
+      }))
       .catch(handleError);
   } catch (error) {
     return handleError(error as Error);
