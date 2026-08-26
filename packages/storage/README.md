@@ -499,9 +499,17 @@ await updateBucket('my-bucket', {
 });
 ```
 
-`retentionDays` must be between 7 and 90. Note that enabling soft delete takes
-a few seconds to take effect — an object deleted immediately afterwards may
-still be deleted for good.
+`retentionDays` must be between 7 and 90. Two caveats are worth knowing before
+you rely on this:
+
+- **Enabling soft delete takes a few seconds to take effect.** An object
+  deleted immediately afterwards is deleted for good, and no amount of
+  retrying the lookup brings it back.
+- **Do not rely on soft delete on a snapshot bucket.** On buckets created with
+  `enableSnapshot: true`, repeated deletes produced no recoverable copies in
+  our testing and the soft-delete view stayed empty. Snapshot buckets already
+  retain deleted objects as versions and delete markers, so recover those with
+  `listVersions()` and `remove(path, { versionId })` instead.
 
 Recovering an object is a three-step flow: find the deleted keys, pick the
 version to act on, then restore or purge it.

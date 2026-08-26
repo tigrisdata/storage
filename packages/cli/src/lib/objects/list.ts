@@ -26,6 +26,7 @@ export default async function listObjects(options: Record<string, unknown>) {
     'snapshot',
   ]);
   const source = getOption<'tigris' | 'shadow'>(options, ['source']);
+  const deleted = !!getOption<boolean>(options, ['deleted']);
   const { limit, pageToken } = getPaginationOptions(options);
 
   if (!bucketArg) {
@@ -42,6 +43,7 @@ export default async function listObjects(options: Record<string, unknown>) {
     prefix,
     ...(snapshotVersion ? { snapshotVersion } : {}),
     ...(source ? { source } : {}),
+    ...(deleted ? { deleted } : {}),
     ...(limit !== undefined ? { limit } : {}),
     ...(pageToken ? { paginationToken: pageToken } : {}),
     config: {

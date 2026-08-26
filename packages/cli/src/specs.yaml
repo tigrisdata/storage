@@ -1458,6 +1458,7 @@ commands:
           - "tigris objects list t3://my-bucket/images/"
           - "tigris objects list my-bucket --prefix images/"
           - "tigris objects list my-bucket --format json"
+          - "tigris objects list my-bucket --deleted"
         messages:
           onStart: 'Listing objects...'
           onSuccess: 'Found {{count}} object(s)'
@@ -1490,15 +1491,19 @@ commands:
           - name: source
             description: List objects from a specific storage source on buckets with shadow migration enabled
             options: [tigris, shadow]
+          - name: deleted
+            description: List soft-deleted objects instead of live ones. Requires soft delete on the bucket. Not the recovery path for snapshot buckets — use "tigris objects list-versions" for those
+            type: flag
       # list-versions
       - name: list-versions
-        description: List object versions and delete markers in a bucket (requires bucket versioning). Returns both arrays separately to match the S3 ListObjectVersions response
+        description: List object versions and delete markers in a bucket (requires bucket versioning), or with --deleted the recoverable versions of soft-deleted objects. Returns both arrays separately to match the S3 ListObjectVersions response
         alias: lv
         examples:
           - "tigris objects list-versions my-bucket"
           - "tigris objects list-versions t3://my-bucket/logs/"
           - "tigris objects list-versions my-bucket --prefix images/"
           - "tigris objects list-versions my-bucket --format json"
+          - "tigris objects list-versions my-bucket --prefix report.pdf --deleted"
         messages:
           onStart: 'Listing object versions...'
           onSuccess: 'Found {{versions}} version(s) and {{deleteMarkers}} delete marker(s)'
@@ -1528,6 +1533,9 @@ commands:
             description: Pagination marker — the key to start listing from (from a prior nextKeyMarker)
           - name: version-id-marker
             description: Pagination marker — the version id to start listing from (from a prior nextVersionIdMarker)
+          - name: deleted
+            description: List the recoverable versions of soft-deleted objects. Use the version id with "tigris objects restore-deleted" or "tigris objects purge"
+            type: flag
       # get
       - name: get
         description: Download an object by key. Prints to stdout by default, or saves to a file with --output
@@ -1644,7 +1652,7 @@ commands:
             examples:
               - my-file.txt
           - name: version-id
-            description: Hard-delete a specific object version (requires bucket versioning). Targets a single key
+            description: Hard-delete a specific object version (requires bucket versioning). Targets a single key. To destroy a soft-deleted version, use "tigris objects purge"
           - name: all-versions
             description: Hard-delete every version and delete marker for the given key(s). Mutually exclusive with --version-id
             type: flag
@@ -1798,6 +1806,74 @@ commands:
           - name: snapshot-version
             description: Inspect the object as of a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
             alias: snapshot
+          - name: format
+            description: Output format
+            options: [json, table, xml]
+            default: table
+      # restore-deleted
+      - name: restore-deleted
+        description: Restore a soft-deleted object within its retention window. List recoverable objects with "tigris objects list --deleted", then pick a version with "tigris objects list-versions --deleted"
+        alias: rd
+        examples:
+          - "tigris objects restore-deleted my-bucket report.pdf --version-id 1787749774802410496"
+          - "tigris objects restore-deleted t3://my-bucket/report.pdf --version-id 1787749774802410496"
+        messages:
+          onStart: 'Restoring deleted object...'
+          onSuccess: "Object '{{key}}' restored successfully"
+          onFailure: 'Failed to restore deleted object'
+          nextActions:
+            - command: 'tigris ls {{bucket}}'
+              description: 'List objects in the bucket'
+        arguments:
+          - name: bucket
+            type: positional
+            required: true
+            description: Name of the bucket, or a full path (t3://bucket/key)
+            examples:
+              - my-bucket
+              - t3://my-bucket/report.pdf
+          - name: key
+            type: positional
+            description: Key of the object (omit if bucket contains the full path)
+            examples:
+              - report.pdf
+          - name: version-id
+            required: true
+            description: The soft-deleted version to bring back, from "tigris objects list-versions --deleted"
+          - name: format
+            description: Output format
+            options: [json, table, xml]
+            default: table
+      # purge
+      - name: purge
+        description: Permanently destroy a soft-deleted object version before its retention period expires. This cannot be undone — the version can no longer be restored with "tigris objects restore-deleted"
+        alias: pg
+        examples:
+          - "tigris objects purge my-bucket report.pdf --version-id 1787749774802410496 --yes"
+          - "tigris objects purge t3://my-bucket/report.pdf --version-id 1787749774802410496 --yes"
+        messages:
+          onStart: 'Purging deleted object...'
+          onSuccess: "Purged version '{{versionId}}' of '{{key}}'"
+          onFailure: 'Failed to purge deleted object'
+        arguments:
+          - name: bucket
+            type: positional
+            required: true
+            description: Name of the bucket, or a full path (t3://bucket/key)
+            examples:
+              - my-bucket
+              - t3://my-bucket/report.pdf
+          - name: key
+            type: positional
+            description: Key of the object (omit if bucket contains the full path)
+            examples:
+              - report.pdf
+          - name: version-id
+            required: true
+            description: The soft-deleted version to destroy, from "tigris objects list-versions --deleted"
+          - name: force
+            type: flag
+            description: Skip confirmation prompts (alias for --yes)
           - name: format
             description: Output format
             options: [json, table, xml]

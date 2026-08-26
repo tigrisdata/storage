@@ -93,7 +93,12 @@ function renderLeafDetail(cmd: CommandSpec, parentPath: string[]): string[] {
         : `--${arg.name}`;
       const defaultStr =
         arg.default !== undefined ? ` (default: ${arg.default})` : '';
-      lines.push(`| \`${flagName}\` | ${arg.description ?? ''}${defaultStr} |`);
+      // A required flag is otherwise indistinguishable from an optional one
+      // here, since `required` only shapes the usage line for positionals.
+      const requiredStr = arg.required ? ' **(required)**' : '';
+      lines.push(
+        `| \`${flagName}\` | ${arg.description ?? ''}${defaultStr}${requiredStr} |`
+      );
     }
     lines.push('');
   }

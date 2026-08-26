@@ -314,6 +314,67 @@ describe('Destructive commands require --yes in non-TTY', () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain('Use --yes to skip confirmation');
   });
+
+  it('objects purge should require confirmation in non-TTY', () => {
+    const result = runCli('objects purge fake-bucket fake-key --version-id 1');
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Use --yes to skip confirmation');
+  });
+});
+
+// A missing `required: true` argument used to print its reason and then exit
+// 0, so a rejected invocation was indistinguishable from a successful one.
+describe('Missing required arguments exit non-zero', () => {
+  it('objects set without --access exits 1', () => {
+    const result = runCli('objects set fake-bucket fake-key');
+    expect(result.stderr).toContain('--access is required');
+    expect(result.exitCode).toBe(1);
+  });
+
+  it('iam users update-role without --role exits 1', () => {
+    const result = runCli('iam users update-role fake-user');
+    expect(result.stderr).toContain('--role is required');
+    expect(result.exitCode).toBe(1);
+  });
+
+  // `required` is invisible in --help for a flag, so the description is the
+  // only thing telling the user what a valid value is.
+  it('reports the argument description alongside the error', () => {
+    const result = runCli('objects set fake-bucket fake-key');
+    expect(result.stderr).toContain('Access level');
+  });
+});
+
+// These fire before any credential or network use, so they run without
+// integration credentials.
+describe('Soft-delete argument validation', () => {
+  it('objects purge requires --version-id', () => {
+    const result = runCli('objects purge fake-bucket fake-key --yes');
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('--version-id is required');
+    // The error should point at where to get a version id.
+    expect(result.stderr).toContain('list-versions');
+  });
+
+  it('objects purge requires a key', () => {
+    const result = runCli('objects purge fake-bucket --version-id 1 --yes');
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Object key is required');
+  });
+
+  it('objects restore-deleted requires --version-id', () => {
+    const result = runCli('objects restore-deleted fake-bucket fake-key');
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('--version-id is required');
+    // The error should point at where to get a version id.
+    expect(result.stderr).toContain('list-versions');
+  });
+
+  it('objects restore-deleted requires a key', () => {
+    const result = runCli('objects restore-deleted fake-bucket --version-id 1');
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Object key is required');
+  });
 });
 
 describe.skipIf(skipTests)('CLI Integration Tests', () => {
