@@ -235,10 +235,13 @@ Other behaviour worth knowing before you debug it as a bug:
   reports it yet. Assert against whichever view the test is about.
 - `retentionDays` must be between 7 and 90; the gateway rejects anything
   outside that range.
-- Soft delete produced no recoverable copies at all on snapshot buckets
-  in testing. Those retain deleted objects as versions and delete
-  markers, recoverable through `listVersions()` and
-  `remove(path, { versionId })` instead.
+- On a snapshot bucket, a **plain** delete records a delete marker
+  rather than soft-deleting, so nothing lands in the soft-delete view
+  and `list({ deleted: true })` stays empty for it — recover those
+  through `listVersions()` on a specific `versionId`. Deleting one
+  specific version *does* soft-delete that version. A test that deletes
+  without a `versionId` on a snapshot bucket and then waits for the
+  soft-delete view will wait forever.
 - To destroy a soft-deleted version use `purgeDeletedObject`, not
   `remove(path, { versionId })` — a versioned delete aimed at a
   soft-deleted version is rejected with `400 InvalidArgument` unless it

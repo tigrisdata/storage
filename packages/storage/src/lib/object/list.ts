@@ -22,12 +22,12 @@ export type ListOptions = {
    * deleted objects, and live objects are left out entirely.
    *
    * Requires soft delete to be enabled on the bucket
-   * (`updateBucket(name, { softDelete })`). Do not rely on it for snapshot
-   * buckets: this view stayed empty on them in testing, and they retain
-   * deleted objects as versions and delete markers that `listVersions()`
-   * reports instead. To act on an entry here, look up its recoverable
-   * versions with `listVersions({ deleted: true })`, then pass a `versionId`
-   * to `restoreDeletedObject` or `purgeDeletedObject`.
+   * (`updateBucket(name, { softDelete })`). On a snapshot bucket, note that a
+   * plain delete records a delete marker rather than soft-deleting, so those
+   * objects appear in `listVersions()` and not here; deleting one specific
+   * version does soft-delete that version. To act on an entry here, look up
+   * its recoverable versions with `listVersions({ deleted: true })`, then pass
+   * a `versionId` to `restoreDeletedObject` or `purgeDeletedObject`.
    */
   deleted?: boolean;
   config?: TigrisStorageConfig;

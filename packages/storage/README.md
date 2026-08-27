@@ -505,11 +505,13 @@ you rely on this:
 - **Enabling soft delete takes a few seconds to take effect.** An object
   deleted immediately afterwards is deleted for good, and no amount of
   retrying the lookup brings it back.
-- **Do not rely on soft delete on a snapshot bucket.** On buckets created with
-  `enableSnapshot: true`, repeated deletes produced no recoverable copies in
-  our testing and the soft-delete view stayed empty. Snapshot buckets already
-  retain deleted objects as versions and delete markers, so recover those with
-  `listVersions()` and `remove(path, { versionId })` instead.
+- **On a snapshot bucket, a plain delete is not a soft delete.** Removing an
+  object without a `versionId` records a delete marker, exactly as versioning
+  normally does, and leaves earlier versions live — nothing lands in the
+  soft-delete view. Recover from that with `listVersions()` and
+  `get`/`remove` on a specific `versionId`. Deleting one specific version
+  *does* soft-delete that version, and it shows up in `list({ deleted: true })`
+  like any other.
 
 Recovering an object is a three-step flow: find the deleted keys, pick the
 version to act on, then restore or purge it.
