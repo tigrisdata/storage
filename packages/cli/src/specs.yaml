@@ -1492,7 +1492,7 @@ commands:
             description: List objects from a specific storage source on buckets with shadow migration enabled
             options: [tigris, shadow]
           - name: deleted
-            description: List soft-deleted objects instead of live ones. Requires soft delete on the bucket. Not the recovery path for snapshot buckets — use "tigris objects list-versions" for those
+            description: List soft-deleted objects instead of live ones. Requires soft delete on the bucket. On a snapshot bucket a plain delete records a delete marker instead, so use "tigris objects list-versions" for those
             type: flag
       # list-versions
       - name: list-versions

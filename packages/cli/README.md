@@ -1035,7 +1035,7 @@ tigris objects list <bucket> [flags]
 | `--limit` | Maximum number of items to return per page |
 | `-pt, --page-token` | Pagination token from a previous request to fetch the next page |
 | `--source` | List objects from a specific storage source on buckets with shadow migration enabled |
-| `--deleted` | List soft-deleted objects instead of live ones. Requires soft delete on the bucket. Not the recovery path for snapshot buckets — use "tigris objects list-versions" for those |
+| `--deleted` | List soft-deleted objects instead of live ones. Requires soft delete on the bucket. On a snapshot bucket a plain delete records a delete marker instead, so use "tigris objects list-versions" for those |
 
 **Examples:**
 ```bash
