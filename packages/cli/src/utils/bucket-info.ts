@@ -146,6 +146,19 @@ export function buildBucketInfo(data: BucketInfoResponse) {
     });
   }
 
+  const shares = data.settings.shares;
+  const sharedWith = [
+    ...(shares.organization
+      ? [`Everyone in organization (${shares.organization.role})`]
+      : []),
+    ...shares.team.map((t) => `${t.teamId} (${t.role})`),
+    ...shares.user.map((u) => `${u.userId} (${u.role})`),
+  ];
+
+  if (sharedWith.length) {
+    info.push({ label: 'Shared With', value: sharedWith.join(', ') });
+  }
+
   if (data.settings.notifications) {
     info.push({
       label: 'Notifications',

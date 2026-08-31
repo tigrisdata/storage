@@ -541,6 +541,7 @@ Create, inspect, update, and delete buckets. Buckets are top-level containers th
 | `tigris buckets lifecycle` (lc) | Manage bucket lifecycle rules. Each rule combines an optional storage-class transition and/or expiration (TTL), scoped to an optional key prefix |
 | `tigris buckets set-notifications` | Configure object event notifications on a bucket. Sends webhook requests to a URL when objects are created, updated, or deleted |
 | `tigris buckets set-cors` | Configure CORS rules on a bucket. Each invocation adds a rule unless --override or --reset is used |
+| `tigris buckets share` | Share a bucket with your whole organization, specific teams, or specific users. Existing shares are kept unless --override or --reset is used |
 
 #### `tigris buckets list` (l)
 
@@ -936,6 +937,33 @@ tigris buckets set-cors my-bucket --origins '*' --methods GET,HEAD
 tigris buckets set-cors my-bucket --origins https://example.com --methods GET,POST --headers Content-Type,Authorization --max-age 3600
 tigris buckets set-cors my-bucket --origins https://example.com --override
 tigris buckets set-cors my-bucket --reset
+```
+
+#### `tigris buckets share`
+
+Share a bucket with your whole organization, specific teams, or specific users. Existing shares are kept unless --override or --reset is used
+
+```
+tigris buckets share <name> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-org, --organization` | Give access to everyone in your organization. Takes exactly one --role and cannot be combined with --team or --user |
+| `-t, --team` | Team ID to share with (can specify multiple, comma-separated). Each team is paired positionally with a --role value |
+| `-u, --user` | User ID to share with (can specify multiple, comma-separated). Each user is paired positionally with a --role value |
+| `-r, --role` | Role to grant (can specify multiple, comma-separated). A single role applies to every target; otherwise each role pairs with the corresponding --team or --user value |
+| `--override` | Replace all existing shares instead of merging with them |
+| `--reset` | Remove all shares from the bucket |
+
+**Examples:**
+```bash
+tigris buckets share my-bucket --organization --role ReadOnly
+tigris buckets share my-bucket --team tmid_MQQUhV --role Editor
+tigris buckets share my-bucket --user uid_MQQUhV --role ReadOnly
+tigris buckets share my-bucket --team tmid_A,tmid_B --role Editor,ReadOnly
+tigris buckets share my-bucket --team tmid_MQQUhV --role Editor --override
+tigris buckets share my-bucket --reset
 ```
 
 ### `tigris snapshots` (s)
