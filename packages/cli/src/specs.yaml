@@ -1965,7 +1965,7 @@ commands:
             examples:
               - tid_AaBbCcDdEeFf
       - name: assign
-        description: Assign per-bucket roles to an access key. Pair each --bucket with a --role (Editor or ReadOnly), or use --admin for org-wide access
+        description: Assign per-bucket roles to an access key. Pair each --bucket with a --role (Editor, ReadWrite, or ReadOnly), or use --admin for org-wide access
         alias: a
         examples:
           - "tigris access-keys assign tid_AaBb --bucket my-bucket --role Editor"
@@ -1996,6 +1996,7 @@ commands:
             multiple: true
             options:
               - Editor
+              - ReadWrite
               - ReadOnly
           - name: admin
             description: Grant admin access to all buckets in the organization

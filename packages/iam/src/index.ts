@@ -19,7 +19,6 @@ export {
 } from './lib/access-key/create';
 export { type GetAccessKeyOptions, getAccessKey } from './lib/access-key/get';
 export {
-  type AccessKey,
   type ListAccessKeysOptions,
   type ListAccessKeysResponse,
   listAccessKeys,
@@ -46,6 +45,13 @@ export {
   type RotateAccessKeyResponse,
   rotateAccessKey,
 } from './lib/access-key/rotate';
+export {
+  ACCESS_KEY_ROLES,
+  type AccessKey,
+  type AccessKeyRole,
+  type BucketRoleAssignment,
+  type BucketScopedRole,
+} from './lib/access-key/types';
 export {
   type CreateOrganizationOptions,
   type CreateOrganizationResponse,

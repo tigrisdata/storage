@@ -39,6 +39,21 @@ describe('keyMatchesOperation', () => {
       expect(keyMatchesOperation(key, 'my-bucket', 'get')).toBe(true);
     });
 
+    it('matches ReadWrite on target bucket', () => {
+      const key = makeKey([{ bucket: 'my-bucket', role: 'ReadWrite' }]);
+      expect(keyMatchesOperation(key, 'my-bucket', 'get')).toBe(true);
+    });
+
+    it('matches ReadWrite on wildcard bucket', () => {
+      const key = makeKey([{ bucket: '*', role: 'ReadWrite' }]);
+      expect(keyMatchesOperation(key, 'my-bucket', 'get')).toBe(true);
+    });
+
+    it('does not match ReadWrite on different bucket', () => {
+      const key = makeKey([{ bucket: 'other-bucket', role: 'ReadWrite' }]);
+      expect(keyMatchesOperation(key, 'my-bucket', 'get')).toBe(false);
+    });
+
     it('does not match Editor on different bucket', () => {
       const key = makeKey([{ bucket: 'other-bucket', role: 'Editor' }]);
       expect(keyMatchesOperation(key, 'my-bucket', 'get')).toBe(false);
@@ -63,6 +78,21 @@ describe('keyMatchesOperation', () => {
 
     it('does not match ReadOnly on wildcard bucket', () => {
       const key = makeKey([{ bucket: '*', role: 'ReadOnly' }]);
+      expect(keyMatchesOperation(key, 'my-bucket', 'put')).toBe(false);
+    });
+
+    it('matches ReadWrite on target bucket', () => {
+      const key = makeKey([{ bucket: 'my-bucket', role: 'ReadWrite' }]);
+      expect(keyMatchesOperation(key, 'my-bucket', 'put')).toBe(true);
+    });
+
+    it('matches ReadWrite on wildcard bucket', () => {
+      const key = makeKey([{ bucket: '*', role: 'ReadWrite' }]);
+      expect(keyMatchesOperation(key, 'my-bucket', 'put')).toBe(true);
+    });
+
+    it('does not match ReadWrite on different bucket', () => {
+      const key = makeKey([{ bucket: 'other-bucket', role: 'ReadWrite' }]);
       expect(keyMatchesOperation(key, 'my-bucket', 'put')).toBe(false);
     });
   });

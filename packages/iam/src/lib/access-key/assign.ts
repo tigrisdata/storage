@@ -1,6 +1,7 @@
 import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
 import type { TigrisIAMConfig, TigrisIAMResponse } from '../types';
 import { getAccessKey } from './get';
+import type { BucketRoleAssignment } from './types';
 
 export type AssignBucketRolesOptions = {
   config?: TigrisIAMConfig;
@@ -11,7 +12,7 @@ export type AssignBucketRolesOptions = {
 */
 export async function assignBucketRoles(
   id: string,
-  roles: { bucket: string; role: 'Editor' | 'ReadOnly' | 'NamespaceAdmin' }[],
+  roles: BucketRoleAssignment[],
   options?: AssignBucketRolesOptions
 ): Promise<TigrisIAMResponse<void, Error>> {
   const { data: client, error } = createIAMClient(options?.config);

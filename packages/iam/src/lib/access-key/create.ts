@@ -1,14 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
 import type { TigrisIAMConfig, TigrisIAMResponse } from '../types';
-import type { AccessKey } from './list';
+import type { AccessKey, BucketRoleAssignment } from './types';
 
 export type CreateAccessKeyOptions = {
   config?: TigrisIAMConfig;
-  bucketsRole?: {
-    bucket: string;
-    role: 'Editor' | 'ReadOnly';
-  }[];
+  bucketsRole?: BucketRoleAssignment[];
 };
 
 type IAMCreateAccessKeyResponse = {

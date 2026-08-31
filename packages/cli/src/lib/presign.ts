@@ -155,11 +155,13 @@ export function keyMatchesOperation(
     // Role must target this bucket or wildcard
     if (r.bucket !== targetBucket && r.bucket !== '*') return false;
 
-    // For put: need Editor
-    if (method === 'put') return r.role === 'Editor';
+    // For put: need write access
+    if (method === 'put') return r.role === 'Editor' || r.role === 'ReadWrite';
 
-    // For get: Editor or ReadOnly
-    return r.role === 'Editor' || r.role === 'ReadOnly';
+    // For get: any bucket-scoped role grants read
+    return (
+      r.role === 'Editor' || r.role === 'ReadWrite' || r.role === 'ReadOnly'
+    );
   });
 }
 
@@ -181,7 +183,10 @@ async function resolveAccessKeyAuto(
   );
 
   if (!match) {
-    const requiredRole = method === 'put' ? 'Editor' : 'Editor or ReadOnly';
+    const requiredRole =
+      method === 'put'
+        ? 'Editor or ReadWrite'
+        : 'Editor, ReadWrite, or ReadOnly';
     exitWithError(
       `No access key with ${requiredRole} access to bucket "${targetBucket}" found.\n` +
         `Create one: tigris access-keys create <name>\n` +
