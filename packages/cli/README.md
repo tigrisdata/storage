@@ -1295,7 +1295,7 @@ Create, list, inspect, delete, and assign roles to access keys. Access keys are 
 | `tigris access-keys create` (c) | Create a new access key with the given name. Returns the key ID and secret (shown only once) |
 | `tigris access-keys delete` (d) | Permanently delete an access key by its ID. This revokes all access immediately |
 | `tigris access-keys get` (g) | Show details for an access key including its name, creation date, and assigned bucket roles |
-| `tigris access-keys assign` (a) | Assign per-bucket roles to an access key. Pair each --bucket with a --role (Editor or ReadOnly), or use --admin for org-wide access |
+| `tigris access-keys assign` (a) | Assign per-bucket roles to an access key. Pair each --bucket with a --role (Editor, ReadWrite, or ReadOnly), or use --admin for org-wide access |
 | `tigris access-keys rotate` (r) | Rotate an access key's secret. The current secret is immediately invalidated and a new one is returned (shown only once) |
 | `tigris access-keys attach-policy` (ap) | Attach an IAM policy to an access key. If no policy ARN is provided, shows interactive selection of available policies |
 | `tigris access-keys detach-policy` (dp) | Detach an IAM policy from an access key. If no policy ARN is provided, shows interactive selection of attached policies |
@@ -1365,7 +1365,7 @@ tigris access-keys get tid_AaBbCcDdEeFf
 
 #### `tigris access-keys assign` (a)
 
-Assign per-bucket roles to an access key. Pair each --bucket with a --role (Editor or ReadOnly), or use --admin for org-wide access
+Assign per-bucket roles to an access key. Pair each --bucket with a --role (Editor, ReadWrite, or ReadOnly), or use --admin for org-wide access
 
 ```
 tigris access-keys assign <id> [flags]

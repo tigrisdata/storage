@@ -1,5 +1,6 @@
 import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
 import type { TigrisIAMConfig, TigrisIAMResponse } from '../types';
+import type { AccessKey, IAMAccessKeysResponse } from './types';
 
 export type ListAccessKeysOptions = {
   limit?: number;
@@ -7,41 +8,10 @@ export type ListAccessKeysOptions = {
   config?: TigrisIAMConfig;
 };
 
-export type AccessKey = {
-  id: string;
-  name: string;
-  secret?: string;
-  createdAt: Date;
-  status: 'active' | 'inactive';
-  organizationId?: string;
-  roles?: {
-    bucket: string;
-    role: 'Editor' | 'ReadOnly' | 'NamespaceAdmin';
-  }[];
-};
-
 export type ListAccessKeysResponse = {
   accessKeys: AccessKey[];
   paginationToken?: string;
   hasMore: boolean;
-};
-
-export type IAMAccessKeysResponse = {
-  IsTruncated: boolean;
-  Marker: string;
-  Keys: {
-    access_key_id: string;
-    created_at: string;
-    creator: string;
-    human_creator: string;
-    namespace_id: string;
-    status: 'active' | 'inactive';
-    username: string;
-    buckets_role: {
-      bucket: string;
-      role: 'Editor' | 'ReadOnly';
-    }[];
-  }[];
 };
 
 export async function listAccessKeys(

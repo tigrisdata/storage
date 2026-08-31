@@ -1,5 +1,11 @@
 import { getIAMConfig } from '@auth/iam.js';
-import { assignBucketRoles, revokeAllBucketRoles } from '@tigrisdata/iam';
+import {
+  ACCESS_KEY_ROLES,
+  type AccessKeyRole,
+  assignBucketRoles,
+  type BucketRoleAssignment,
+  revokeAllBucketRoles,
+} from '@tigrisdata/iam';
 import {
   failWithError,
   getSuccessNextActions,
@@ -9,9 +15,6 @@ import { msg, printStart, printSuccess } from '@utils/messages.js';
 import { getFormat, getOption } from '@utils/options.js';
 
 const context = msg('access-keys', 'assign');
-
-type Role = 'Editor' | 'ReadOnly' | 'NamespaceAdmin';
-const validRoles: Role[] = ['Editor', 'ReadOnly', 'NamespaceAdmin'];
 
 function normalizeToArray<T>(value: T | T[] | undefined): T[] {
   if (!value) return [];
@@ -61,7 +64,7 @@ export default async function assign(options: Record<string, unknown>) {
     return;
   }
 
-  let assignments: { bucket: string; role: Role }[];
+  let assignments: BucketRoleAssignment[];
 
   if (admin) {
     // Admin access: grant NamespaceAdmin to all buckets
@@ -83,10 +86,10 @@ export default async function assign(options: Record<string, unknown>) {
 
     // Validate all roles
     for (const role of roles) {
-      if (!validRoles.includes(role as Role)) {
+      if (!ACCESS_KEY_ROLES.includes(role as AccessKeyRole)) {
         failWithError(
           context,
-          `Invalid role "${role}". Valid roles are: ${validRoles.join(', ')}`
+          `Invalid role "${role}". Valid roles are: ${ACCESS_KEY_ROLES.join(', ')}`
         );
       }
     }
@@ -96,13 +99,13 @@ export default async function assign(options: Record<string, unknown>) {
       // Single role applies to all buckets
       assignments = buckets.map((bucket) => ({
         bucket,
-        role: roles[0] as Role,
+        role: roles[0] as AccessKeyRole,
       }));
     } else if (roles.length === buckets.length) {
       // Pair buckets with roles
       assignments = buckets.map((bucket, i) => ({
         bucket,
-        role: roles[i] as Role,
+        role: roles[i] as AccessKeyRole,
       }));
     } else {
       failWithError(

@@ -1,5 +1,9 @@
 import type { TigrisResponse } from '@shared/types';
-import { createAccessKey, removeAccessKey } from '@tigrisdata/iam';
+import {
+  type BucketScopedRole,
+  createAccessKey,
+  removeAccessKey,
+} from '@tigrisdata/iam';
 import {
   createBucket,
   createBucketSnapshot,
@@ -14,7 +18,7 @@ export type CreateForksOptions = {
   prefix?: string;
   /** If provided, creates a scoped access key per fork with this role. */
   credentials?: {
-    role: 'Editor' | 'ReadOnly';
+    role: BucketScopedRole;
   };
   config?: TigrisAgentKitConfig;
 };
