@@ -19,6 +19,7 @@ function makeResponse(overrides: Record<string, unknown> = {}) {
       softDelete: { enabled: false },
       allowObjectAcl: false,
       corsRules: [],
+      shares: { team: [], user: [] },
       customDomain: undefined,
       additionalHeaders: undefined,
       lifecycleRules: undefined,

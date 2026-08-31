@@ -94,6 +94,62 @@ export type BucketLifecycleRule = {
   filter?: BucketLifecycleFilter;
 };
 
+export const bucketShareRoles = ['ReadOnly', 'ReadWrite', 'Editor'] as const;
+
+/**
+ * Roles that can be granted on a bucket through a share.
+ *
+ * The org-wide `NamespaceAdmin` role has no meaning here — a share always
+ * targets one concrete bucket.
+ *
+ * Declared here rather than reused from `@tigrisdata/iam`: bucket shares grant
+ * a *team* or *user* access, access-key roles grant a *credential* access. The
+ * two vocabularies coincide today but are independent, and `storage` does not
+ * depend on `iam`.
+ */
+export type BucketShareRole = (typeof bucketShareRoles)[number];
+
+/** Grant to everyone in the organization. */
+export type OrganizationShare = {
+  role: BucketShareRole;
+};
+
+/** Grant to a single team. */
+export type TeamShare = {
+  teamId: string;
+  role: BucketShareRole;
+};
+
+/** Grant to a single user. */
+export type UserShare = {
+  userId: string;
+  role: BucketShareRole;
+};
+
+/**
+ * Who a bucket is shared with, as returned by `getBucketInfo`.
+ *
+ * `team` and `user` are always present — empty when nothing is shared that
+ * way. `organization` is absent unless the bucket is shared org-wide.
+ */
+export type BucketShares = {
+  /** Access for everyone in the organization. */
+  organization?: OrganizationShare;
+  team: TeamShare[];
+  user: UserShare[];
+};
+
+/**
+ * Who to share a bucket with. Every field is optional, but at least one must
+ * be provided.
+ */
+export type BucketSharesInput = {
+  /** Give access to everyone in your organization. */
+  organization?: OrganizationShare;
+  team?: TeamShare[];
+  user?: UserShare[];
+};
+
 export type BucketCorsRule = {
   allowedOrigins: string | string[];
   allowedMethods?: string | string[];

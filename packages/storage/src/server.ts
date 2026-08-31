@@ -55,6 +55,7 @@ export {
   type SetBucketTypeOptions,
   setBucketType,
 } from './lib/bucket/set/type';
+export { type ShareBucketOptions, shareBucket } from './lib/bucket/share';
 export {
   type BucketSnapshot,
   type CreateBucketSnapshotOptions,
@@ -77,6 +78,9 @@ export type {
   BucketMigration,
   BucketNotification,
   BucketOwner,
+  BucketShareRole,
+  BucketShares,
+  BucketSharesInput,
   BucketsStats,
   BucketTtl,
   BucketType,
@@ -84,8 +88,11 @@ export type {
   NotificationEvent,
   NotificationEventName,
   NotificationResponse,
+  OrganizationShare,
   StorageClass,
+  TeamShare,
   UpdateBucketResponse,
+  UserShare,
 } from './lib/bucket/types';
 export { type UpdateBucketOptions, updateBucket } from './lib/bucket/update';
 export {

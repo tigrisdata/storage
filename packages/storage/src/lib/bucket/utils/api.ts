@@ -1,4 +1,4 @@
-import type { StorageClass } from '../types';
+import type { BucketShareRole, StorageClass } from '../types';
 
 type BucketApiNotifications =
   | Record<string, never>
@@ -73,8 +73,22 @@ type BucketApiSettings = {
   object_notifications?: BucketApiNotifications;
   soft_delete?: { enabled: true; retention_days: number } | { enabled: false };
   additional_http_headers?: { 'X-Content-Type-Options': 'nosniff' } | null;
+  shares?: BucketApiShare[];
   type?: 0 | 1;
 };
+
+/**
+ * A single share on the wire. Exactly one of `team_id` / `user_id` is set;
+ * the organization-wide grant is `team_id: 'all'`.
+ */
+export type BucketApiShare = {
+  team_id?: string;
+  user_id?: string;
+  role: BucketShareRole;
+};
+
+/** Wire sentinel in `team_id` meaning "everyone in the organization". */
+export const ORGANIZATION_TEAM_ID = 'all';
 
 export type GetBucketInfoApiResponseBody = BucketApiSettings & {
   ForkInfo?: {

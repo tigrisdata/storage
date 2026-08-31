@@ -6,10 +6,14 @@ import type {
   BucketLocations,
   BucketMigration,
   BucketNotification,
+  BucketShares,
   BucketTtl,
   StorageClass,
 } from './types';
-import type { GetBucketInfoApiResponseBody } from './utils/api';
+import {
+  type GetBucketInfoApiResponseBody,
+  ORGANIZATION_TEAM_ID,
+} from './utils/api';
 import { parseBucketLocations } from './utils/regions';
 
 export type GetBucketInfoOptions = {
@@ -62,6 +66,8 @@ export type BucketInfoResponse = {
     corsRules: BucketCorsRule[];
     additionalHeaders?: GetBucketInfoApiResponseBody['additional_http_headers'];
     notifications?: BucketNotification;
+    /** Who this bucket is shared with. */
+    shares: BucketShares;
   };
   sizeInfo: {
     numberOfObjects: number | undefined;
@@ -90,6 +96,28 @@ function mapNotification(
   }
 
   return base;
+}
+
+/**
+ * Split the flat wire array into its three grant targets. The organization
+ * grant arrives as the reserved `team_id` sentinel rather than its own field.
+ */
+function mapShares(
+  shares: GetBucketInfoApiResponseBody['shares']
+): BucketShares {
+  const result: BucketShares = { team: [], user: [] };
+
+  for (const share of shares ?? []) {
+    if (share.team_id === ORGANIZATION_TEAM_ID) {
+      result.organization = { role: share.role };
+    } else if (share.team_id) {
+      result.team.push({ teamId: share.team_id, role: share.role });
+    } else if (share.user_id) {
+      result.user.push({ userId: share.user_id, role: share.role });
+    }
+  }
+
+  return result;
 }
 
 export async function getBucketInfo(
@@ -205,6 +233,7 @@ export async function getBucketInfo(
         notifications: response.data.object_notifications
           ? mapNotification(response.data.object_notifications)
           : undefined,
+        shares: mapShares(response.data.shares),
       },
       sizeInfo: {
         numberOfObjects: response.data.estimated_unique_rows ?? undefined,
