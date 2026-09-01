@@ -27,6 +27,14 @@ export type GetSignedUploadUrlOptions = {
    * matching header; with POST, the value is baked into the form.
    */
   contentType?: string;
+  /**
+   * Locks the upload's `Cache-Control`. Works in both contracts — on PUT it's
+   * returned as a required header the client must send; on POST it's baked
+   * into the form.
+   *
+   * @example 'public, max-age=31536000, immutable'
+   */
+  cacheControl?: string;
   /** Maximum body size in bytes. POST-only (no PUT equivalent). */
   maxSize?: number;
   /** Minimum body size in bytes. POST-only (no PUT equivalent). */
@@ -104,6 +112,7 @@ async function createPutContract(
       Bucket: bucket,
       Key: key,
       ContentType: options.contentType,
+      CacheControl: options.cacheControl,
       Metadata: normalizedMetadata,
       ACL: acl,
     });
@@ -112,6 +121,9 @@ async function createPutContract(
     const headers: Record<string, string> = {};
     if (options.contentType) {
       headers['Content-Type'] = options.contentType;
+    }
+    if (options.cacheControl) {
+      headers['Cache-Control'] = options.cacheControl;
     }
     if (acl) {
       headers[TigrisHeaders.ACL] = acl;
@@ -148,6 +160,11 @@ async function createPostContract(
   if (options.contentType) {
     fields['Content-Type'] = options.contentType;
     conditions.push({ 'Content-Type': options.contentType });
+  }
+
+  if (options.cacheControl) {
+    fields['Cache-Control'] = options.cacheControl;
+    conditions.push({ 'Cache-Control': options.cacheControl });
   }
 
   if (options.maxSize !== undefined || options.minSize !== undefined) {
