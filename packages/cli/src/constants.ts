@@ -3,6 +3,12 @@ export const DEFAULT_IAM_ENDPOINT = 'https://iam.storageapi.dev';
 export const DEFAULT_MGMT_ENDPOINT = 'https://mgmt.storageapi.dev';
 export const NPM_REGISTRY_URL =
   'https://registry.npmjs.org/@tigrisdata/cli/latest';
+
+// Short-URL host serving the standalone installers and the versioned CLI
+// binaries. Published by .github/workflows/sync-installers.yaml (scripts) and
+// the release workflow (binaries); the installers themselves resolve against
+// it and fall back to GitHub releases if it is unreachable.
+export const INSTALL_BASE_URL = 'https://get.t3.storage.dev';
 export const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // Check for updates every 6 hours
 export const UPDATE_NOTIFY_INTERVAL_MS = 1 * 60 * 60 * 1000; // Show update notification every 1 hour
 

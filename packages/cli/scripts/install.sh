@@ -1,17 +1,26 @@
 #!/bin/sh
 # Tigris CLI installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/tigrisdata/storage/main/packages/cli/scripts/install.sh | sh
+# Usage: curl -fsSL https://get.t3.storage.dev/install.sh | sh
 #
 # Environment variables:
 #   TIGRIS_INSTALL_DIR  - Installation directory (default: /usr/local/bin)
 #   TIGRIS_VERSION      - Specific version to install (default: latest)
-#   TIGRIS_REPO         - GitHub repo (default: tigrisdata/storage)
+#   TIGRIS_BASE_URL     - Artifact host (default: https://get.t3.storage.dev)
+#   TIGRIS_REPO         - GitHub repo for the fallback path (default: tigrisdata/storage)
 #   TIGRIS_DOWNLOAD_URL - Direct download URL (skips version detection, for testing)
 #   TIGRIS_SKIP_PATH    - Set to 1 to skip PATH modification (for testing)
 
 set -e
 
 REPO="${TIGRIS_REPO:-tigrisdata/storage}"
+BASE_URL="${TIGRIS_BASE_URL:-https://get.t3.storage.dev}"
+# Strip trailing slashes so "${BASE_URL}/cli/..." can't build a "//" path. An
+# S3-style host reads the extra separator as part of the key, making
+# "//cli/latest.json" a different (missing) object rather than the same one.
+# Loops to match the PowerShell installer's TrimEnd('/'), which strips all.
+while [ "${BASE_URL%/}" != "$BASE_URL" ]; do
+  BASE_URL="${BASE_URL%/}"
+done
 BINARY_NAME="tigris"
 DEFAULT_INSTALL_DIR="/usr/local/bin"
 
@@ -81,12 +90,17 @@ http_get() {
   fi
 }
 
-# Resolve the download URL for an asset from the newest (or $TIGRIS_VERSION)
-# @tigrisdata/cli release. In this monorepo `releases/latest` is whatever
-# package shipped last, not the CLI — so we list releases and match on the
-# asset filename (only CLI releases carry tigris-<platform> archives) and copy
-# GitHub's own browser_download_url verbatim rather than assembling the
+# --- GitHub fallback -------------------------------------------------------
+# Only reached when the artifact bucket is unreachable. Resolve the download
+# URL for an asset from the newest (or $TIGRIS_VERSION) @tigrisdata/cli
+# release. In this monorepo `releases/latest` is whatever package shipped last,
+# not the CLI — so we list releases and match on the asset filename (only CLI
+# releases carry tigris-<platform> archives) and copy GitHub's own
+# browser_download_url verbatim rather than assembling the
 # @tigrisdata/cli@<version> path (its '/' and '@' don't encode consistently).
+#
+# Note this path is subject to GitHub's unauthenticated API rate limit
+# (60 req/hour per IP), which is precisely why the bucket is tried first.
 resolve_asset_url() {
   asset="$1"
   body="$(http_get "https://api.github.com/repos/${REPO}/releases?per_page=100")"
@@ -117,6 +131,121 @@ download_file() {
   else
     error "Neither curl nor wget found. Please install one of them."
   fi
+}
+
+# A version reaches us from $TIGRIS_VERSION or from latest.json, and is then
+# interpolated into a download URL. Neither is shell-evaluated, but keep the
+# charset tight so a surprising value fails here rather than as a confusing
+# 404 (or a path that escapes the version prefix) later.
+valid_version() {
+  case "$1" in
+    '') return 1 ;;
+    *[!0-9A-Za-z.+-]*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+# The newest published CLI version, per the bucket's version pointer. Empty if
+# the bucket is unreachable or serving something unexpected.
+fetch_latest_version() {
+  body="$(http_get "${BASE_URL}/cli/latest.json" 2>/dev/null || true)"
+  [ -n "$body" ] || return 1
+  version="$(printf '%s' "$body" \
+    | sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+    | head -n 1)"
+  valid_version "$version" || return 1
+  printf '%s' "$version"
+}
+
+sha256_of() {
+  if command -v sha256sum > /dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum > /dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  else
+    return 1
+  fi
+}
+
+# Verify $1 (a downloaded archive named $3) against the SHA256SUMS document at
+# $2. A missing checksum document is tolerated — CLI releases published before
+# this installer landed don't carry one, and the GitHub fallback must keep
+# working for them. A checksum that is present and does NOT match is fatal.
+verify_checksum() {
+  archive_path="$1"
+  sums_url="$2"
+  archive_name="$3"
+
+  sums="$(http_get "$sums_url" 2>/dev/null || true)"
+  if [ -z "$sums" ]; then
+    warn "No SHA256SUMS published for this version — skipping checksum verification"
+    return 0
+  fi
+
+  expected="$(printf '%s\n' "$sums" | awk -v f="$archive_name" '$2 == f { print $1; exit }')"
+  if [ -z "$expected" ]; then
+    warn "SHA256SUMS has no entry for ${archive_name} — skipping checksum verification"
+    return 0
+  fi
+
+  if ! actual="$(sha256_of "$archive_path")"; then
+    warn "Neither sha256sum nor shasum found — skipping checksum verification"
+    return 0
+  fi
+
+  if [ "$actual" != "$expected" ]; then
+    error "Checksum mismatch for ${archive_name}
+  expected: ${expected}
+  actual:   ${actual}
+This archive does not match the published checksum. Aborting."
+  fi
+
+  info "Checksum verified"
+}
+
+# Download the platform archive $2 into $1, preferring the artifact bucket and
+# falling back to GitHub releases. Sets VERSION as a side effect.
+#
+# The bucket is tried first because it needs no API call to resolve a pinned
+# version (and only one cheap request for "latest"), which keeps installs
+# working from shared IPs that have exhausted GitHub's anonymous rate limit.
+download_release() {
+  out="$1"
+  archive_name="$2"
+
+  if [ -n "${TIGRIS_VERSION:-}" ]; then
+    if ! valid_version "$TIGRIS_VERSION"; then
+      error "TIGRIS_VERSION is not a valid version string: ${TIGRIS_VERSION}"
+    fi
+    VERSION="$TIGRIS_VERSION"
+    info "Resolving Tigris CLI ${VERSION}..."
+  else
+    info "Resolving latest Tigris CLI release..."
+    VERSION="$(fetch_latest_version || true)"
+  fi
+
+  if [ -n "$VERSION" ]; then
+    bucket_url="${BASE_URL}/cli/v${VERSION}/${archive_name}"
+    info "Downloading from: $bucket_url"
+    if download_file "$bucket_url" "$out" 2>/dev/null; then
+      verify_checksum "$out" "${BASE_URL}/cli/v${VERSION}/SHA256SUMS" "$archive_name"
+      return 0
+    fi
+    warn "Could not fetch ${archive_name} from ${BASE_URL} — falling back to GitHub releases"
+  else
+    warn "Could not reach ${BASE_URL} — falling back to GitHub releases"
+  fi
+
+  gh_url="$(resolve_asset_url "$archive_name")"
+  if [ -z "$gh_url" ]; then
+    error "Could not find ${archive_name} for Tigris CLI ${VERSION:-latest}.
+Checked ${BASE_URL} and the ${REPO} GitHub releases."
+  fi
+  VERSION="${TIGRIS_VERSION:-latest}"
+  info "Downloading from: $gh_url"
+  download_file "$gh_url" "$out"
+  # Same release, so the checksum document sits alongside the archive.
+  verify_checksum "$out" "${gh_url%/*}/SHA256SUMS" "$archive_name"
 }
 
 detect_shell() {
@@ -245,7 +374,6 @@ EOF
 
 install_skill() {
   SKILL_DIR="$HOME/.claude/skills/tigris"
-  SKILL_URL="https://raw.githubusercontent.com/${REPO}/main/packages/cli/SKILL.md"
 
   # Only attempt if ~/.claude exists (Claude Code is installed)
   if [ ! -d "$HOME/.claude" ]; then
@@ -254,11 +382,17 @@ install_skill() {
 
   mkdir -p "$SKILL_DIR" 2>/dev/null || return 0
 
-  if command -v curl > /dev/null 2>&1; then
-    curl -fsSL "$SKILL_URL" -o "$SKILL_DIR/SKILL.md" 2>/dev/null || return 0
-  elif command -v wget > /dev/null 2>&1; then
-    wget -q "$SKILL_URL" -O "$SKILL_DIR/SKILL.md" 2>/dev/null || return 0
-  fi
+  # Best-effort, and entirely optional — try the bucket, then GitHub (which
+  # also keeps forks working, since $TIGRIS_REPO still resolves there).
+  for skill_url in \
+    "${BASE_URL}/SKILL.md" \
+    "https://raw.githubusercontent.com/${REPO}/main/packages/cli/SKILL.md"
+  do
+    if download_file "$skill_url" "$SKILL_DIR/SKILL.md" 2>/dev/null; then
+      return 0
+    fi
+  done
+  return 0
 }
 
 main() {
@@ -290,36 +424,23 @@ main() {
     BINARY_FILE="$BINARY_NAME"
   fi
 
-  # Determine download URL
-  if [ -n "${TIGRIS_DOWNLOAD_URL:-}" ]; then
-    # Direct URL provided (for testing)
-    DOWNLOAD_URL="$TIGRIS_DOWNLOAD_URL"
-    VERSION="local"
-    info "Using direct download URL (testing mode)"
-  else
-    if [ -n "${TIGRIS_VERSION:-}" ]; then
-      info "Resolving @tigrisdata/cli@${TIGRIS_VERSION}..."
-      VERSION="$TIGRIS_VERSION"
-    else
-      info "Resolving latest @tigrisdata/cli release..."
-      VERSION="latest"
-    fi
-    DOWNLOAD_URL="$(resolve_asset_url "$ARCHIVE_NAME")"
-    if [ -z "$DOWNLOAD_URL" ]; then
-      error "Could not find a ${ARCHIVE_NAME} asset in ${REPO} @tigrisdata/cli releases"
-    fi
-  fi
-
-  info "Installing version: $VERSION"
-  info "Downloading from: $DOWNLOAD_URL"
-
   # Create temp directory
   TMP_DIR="$(mktemp -d)"
   trap 'rm -rf "$TMP_DIR"' EXIT
+  ARCHIVE_PATH="${TMP_DIR}/${ARCHIVE_NAME}"
 
   # Download archive
-  ARCHIVE_PATH="${TMP_DIR}/${ARCHIVE_NAME}"
-  download_file "$DOWNLOAD_URL" "$ARCHIVE_PATH"
+  if [ -n "${TIGRIS_DOWNLOAD_URL:-}" ]; then
+    # Direct URL provided (for testing) — no resolution, no checksum.
+    VERSION="local"
+    info "Using direct download URL (testing mode)"
+    info "Downloading from: $TIGRIS_DOWNLOAD_URL"
+    download_file "$TIGRIS_DOWNLOAD_URL" "$ARCHIVE_PATH"
+  else
+    download_release "$ARCHIVE_PATH" "$ARCHIVE_NAME"
+  fi
+
+  info "Installing version: $VERSION"
 
   # Extract archive
   info "Extracting..."

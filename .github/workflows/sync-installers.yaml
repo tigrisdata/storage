@@ -1,0 +1,111 @@
+name: Sync installers
+
+# The install scripts are served from get.t3.storage.dev but edited here.
+# Before that bucket existed they were fetched straight from
+# raw.githubusercontent.com/<repo>/main/..., so a fix went live the moment it
+# landed on main. This workflow preserves exactly that: a script change on main
+# is mirrored to the bucket immediately, instead of waiting for the next CLI
+# release. Versioned binaries are handled by release.yaml, not here.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/cli/scripts/install.sh"
+      - "packages/cli/scripts/install.ps1"
+      - "packages/cli/SKILL.md"
+      - ".github/workflows/sync-installers.yaml"
+  workflow_dispatch:
+
+# Only the final state of these files matters, so collapse a burst of pushes
+# into a single upload rather than racing several uploads of the same objects.
+concurrency:
+  group: sync-installers
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      # pr.yaml already checks these on every PR, but a direct push to main
+      # skips that. These files get piped into a shell by every installing
+      # user, so re-check before publishing rather than trusting the path in.
+      - name: Validate install.sh
+        run: |
+          sh -n packages/cli/scripts/install.sh
+          shellcheck -s sh -e SC2034,SC2129 packages/cli/scripts/install.sh
+          echo "install.sh OK"
+
+      - name: Validate install.ps1
+        shell: pwsh
+        run: |
+          $path = (Resolve-Path 'packages/cli/scripts/install.ps1').Path
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) {
+            $errors | ForEach-Object { Write-Host "$($_.Extent.StartLineNumber): $($_.Message)" }
+            exit 1
+          }
+          Write-Host 'install.ps1 OK'
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Publish with our own CLI rather than the AWS CLI. Building it from this
+      # commit (instead of installing the released one) keeps the tool and the
+      # scripts it publishes in lockstep, and avoids depending on the last
+      # release already having the flags this step uses.
+      - name: Build CLI
+        run: pnpm --filter "@tigrisdata/cli..." run build
+
+      - name: Publish installers to get.t3.storage.dev
+        env:
+          TIGRIS_STORAGE_ACCESS_KEY_ID: ${{ secrets.TIGRIS_RELEASE_ACCESS_KEY_ID }}
+          TIGRIS_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_RELEASE_SECRET_ACCESS_KEY }}
+          TIGRIS_STORAGE_ENDPOINT: ${{ secrets.TIGRIS_STORAGE_ENDPOINT }}
+          TIGRIS_NO_TELEMETRY: "1"
+        run: |
+          # secrets can't be used in a step `if:`, so gate here.
+          if [ -z "${TIGRIS_STORAGE_ACCESS_KEY_ID:-}" ]; then
+            echo "TIGRIS_RELEASE_ACCESS_KEY_ID not set — skipping installer sync."
+            exit 0
+          fi
+
+          t3() { node packages/cli/dist/cli.js "$@"; }
+
+          t3 --version
+
+          # These objects are mutable and a bad one is piped straight into a
+          # shell, so keep the TTL short enough that a fix propagates in
+          # minutes rather than hours.
+          MUTABLE='public, max-age=300, must-revalidate'
+
+          # --access public is explicit on purpose: `objects put` always sends
+          # an object ACL and defaults it to private, so omitting this would
+          # bet on the bucket's own public setting winning that conflict.
+          publish() {
+            t3 objects put "t3://get/$1" "$2" \
+              --access public \
+              --content-type "$3" \
+              --cache-control "$MUTABLE"
+          }
+
+          # text/plain so they render in a browser — people should be able to
+          # read what they are about to pipe into sh.
+          publish install.sh  packages/cli/scripts/install.sh  'text/plain; charset=utf-8'
+          publish install.ps1 packages/cli/scripts/install.ps1 'text/plain; charset=utf-8'
+          publish SKILL.md    packages/cli/SKILL.md            'text/markdown; charset=utf-8'
+
+          echo "Installers synced to get.t3.storage.dev"
