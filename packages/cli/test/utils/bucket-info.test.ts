@@ -19,6 +19,7 @@ function makeResponse(overrides: Record<string, unknown> = {}) {
       softDelete: { enabled: false },
       allowObjectAcl: false,
       corsRules: [],
+      shares: { team: [], user: [] },
       customDomain: undefined,
       additionalHeaders: undefined,
       lifecycleRules: undefined,
@@ -324,6 +325,62 @@ describe('buildBucketInfo', () => {
         })
       );
       expect(findValue(info, 'CORS Rules')).toBe('2 rule(s)');
+    });
+  });
+
+  describe('shares', () => {
+    it('does not add shares when nothing is shared', () => {
+      const info = buildBucketInfo(makeResponse());
+      expect(findValue(info, 'Shared With')).toBeUndefined();
+    });
+
+    it('names the organization grant in plain language', () => {
+      const info = buildBucketInfo(
+        makeResponse({
+          settings: {
+            ...makeResponse().settings,
+            shares: { organization: { role: 'ReadOnly' }, team: [], user: [] },
+          },
+        })
+      );
+      expect(findValue(info, 'Shared With')).toBe(
+        'Everyone in organization (ReadOnly)'
+      );
+    });
+
+    it('lists teams and users', () => {
+      const info = buildBucketInfo(
+        makeResponse({
+          settings: {
+            ...makeResponse().settings,
+            shares: {
+              team: [{ teamId: 'tmid_MQQUhV', role: 'Editor' }],
+              user: [{ userId: 'uid_MQQUhV', role: 'ReadWrite' }],
+            },
+          },
+        })
+      );
+      expect(findValue(info, 'Shared With')).toBe(
+        'tmid_MQQUhV (Editor), uid_MQQUhV (ReadWrite)'
+      );
+    });
+
+    it('orders organization before teams and users', () => {
+      const info = buildBucketInfo(
+        makeResponse({
+          settings: {
+            ...makeResponse().settings,
+            shares: {
+              organization: { role: 'ReadOnly' },
+              team: [{ teamId: 'tmid_A', role: 'Editor' }],
+              user: [{ userId: 'uid_A', role: 'ReadWrite' }],
+            },
+          },
+        })
+      );
+      expect(findValue(info, 'Shared With')).toBe(
+        'Everyone in organization (ReadOnly), tmid_A (Editor), uid_A (ReadWrite)'
+      );
     });
   });
 

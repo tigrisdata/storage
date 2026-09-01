@@ -1330,6 +1330,54 @@ commands:
             description: Clear all CORS rules on the bucket
             type: flag
 
+      # share
+      - name: share
+        description: Share a bucket with your whole organization, specific teams, or specific users. Existing shares are kept unless --override or --reset is used
+        examples:
+          - "tigris buckets share my-bucket --organization --role ReadOnly"
+          - "tigris buckets share my-bucket --team tmid_MQQUhV --role Editor"
+          - "tigris buckets share my-bucket --user uid_MQQUhV --role ReadOnly"
+          - "tigris buckets share my-bucket --team tmid_A,tmid_B --role Editor,ReadOnly"
+          - "tigris buckets share my-bucket --team tmid_MQQUhV --role Editor --override"
+          - "tigris buckets share my-bucket --reset"
+        messages:
+          onStart: 'Updating bucket shares...'
+          onSuccess: 'Shares updated for bucket {{name}}'
+          onFailure: 'Failed to update bucket shares'
+        arguments:
+          - name: name
+            description: Name of the bucket
+            type: positional
+            required: true
+            examples:
+              - my-bucket
+          - name: organization
+            alias: org
+            description: Give access to everyone in your organization. Takes exactly one --role and cannot be combined with --team or --user
+            type: flag
+          - name: team
+            alias: t
+            description: Team ID to share with (can specify multiple, comma-separated). Each team is paired positionally with a --role value
+            multiple: true
+          - name: user
+            alias: u
+            description: User ID to share with (can specify multiple, comma-separated). Each user is paired positionally with a --role value
+            multiple: true
+          - name: role
+            alias: r
+            description: Role to grant (can specify multiple, comma-separated). A single role applies to every target; otherwise each role pairs with the corresponding --team or --user value
+            multiple: true
+            options:
+              - ReadOnly
+              - ReadWrite
+              - Editor
+          - name: override
+            description: Replace all existing shares instead of merging with them
+            type: flag
+          - name: reset
+            description: Remove all shares from the bucket
+            type: flag
+
   #########################
   # Manage forks (removed)
   #########################
