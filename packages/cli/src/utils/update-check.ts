@@ -5,6 +5,7 @@ import { join } from 'node:path';
 
 import { version as currentVersion } from '../../package.json';
 import {
+  INSTALL_BASE_URL,
   NPM_REGISTRY_URL,
   UPDATE_CHECK_INTERVAL_MS,
   UPDATE_NOTIFY_INTERVAL_MS,
@@ -105,8 +106,8 @@ export function getUpdateCommand(): string {
     default:
       // Standalone binary installed via the curl/irm script.
       return process.platform === 'win32'
-        ? 'irm https://raw.githubusercontent.com/tigrisdata/storage/main/packages/cli/scripts/install.ps1 | iex'
-        : 'curl -fsSL https://raw.githubusercontent.com/tigrisdata/storage/main/packages/cli/scripts/install.sh | sh';
+        ? `irm ${INSTALL_BASE_URL}/install.ps1 | iex`
+        : `curl -fsSL ${INSTALL_BASE_URL}/install.sh | sh`;
   }
 }
 

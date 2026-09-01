@@ -45,6 +45,32 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
+      # install.sh and install.ps1 ship to users verbatim and are never
+      # exercised by the Node test suite. install.ps1 in particular only runs
+      # on Windows, which this repo has no runner for — so a syntax error in it
+      # would otherwise reach get.t3.storage.dev undetected. Check both
+      # statically here (pwsh and shellcheck are preinstalled on the runner, so
+      # this costs seconds and needs no Windows runner).
+      - name: Validate install.sh
+        run: |
+          sh -n packages/cli/scripts/install.sh
+          # SC2034: the colour variables are defined as a complete set, some unused.
+          # SC2129: pre-existing style nit in add_to_path.
+          shellcheck -s sh -e SC2034,SC2129 packages/cli/scripts/install.sh
+          echo "install.sh OK"
+
+      - name: Validate install.ps1
+        shell: pwsh
+        run: |
+          $path = (Resolve-Path 'packages/cli/scripts/install.ps1').Path
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) {
+            $errors | ForEach-Object { Write-Host "$($_.Extent.StartLineNumber): $($_.Message)" }
+            exit 1
+          }
+          Write-Host 'install.ps1 OK'
+
       - name: Build packages
         run: pnpm -r --if-present run build
 

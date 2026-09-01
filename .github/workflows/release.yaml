@@ -184,6 +184,20 @@ jobs:
           done
           zip tigris-windows-x64.zip tigris-windows-x64.exe
 
+      # Both installers verify the archive they download against this document,
+      # so it ships to the GitHub release and the bucket alike. Plain filenames
+      # only (no ./ prefix) — the installers match on the second field.
+      - name: Generate SHA256SUMS
+        working-directory: packages/cli/bin
+        run: |
+          sha256sum \
+            tigris-darwin-arm64.tar.gz \
+            tigris-darwin-x64.tar.gz \
+            tigris-linux-x64.tar.gz \
+            tigris-linux-arm64.tar.gz \
+            tigris-windows-x64.zip > SHA256SUMS
+          cat SHA256SUMS
+
       - name: Upload assets to the @tigrisdata/cli release
         working-directory: packages/cli
         env:
@@ -204,6 +218,7 @@ jobs:
             bin/tigris-linux-x64.tar.gz \
             bin/tigris-linux-arm64.tar.gz \
             bin/tigris-windows-x64.zip \
+            bin/SHA256SUMS \
             scripts/install.sh \
             scripts/install.ps1
           do
@@ -215,6 +230,100 @@ jobs:
             done
           done
           echo "All assets uploaded to $TAG"
+
+  # Mirror the release artifacts to get.t3.storage.dev, the short-URL host the
+  # installers resolve against.
+  #
+  # Deliberately its own job rather than a trailing step in build-binaries:
+  # update-homebrew depends on that job and needs only the GitHub assets, which
+  # are already uploaded by the time this runs. Folding the bucket publish in
+  # there would let a bucket outage — or a release key missing PutObjectAcl —
+  # block the Homebrew formula for a release that is otherwise complete.
+  #
+  # Assets are pulled back from the GitHub release rather than handed between
+  # jobs, which matches the layering: the release is the source of record and
+  # the bucket is a mirror of it.
+  publish-bucket:
+    needs: [release, build-binaries]
+    if: ${{ needs.release.outputs.cli_published == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.release.outputs.cli_version }}
+        run: |
+          mkdir -p dist
+          gh release download "@tigrisdata/cli@${VERSION}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --dir dist \
+            --pattern 'tigris-*' \
+            --pattern 'SHA256SUMS'
+          ls -l dist
+
+      - name: Publish artifacts to get.t3.storage.dev
+        working-directory: dist
+        env:
+          TIGRIS_STORAGE_ACCESS_KEY_ID: ${{ secrets.TIGRIS_RELEASE_ACCESS_KEY_ID }}
+          TIGRIS_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_RELEASE_SECRET_ACCESS_KEY }}
+          TIGRIS_STORAGE_ENDPOINT: ${{ secrets.TIGRIS_STORAGE_ENDPOINT }}
+          TIGRIS_NO_TELEMETRY: "1"
+          VERSION: ${{ needs.release.outputs.cli_version }}
+        run: |
+          # secrets can't be used in a step `if:`, so gate here: no key means
+          # the bucket can't be written, so skip rather than fail.
+          if [ -z "${TIGRIS_STORAGE_ACCESS_KEY_ID:-}" ]; then
+            echo "TIGRIS_RELEASE_ACCESS_KEY_ID not set — skipping bucket publish."
+            exit 0
+          fi
+
+          # Publish with the CLI this release just shipped, unpacked from its
+          # own archive, so every release exercises `tigris objects put`
+          # end to end against a real bucket. The extracted binary is
+          # `tigris-linux-x64`; the archive it came from keeps the .tar.gz
+          # suffix, so the publish loop below does not pick it up.
+          tar xzf tigris-linux-x64.tar.gz
+          chmod +x ./tigris-linux-x64
+          t3() { ./tigris-linux-x64 "$@"; }
+
+          t3 --version
+
+          # Version-prefixed paths are write-once, so they can cache forever.
+          IMMUTABLE='public, max-age=31536000, immutable'
+
+          # --access public is explicit on purpose: `objects put` always sends
+          # an object ACL and defaults it to private, so omitting this would
+          # bet on the bucket's own public setting winning that conflict.
+          publish() {
+            t3 objects put "t3://get/cli/v${VERSION}/$1" "$1" \
+              --access public \
+              --content-type "$2" \
+              --cache-control "$3"
+          }
+
+          for f in \
+            tigris-darwin-arm64.tar.gz \
+            tigris-darwin-x64.tar.gz \
+            tigris-linux-x64.tar.gz \
+            tigris-linux-arm64.tar.gz
+          do
+            publish "$f" 'application/gzip' "$IMMUTABLE"
+          done
+
+          publish tigris-windows-x64.zip 'application/zip' "$IMMUTABLE"
+          publish SHA256SUMS 'text/plain; charset=utf-8' "$IMMUTABLE"
+
+          # The version pointer goes LAST: it is what an installer reads to
+          # discover "latest", so publishing it before the archives are all in
+          # place would advertise a version that 404s. Short TTL so a new
+          # release is picked up promptly rather than after a year.
+          printf '{"version":"%s"}\n' "$VERSION" > latest.json
+          t3 objects put t3://get/cli/latest.json latest.json \
+            --access public \
+            --content-type 'application/json' \
+            --cache-control 'public, max-age=300, must-revalidate'
+
+          echo "Published v${VERSION} to get.t3.storage.dev"
 
   # Regenerate the Homebrew formula from the release assets and open a PR
   # against tigrisdata/homebrew-tap. Needs a HOMEBREW_TAP_TOKEN secret with

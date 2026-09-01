@@ -34,23 +34,29 @@ npm uninstall -g @tigrisdata/cli
 
 No dependencies required. Downloads a self-contained executable.
 
+Archives are verified against the published `SHA256SUMS` before install, and the
+installer aborts on a mismatch. Artifacts are served from
+`get.t3.storage.dev`; if that host is unreachable the installer falls back to
+the equivalent GitHub release assets automatically.
+
 ### macOS / Linux
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/tigrisdata/storage/main/packages/cli/scripts/install.sh | sh
+curl -fsSL https://get.t3.storage.dev/install.sh | sh
 ```
 
 #### Options
 
-| Environment Variable | Description                                          |
-| -------------------- | ---------------------------------------------------- |
-| `TIGRIS_VERSION`     | Install a specific version (e.g., `3.4.2`)          |
-| `TIGRIS_INSTALL_DIR` | Custom install directory (default: `/usr/local/bin`) |
+| Environment Variable | Description                                                       |
+| -------------------- | ----------------------------------------------------------------- |
+| `TIGRIS_VERSION`     | Install a specific version (e.g., `3.4.2`)                        |
+| `TIGRIS_INSTALL_DIR` | Custom install directory (default: `/usr/local/bin`)              |
+| `TIGRIS_BASE_URL`    | Artifact host (default: `https://get.t3.storage.dev`)             |
 
 Example:
 
 ```sh
-TIGRIS_VERSION=3.4.2 curl -fsSL https://raw.githubusercontent.com/tigrisdata/storage/main/packages/cli/scripts/install.sh | sh
+TIGRIS_VERSION=3.4.2 curl -fsSL https://get.t3.storage.dev/install.sh | sh
 ```
 
 #### Uninstall (macOS / Linux)
@@ -66,20 +72,21 @@ If you used a custom `TIGRIS_INSTALL_DIR`, remove from that directory instead an
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/tigrisdata/storage/main/packages/cli/scripts/install.ps1 | iex
+irm https://get.t3.storage.dev/install.ps1 | iex
 ```
 
 #### Options
 
-| Environment Variable | Description                                         |
-| -------------------- | --------------------------------------------------- |
-| `TIGRIS_VERSION`     | Install a specific version (e.g., `3.4.2`)         |
-| `TIGRIS_INSTALL_DIR` | Custom install directory (default: `~\.tigris\bin`) |
+| Environment Variable | Description                                            |
+| -------------------- | ------------------------------------------------------ |
+| `TIGRIS_VERSION`     | Install a specific version (e.g., `3.4.2`)            |
+| `TIGRIS_INSTALL_DIR` | Custom install directory (default: `~\.tigris\bin`)   |
+| `TIGRIS_BASE_URL`    | Artifact host (default: `https://get.t3.storage.dev`) |
 
 Example:
 
 ```powershell
-$env:TIGRIS_VERSION = "3.4.2"; irm https://raw.githubusercontent.com/tigrisdata/storage/main/packages/cli/scripts/install.ps1 | iex
+$env:TIGRIS_VERSION = "3.4.2"; irm https://get.t3.storage.dev/install.ps1 | iex
 ```
 
 #### Uninstall (Windows)

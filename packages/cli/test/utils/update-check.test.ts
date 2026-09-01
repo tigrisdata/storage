@@ -1,6 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { isNewerVersion } from '../../src/utils/update-check.js';
+import { getInstallMethod } from '../../src/utils/install-method.js';
+import {
+  getUpdateCommand,
+  isNewerVersion,
+} from '../../src/utils/update-check.js';
+
+vi.mock('../../src/utils/install-method.js', () => ({
+  getInstallMethod: vi.fn(),
+}));
+
+const mockedInstallMethod = vi.mocked(getInstallMethod);
 
 describe('isNewerVersion', () => {
   it('should return true when latest major is greater', () => {
@@ -106,5 +116,50 @@ describe('isNewerVersion', () => {
   it('should handle v prefix with prereleases', () => {
     expect(isNewerVersion('v1.0.0-alpha.1', 'v1.0.0')).toBe(true);
     expect(isNewerVersion('v1.0.0-beta.1', '1.0.0')).toBe(true);
+  });
+});
+
+describe('getUpdateCommand', () => {
+  const realPlatform = process.platform;
+
+  const setPlatform = (value: string) => {
+    Object.defineProperty(process, 'platform', {
+      value,
+      configurable: true,
+    });
+  };
+
+  afterEach(() => {
+    setPlatform(realPlatform);
+    vi.clearAllMocks();
+  });
+
+  it('uses the npm registry for npm installs', () => {
+    mockedInstallMethod.mockReturnValue('npm');
+    expect(getUpdateCommand()).toBe('npm install -g @tigrisdata/cli');
+  });
+
+  it('uses brew for homebrew installs', () => {
+    mockedInstallMethod.mockReturnValue('homebrew');
+    expect(getUpdateCommand()).toBe('brew upgrade tigris');
+  });
+
+  // `tigris update` execSyncs this string verbatim, so it has to stay a
+  // working one-liner pointed at the short-URL host. Asserting on the exact
+  // command keeps a URL change from silently shipping a broken self-update.
+  it('pipes the get.t3.storage.dev installer for standalone binaries', () => {
+    mockedInstallMethod.mockReturnValue('binary');
+    setPlatform('linux');
+    expect(getUpdateCommand()).toBe(
+      'curl -fsSL https://get.t3.storage.dev/install.sh | sh'
+    );
+  });
+
+  it('uses the PowerShell installer on Windows', () => {
+    mockedInstallMethod.mockReturnValue('binary');
+    setPlatform('win32');
+    expect(getUpdateCommand()).toBe(
+      'irm https://get.t3.storage.dev/install.ps1 | iex'
+    );
   });
 });
