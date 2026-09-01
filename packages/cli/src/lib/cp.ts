@@ -104,7 +104,8 @@ async function uploadFile(
   key: string,
   config: Awaited<ReturnType<typeof getStorageConfig>>,
   showProgress = false,
-  access?: 'public' | 'private'
+  access?: 'public' | 'private',
+  cacheControl?: string
 ): Promise<{ error?: string }> {
   let fileSize: number | undefined;
   try {
@@ -123,6 +124,7 @@ async function uploadFile(
     ...calculateUploadParams(fileSize),
     ...(contentType ? { contentType } : {}),
     ...(access ? { access } : {}),
+    ...(cacheControl ? { cacheControl } : {}),
     onUploadProgress: showProgress
       ? ({ loaded }) => {
           if (fileSize !== undefined && fileSize > 0) {
@@ -258,7 +260,8 @@ async function copyLocalToRemote(
   destParsed: ParsedPath,
   config: Awaited<ReturnType<typeof getStorageConfig>>,
   recursive: boolean,
-  access?: 'public' | 'private'
+  access?: 'public' | 'private',
+  cacheControl?: string
 ) {
   const localPath = resolveLocalPath(src);
   const isWildcard = src.includes('*');
@@ -293,7 +296,8 @@ async function copyLocalToRemote(
         destKey,
         config,
         false,
-        access
+        access,
+        cacheControl
       );
       if (result.error) {
         console.error(`Failed to upload ${file}: ${result.error}`);
@@ -370,7 +374,8 @@ async function copyLocalToRemote(
         destKey,
         config,
         false,
-        access
+        access,
+        cacheControl
       );
       if (result.error) {
         console.error(`Failed to upload ${file}: ${result.error}`);
@@ -425,7 +430,8 @@ async function copyLocalToRemote(
       destKey,
       config,
       !_jsonMode,
-      access
+      access,
+      cacheControl
     );
     if (result.error) {
       exitWithError(result.error);
@@ -849,6 +855,10 @@ export default async function cp(options: Record<string, unknown>) {
 
   const recursive = !!getOption<boolean>(options, ['recursive', 'r']);
   const accessArg = getOption<string>(options, ['access', 'a', 'A']);
+  const cacheControl = getOption<string>(options, [
+    'cache-control',
+    'cacheControl',
+  ]);
   const format = getFormat(options);
   _jsonMode = format === 'json';
 
@@ -871,6 +881,13 @@ export default async function cp(options: Record<string, unknown>) {
     );
   }
 
+  // Same reasoning as --access: Cache-Control is stored on the object at write
+  // time, and the only write a cp performs is an upload. copy() can't carry it
+  // and a downloaded file has nowhere to put it.
+  if (cacheControl !== undefined && direction !== 'local-to-remote') {
+    exitWithError('--cache-control only applies to local-to-remote uploads.');
+  }
+
   const config = await getStorageConfig({ withCredentialProvider: true });
 
   switch (direction) {
@@ -879,7 +896,14 @@ export default async function cp(options: Record<string, unknown>) {
       if (!destParsed.bucket) {
         exitWithError('Invalid destination path');
       }
-      await copyLocalToRemote(src, destParsed, config, recursive, access);
+      await copyLocalToRemote(
+        src,
+        destParsed,
+        config,
+        recursive,
+        access,
+        cacheControl
+      );
       break;
     }
     case 'remote-to-local': {

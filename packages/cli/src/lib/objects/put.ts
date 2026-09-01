@@ -25,6 +25,10 @@ export default async function putObject(options: Record<string, unknown>) {
     't',
     'T',
   ]);
+  const cacheControl = getOption<string>(options, [
+    'cache-control',
+    'cacheControl',
+  ]);
   const format = getFormat(options);
 
   if (!bucketArg) {
@@ -81,6 +85,7 @@ export default async function putObject(options: Record<string, unknown>) {
   const { data, error } = await put(key, body, {
     access: access === 'public' ? 'public' : 'private',
     contentType: resolvedContentType,
+    cacheControl,
     ...uploadParams,
     onUploadProgress: ({ loaded, percentage }) => {
       if (fileSize !== undefined && fileSize > 0) {
@@ -109,6 +114,7 @@ export default async function putObject(options: Record<string, unknown>) {
       path: data.path,
       size: formatSize(data.size ?? fileSize ?? 0),
       contentType: data.contentType || '-',
+      cacheControl: data.cacheControl || '-',
       modified: data.modified,
     },
   ];
@@ -117,6 +123,7 @@ export default async function putObject(options: Record<string, unknown>) {
     { key: 'path', header: 'Path' },
     { key: 'size', header: 'Size' },
     { key: 'contentType', header: 'Content-Type' },
+    { key: 'cacheControl', header: 'Cache-Control' },
     { key: 'modified', header: 'Modified' },
   ]);
 
