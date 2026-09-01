@@ -105,6 +105,7 @@ export default async function stat(options: Record<string, unknown>) {
     { metric: 'Size', value: formatSize(data.size) },
     { metric: 'Content-Type', value: data.contentType || 'N/A' },
     { metric: 'Content-Disposition', value: data.contentDisposition || 'N/A' },
+    { metric: 'Cache-Control', value: data.cacheControl || 'N/A' },
     { metric: 'Modified', value: data.modified.toISOString() },
   ];
 

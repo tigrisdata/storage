@@ -12,6 +12,7 @@ export type HeadOptions = {
 };
 
 export type HeadResponse = {
+  cacheControl: string;
   contentDisposition: string;
   contentType: string;
   etag: string;
@@ -53,6 +54,7 @@ export async function head(
             modified: res.LastModified ?? new Date(),
             contentType: res.ContentType ?? '',
             contentDisposition: res.ContentDisposition ?? '',
+            cacheControl: res.CacheControl ?? '',
             etag: res.ETag ?? '',
             metadata: res.Metadata ?? {},
             url: await getSignedUrl(tigrisClient, head, {

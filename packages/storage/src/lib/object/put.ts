@@ -24,6 +24,14 @@ export type PutOptions = {
   allowOverwrite?: boolean;
   contentType?: string;
   contentDisposition?: 'attachment' | 'inline';
+  /**
+   * `Cache-Control` header stored with the object and returned on every read.
+   * Tigris honors it at the edge; when omitted, public buckets fall back to
+   * `public, max-age=3600` for recognised static asset types.
+   *
+   * @example 'public, max-age=31536000, immutable'
+   */
+  cacheControl?: string;
   metadata?: Record<string, string>;
   multipart?: boolean;
   partSize?: number;
@@ -34,6 +42,7 @@ export type PutOptions = {
 };
 
 export type PutResponse = {
+  cacheControl: string | undefined;
   contentDisposition: string | undefined;
   contentType: string | undefined;
   etag: string;
@@ -88,6 +97,7 @@ export async function put(
       Body: body,
       ContentType: options?.contentType ?? undefined,
       ContentDisposition: contentDisposition,
+      CacheControl: options?.cacheControl ?? undefined,
       Metadata: options?.metadata,
       ACL: access,
     },
@@ -158,6 +168,7 @@ export async function put(
 
   return {
     data: {
+      cacheControl: options?.cacheControl ?? undefined,
       contentDisposition: options?.contentDisposition ?? undefined,
       contentType: options?.contentType ?? undefined,
       etag,

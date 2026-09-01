@@ -390,11 +390,13 @@ tigris cp <src> <dest> [flags]
 |------|-------------|
 | `-r, --recursive` | Copy directories recursively |
 | `-a, --access` | Access level for uploaded objects (only applies to local-to-remote uploads) |
+| `--cache-control` | Cache-Control header stored with uploaded objects (only applies to local-to-remote uploads) |
 
 **Examples:**
 ```bash
 tigris cp ./file.txt t3://my-bucket/file.txt
 tigris cp ./logo.png t3://my-bucket/logo.png --access public
+tigris cp ./dist/ t3://my-bucket/assets/ -r --cache-control 'public, max-age=31536000, immutable'
 tigris cp t3://my-bucket/file.txt ./local-copy.txt
 tigris cp t3://my-bucket/src/ t3://my-bucket/dest/ -r
 tigris cp ./images/ t3://my-bucket/images/ -r
@@ -1136,6 +1138,7 @@ tigris objects put <bucket> [key] [file] [flags]
 |------|-------------|
 | `-a, --access` | Access level (default: private) |
 | `-t, --content-type` | Content type (auto-detected from extension if omitted) |
+| `--cache-control` | Cache-Control header stored with the object and returned on every read (e.g. "public, max-age=31536000, immutable") |
 | `--format` | Output format (default: table) |
 
 **Examples:**
@@ -1143,6 +1146,7 @@ tigris objects put <bucket> [key] [file] [flags]
 tigris objects put my-bucket report.pdf ./report.pdf
 tigris objects put t3://my-bucket/report.pdf ./report.pdf
 tigris objects put my-bucket logo.png ./logo.png --access public --content-type image/png
+tigris objects put my-bucket app.js ./app.js --cache-control 'public, max-age=31536000, immutable'
 echo 'hello' | tigris objects put t3://my-bucket/hello.txt
 cat report.pdf | tigris objects put my-bucket report.pdf --content-type application/pdf
 ```

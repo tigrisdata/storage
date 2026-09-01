@@ -292,6 +292,40 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
       await remove(etagFileName, { config });
     });
 
+    // Tigris stores the Cache-Control given at write time and returns it on
+    // every read. The release pipeline depends on this to mark versioned CLI
+    // artifacts immutable and the install scripts short-lived, so assert the
+    // header actually round-trips rather than just that put() accepted it.
+    it('should round-trip cacheControl through put and head', async () => {
+      const ccFileName = `test-cache-control-${Date.now()}.txt`;
+      const cacheControl = 'public, max-age=31536000, immutable';
+
+      const putResult = await put(ccFileName, testFileContent, {
+        cacheControl,
+        config,
+      });
+      expect(putResult.error).toBeUndefined();
+      expect(putResult.data?.cacheControl).toBe(cacheControl);
+
+      const headResult = await head(ccFileName, { config });
+      expect(headResult.error).toBeUndefined();
+      expect(headResult.data?.cacheControl).toBe(cacheControl);
+
+      await remove(ccFileName, { config });
+    });
+
+    it('should leave cacheControl empty when none was set', async () => {
+      const plainFileName = `test-no-cache-control-${Date.now()}.txt`;
+
+      await put(plainFileName, testFileContent, { config });
+
+      const headResult = await head(plainFileName, { config });
+      expect(headResult.error).toBeUndefined();
+      expect(headResult.data?.cacheControl).toBe('');
+
+      await remove(plainFileName, { config });
+    });
+
     it('should return undefined data for non-existent files', async () => {
       const result = await head('non-existent-file.txt', {
         config,
