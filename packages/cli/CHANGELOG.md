@@ -1,5 +1,97 @@
 # @tigrisdata/cli
 
+## 3.11.0
+
+### Minor Changes
+
+- [#284](https://github.com/tigrisdata/storage/pull/284) [`91e32ed`](https://github.com/tigrisdata/storage/commit/91e32ede0843fd30f13f3d42e37735ddff3e11f6) Thanks [@designcode](https://github.com/designcode)! - Serve the standalone installers from `get.t3.storage.dev`.
+
+  Installing no longer requires a long `raw.githubusercontent.com` URL:
+
+  ```sh
+  curl -fsSL https://get.t3.storage.dev/install.sh | sh
+  ```
+
+  ```powershell
+  irm https://get.t3.storage.dev/install.ps1 | iex
+  ```
+
+  Both installers now resolve artifacts from the bucket rather than the GitHub
+  releases API, which removes the anonymous 60-requests/hour rate limit that could
+  make installs fail from shared or CI IP addresses — a pinned `TIGRIS_VERSION`
+  now needs no API call at all. Downloads are verified against a published
+  `SHA256SUMS` and abort on a mismatch. If the bucket is unreachable the
+  installers fall back to the GitHub release assets automatically, and
+  `TIGRIS_BASE_URL` overrides the host.
+
+- [#283](https://github.com/tigrisdata/storage/pull/283) [`adf604a`](https://github.com/tigrisdata/storage/commit/adf604a15d82b4575aa6fb88c4ddf27a337d083f) Thanks [@designcode](https://github.com/designcode)! - Add `--cache-control` to `objects put` and `cp`, and report it in `stat`.
+
+  The value is stored with the uploaded object and returned by Tigris on every
+  read:
+
+  ```sh
+  tigris objects put my-bucket app.js ./app.js \
+    --cache-control 'public, max-age=31536000, immutable'
+
+  tigris cp ./dist/ t3://my-bucket/assets/ -r \
+    --cache-control 'public, max-age=31536000, immutable'
+  ```
+
+  On `cp` it applies to local-to-remote uploads only, matching `--access`.
+
+- [#281](https://github.com/tigrisdata/storage/pull/281) [`abf2574`](https://github.com/tigrisdata/storage/commit/abf2574d38a9a29096bbd2c96275fbccfe9c34d1) Thanks [@designcode](https://github.com/designcode)! - Add the `ReadWrite` access key role and centralize role types in `@tigrisdata/iam`.
+
+  `ReadWrite` grants object read and write on a bucket, sitting between `ReadOnly`
+  and `Editor`. It is accepted anywhere a bucket role is — `assignBucketRoles`,
+  `createAccessKey`, `tigris access-keys assign --role ReadWrite`, and the
+  `credentials.role` option on agent-kit's `createWorkspace` / `createForks`.
+
+  The role union previously lived as four inline string-literal types in `iam` plus
+  duplicated copies in `cli` and `agent-kit`, which had already drifted apart. It
+  now lives once in `packages/iam/src/lib/access-key/types.ts` and is exported from
+  the package root as `AccessKeyRole`, with `ACCESS_KEY_ROLES` for runtime
+  validation and `BucketRoleAssignment` for `{ bucket, role }` pairs. The shared
+  `AccessKey` and IAM list-response types moved to the same module.
+
+  This also fixes a type fidelity bug: `createAccessKey`'s `bucketsRole` option and
+  the raw IAM list response both excluded `NamespaceAdmin`, even though the API
+  accepts and returns it in that field.
+
+- [#282](https://github.com/tigrisdata/storage/pull/282) [`5940199`](https://github.com/tigrisdata/storage/commit/594019979fd6efeede4399f7b69741179ef5d9c6) Thanks [@designcode](https://github.com/designcode)! - Add `tigris buckets share` and show shares in `tigris buckets get`.
+
+  ```bash
+  tigris buckets share my-bucket --organization --role ReadOnly
+  tigris buckets share my-bucket --team tmid_MQQUhV --role Editor
+  tigris buckets share my-bucket --user uid_MQQUhV --role ReadOnly
+  tigris buckets share my-bucket --team tmid_A,tmid_B --role Editor,ReadOnly
+  tigris buckets share my-bucket --reset
+  ```
+
+  `--organization` gives access to everyone in your organization and takes exactly
+  one `--role`. `--team` and `--user` accept comma-separated IDs; a single `--role`
+  applies to all of them, otherwise roles pair positionally.
+
+  Use one of `--organization`, `--team`, or `--user` per invocation. Because
+  shares merge by default, granting to more than one kind of target is just
+  running the command more than once.
+
+  Shares merge by default — a grant for a target you name is updated, and targets
+  you do not name keep their access. Pass `--override` to replace the list
+  outright, or `--reset` to remove every share.
+
+  `tigris buckets get` now shows a `Shared With` row listing the organization
+  grant first, then teams, then users.
+
+### Patch Changes
+
+- [#274](https://github.com/tigrisdata/storage/pull/274) [`eb46ca8`](https://github.com/tigrisdata/storage/commit/eb46ca8431d52d58a3bbe91d46e75510d3711780) Thanks [@designcode](https://github.com/designcode)! - Correct the snapshot-bucket caveat on soft delete.
+
+  The docs said not to rely on soft delete at all on a snapshot bucket. What actually happens is narrower: a **plain** delete there records a delete marker rather than soft-deleting, so nothing lands in the soft-delete view — but deleting one specific version does soft-delete that version, and it shows up in `list({ deleted: true })` like any other.
+
+- Updated dependencies [[`adf604a`](https://github.com/tigrisdata/storage/commit/adf604a15d82b4575aa6fb88c4ddf27a337d083f), [`abf2574`](https://github.com/tigrisdata/storage/commit/abf2574d38a9a29096bbd2c96275fbccfe9c34d1), [`5940199`](https://github.com/tigrisdata/storage/commit/594019979fd6efeede4399f7b69741179ef5d9c6), [`eb46ca8`](https://github.com/tigrisdata/storage/commit/eb46ca8431d52d58a3bbe91d46e75510d3711780)]:
+  - @tigrisdata/storage@3.21.0
+  - @tigrisdata/iam@2.5.0
+
 ## 3.10.0
 
 ### Minor Changes

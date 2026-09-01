@@ -1,5 +1,68 @@
 # @tigrisdata/storage
 
+## 3.21.0
+
+### Minor Changes
+
+- [#283](https://github.com/tigrisdata/storage/pull/283) [`adf604a`](https://github.com/tigrisdata/storage/commit/adf604a15d82b4575aa6fb88c4ddf27a337d083f) Thanks [@designcode](https://github.com/designcode)! - Add `Cache-Control` support to uploads.
+
+  `put()` accepts a `cacheControl` option, stored with the object and returned by
+  Tigris on every read. Public buckets otherwise fall back to
+  `public, max-age=3600` for recognised static asset types.
+
+  ```ts
+  await put("assets/app.abc123.js", body, {
+    access: "public",
+    cacheControl: "public, max-age=31536000, immutable",
+  });
+  ```
+
+  `getSignedUploadUrl()` accepts the same option, so browser uploads can be locked
+  to a cache policy — on the PUT contract it comes back as a required
+  `Cache-Control` header, and on the POST contract it is baked into the form
+  policy.
+
+  `head()` now returns the stored value as `cacheControl`, and `put()` echoes it
+  back on `PutResponse`.
+
+- [#282](https://github.com/tigrisdata/storage/pull/282) [`5940199`](https://github.com/tigrisdata/storage/commit/594019979fd6efeede4399f7b69741179ef5d9c6) Thanks [@[{](https://github.com/[{)! - Add `shareBucket()` and expose bucket shares on `getBucketInfo()`.
+
+  `shareBucket()` grants access to your whole organization, to specific teams, or
+  to specific users:
+
+  ```ts
+  await shareBucket('my-bucket', {
+    organization: { role: 'ReadOnly' },
+    team: [{ teamId: 'tmid_MQQUhV', role: 'Editor' }],
+   userId: 'uid_MQQUhV', role: 'ReadOnly' }],
+  });
+  ```
+
+  Shares **merge** by default: a target you name has its role updated, and targets
+  you do not name keep their access. Granting one team access therefore cannot
+  silently revoke your organization-wide grant. This costs a `getBucketInfo` call,
+  and a failure to read the current shares is surfaced rather than writing a
+  truncated list.
+
+  Pass `override: true` to make the shares you provide the complete list — anything
+  omitted loses access — and `{ override: true, team: [], user: [] }` to remove
+  every share. A call with no targets at all is rejected rather than treated as a
+  clear.
+
+  `getBucketInfo()` returns `settings.shares` in the same shape: `team` and `user`
+  are always arrays (empty when nothing is shared that way) and `organization` is
+  absent unless the bucket is shared org-wide.
+
+  Roles are `ReadOnly`, `ReadWrite`, or `Editor`, typed as `BucketShareRole`. The
+  org-wide `NamespaceAdmin` role is not accepted: a share always targets one
+  concrete bucket.
+
+### Patch Changes
+
+- [#274](https://github.com/tigrisdata/storage/pull/274) [`eb46ca8`](https://github.com/tigrisdata/storage/commit/eb46ca8431d52d58a3bbe91d46e75510d3711780) Thanks [@designcode](https://github.com/designcode)! - Correct the snapshot-bucket caveat on soft delete.
+
+  The docs said not to rely on soft delete at all on a snapshot bucket. What actually happens is narrower: a **plain** delete there records a delete marker rather than soft-deleting, so nothing lands in the soft-delete view — but deleting one specific version does soft-delete that version, and it shows up in `list({ deleted: true })` like any other.
+
 ## 3.20.0
 
 ### Minor Changes
