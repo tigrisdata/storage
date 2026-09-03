@@ -1,0 +1,18 @@
+:root {
+  color-scheme: dark;
+  background: #0e1920;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+/* Full-bleed: the terminal is the whole page. */
+.tigris-shell {
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+}
