@@ -64,16 +64,6 @@ importers:
         specifier: ^8.0.14
         version: 8.2.2(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.12)(yaml@2.9.0)
 
-  apps/cli-browser-playground:
-    dependencies:
-      '@tigrisdata/cli':
-        specifier: workspace:^
-        version: link:../../packages/cli
-    devDependencies:
-      vite:
-        specifier: ^8.0.14
-        version: 8.2.2(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.12)(yaml@2.9.0)
-
   apps/cli-shell-playground:
     dependencies:
       '@tigrisdata/cli-shell':
