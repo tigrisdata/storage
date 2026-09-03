@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tigris CLI — browser harness</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>tigris <span class="tag">browser build</span></h1>
+      <div id="status" class="status">Not authenticated</div>
+    </header>
+
+    <form id="auth" class="auth">
+      <input id="accessKeyId" placeholder="Access Key ID" autocomplete="off" spellcheck="false" />
+      <input id="secretAccessKey" type="password" placeholder="Secret Access Key" autocomplete="off" />
+      <button type="submit">Use these keys</button>
+      <span class="hint">Kept in memory only — never written to storage.</span>
+    </form>
+
+    <div id="output" class="output"></div>
+
+    <form id="repl" class="repl">
+      <span class="prompt">$</span>
+      <input id="command" placeholder="ls" autocomplete="off" spellcheck="false" />
+    </form>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
