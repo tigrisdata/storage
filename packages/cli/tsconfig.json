@@ -18,5 +18,10 @@
     }
   },
   "include": ["src", "test"],
-  "exclude": ["src/cli-binary.ts", "src/command-registry.ts"]
+  "exclude": [
+    "src/cli-binary.ts",
+    "src/command-registry.ts",
+    "src/browser",
+    "test/browser"
+  ]
 }

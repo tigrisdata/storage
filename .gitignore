@@ -15,3 +15,4 @@ coverage/
 # packages/cli
 packages/cli/bin/
 packages/cli/src/command-registry.ts
+packages/cli/src/browser/command-registry.generated.ts
