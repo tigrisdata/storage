@@ -86,22 +86,22 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         uses: changesets/action@v2.1.1
         with:
-          version: pnpm changeset version
-          publish: pnpm changeset publish
-          commit: "chore(release): bump versions and update changelogs"
-          title: "chore(release): bump versions and update changelogs"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          version-script: pnpm changeset version
+          publish-script: pnpm changeset publish
+          commit-message: "chore(release): bump versions and update changelogs"
+          pr-title: "chore(release): bump versions and update changelogs"
+          # v2 dropped the GITHUB_TOKEN env var; the token is an input now.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # Did this run publish @tigrisdata/cli? If so, expose its version so the
       # build-binaries / update-homebrew jobs fire (and skip for releases that
-      # only touched other packages). publishedPackages is a JSON array of
+      # only touched other packages). published-packages is a JSON array of
       # { name, version }.
       - name: Detect CLI publish
         id: cli
         if: ${{ github.event_name == 'push' && steps.changesets.outputs.published == 'true' }}
         env:
-          PUBLISHED: ${{ steps.changesets.outputs.publishedPackages }}
+          PUBLISHED: ${{ steps.changesets.outputs.published-packages }}
         run: |
           version="$(printf '%s' "$PUBLISHED" | jq -r '.[] | select(.name == "@tigrisdata/cli") | .version')"
           if [ -n "$version" ]; then
@@ -118,6 +118,12 @@ jobs:
       # `inputs.tag` is bound to an env var and referenced as "$TAG" rather than
       # interpolated into the shell command, per GitHub's hardening guide
       # (avoids script injection from a crafted dispatch input).
+      #
+      # Since Changesets v3, `version` exits 1 when there are no unreleased
+      # changesets rather than exiting 0 having done nothing. A beta run with
+      # nothing to ship therefore fails here, which is deliberate: it stops the
+      # publish step below from re-publishing the current versions under the
+      # beta tag. A red run on an empty queue is the correct outcome, not a bug.
       - name: Version (snapshot)
         if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
