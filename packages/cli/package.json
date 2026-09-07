@@ -83,7 +83,7 @@
   },
   "devDependencies": {
     "buffer": "^6.0.3",
-    "esbuild": "^0.27.7",
+    "esbuild": "^0.28.0",
     "events": "^3.3.0",
     "memfs": "^4.68.1",
     "path-browserify": "^1.0.1",
