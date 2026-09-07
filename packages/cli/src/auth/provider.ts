@@ -58,8 +58,12 @@ export function getEnvForcePathStyle(): boolean {
   return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
 }
 
-const tigrisConfig = getTigrisConfig();
-const auth0Config = getAuth0Config();
+// Resolved per call rather than snapshotted at module load. `getEnvForcePathStyle()`
+// below already reads its variable per call for the same reason: the browser
+// build supplies `process.env` from its host, which is not yet installed when
+// this module is first evaluated, so a snapshot would freeze every endpoint to
+// its default. In Node the value cannot change mid-process, so this is
+// equivalent there.
 
 // ---------------------------------------------------------------------------
 // Environment credential helpers
@@ -109,6 +113,19 @@ export function getEnvCredentials(): EnvCredentials | null {
  * Returns true if login was triggered, false if non-interactive or already attempted.
  */
 let autoLoginAttempted = false;
+
+/**
+ * Clear the once-per-process auto-login latch.
+ *
+ * A Node CLI run is one command and then exit, so latching for the process is
+ * the same as latching for the command. A browser runtime lives for the whole
+ * page, where the latch would otherwise mean a cancelled login or a `logout`
+ * permanently suppresses auto-login for every later command.
+ */
+export function resetAutoLogin(): void {
+  autoLoginAttempted = false;
+}
+
 async function triggerAutoLogin(): Promise<boolean> {
   if (autoLoginAttempted || !process.stdin.isTTY) return false;
   autoLoginAttempted = true;
@@ -246,9 +263,9 @@ async function resolveStorageConfig(options?: {
         secretAccessKey: method.secretAccessKey,
         endpoint:
           profileConfig.endpoint ||
-          tigrisConfig.endpoint ||
+          getTigrisConfig().endpoint ||
           DEFAULT_STORAGE_ENDPOINT,
-        iamEndpoint: profileConfig.iamEndpoint || tigrisConfig.iamEndpoint,
+        iamEndpoint: profileConfig.iamEndpoint || getTigrisConfig().iamEndpoint,
       };
     }
 
@@ -277,10 +294,10 @@ async function resolveStorageConfig(options?: {
             expiration: new Date(Date.now() + 10 * 60 * 1000),
           }),
         }),
-        endpoint: tigrisConfig.endpoint,
+        endpoint: getTigrisConfig().endpoint,
         organizationId: selectedOrg,
-        iamEndpoint: tigrisConfig.iamEndpoint,
-        authDomain: auth0Config.domain,
+        iamEndpoint: getTigrisConfig().iamEndpoint,
+        authDomain: getAuth0Config().domain,
       };
     }
 
@@ -291,7 +308,7 @@ async function resolveStorageConfig(options?: {
         secretAccessKey: method.secretAccessKey,
         endpoint: getStoredCredentials()?.endpoint || DEFAULT_STORAGE_ENDPOINT,
         organizationId: selectedOrg ?? undefined,
-        iamEndpoint: tigrisConfig.iamEndpoint,
+        iamEndpoint: getTigrisConfig().iamEndpoint,
       };
     }
 
@@ -309,7 +326,7 @@ async function resolveStorageConfig(options?: {
         secretAccessKey: method.secretAccessKey,
         endpoint: getStoredCredentials()?.endpoint || DEFAULT_STORAGE_ENDPOINT,
         organizationId: selectedOrg ?? undefined,
-        iamEndpoint: tigrisConfig.iamEndpoint,
+        iamEndpoint: getTigrisConfig().iamEndpoint,
       };
     }
 

@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true
+  },
+  "include": ["src/browser", "src/global.d.ts", "test/browser"],
+  "exclude": ["src/cli-binary.ts", "src/command-registry.ts"]
+}

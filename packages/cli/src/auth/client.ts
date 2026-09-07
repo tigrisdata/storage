@@ -69,6 +69,22 @@ interface TokenResponse {
 /**
  * Auth0 Client wrapper for CLI authentication
  */
+/**
+ * Refreshes tokens on behalf of an environment that holds no refresh token of
+ * its own — the browser build, where Auth0's SPA SDK keeps refresh tokens in
+ * its own cache and renews on request. Returns the token set it installed, or
+ * null to decline. The Node CLI never registers one.
+ */
+export type ExternalTokenRefresher = () => Promise<storage.TokenSet | null>;
+
+let externalRefresher: ExternalTokenRefresher | null = null;
+
+export function setExternalTokenRefresher(
+  refresher: ExternalTokenRefresher | null
+): void {
+  externalRefresher = refresher;
+}
+
 export class TigrisAuthClient {
   private config: ReturnType<typeof getAuth0Config>;
   private baseUrl: string;
@@ -275,6 +291,9 @@ export class TigrisAuthClient {
     }
 
     if (!tokenSet?.refreshToken) {
+      const renewed = externalRefresher ? await externalRefresher() : null;
+      if (renewed) return renewed;
+
       throw new Error(
         'No refresh token available. Please run "tigris login" to re-authenticate.'
       );

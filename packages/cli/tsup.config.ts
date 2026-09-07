@@ -23,6 +23,8 @@ export default defineConfig((options) => ({
     '!src/cli-binary.ts',
     '!src/specs-embedded.ts',
     '!src/command-registry.ts',
+    // Browser build has its own entry and shims — see scripts/build-browser.ts
+    '!src/browser/**',
   ],
   format: ['esm'],
   dts: false,

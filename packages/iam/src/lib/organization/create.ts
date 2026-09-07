@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
 import type { TigrisIAMConfig, TigrisIAMResponse } from '../types';
 import { listOrganizations } from './list';
@@ -55,7 +54,7 @@ export async function createOrganization(
     method: 'POST',
     path: IAM_ENDPOINTS.createOrganization,
     body: {
-      id: randomUUID().toString(),
+      id: crypto.randomUUID(),
       name: organizationName,
     },
   });

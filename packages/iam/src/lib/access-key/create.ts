@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
 import type { TigrisIAMConfig, TigrisIAMResponse } from '../types';
 import type { AccessKey, BucketRoleAssignment } from './types';
@@ -32,7 +31,7 @@ export async function createAccessKey(
   formData.append(
     'Req',
     JSON.stringify({
-      req_uuid: randomUUID().toString(),
+      req_uuid: crypto.randomUUID(),
       name,
       buckets_role: options?.bucketsRole ?? [],
     })
