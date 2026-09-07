@@ -84,7 +84,7 @@ jobs:
       - name: Create release PR or publish
         id: changesets
         if: ${{ github.event_name == 'push' }}
-        uses: changesets/action@v1
+        uses: changesets/action@v2.1.1
         with:
           version: pnpm changeset version
           publish: pnpm changeset publish
