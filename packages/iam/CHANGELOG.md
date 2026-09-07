@@ -1,5 +1,13 @@
 # @tigrisdata/iam
 
+## 2.5.1
+
+### Patch Changes
+
+- [#286](https://github.com/tigrisdata/storage/pull/286) [`73d4a3e`](https://github.com/tigrisdata/storage/commit/73d4a3e679845ea1f0f690a0753c4c00400dcbf9) Thanks [@designcode](https://github.com/designcode)! - Use the Web Crypto global instead of `node:crypto` for request UUIDs, so the
+  package can be bundled for a browser. `crypto.randomUUID()` is the same source
+  already used by `addPolicy` and `editPolicy`.
+
 ## 2.5.0
 
 ### Minor Changes

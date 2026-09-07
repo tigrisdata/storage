@@ -1,6 +1,6 @@
 {
   "name": "@tigrisdata/cli-shell",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The Tigris CLI as an embeddable React terminal, backed by a virtual bash environment",
   "type": "module",
   "main": "./dist/index.js",
