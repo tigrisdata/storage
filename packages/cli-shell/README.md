@@ -126,7 +126,7 @@ unaffected because its device flow has no callback URI.
 | --- | --- |
 | `auth` | Auth0 domain/clientId/audience overrides |
 | `accessKey` | Sign in with an access key instead of OAuth |
-| `env` | Extra environment variables the CLI can read |
+| `env` | Extra environment variables the CLI can read. `TIGRIS_FORCE_PATH_STYLE` defaults to `true` — a page cannot reach per-bucket subdomains cross-origin — and can be overridden here |
 | `welcome` | Replace the banner, or `false` for none |
 | `onReady` | Receives the `ShellEngine` for imperative use |
 | `className`, `style` | Applied to the container |

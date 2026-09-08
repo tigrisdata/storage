@@ -58,7 +58,11 @@ export function createReplHost(options: HostOptions): BrowserHost {
     },
 
     get env() {
-      return env?.() ?? {};
+      // Path-style addressing, as agent-shell defaults to. A page cannot
+      // reach per-bucket subdomains (`<bucket>.<endpoint>`): each is its own
+      // origin with its own CORS policy, so bucket-scoped calls must go to
+      // `<endpoint>/<bucket>/...` instead. The caller's env still wins.
+      return { TIGRIS_FORCE_PATH_STYLE: 'true', ...env?.() };
     },
 
     confirm: async (message, options) => {
