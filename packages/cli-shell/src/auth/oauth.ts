@@ -144,34 +144,92 @@ interface MintedTokens {
   expiresAt?: number;
 }
 
+function getSilentToken(
+  auth0: Auth0Client,
+  config: ResolvedAuth0Config,
+  cacheMode: 'on' | 'off'
+) {
+  return auth0.getTokenSilently({
+    authorizationParams: { audience: config.audience },
+    detailedResponse: true,
+    cacheMode,
+  });
+}
+
+/** The `exp` claim of a JWT, in seconds — or undefined if it is not one. */
+function jwtExp(token: string): number | undefined {
+  const payload = token.split('.')[1];
+  if (!payload) return undefined;
+  try {
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const claims = JSON.parse(atob(padded)) as { exp?: unknown };
+    return typeof claims.exp === 'number' ? claims.exp : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * When the access token expires, in Unix ms.
+ *
+ * Read from the token's own `exp` claim when it is a JWT — exact for a fresh
+ * token and a cached one alike. The SDK's `expires_in` is only the fallback:
+ * on a cache hit it is the token's *original* lifetime, not the time left, so
+ * trusting it would record a near-dead token as good for another hour.
+ */
+export function expiryOf(
+  accessToken: string,
+  expiresIn: number | undefined
+): number | undefined {
+  const exp = jwtExp(accessToken);
+  if (exp !== undefined) return exp * 1000;
+  return expiresIn ? Date.now() + expiresIn * 1000 : undefined;
+}
+
+/** The session holds no refresh token at all — as opposed to a rejected one. */
+function isMissingRefreshToken(error: unknown): boolean {
+  if (error instanceof GenericError) {
+    return error.error === 'missing_refresh_token';
+  }
+  return /missing_refresh_token|Missing Refresh Token/i.test(messageOf(error));
+}
+
 /**
  * Tokens from the SDK, in the shape the CLI's store takes.
  *
- * `detailedResponse` gives the id_token and the real expiry. Both matter:
- * the CLI's `whoami` reads its identity out of the ID token, and without a
- * true `expires_in` we would be guessing when the session lapses.
+ * `detailedResponse` gives the id_token, which `whoami` reads its identity
+ * from. Expiry comes from the token itself (see `expiryOf`).
  *
- * `renew` forces a real refresh. The SDK otherwise hands back its cached
- * token until a minute before expiry, which is no use to a CLI that asks
- * five minutes before.
+ * A plain read (login, restore) takes whatever the SDK holds: the cached
+ * token while it is valid, refreshed by the SDK itself once it nears expiry.
+ *
+ * A renewal forces a real refresh: the CLI asks five minutes before expiry,
+ * and a cache hit would just hand back the same expiring token. If the
+ * session has no refresh token to spend — one cached before offline access
+ * was in use — the cached token still serves until it truly expires, rather
+ * than every command failing. That fallback is only for a *missing* refresh
+ * token: a refresh token the tenant rejects (revoked, expired, login
+ * required) means the session is dead and must not be reinstalled.
  */
 async function mintTokens(
   auth0: Auth0Client,
   config: ResolvedAuth0Config,
   { renew = false } = {}
 ): Promise<MintedTokens> {
-  const token = await auth0.getTokenSilently({
-    authorizationParams: { audience: config.audience },
-    detailedResponse: true,
-    cacheMode: renew ? 'off' : 'on',
-  });
+  const token = renew
+    ? await getSilentToken(auth0, config, 'off').catch((error) => {
+        if (!isMissingRefreshToken(error)) throw error;
+        return getSilentToken(auth0, config, 'on');
+      })
+    : await getSilentToken(auth0, config, 'on');
+
+  const expiresAt = expiryOf(token.access_token, token.expires_in);
 
   return {
     accessToken: token.access_token,
     ...(token.id_token ? { idToken: token.id_token } : {}),
-    ...(token.expires_in
-      ? { expiresAt: Date.now() + token.expires_in * 1000 }
-      : {}),
+    ...(expiresAt !== undefined ? { expiresAt } : {}),
   };
 }
 
@@ -284,10 +342,11 @@ async function discardSession(config: ResolvedAuth0Config): Promise<void> {
  * The CLI refreshes a token within five minutes of expiry by posting a refresh
  * token to Auth0 — which it does not hold here, because the SDK keeps refresh
  * tokens in its own cache. Its browser build routes that refresh to the host
- * instead (`BrowserHost.refreshSession`), and this is the implementation: a
- * forced refresh off the SDK's cache, re-installed into the CLI's store. It
- * runs whenever the CLI decides to, including mid-command during a long
- * upload, so tokens behave as they do in Node.
+ * instead (`BrowserHost.refreshSession`), and this is the implementation: ask
+ * the SDK for a current access token — it hands back the cached one while it
+ * is valid and refreshes off its own refresh token when it nears expiry — and
+ * re-install it. Runs whenever the CLI decides to, including mid-command
+ * during a long upload, so tokens behave as they do in Node.
  */
 export async function renewAuth0Session(
   options: Auth0Options = {}
@@ -304,9 +363,9 @@ export async function renewAuth0Session(
   try {
     // Tokens only, merged over the stored set. The organizations are already
     // there from login or restore, and a /userinfo blip must not leave a
-    // near-expired token in place after the SDK has already refreshed; and a
-    // refresh response does not always carry an ID token, which `whoami`
-    // needs — replacing the set wholesale would wipe it.
+    // near-expired token in place; and a refresh response does not always
+    // carry an ID token, which `whoami` needs — replacing the set wholesale
+    // would wipe it.
     await renewOAuthSession(await mintTokens(auth0, config, { renew: true }));
   } catch (error) {
     if (isStaleSessionError(error)) await discardSession(config);
@@ -410,17 +469,21 @@ function isStaleSessionError(error: unknown): boolean {
  * `tigris login` alone will not do while the SDK still reports it signed in.
  */
 function explainTokenFailure(error: unknown): string {
-  const raw = messageOf(error);
-
-  if (/missing_refresh_token|Missing Refresh Token/i.test(raw)) {
-    return `${raw}\n\nThe tenant issued no refresh token and silent auth did not succeed. Enable "Allow Offline Access" on the API in Auth0, or sign in with an access key instead.`;
+  // A stale session is the recoverable case: re-login fixes it, and the
+  // caller has discarded it so the next login starts clean.
+  if (isStaleSessionError(error)) {
+    return 'Your Tigris session has expired. Run "tigris login" to sign in again.';
   }
 
+  // Any other Auth0 error names the audience, scope and tenant settings —
+  // detail for whoever configured the tenant, not for someone at a shell. It
+  // is not necessarily expiry (a timeout, say), so do not claim it is.
   if (error instanceof GenericError) {
-    return `${raw}\n\nRun "tigris logout" to discard the stored session, then "tigris login" to start a new one.`;
+    return 'Could not reach Tigris to verify your session. Please try again.';
   }
 
-  return raw;
+  // Errors we raise ourselves already read for a user, e.g. the no-org case.
+  return messageOf(error);
 }
 
 function messageOf(error: unknown): string {
