@@ -1,5 +1,13 @@
 # @tigrisdata/cli-shell
 
+## 0.2.1
+
+### Patch Changes
+
+- [#300](https://github.com/tigrisdata/storage/pull/300) [`c91f372`](https://github.com/tigrisdata/storage/commit/c91f372680b8cc05f0950fec059d7ff74ea16594) Thanks [@designcode](https://github.com/designcode)! - Fix OAuth token handling in the browser shell. Token expiry is now read from the access token's own `exp` claim, so it is exact for a fresh token and a cached one alike — previously a cached token carried the SDK's original `expires_in`, letting a near-expired token be recorded as good for another hour, after which commands failed until that wrong timestamp elapsed. Renewal forces a real refresh so the CLI gets a genuinely new token when it asks; a session with no refresh token (one cached before offline access was in use) falls back to its cached token and keeps working until it truly expires, while a refresh token the tenant rejects is discarded so the user signs in again. A renewal that cannot proceed reports a clean "session expired, run tigris login" message instead of the Auth0 SDK's internal audience and scope detail.
+
+- [#302](https://github.com/tigrisdata/storage/pull/302) [`cf16c17`](https://github.com/tigrisdata/storage/commit/cf16c17fe23e8203078840ee402bb54b04058ace) Thanks [@designcode](https://github.com/designcode)! - Default to S3 path-style addressing (`TIGRIS_FORCE_PATH_STYLE=true`), as `@tigrisdata/agent-shell` does. In a browser, virtual-hosted URLs put each bucket on its own subdomain — a separate origin with its own CORS policy — so bucket-scoped commands such as `objects list` failed with CORS errors. Path style sends them to `<endpoint>/<bucket>/...` on the one origin. A caller's `env` still overrides it.
+
 ## 0.2.0
 
 ### Minor Changes
