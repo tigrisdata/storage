@@ -11,7 +11,7 @@ import {
   flushTelemetry,
   initTelemetry,
 } from '@utils/telemetry.js';
-import { Command as CommanderCommand, Option } from 'commander';
+import { Command as CommanderCommand, Help, Option } from 'commander';
 
 import type { Argument, CommandSpec, Specs } from './types.js';
 
@@ -747,6 +747,76 @@ export function registerCommands(
 }
 
 /**
+ * Commander aligns every description in a column to the right of the
+ * command/option terms, and only wraps a description when that column is at
+ * least `minWidthToWrap` (40) characters wide. Our widest term
+ * ("cp|copy [options] <src> <dest>") is 30 characters, so the column is only
+ * `columns - 34` wide and the check fails on any terminal narrower than about
+ * 75 columns. When it fails Commander does not fall back to a narrower column
+ * — it stops wrapping altogether and emits each description as a single
+ * unwrapped line, up to 192 characters for `tigris --help`. Narrow terminals
+ * therefore render *worse* than the 80-column default, not better.
+ *
+ * Below that point, stack the description underneath its own term and wrap it
+ * to the full terminal width instead, which is legible all the way down to
+ * ~30 columns:
+ *
+ *   ls|list [options] [path]
+ *       List all buckets (no arguments)
+ *       or objects under a bucket/prefix
+ *       path.
+ *
+ * Anything wide enough for a readable side-by-side column keeps Commander's
+ * standard two-column layout.
+ */
+const NARROW_HELP_DESCRIPTION_INDENT = 6;
+const MIN_INLINE_DESCRIPTION_WIDTH = 34;
+const MIN_STACKED_DESCRIPTION_WIDTH = 20;
+
+export const narrowHelpConfiguration = {
+  // The stacked layout below wraps to (terminal width - 6), so Commander's
+  // own 40-column floor would veto the wrap it is being asked to perform.
+  minWidthToWrap: MIN_STACKED_DESCRIPTION_WIDTH,
+
+  formatItem(
+    this: Help,
+    term: string,
+    termWidth: number,
+    description: string,
+    helper: Help
+  ): string {
+    const itemIndent = 2;
+    const spacerWidth = 2;
+    const helpWidth = helper.helpWidth ?? 80;
+    const inlineWidth = helpWidth - termWidth - spacerWidth - itemIndent;
+
+    // Wide enough for the standard aligned two-column layout.
+    if (!description || inlineWidth >= MIN_INLINE_DESCRIPTION_WIDTH) {
+      return Help.prototype.formatItem.call(
+        this,
+        term,
+        termWidth,
+        description,
+        helper
+      );
+    }
+
+    const indent = ' '.repeat(NARROW_HELP_DESCRIPTION_INDENT);
+    const wrapped = helper.boxWrap(
+      description,
+      Math.max(
+        helpWidth - NARROW_HELP_DESCRIPTION_INDENT,
+        MIN_STACKED_DESCRIPTION_WIDTH
+      )
+    );
+    return `${' '.repeat(itemIndent)}${term}\n${indent}${wrapped.replace(
+      /\n/g,
+      `\n${indent}`
+    )}`;
+  },
+};
+
+/**
  * Create and configure the CLI program
  */
 export function createProgram(config: CLIConfig): CommanderCommand {
@@ -754,6 +824,7 @@ export function createProgram(config: CLIConfig): CommanderCommand {
 
   const program = new CommanderCommand();
   program.name(specs.name).description(specs.description).version(version);
+  program.configureHelp(narrowHelpConfiguration);
 
   registerCommands(config, program, specs.commands);
 
