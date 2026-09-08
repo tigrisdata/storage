@@ -10,10 +10,17 @@
   "dependencies": {
     "@auth0/auth0-spa-js": "^2.19.3",
     "@tigrisdata/agent-shell": "workspace:^",
+    "@tigrisdata/cli-shell": "workspace:^",
     "@xterm/addon-fit": "^0.11.0",
-    "@xterm/xterm": "^6.0.0"
+    "@xterm/xterm": "^6.0.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
   },
   "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
     "vite": "^8.0.14"
-  }
+  },
+  "description": "Playground for the Tigris agent shell (/) and CLI shell (/cli)"
 }
