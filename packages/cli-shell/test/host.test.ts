@@ -230,6 +230,23 @@ describe('createReplHost', () => {
     });
   });
 
+  it('defaults the CLI to path-style addressing', () => {
+    // Regression: without this the CLI used virtual-hosted URLs
+    // (`<bucket>.<endpoint>`), and every bucket-scoped request from a page
+    // was a cross-origin call to a host with no CORS headers.
+    const host = createReplHost({ io: makeIO([]) });
+    expect(host.env?.TIGRIS_FORCE_PATH_STYLE).toBe('true');
+  });
+
+  it('lets the caller override path-style addressing', () => {
+    const host = createReplHost({
+      io: makeIO([]),
+      env: () => ({ TIGRIS_FORCE_PATH_STYLE: 'false', OTHER: 'kept' }),
+    });
+    expect(host.env?.TIGRIS_FORCE_PATH_STYLE).toBe('false');
+    expect(host.env?.OTHER).toBe('kept');
+  });
+
   it('routes refreshSession to the supplied handler', async () => {
     const refreshSession = vi.fn(async () => {});
     const host = createReplHost({ io: makeIO([]), refreshSession });
