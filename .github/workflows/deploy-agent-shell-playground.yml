@@ -1,7 +1,8 @@
 name: Deploy agent-shell playground
 
 # Deploys apps/agent-shell-playground to Fly.io on pushes to main that touch
-# the app or its @tigrisdata/agent-shell dependency, plus manual dispatch.
+# the app or the packages it serves — @tigrisdata/agent-shell at / and
+# @tigrisdata/cli-shell at /cli — plus manual dispatch.
 # The Dockerfile (pierrezemb/gostatic) serves the Vite `dist/` built in CI,
 # so we build first, then `flyctl deploy` ships the static bundle.
 on:
@@ -9,6 +10,7 @@ on:
     branches: [main]
     paths:
       - 'packages/agent-shell/**'
+      - 'packages/cli-shell/**'
       - 'apps/agent-shell-playground/**'
   workflow_dispatch:
 
@@ -30,7 +32,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Builds @tigrisdata/agent-shell (workspace dep) then the playground.
+      # `...` builds the workspace deps first — @tigrisdata/agent-shell and
+      # @tigrisdata/cli-shell (and its @tigrisdata/cli) — then the playground.
       - name: Build playground
         run: pnpm --filter agent-shell-playground... build
 
