@@ -1,4 +1,4 @@
-import type { Command as CommanderCommand } from 'commander';
+import { Command, type Command as CommanderCommand } from 'commander';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -6,6 +6,7 @@ import {
   extractArgumentValues,
   formatArgumentHelp,
   isValidCommandName,
+  narrowHelpConfiguration,
   validateRequiredWhen,
 } from '../src/cli-core.js';
 import type { Argument } from '../src/types.js';
@@ -357,5 +358,47 @@ describe('addArgumentsToCommand', () => {
       { name: 'format', description: 'Format', default: 'table' },
     ]);
     expect(calls.option[0][2]).toBe('table');
+  });
+});
+
+describe('narrowHelpConfiguration', () => {
+  function helpAt(columns: number): string {
+    const program = new Command()
+      .name('tigris')
+      .description('Command line interface for Tigris')
+      .configureHelp(narrowHelpConfiguration)
+      .configureOutput({
+        getOutHelpWidth: () => columns,
+        getErrHelpWidth: () => columns,
+      });
+    program
+      .command('cp')
+      .alias('copy')
+      .argument('<src>')
+      .argument('<dest>')
+      .description(
+        'Copy files between local filesystem and Tigris, or between paths within Tigris. At least one side must be a remote t3:// path'
+      );
+    return program.helpInformation();
+  }
+
+  it('wraps every command description to a narrow terminal width', () => {
+    const lines = helpAt(37).split('\n');
+    const commandLines = lines.filter((line) => !line.startsWith('Usage:'));
+    for (const line of commandLines) {
+      expect(line.length).toBeLessThanOrEqual(37);
+    }
+  });
+
+  it('stacks the description under its term when narrow', () => {
+    expect(helpAt(37)).toContain(
+      '  cp|copy <src> <dest>\n      Copy files between local'
+    );
+  });
+
+  it('keeps the aligned two-column layout when wide', () => {
+    expect(helpAt(100)).toContain(
+      '  cp|copy <src> <dest>  Copy files between local'
+    );
   });
 });
