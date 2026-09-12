@@ -49,7 +49,7 @@ importers:
     dependencies:
       '@auth0/auth0-spa-js':
         specifier: ^2.19.3
-        version: 2.24.1
+        version: 2.25.0
       '@tigrisdata/agent-shell':
         specifier: workspace:^
         version: link:../../packages/agent-shell
@@ -171,7 +171,7 @@ importers:
     dependencies:
       '@auth0/auth0-spa-js':
         specifier: ^2.19.3
-        version: 2.24.1
+        version: 2.25.0
       '@tigrisdata/cli':
         specifier: workspace:^
         version: link:../cli
@@ -328,11 +328,11 @@ packages:
   '@asamuzakjp/nwsapi@2.3.9':
     resolution: {integrity: sha512-n8GuYSrI9bF7FFZ/SjhwevlHc8xaVlb/7HmHelnc/PZXBD2ZR49NnN9sMMuDdEGPeeRQ5d0hqlSlEpgCX3Wl0Q==}
 
-  '@auth0/auth0-auth-js@1.12.1':
-    resolution: {integrity: sha512-YgYOAGmfwO40YOYkYSW7XvE6b+qkdlXdpzBshvOjCioygesUxIw2qRerilW1/8XQV41mnFvQIPnsTdEOHN9BeA==}
+  '@auth0/auth0-auth-js@1.15.0':
+    resolution: {integrity: sha512-obn/Qhxx3eNs2wV6/lLsIDIcEiSJvBEEy15hppB5Me1j2No2toa7KqQcXHBCyGX4mBBdVnxZJBjEX6E4WanYwg==}
 
-  '@auth0/auth0-spa-js@2.24.1':
-    resolution: {integrity: sha512-iS18fBlWWxQ/FPtWgWzYYEImsNRumJG2cZ08xV0HsEmWtTBv+54A+fnyFx9eiNBP7cLp0emwDDjgeG+hQEbVBA==}
+  '@auth0/auth0-spa-js@2.25.0':
+    resolution: {integrity: sha512-ISqLDRQcxFfF678AgtYDCdXESHX9W8II339xj/F6ujIptjK/ZkcTwq4HJs3RG7F24xRq1Xx1Vsc2uSCpyCMcUA==}
 
   '@aws-crypto/sha256-js@5.2.0':
     resolution: {integrity: sha512-FFQQyu7edu4ufvIZ+OadFpHHOt+eSTBaYaki44c+akjg7qZg9oOQeLlk77F6tSYqjDAFClrHJk9tMf0HdVyOvA==}
@@ -2167,8 +2167,8 @@ packages:
     resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
     engines: {node: '>=12'}
 
-  dpop@2.1.1:
-    resolution: {integrity: sha512-J0Of2JTiM4h5si0tlbPQ/lkqfZ5wAEVkKYBhkwyyANnPJfWH4VsR5uIkZ+T+OSPIwDYUg1fbd5Mmodd25HjY1w==}
+  dpop@2.1.2:
+    resolution: {integrity: sha512-hN3XjjCcgYWmNL8DFAV1Z3alXIvLolvjis189NI/U4k4Iu/m4rBeUYObbIjnRzQYDQv4zMaXXskjVDqSkmyh7Q==}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -2878,8 +2878,8 @@ packages:
     engines: {node: ^12.13.0 || ^14.15.0 || >=16.0.0}
     deprecated: This package is no longer supported.
 
-  oauth4webapi@3.8.7:
-    resolution: {integrity: sha512-4RxcKxXjuItDFZ20RRPf4YTw3kpeXJyCgJFxVzJ068A7PNJ18st2Dg90tlC1LkSDS0GecroagCLHYEIVUhCAkw==}
+  oauth4webapi@3.8.8:
+    resolution: {integrity: sha512-8N28E+a/oxfXWBgOMt+ZP/JUf/XR+IFbvkAEPP3gznXOMv9BpAAwiIj0TFNz3tGTPc0ZQ8zmWBNgN1nAys0gng==}
 
   object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
@@ -2896,8 +2896,8 @@ packages:
     resolution: {integrity: sha512-RWqF+pBSkqecEvCKOn8QYhaNdRMJDZRIrlS/7rTDdLHaPcfXGCZ/h8zb413NfvdeAV0MR7T1yJcA34/q+CSm1Q==}
     engines: {node: '>=20'}
 
-  openid-client@6.8.5:
-    resolution: {integrity: sha512-jNGC/5wnTYwCcEUe2ss0IRUmVRQcgxM0A1nLb3eX/9llqNbMWOQd2xd+qDAgfVCpA5Qh96Y1cdnkfbva6+bSdA==}
+  openid-client@6.8.8:
+    resolution: {integrity: sha512-ZsucJA5Ad04Uv7YN4ql+s4GXNmb9uAYQwyJTsJx7CH/MX3JZioLE2pVKi1SC+YrbSLA4Px3Gi30dMjgOZtb6pA==}
 
   p-map@4.0.0:
     resolution: {integrity: sha512-/bjOqmgETBYB5BoEeGVea8dmvHb2m9GLy1E9W43yeyfP6QQCZGFNa+XRceJEuDB6zqr+gKpIAmlLebMpykw/MQ==}
@@ -3580,16 +3580,16 @@ snapshots:
 
   '@asamuzakjp/nwsapi@2.3.9': {}
 
-  '@auth0/auth0-auth-js@1.12.1':
+  '@auth0/auth0-auth-js@1.15.0':
     dependencies:
       jose: 6.2.12
-      openid-client: 6.8.5
+      openid-client: 6.8.8
 
-  '@auth0/auth0-spa-js@2.24.1':
+  '@auth0/auth0-spa-js@2.25.0':
     dependencies:
-      '@auth0/auth0-auth-js': 1.12.1
+      '@auth0/auth0-auth-js': 1.15.0
       browser-tabs-lock: 1.3.0
-      dpop: 2.1.1
+      dpop: 2.1.2
       es-cookie: 1.3.2
 
   '@aws-crypto/sha256-js@5.2.0':
@@ -5434,7 +5434,7 @@ snapshots:
 
   dotenv@17.4.2: {}
 
-  dpop@2.1.1: {}
+  dpop@2.1.2: {}
 
   dunder-proto@1.0.1:
     dependencies:
@@ -6217,7 +6217,7 @@ snapshots:
       set-blocking: 2.0.0
     optional: true
 
-  oauth4webapi@3.8.7: {}
+  oauth4webapi@3.8.8: {}
 
   object-assign@4.1.1: {}
 
@@ -6236,10 +6236,10 @@ snapshots:
       powershell-utils: 0.2.1
       wsl-utils: 1.0.0
 
-  openid-client@6.8.5:
+  openid-client@6.8.8:
     dependencies:
       jose: 6.2.12
-      oauth4webapi: 3.8.7
+      oauth4webapi: 3.8.8
 
   p-map@4.0.0:
     dependencies:
