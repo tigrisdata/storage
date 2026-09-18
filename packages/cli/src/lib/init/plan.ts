@@ -19,7 +19,7 @@ const UPDATE_STEP = 'Update the CLI to the latest version: `tigris update`.';
 
 const SETUP_STEPS = [
   'Run `tigris whoami` to get the authentication state. If the user is not authenticated, run `tigris login oauth`.',
-  'Run `tigris orgs list --format json`. If there is more than one org, ask the user which org to use. Then run `tigris orgs select <org>` to make that org active. The commands that come after target the active org.',
+  'Run `tigris orgs list --format json`. If there is more than one org, ask the user which org to use. If there is more than one org, run `tigris orgs select <org>` to make that org active. The commands that come after target the active org.',
   'Read the project name from a metadata file, for example package.json, go.mod, or pyproject.toml. Run `tigris buckets list --format json` first. If the bucket is absent, run `tigris buckets create <name> --format json`. If anything is ambiguous, ask the user.',
   `Create the access key in a private temporary file. Use \`>\` to overwrite the file. Do not use \`>>\` to append. Then print only the ID:
    \`umask 077; tmpfile=$(mktemp); tigris access-keys create <username>-<project>-devel --format json > "$tmpfile" && jq -r '.id' < "$tmpfile"\``,
