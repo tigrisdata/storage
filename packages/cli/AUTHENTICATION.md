@@ -129,6 +129,39 @@ tigris whoami --json
 
 Returns machine-readable JSON output including `authMethod`, `email`, `userId`, and organization details.
 
+## Handing Credentials to Other Tools
+
+`tigris env` prints the active credentials as the environment variables the AWS SDKs, the AWS CLI and the Tigris SDKs read. Only the assignments go to stdout, so the output can be evaluated or redirected directly:
+
+```sh
+eval "$(tigris env)"                 # this shell: boto3, aws-cli, rclone now hit Tigris
+tigris env --format dotenv > .env    # a .env for the app
+tigris env --shell fish | source     # fish
+tigris env --shell powershell        # PowerShell
+tigris env --tigris                  # TIGRIS_STORAGE_* names for @tigrisdata/storage and storage-go
+tigris env --json                    # for scripts
+```
+
+The default output is:
+
+```sh
+export AWS_ACCESS_KEY_ID='tid_AaBb'
+export AWS_SECRET_ACCESS_KEY='tsec_XxYy'
+export AWS_ENDPOINT_URL_S3='https://t3.storage.dev'
+export AWS_ENDPOINT_URL_IAM='https://iam.storageapi.dev'
+export AWS_REGION='auto'
+```
+
+This is the same convention other CLIs use to move a credential from their own store into the shell: `gh auth token` prints the GitHub token for `GH_TOKEN`, `fly auth token` prints the Fly.io token for `FLY_API_TOKEN`, and direnv's whole model is an `.envrc` of exports that the shell evaluates on `cd`.
+
+`tigris env` needs an access key. OAuth sessions carry a token that only the CLI can use, so from an OAuth session create a key first and save it:
+
+```sh
+tigris access-keys create my-app
+tigris configure --access-key tid_AaBb --access-secret tsec_XxYy
+eval "$(tigris env)"
+```
+
 ## Logout
 
 ```sh
