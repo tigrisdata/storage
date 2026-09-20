@@ -4,6 +4,8 @@ import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import * as p from '@clack/prompts';
 
+import { buildAgentPrompt } from './plan.js';
+
 import {
   buildSkillsArgs,
   defaultsHint,
@@ -31,7 +33,9 @@ import {
  */
 export async function runInteractive() {
   if (!process.stdin.isTTY) {
-    console.error('Run `tigris init` in an interactive terminal.');
+    console.error(
+      'Run `tigris init` in an interactive terminal, or `tigris init --yes` to take the defaults for the editor(s) detected here (`--editor <id>` to choose).'
+    );
     process.exit(1);
   }
 
@@ -99,6 +103,102 @@ export async function runInteractive() {
     skillIds = picked;
   }
 
+  await applySetup({
+    editors,
+    installedCli,
+    mcpLocation,
+    skillsLocation,
+    skillIds,
+    cwd,
+    home,
+    handoff: true,
+  });
+}
+
+/** What both entry points decide before anything is written. */
+export interface SetupPlan {
+  editors: EditorInfo[];
+  installedCli: string | null;
+  mcpLocation: InstallLocation;
+  skillsLocation: InstallLocation;
+  skillIds: string[];
+  cwd: string;
+  home: string;
+  /**
+   * End by handing the user a prompt for their agent. Off under `--yes`,
+   * which is usually the agent itself running the recipe that prompt leads to.
+   */
+  handoff: boolean;
+}
+
+/**
+ * Non-interactive setup (`tigris init --yes`): the wizard's "Defaults" with no
+ * questions asked. Editors come from `--editor` when given, otherwise from
+ * what `detectEditors` finds — which, when an AI agent runs this inside its
+ * own session, is the agent itself (Claude Code sets `CLAUDECODE=1`, Cursor
+ * sets `TERM_PROGRAM=cursor`, and so on). That is what lets the `--agent`
+ * recipe say "set yourself up" without knowing which agent is reading it.
+ */
+export async function runNonInteractive(requested: string[] | undefined) {
+  const cwd = process.cwd();
+  const home = homedir();
+
+  p.intro('Connect Tigris to your AI coding agent');
+
+  let editors: EditorInfo[];
+  if (requested && requested.length > 0) {
+    const unknown = requested.filter(
+      (id) => !SUPPORTED_EDITORS.some((e) => e.id === id)
+    );
+    if (unknown.length > 0) {
+      p.log.error(
+        `Unknown editor(s): ${unknown.join(', ')}. Supported: ${SUPPORTED_EDITORS.map((e) => e.id).join(', ')}.`
+      );
+      process.exit(1);
+    }
+    editors = SUPPORTED_EDITORS.filter((e) => requested.includes(e.id));
+  } else {
+    const detected = detectEditors({
+      env: process.env,
+      cwd,
+      home,
+      fileExists: existsSync,
+    });
+    editors = SUPPORTED_EDITORS.filter((e) => detected.includes(e.id));
+    if (editors.length === 0) {
+      p.log.error(
+        `No AI editor detected here. Pass one or more with --editor: ${SUPPORTED_EDITORS.map((e) => e.id).join(', ')}.`
+      );
+      process.exit(1);
+    }
+    p.log.info(`Detected: ${labels(editors)}`);
+  }
+
+  await applySetup({
+    editors,
+    installedCli: getInstalledCliVersion(),
+    mcpLocation: 'global',
+    skillsLocation: 'project',
+    skillIds: TIGRIS_SKILLS.map((s) => s.id),
+    cwd,
+    home,
+    handoff: false,
+  });
+}
+
+/** Steps 5-8 of the wizard: install/update the CLI, write MCP config, install skills, hand off. */
+async function applySetup(plan: SetupPlan): Promise<void> {
+  const {
+    editors,
+    installedCli,
+    mcpLocation,
+    skillsLocation,
+    skillIds,
+    cwd,
+    home,
+    handoff,
+  } = plan;
+
   // 5. Tigris CLI — install it when missing, otherwise bring it up to date.
   // A successful update leaves a CLI new enough for the handoff; only when it
   // fails is it worth checking what's actually there.
@@ -127,11 +227,19 @@ export async function runInteractive() {
   }
 
   // 8. Hand off to the agent — use the installed CLI, or npx if unavailable.
-  const runner = cliAvailable
-    ? 'tigris init --agent'
-    : 'npx tigris init --agent';
-  p.note(runner, 'Paste this to your AI coding agent to finish setup');
-  p.outro('Your agent will authenticate with Tigris in-browser on first use.');
+  if (handoff) {
+    p.note(
+      buildAgentPrompt({ cli: cliAvailable ? 'tigris' : 'npx tigris' }),
+      'Paste this to your AI coding agent to finish setup'
+    );
+    p.outro(
+      'Your agent will authenticate with Tigris in-browser on first use.'
+    );
+  } else {
+    p.outro(
+      'Done. Restart the agent so it picks up the Tigris MCP server and skills.'
+    );
+  }
 }
 
 async function location(

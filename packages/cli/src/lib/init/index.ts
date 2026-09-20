@@ -1,19 +1,26 @@
 import { getOption } from '@utils/options.js';
 
 import { NO_BANNER_ENV } from '../../constants.js';
-import { runInteractive } from './interactive.js';
+import { runInteractive, runNonInteractive } from './interactive.js';
 import { buildAgentSetup } from './plan.js';
 import { getInstalledCliVersion, withoutEphemeralBins } from './shared.js';
 
 /**
- * `tigris init` — two modes:
+ * `tigris init` — three modes:
  *  - bare (interactive): set up the local AI tooling (CLI, MCP config, skills),
- *    then hand the user a command to give their agent.
+ *    then hand the user a prompt to give their agent.
+ *  - `--yes` (non-interactive): the same with the defaults and no questions,
+ *    for the editor(s) given with `--editor` or detected from the environment.
+ *    This is how an agent sets *itself* up while following the recipe.
  *  - `--agent`: print a plain-text onboarding recipe for an AI coding agent to
- *    follow (it runs the `tigris` commands itself).
+ *    follow (it runs the `tigris` commands itself). `--bucket` names a bucket
+ *    that already exists, so the recipe uses it instead of creating one.
  */
 export default async function init(options: Record<string, unknown>) {
   const agentMode = getOption<boolean>(options, ['agent']);
+  const yes = getOption<boolean>(options, ['yes', 'y']);
+  const editors = getOption<string[] | string>(options, ['editor', 'e']);
+  const bucket = getOption<string>(options, ['bucket', 'b']);
 
   // init manages CLI currency itself (updateCli here, step 1 in the recipe),
   // so suppress the CLI's post-command update-notifier — it's redundant and, on
@@ -33,11 +40,25 @@ export default async function init(options: Record<string, unknown>) {
   process.env.PATH = withoutEphemeralBins(process.env.PATH);
 
   if (!agentMode) {
-    await runInteractive();
+    if (yes || editors) {
+      await runNonInteractive(
+        editors === undefined
+          ? undefined
+          : Array.isArray(editors)
+            ? editors
+            : [editors]
+      );
+    } else {
+      await runInteractive();
+    }
     return;
   }
 
   // Reached through `npx` (no `tigris` on PATH) the recipe has to install the
   // CLI first; otherwise it just keeps the existing one current.
-  console.log(buildAgentSetup(getInstalledCliVersion() !== null));
+  console.log(
+    buildAgentSetup(getInstalledCliVersion() !== null, {
+      ...(bucket ? { bucket } : {}),
+    })
+  );
 }
