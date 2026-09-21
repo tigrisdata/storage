@@ -121,8 +121,11 @@ describe('ShellEngine', () => {
 
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('Usage: tigris');
-      expect(result.stdout).toContain('after');
-      expect(result.stdout).not.toContain(';');
+      // The shell, not tigris, must consume the `;`: the help page ends and
+      // `after` follows as the next command's output. (The help text itself
+      // contains semicolons, so we cannot just look for one.)
+      expect(result.stdout.trimEnd().endsWith('\nafter')).toBe(true);
+      expect(result.stderr).not.toContain('Unknown command');
     });
 
     it('redirects its output like any other command', async () => {

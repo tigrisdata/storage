@@ -179,6 +179,152 @@ describe('specs completeness', () => {
     }
   });
 
+  // Help lists show `help_text ?? description` on one row per entry. Past
+  // these lengths a row wraps to three or more lines on an 80-column terminal
+  // and the list stops being scannable — add a shorter `help_text` instead of
+  // trimming the `description`, which the command's own page and the docs use.
+  describe('help text is precise', () => {
+    const MAX_COMMAND_HELP = 60;
+    const MAX_ARGUMENT_HELP = 80;
+    const live = allCommands.filter(({ spec }) => !spec.removed);
+
+    it(`command help text fits in ${MAX_COMMAND_HELP} characters`, () => {
+      const tooLong = live
+        .map(({ spec, path }) => ({
+          label: path.join(' '),
+          text: spec.help_text ?? spec.description ?? '',
+        }))
+        .filter(({ text }) => text.length > MAX_COMMAND_HELP)
+        .map(({ label, text }) => `${label} (${text.length}): ${text}`);
+      expect(tooLong).toEqual([]);
+    });
+
+    it(`argument help text fits in ${MAX_ARGUMENT_HELP} characters`, () => {
+      const globalArgs = specs.definitions?.global_arguments ?? [];
+      const tooLong = [
+        ...globalArgs.map((arg) => ({ label: 'global', arg })),
+        ...live.flatMap(({ spec, path }) =>
+          (spec.arguments ?? []).map((arg) => ({ label: path.join(' '), arg }))
+        ),
+      ]
+        .filter(({ arg }) => !arg.removed)
+        .map(({ label, arg }) => ({
+          label: `${label} --${arg.name}`,
+          text: arg.help_text ?? arg.description ?? '',
+        }))
+        .filter(({ text }) => text.length > MAX_ARGUMENT_HELP)
+        .map(({ label, text }) => `${label} (${text.length}): ${text}`);
+      expect(tooLong).toEqual([]);
+    });
+
+    it('every command list row fits on one 80-column line', () => {
+      // Mirrors the layout in src/help.ts: 2 indent + the widest sibling
+      // name + 2 spacer, then the text.
+      const lists = [
+        { label: specs.name, commands: specs.commands },
+        ...live
+          .filter(({ spec }) => spec.commands && spec.commands.length > 0)
+          .map(({ spec, path }) => ({
+            label: path.join(' '),
+            commands: spec.commands ?? [],
+          })),
+      ];
+      const wrapped = lists.flatMap(({ label, commands }) => {
+        const visible = commands.filter((cmd) => !cmd.removed);
+        const column =
+          2 + Math.max(...visible.map((cmd) => cmd.name.length)) + 2;
+        return visible
+          .filter(
+            (cmd) =>
+              column + (cmd.help_text ?? cmd.description ?? '').length > 80
+          )
+          .map((cmd) => `${label} ${cmd.name}`);
+      });
+      expect(wrapped).toEqual([]);
+    });
+
+    it('help_text is a single line without a trailing period', () => {
+      const malformed = live
+        .flatMap(({ spec, path }) => [
+          { label: path.join(' '), text: spec.help_text },
+          ...(spec.arguments ?? []).map((arg) => ({
+            label: `${path.join(' ')} --${arg.name}`,
+            text: arg.help_text,
+          })),
+        ])
+        .filter(
+          ({ text }) =>
+            text !== undefined && (/\n/.test(text) || /\.$/.test(text.trim()))
+        )
+        .map(({ label, text }) => `${label}: ${text}`);
+      expect(malformed).toEqual([]);
+    });
+  });
+
+  describe('command groups', () => {
+    const parents = [
+      { label: specs.name, groups: specs.groups, commands: specs.commands },
+      ...allCommands
+        .filter(({ spec }) => spec.commands && spec.commands.length > 0)
+        .map(({ spec, path }) => ({
+          label: path.join(' '),
+          groups: spec.groups,
+          commands: spec.commands ?? [],
+        })),
+    ];
+
+    it('every group is one its parent declares', () => {
+      // A typo would otherwise render as a new heading of its own.
+      const unknown = parents.flatMap(({ label, groups, commands }) =>
+        commands
+          .filter((cmd) => cmd.group && !(groups ?? []).includes(cmd.group))
+          .map((cmd) => `${label} ${cmd.name}: ${cmd.group}`)
+      );
+      expect(unknown).toEqual([]);
+    });
+
+    it('a parent that declares groups leaves no command ungrouped', () => {
+      const ungrouped = parents
+        .filter(({ groups }) => groups && groups.length > 0)
+        .flatMap(({ label, commands }) =>
+          commands
+            .filter((cmd) => !cmd.removed && !cmd.group)
+            .map((cmd) => `${label} ${cmd.name}`)
+        );
+      expect(ungrouped).toEqual([]);
+    });
+
+    it('every declared group is used', () => {
+      const unused = parents.flatMap(({ label, groups, commands }) =>
+        (groups ?? [])
+          .filter((group) => !commands.some((cmd) => cmd.group === group))
+          .map((group) => `${label}: ${group}`)
+      );
+      expect(unused).toEqual([]);
+    });
+  });
+
+  describe('--yes is listed exactly where a command confirms', () => {
+    // The global --yes is hidden; a command lists it by declaring
+    // *yes_argument. Handlers read it as getOption(options, ['yes', ...]).
+    for (const { spec, path } of leaves) {
+      const label = path.join(' ');
+      it(`${label}`, () => {
+        const filePath = `${join(srcRoot, ...path)}.ts`;
+        const indexPath = join(srcRoot, ...path, 'index.ts');
+        const source = readFileSync(
+          existsSync(filePath) ? filePath : indexPath,
+          'utf8'
+        );
+        const readsYes = /getOption[^;]*\[\s*'yes'/.test(source);
+        const declaresYes = (spec.arguments ?? []).some(
+          (arg) => arg.name === 'yes' && !arg.hidden
+        );
+        expect(declaresYes).toBe(readsYes);
+      });
+    }
+  });
+
   describe('deprecated commands have onDeprecated message', () => {
     const deprecated = allCommands.filter(({ spec }) => spec.deprecated);
 

@@ -1,12 +1,10 @@
-import { Command, type Command as CommanderCommand } from 'commander';
+import type { Command as CommanderCommand } from 'commander';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   addArgumentsToCommand,
   extractArgumentValues,
-  formatArgumentHelp,
   isValidCommandName,
-  narrowHelpConfiguration,
   validateRequiredWhen,
 } from '../src/cli-core.js';
 import type { Argument } from '../src/types.js';
@@ -25,129 +23,6 @@ describe('isValidCommandName', () => {
       expect(isValidCommandName(name)).toBe(false);
     }
   );
-});
-
-describe('formatArgumentHelp', () => {
-  it('formats positional argument', () => {
-    const arg: Argument = {
-      name: 'path',
-      description: 'The file path',
-      type: 'positional',
-    };
-    const result = formatArgumentHelp(arg);
-    expect(result).toContain('  path');
-    expect(result).toContain('[positional argument]');
-  });
-
-  it('formats flag', () => {
-    const arg: Argument = {
-      name: 'force',
-      description: 'Force the operation',
-      type: 'flag',
-    };
-    const result = formatArgumentHelp(arg);
-    expect(result).toContain('--force');
-  });
-
-  it('formats short alias', () => {
-    const arg: Argument = {
-      name: 'format',
-      description: 'Output format',
-      alias: 'f',
-    };
-    const result = formatArgumentHelp(arg);
-    expect(result).toContain('--format, -f');
-  });
-
-  it('formats long alias', () => {
-    const arg: Argument = {
-      name: 'fork-of',
-      description: 'Fork source',
-      alias: 'fork',
-    };
-    const result = formatArgumentHelp(arg);
-    expect(result).toContain('--fork-of, --fork');
-  });
-
-  it('formats string[] options', () => {
-    const arg: Argument = {
-      name: 'format',
-      description: 'Output format',
-      options: ['json', 'table'],
-    };
-    const result = formatArgumentHelp(arg);
-    expect(result).toContain('(options: json, table)');
-  });
-
-  it('formats object options', () => {
-    const arg: Argument = {
-      name: 'tier',
-      description: 'Storage tier',
-      options: [
-        { name: 'Standard', value: 'STANDARD', description: 'Default tier' },
-      ],
-    };
-    const result = formatArgumentHelp(arg);
-    expect(result).toContain('(options: STANDARD)');
-  });
-
-  it('formats default value', () => {
-    const arg: Argument = {
-      name: 'format',
-      description: 'Output format',
-      default: 'table',
-    };
-    const result = formatArgumentHelp(arg);
-    expect(result).toContain('[default: table]');
-  });
-
-  it('formats required', () => {
-    const arg: Argument = {
-      name: 'name',
-      description: 'Bucket name',
-      required: true,
-    };
-    const result = formatArgumentHelp(arg);
-    expect(result).toContain('[required]');
-  });
-
-  it('formats required-when', () => {
-    const arg: Argument = {
-      name: 'target',
-      description: 'Target bucket',
-      'required-when': 'type=bucket',
-    };
-    const result = formatArgumentHelp(arg);
-    expect(result).toContain('[required when: type=bucket]');
-  });
-
-  it('formats multiple', () => {
-    const arg: Argument = {
-      name: 'regions',
-      description: 'Regions',
-      multiple: true,
-    };
-    const result = formatArgumentHelp(arg);
-    expect(result).toContain('[multiple values: comma-separated]');
-  });
-
-  it('formats examples', () => {
-    const arg: Argument = {
-      name: 'path',
-      description: 'Object path',
-      examples: ['t3://bucket/key'],
-    };
-    const result = formatArgumentHelp(arg);
-    expect(result).toContain('(examples: t3://bucket/key)');
-  });
-
-  it('pads short names to at least 26 chars', () => {
-    const arg: Argument = { name: 'x', description: 'desc' };
-    const result = formatArgumentHelp(arg);
-    // "  --x" is 5 chars, should be padded to 26
-    const descIndex = result.indexOf('desc');
-    expect(descIndex).toBeGreaterThanOrEqual(26);
-  });
 });
 
 describe('extractArgumentValues', () => {
@@ -358,47 +233,5 @@ describe('addArgumentsToCommand', () => {
       { name: 'format', description: 'Format', default: 'table' },
     ]);
     expect(calls.option[0][2]).toBe('table');
-  });
-});
-
-describe('narrowHelpConfiguration', () => {
-  function helpAt(columns: number): string {
-    const program = new Command()
-      .name('tigris')
-      .description('Command line interface for Tigris')
-      .configureHelp(narrowHelpConfiguration)
-      .configureOutput({
-        getOutHelpWidth: () => columns,
-        getErrHelpWidth: () => columns,
-      });
-    program
-      .command('cp')
-      .alias('copy')
-      .argument('<src>')
-      .argument('<dest>')
-      .description(
-        'Copy files between local filesystem and Tigris, or between paths within Tigris. At least one side must be a remote t3:// path'
-      );
-    return program.helpInformation();
-  }
-
-  it('wraps every command description to a narrow terminal width', () => {
-    const lines = helpAt(37).split('\n');
-    const commandLines = lines.filter((line) => !line.startsWith('Usage:'));
-    for (const line of commandLines) {
-      expect(line.length).toBeLessThanOrEqual(37);
-    }
-  });
-
-  it('stacks the description under its term when narrow', () => {
-    expect(helpAt(37)).toContain(
-      '  cp|copy <src> <dest>\n      Copy files between local'
-    );
-  });
-
-  it('keeps the aligned two-column layout when wide', () => {
-    expect(helpAt(100)).toContain(
-      '  cp|copy <src> <dest>  Copy files between local'
-    );
   });
 });

@@ -118,8 +118,16 @@ describe('CLI Help Commands', () => {
   it('should show main help', () => {
     const result = runCli('help');
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('Tigris CLI');
-    expect(result.stdout).toContain('Commands:');
+    expect(result.stdout).toContain('Usage: tigris');
+    expect(result.stdout).toContain('Get started:');
+    expect(result.stdout).toContain('Manage resources:');
+  });
+
+  it('should print the same page for "help" and "--help"', () => {
+    expect(runCli('help').stdout).toBe(runCli('--help').stdout);
+    expect(runCli('buckets create help').stdout).toBe(
+      runCli('buckets create --help').stdout
+    );
   });
 
   it('should show ls help', () => {
@@ -205,7 +213,8 @@ describe('CLI Help Commands', () => {
   it('should show buckets help', () => {
     const result = runCli('buckets help');
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('Commands:');
+    expect(result.stdout).toContain('Basics:');
+    expect(result.stdout).toContain('Forks & snapshots:');
     expect(result.stdout).toContain('list');
     expect(result.stdout).toContain('create');
   });
@@ -213,7 +222,8 @@ describe('CLI Help Commands', () => {
   it('should show objects help', () => {
     const result = runCli('objects help');
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('Commands:');
+    expect(result.stdout).toContain('Basics:');
+    expect(result.stdout).toContain('Versions & recovery:');
     expect(result.stdout).toContain('list');
     expect(result.stdout).toContain('get');
     expect(result.stdout).toContain('put');

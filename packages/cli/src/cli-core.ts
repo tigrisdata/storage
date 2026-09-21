@@ -11,8 +11,16 @@ import {
   flushTelemetry,
   initTelemetry,
 } from '@utils/telemetry.js';
-import { Command as CommanderCommand, Help, Option } from 'commander';
+import { Command as CommanderCommand, Option } from 'commander';
 
+import {
+  argumentHelpText,
+  GLOBAL_OPTIONS_HEADING,
+  groupHeading,
+  helpConfiguration,
+  OPTIONS_HEADING,
+  setHelpDetails,
+} from './help.js';
 import type { Argument, CommandSpec, Specs } from './types.js';
 
 /**
@@ -133,67 +141,6 @@ export function isValidCommandName(name: string): boolean {
   return /^[a-zA-Z0-9_-]+$/.test(name);
 }
 
-export function formatArgumentHelp(arg: Argument): string {
-  let optionPart: string;
-
-  if (arg.type === 'positional') {
-    optionPart = `  ${arg.name}`;
-  } else {
-    optionPart = `  --${arg.name}`;
-    if (arg.alias && typeof arg.alias === 'string') {
-      optionPart +=
-        arg.alias.length === 1 ? `, -${arg.alias}` : `, --${arg.alias}`;
-    }
-  }
-
-  const minPadding = 26;
-  const paddedOptionPart =
-    optionPart.length >= minPadding
-      ? `${optionPart}  `
-      : optionPart.padEnd(minPadding);
-  let description = arg.description;
-
-  if (arg.options) {
-    if (Array.isArray(arg.options) && typeof arg.options[0] === 'string') {
-      description += ` (options: ${(arg.options as string[]).join(', ')})`;
-    } else {
-      description += ` (options: ${(arg.options as Array<{ name: string; value: string }>).map((o) => o.value).join(', ')})`;
-    }
-  }
-
-  if (arg.default) {
-    description += ` [default: ${arg.default}]`;
-  }
-
-  if (arg.required) {
-    description += ' [required]';
-  }
-
-  if (arg.deprecated) {
-    description += arg.replaced_by
-      ? ` [deprecated: use ${arg.replaced_by}]`
-      : ' [deprecated]';
-  }
-
-  if (arg['required-when']) {
-    description += ` [required when: ${arg['required-when']}]`;
-  }
-
-  if (arg.multiple) {
-    description += ' [multiple values: comma-separated]';
-  }
-
-  if (arg.type === 'positional') {
-    description += ' [positional argument]';
-  }
-
-  if (arg.examples && arg.examples.length > 0) {
-    description += ` (examples: ${arg.examples.join(', ')})`;
-  }
-
-  return `${paddedOptionPart}${description}`;
-}
-
 export function commandHasAnyImplementation(
   command: CommandSpec,
   pathParts: string[],
@@ -256,100 +203,6 @@ function checkRemovedArguments(
   }
 }
 
-export function showCommandHelp(
-  specs: Specs,
-  command: CommandSpec,
-  pathParts: string[],
-  hasImplementation: ImplementationChecker
-) {
-  const fullPath = pathParts.join(' ');
-  console.log(`\n${specs.name} ${fullPath} - ${command.description ?? ''}\n`);
-
-  if (command.commands && command.commands.length > 0) {
-    const availableCmds = command.commands.filter(
-      (cmd) =>
-        !cmd.removed &&
-        commandHasAnyImplementation(
-          cmd,
-          [...pathParts, cmd.name],
-          hasImplementation
-        )
-    );
-
-    if (availableCmds.length > 0) {
-      console.log('Commands:');
-      availableCmds.forEach((cmd) => {
-        let cmdPart = `  ${cmd.name}`;
-        if (cmd.alias) {
-          const aliases = Array.isArray(cmd.alias) ? cmd.alias : [cmd.alias];
-          cmdPart += ` (${aliases.join(', ')})`;
-        }
-        const paddedCmdPart = cmdPart.padEnd(24);
-        console.log(`${paddedCmdPart}${cmd.description ?? ''}`);
-      });
-      console.log();
-    }
-  }
-
-  const globalArgs = specs.definitions?.global_arguments ?? [];
-  const effectiveArgs = getEffectiveArguments(
-    globalArgs,
-    command.arguments
-  ).filter((arg) => !arg.removed);
-  if (effectiveArgs.length > 0) {
-    console.log('Arguments:');
-    effectiveArgs.forEach((arg) => {
-      console.log(formatArgumentHelp(arg));
-    });
-    console.log();
-  }
-
-  if (command.examples && command.examples.length > 0) {
-    console.log('Examples:');
-    command.examples.forEach((ex) => {
-      console.log(`  ${ex}`);
-    });
-    console.log();
-  }
-
-  if (command.commands && command.commands.length > 0) {
-    console.log(
-      `Use "${specs.name} ${fullPath} <command> help" for more information about a command.`
-    );
-  }
-}
-
-export function showMainHelp(
-  specs: Specs,
-  version: string,
-  hasImplementation: ImplementationChecker
-) {
-  console.log(`Tigris CLI Version: ${version}\n`);
-  console.log('Usage: tigris [command] [options]\n');
-  console.log('Commands:');
-
-  const availableCommands = specs.commands.filter(
-    (cmd) =>
-      !cmd.removed &&
-      commandHasAnyImplementation(cmd, [cmd.name], hasImplementation)
-  );
-
-  availableCommands.forEach((command: CommandSpec) => {
-    let commandPart = `  ${command.name}`;
-    if (command.alias) {
-      const aliases = Array.isArray(command.alias)
-        ? command.alias
-        : [command.alias];
-      commandPart += ` (${aliases.join(', ')})`;
-    }
-    const paddedCommandPart = commandPart.padEnd(24);
-    console.log(`${paddedCommandPart}${command.description ?? ''}`);
-  });
-  console.log(
-    `\nUse "${specs.name} <command> help" for more information about a command.`
-  );
-}
-
 /**
  * Merge global arguments (from specs.yaml definitions.global_arguments)
  * into a command's argument list, skipping any that the command already
@@ -371,52 +224,68 @@ function getEffectiveArguments(
   return [...args, ...injected];
 }
 
+function optionFlags(arg: Argument): string {
+  const isShortAlias =
+    arg.alias && typeof arg.alias === 'string' && arg.alias.length === 1;
+  const isLongAlias =
+    arg.alias && typeof arg.alias === 'string' && arg.alias.length > 1;
+  const flags = isShortAlias
+    ? `-${arg.alias}, --${arg.name}`
+    : isLongAlias
+      ? `--${arg.alias}, --${arg.name}`
+      : `--${arg.name}`;
+
+  if (arg.type === 'flag') {
+    // Flags don't take values
+    return flags;
+  }
+  if (arg.type === 'boolean') {
+    return `${flags} [value]`;
+  }
+  if (arg.options) {
+    return `${flags} <value>`;
+  }
+  return arg.required || arg['required-when']
+    ? `${flags} <value>`
+    : `${flags} [value]`;
+}
+
 export function addArgumentsToCommand(
   cmd: CommanderCommand,
-  args: Argument[] = []
+  args: Argument[] = [],
+  globalArgs: Argument[] = []
 ) {
-  args.forEach((arg) => {
+  // Global arguments go last and in their declared order, wherever a command
+  // redeclares one, so the global section reads the same on every page.
+  const globalRank = (arg: Argument) =>
+    globalArgs.findIndex((globalArg) => globalArg.name === arg.name);
+  const ordered = [
+    ...args.filter((arg) => globalRank(arg) === -1),
+    ...args
+      .filter((arg) => globalRank(arg) !== -1)
+      .sort((a, b) => globalRank(a) - globalRank(b)),
+  ];
+
+  ordered.forEach((arg) => {
     if (arg.type === 'positional') {
       const argumentName = arg.required ? `<${arg.name}>` : `[${arg.name}]`;
-      cmd.argument(argumentName, arg.description);
+      cmd.argument(argumentName, argumentHelpText(arg));
+    } else if (arg.removed || arg.hidden) {
+      // Register but hide from --help so commander still parses the value. A
+      // removed argument is then intercepted by the dispatch handler.
+      cmd.addOption(
+        new Option(optionFlags(arg), arg.description ?? '').hideHelp()
+      );
     } else {
-      const isShortAlias =
-        arg.alias && typeof arg.alias === 'string' && arg.alias.length === 1;
-      const isLongAlias =
-        arg.alias && typeof arg.alias === 'string' && arg.alias.length > 1;
-      let optionString = isShortAlias
-        ? `-${arg.alias}, --${arg.name}`
-        : isLongAlias
-          ? `--${arg.alias}, --${arg.name}`
-          : `--${arg.name}`;
-
-      if (arg.type === 'flag') {
-        // Flags don't take values
-      } else if (arg.type === 'boolean') {
-        optionString += ' [value]';
-      } else if (arg.options) {
-        optionString += ' <value>';
-      } else {
-        optionString +=
-          arg.required || arg['required-when'] ? ' <value>' : ' [value]';
-      }
-
-      if (arg.removed) {
-        // Register but hide from --help so commander still parses the
-        // value; the dispatch handler intercepts it post-parse.
-        cmd.addOption(
-          new Option(optionString, arg.description ?? '').hideHelp()
+      // Matched by name, so a command that redeclares a global argument (its
+      // own --format values, --yes where it confirms) still lists it with the
+      // other global options.
+      if (globalArgs.length > 0) {
+        cmd.optionsGroup(
+          globalRank(arg) === -1 ? OPTIONS_HEADING : GLOBAL_OPTIONS_HEADING
         );
-      } else {
-        let description = arg.description ?? '';
-        if (arg.deprecated) {
-          const hint = arg.replaced_by
-            ? ` Use ${arg.replaced_by} instead.`
-            : '';
-          description = `(deprecated) ${description}${hint}`;
-        }
-        cmd.option(optionString, description, arg.default);
       }
+      cmd.option(optionFlags(arg), argumentHelpText(arg), arg.default);
     }
   });
 }
@@ -605,7 +474,12 @@ export function registerCommands(
 
     const cmd = parent
       .command(spec.name, spec.removed ? { hidden: true } : undefined)
-      .description(spec.description ?? '');
+      .description(spec.description ?? '')
+      .summary(spec.help_text ?? '');
+    if (spec.group) {
+      cmd.helpGroup(groupHeading(spec.group));
+    }
+    setHelpDetails(cmd, { examples: spec.examples, groups: spec.groups });
 
     if (spec.alias) {
       const aliases = Array.isArray(spec.alias) ? spec.alias : [spec.alias];
@@ -639,7 +513,7 @@ export function registerCommands(
             ...(spec.arguments || []),
             ...(defaultCmd.arguments || []),
           ]);
-          addArgumentsToCommand(cmd, allArguments);
+          addArgumentsToCommand(cmd, allArguments, globalArgs);
           cmd.allowExcessArguments(true);
 
           cmd.action(async (...args) => {
@@ -692,14 +566,15 @@ export function registerCommands(
             specs,
             hasImplementation
           );
-          showCommandHelp(specs, spec, currentPath, hasImplementation);
+          cmd.outputHelp();
         });
       }
     } else {
       // Leaf command
       addArgumentsToCommand(
         cmd,
-        getEffectiveArguments(globalArgs, spec.arguments)
+        getEffectiveArguments(globalArgs, spec.arguments),
+        globalArgs
       );
 
       cmd.action(async (...args) => {
@@ -736,85 +611,13 @@ export function registerCommands(
       });
     }
 
-    // Add help subcommand
-    cmd
-      .command('help')
-      .description('Show help for this command')
-      .action(() => {
-        showCommandHelp(specs, spec, currentPath, hasImplementation);
-      });
+    // `tigris <command> help` prints the same page as `--help`. Hidden so it
+    // does not turn every leaf command into one with a "Commands:" section.
+    cmd.command('help', { hidden: true }).action(() => {
+      cmd.outputHelp();
+    });
   }
 }
-
-/**
- * Commander aligns every description in a column to the right of the
- * command/option terms, and only wraps a description when that column is at
- * least `minWidthToWrap` (40) characters wide. Our widest term
- * ("cp|copy [options] <src> <dest>") is 30 characters, so the column is only
- * `columns - 34` wide and the check fails on any terminal narrower than about
- * 75 columns. When it fails Commander does not fall back to a narrower column
- * — it stops wrapping altogether and emits each description as a single
- * unwrapped line, up to 192 characters for `tigris --help`. Narrow terminals
- * therefore render *worse* than the 80-column default, not better.
- *
- * Below that point, stack the description underneath its own term and wrap it
- * to the full terminal width instead, which is legible all the way down to
- * ~30 columns:
- *
- *   ls|list [options] [path]
- *       List all buckets (no arguments)
- *       or objects under a bucket/prefix
- *       path.
- *
- * Anything wide enough for a readable side-by-side column keeps Commander's
- * standard two-column layout.
- */
-const NARROW_HELP_DESCRIPTION_INDENT = 6;
-const MIN_INLINE_DESCRIPTION_WIDTH = 34;
-const MIN_STACKED_DESCRIPTION_WIDTH = 20;
-
-export const narrowHelpConfiguration = {
-  // The stacked layout below wraps to (terminal width - 6), so Commander's
-  // own 40-column floor would veto the wrap it is being asked to perform.
-  minWidthToWrap: MIN_STACKED_DESCRIPTION_WIDTH,
-
-  formatItem(
-    this: Help,
-    term: string,
-    termWidth: number,
-    description: string,
-    helper: Help
-  ): string {
-    const itemIndent = 2;
-    const spacerWidth = 2;
-    const helpWidth = helper.helpWidth ?? 80;
-    const inlineWidth = helpWidth - termWidth - spacerWidth - itemIndent;
-
-    // Wide enough for the standard aligned two-column layout.
-    if (!description || inlineWidth >= MIN_INLINE_DESCRIPTION_WIDTH) {
-      return Help.prototype.formatItem.call(
-        this,
-        term,
-        termWidth,
-        description,
-        helper
-      );
-    }
-
-    const indent = ' '.repeat(NARROW_HELP_DESCRIPTION_INDENT);
-    const wrapped = helper.boxWrap(
-      description,
-      Math.max(
-        helpWidth - NARROW_HELP_DESCRIPTION_INDENT,
-        MIN_STACKED_DESCRIPTION_WIDTH
-      )
-    );
-    return `${' '.repeat(itemIndent)}${term}\n${indent}${wrapped.replace(
-      /\n/g,
-      `\n${indent}`
-    )}`;
-  },
-};
 
 /**
  * Create and configure the CLI program
@@ -823,24 +626,44 @@ export function createProgram(config: CLIConfig): CommanderCommand {
   const { specs, version, hasImplementation } = config;
 
   const program = new CommanderCommand();
-  program.name(specs.name).description(specs.description).version(version);
-  program.configureHelp(narrowHelpConfiguration);
+  program
+    .name(specs.name)
+    .description(specs.description)
+    .version(version, '-V, --version', 'Show the CLI version')
+    // Set before registerCommands(): subcommands inherit both settings.
+    .helpOption('-h, --help', 'Show help')
+    .configureHelp(helpConfiguration);
 
   registerCommands(config, program, specs.commands);
 
-  program
+  // The root takes none of the global arguments itself; list them all, hidden
+  // ones included, so the front page says what every command accepts.
+  const globalOptions = (specs.definitions?.global_arguments ?? [])
+    .filter((arg) => !arg.removed)
+    .map((arg) => new Option(optionFlags(arg), argumentHelpText(arg)));
+  setHelpDetails(program, { groups: specs.groups, globalOptions });
+
+  // The built-in commands join the last group the spec declares.
+  const builtinGroup = specs.groups?.[specs.groups.length - 1];
+
+  const helpCommand = program
     .command('help')
     .description('Show general help')
     .action(() => {
-      showMainHelp(specs, version, hasImplementation);
+      program.outputHelp();
     });
 
-  program
+  const versionCommand = program
     .command('version')
     .description('Show the CLI version')
     .action(() => {
       console.log(version);
     });
+
+  if (builtinGroup) {
+    helpCommand.helpGroup(groupHeading(builtinGroup));
+    versionCommand.helpGroup(groupHeading(builtinGroup));
+  }
 
   program.allowExcessArguments(true);
   program.action((...args) => {
@@ -851,7 +674,7 @@ export function createProgram(config: CLIConfig): CommanderCommand {
       specs,
       hasImplementation
     );
-    showMainHelp(specs, version, hasImplementation);
+    program.outputHelp();
   });
 
   return program;
