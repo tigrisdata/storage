@@ -412,6 +412,7 @@ tigris mv <src> <dest> [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
 | `-r, --recursive` | Move directories recursively |
 | `-f, --force` | Skip confirmation prompts (alias for --yes) |
 
@@ -432,6 +433,7 @@ tigris rm <path> [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
 | `-r, --recursive` | Remove directories recursively |
 | `-f, --force` | Skip confirmation prompts (alias for --yes) |
 
@@ -605,8 +607,12 @@ tigris buckets create my-fork --fork-of my-bucket --source-snapshot 176588900050
 Update a fork with the latest changes from its source bucket
 
 ```
-tigris buckets rebase <fork>
+tigris buckets rebase <fork> [flags]
 ```
+
+| Flag | Description |
+|------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
 
 **Examples:**
 ```bash
@@ -624,6 +630,7 @@ tigris buckets merge <fork> [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
 | `-source, --into` | Source bucket to merge into. Defaults to the fork's parent source bucket |
 | `-from-snap, --from-snapshot` | Merge from a specific snapshot of the fork rather than its current state. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464) |
 
@@ -662,6 +669,7 @@ tigris buckets delete <name> [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
 | `--force` | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
@@ -1022,6 +1030,7 @@ tigris snapshots delete <name> <version> [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
 | `--force` | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
@@ -1161,6 +1170,7 @@ tigris objects delete <bucket> [key] [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
 | `--version-id` | Hard-delete a specific object version (requires bucket versioning). Targets a single key. To destroy a soft-deleted version, use "tigris objects purge" |
 | `--all-versions` | Hard-delete every version and delete marker for the given key(s). Mutually exclusive with --version-id |
 | `--force` | Skip confirmation prompts (alias for --yes) |
@@ -1307,6 +1317,7 @@ tigris objects purge <bucket> [key] [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
 | `--version-id` | The soft-deleted version to destroy, from "tigris objects list-versions --deleted" **(required)** |
 | `--force` | Skip confirmation prompts (alias for --yes) |
 | `--format` | Output format (default: table) |
@@ -1375,6 +1386,7 @@ tigris access-keys delete <id> [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
 | `--force` | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
@@ -1428,6 +1440,7 @@ tigris access-keys rotate <id> [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
 | `--force` | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
@@ -1463,6 +1476,7 @@ tigris access-keys detach-policy <id> [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
 | `--policy-arn` | ARN of the policy to detach |
 | `--force` | Skip confirmation prompts (alias for --yes) |
 
@@ -1603,6 +1617,7 @@ tigris iam policies delete [resource] [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
 | `--force` | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
@@ -1639,6 +1654,7 @@ tigris iam policies unlink-key [resource] [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
 | `--id` | Access key ID to detach |
 | `--force` | Skip confirmation prompts (alias for --yes) |
 
@@ -1725,6 +1741,7 @@ tigris iam users revoke-invitation [resource] [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
 | `--force` | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
@@ -1764,6 +1781,7 @@ tigris iam users remove [resource] [flags]
 
 | Flag | Description |
 |------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
 | `--force` | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
