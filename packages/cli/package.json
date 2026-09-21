@@ -41,6 +41,7 @@
     "test:integration": "vitest run test/cli.test.ts",
     "publint": "publint",
     "updatedocs": "tsx scripts/update-docs.ts",
+    "generate:agent-setup": "tsx scripts/generate-agent-setup.ts",
     "postinstall": "node postinstall.cjs",
     "generate:registry": "tsx scripts/generate-registry.ts",
     "build:binary": "npm run generate:registry && tsc --noEmit -p tsconfig.binary.json && tsx scripts/build-binaries.ts",

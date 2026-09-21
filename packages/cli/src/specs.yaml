@@ -100,7 +100,10 @@ commands:
     examples:
       - "tigris init"
       - "npx tigris init"
+      - "tigris init --yes"
+      - "tigris init --editor claude-code,cursor --yes"
       - "tigris init --agent"
+      - "tigris init --agent --bucket my-bucket"
     messages:
       onStart: ''
       onSuccess: ''
@@ -109,6 +112,17 @@ commands:
       - name: agent
         description: Print a setup recipe for an AI coding agent to follow instead of running the interactive wizard
         type: flag
+      - name: bucket
+        alias: b
+        description: 'With --agent, a bucket that already exists for this user; the recipe uses it instead of creating one'
+      - name: yes
+        alias: y
+        description: 'Skip the wizard and install the defaults (MCP global, all skills project-level) for the editors given with --editor, or detected from the environment'
+        type: flag
+      - name: editor
+        alias: e
+        description: 'Editor(s) to configure without asking (implies --yes). Ids: claude-code, cursor, vscode, windsurf, codex, antigravity-cli, cline, zed, roo, opencode'
+        multiple: true
 
   #########################
   # Authentication

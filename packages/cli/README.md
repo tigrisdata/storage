@@ -70,12 +70,18 @@ tigris init [flags]
 | Flag | Description |
 |------|-------------|
 | `--agent` | Print a setup recipe for an AI coding agent to follow instead of running the interactive wizard |
+| `-b, --bucket` | With --agent, a bucket that already exists for this user; the recipe uses it instead of creating one |
+| `-y, --yes` | Skip the wizard and install the defaults (MCP global, all skills project-level) for the editors given with --editor, or detected from the environment |
+| `-e, --editor` | Editor(s) to configure without asking (implies --yes). Ids: claude-code, cursor, vscode, windsurf, codex, antigravity-cli, cline, zed, roo, opencode |
 
 **Examples:**
 ```bash
 tigris init
 npx tigris init
+tigris init --yes
+tigris init --editor claude-code,cursor --yes
 tigris init --agent
+tigris init --agent --bucket my-bucket
 ```
 
 ### `tigris configure` (c)
