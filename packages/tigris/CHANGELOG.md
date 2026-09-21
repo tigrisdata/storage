@@ -1,5 +1,24 @@
 # tigris
 
+## 3.12.2
+
+### Patch Changes
+
+- [#236](https://github.com/tigrisdata/storage/pull/236) [`a9876ab`](https://github.com/tigrisdata/storage/commit/a9876ab253f03a69ca1d3da08d914fc9ac3f227f) Thanks [@Xe](https://github.com/Xe)! - `tigris init --agent` prints its setup recipe in [ASD-STE100 Simplified
+  Technical English](https://www.asd-ste100.org/). Each step reads the same
+  way to every agent that follows it.
+  
+  The goal is to make the instructions unambiguous for both humans and
+  agents. A distracted operator and a less capable model read each step the
+  same way.
+  
+  Each step is now one instruction per sentence in the imperative. Every
+  condition is ahead of the command. All steps that carried two orders at
+  once now use two sentences. An agent can no longer do half of a step
+  and count it as complete.
+- Updated dependencies [[`a9876ab`](https://github.com/tigrisdata/storage/commit/a9876ab253f03a69ca1d3da08d914fc9ac3f227f), [`5fb9f14`](https://github.com/tigrisdata/storage/commit/5fb9f14fdb6e16dce3a150aab883dce49abc5ca2)]:
+  - @tigrisdata/cli@3.12.2
+
 ## 3.12.1
 
 ### Patch Changes
