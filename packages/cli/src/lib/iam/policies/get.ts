@@ -71,12 +71,18 @@ export default async function get(options: Record<string, unknown>) {
   console.log('  Statements:');
   for (const stmt of data.document.statements) {
     console.log(`    - Effect: ${stmt.effect}`);
+    if (stmt.sid) {
+      console.log(`      Sid: ${stmt.sid}`);
+    }
     console.log(
       `      Action: ${Array.isArray(stmt.action) ? stmt.action.join(', ') : stmt.action}`
     );
     console.log(
       `      Resource: ${Array.isArray(stmt.resource) ? stmt.resource.join(', ') : stmt.resource}`
     );
+    if (stmt.condition) {
+      console.log(`      Condition: ${JSON.stringify(stmt.condition)}`);
+    }
   }
 
   printSuccess(context);

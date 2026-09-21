@@ -2771,7 +2771,13 @@ describe.skipIf(skipTests || skipOAuth)('OAuth Integration Tests', () => {
       const doc = JSON.stringify({
         Version: '2012-10-17',
         Statement: [
-          { Effect: 'Allow', Action: ['s3:GetObject'], Resource: ['*'] },
+          {
+            Sid: 'OfficeOnly',
+            Effect: 'Allow',
+            Action: ['s3:GetObject'],
+            Resource: ['*'],
+            Condition: { IpAddress: { 'aws:SourceIp': ['10.0.0.0/8'] } },
+          },
         ],
       });
       const result = runCli(
@@ -2800,6 +2806,30 @@ describe.skipIf(skipTests || skipOAuth)('OAuth Integration Tests', () => {
         `iam policies get --resource ${policyArn} --format json`
       );
       expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      const [statement] = parsed.document.statements;
+      expect(statement.sid).toBe('OfficeOnly');
+      expect(statement.condition).toEqual({
+        IpAddress: { 'aws:SourceIp': ['10.0.0.0/8'] },
+      });
+    });
+
+    it('should keep the condition through a description-only edit', () => {
+      if (!policyArn) return;
+      const edited = runCli(
+        `iam policies edit --resource ${policyArn} --description 'edited' --format json`
+      );
+      expect(edited.exitCode).toBe(0);
+
+      const result = runCli(
+        `iam policies get --resource ${policyArn} --format json`
+      );
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim());
+      expect(parsed.description).toBe('edited');
+      expect(parsed.document.statements[0].condition).toEqual({
+        IpAddress: { 'aws:SourceIp': ['10.0.0.0/8'] },
+      });
     });
 
     it('should delete the policy', () => {

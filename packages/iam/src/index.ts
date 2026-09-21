@@ -65,6 +65,7 @@ export {
 } from './lib/organization/list';
 export { type AddPolicyOptions, addPolicy } from './lib/policy/add';
 export { type DeletePolicyOptions, deletePolicy } from './lib/policy/delete';
+export { fromApiDocument, toApiDocument } from './lib/policy/document';
 export { type EditPolicyOptions, editPolicy } from './lib/policy/edit';
 export {
   type GetPolicyOptions,
@@ -78,6 +79,7 @@ export {
 } from './lib/policy/list';
 export type {
   Policy,
+  PolicyCondition,
   PolicyDocument,
   PolicyStatement,
 } from './lib/policy/types';

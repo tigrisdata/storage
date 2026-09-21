@@ -1,6 +1,7 @@
 import { handleError } from '@shared/index';
 import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
 import type { TigrisIAMConfig, TigrisIAMResponse } from '../types';
+import { fromApiDocument } from './document';
 import type { Policy, PolicyDocument } from './types';
 
 export type GetPolicyOptions = {
@@ -72,24 +73,7 @@ export async function getPolicy(
 
   let document: PolicyDocument;
   try {
-    const raw = JSON.parse(policy.Document);
-    document = {
-      version: raw.Version,
-      statements: (Array.isArray(raw.Statement)
-        ? raw.Statement
-        : [raw.Statement]
-      ).map(
-        (s: {
-          Effect: string;
-          Action: string | string[];
-          Resource: string | string[];
-        }) => ({
-          effect: s.Effect,
-          action: s.Action,
-          resource: s.Resource,
-        })
-      ),
-    };
+    document = fromApiDocument(policy.Document);
   } catch {
     return { error: new Error('Failed to parse policy document') };
   }
