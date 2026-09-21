@@ -10,10 +10,14 @@ export type Policy = {
   updateDate: Date;
 };
 
+export type PolicyCondition = Record<string, Record<string, string | string[]>>;
+
 export type PolicyStatement = {
+  sid?: string;
   effect: string;
   action: string | string[];
   resource: string | string[];
+  condition?: PolicyCondition;
 };
 
 export type PolicyDocument = {

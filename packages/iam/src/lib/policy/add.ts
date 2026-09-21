@@ -1,6 +1,7 @@
 import { handleError } from '@shared/index';
 import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
 import type { TigrisIAMConfig, TigrisIAMResponse } from '../types';
+import { toApiDocument } from './document';
 import type { Policy, PolicyDocument } from './types';
 
 export type AddPolicyOptions = {
@@ -42,15 +43,10 @@ export async function addPolicy(
   formData.append('Description', options.description);
   formData.append('ReqUUID', crypto.randomUUID());
 
-  const doc = {
-    Version: options.document.version,
-    Statement: options.document.statements.map((s) => ({
-      Effect: s.effect,
-      Action: s.action,
-      Resource: s.resource,
-    })),
-  };
-  formData.append('PolicyDocument', JSON.stringify(doc));
+  formData.append(
+    'PolicyDocument',
+    JSON.stringify(toApiDocument(options.document))
+  );
 
   const headers = {
     'Content-Type': 'application/x-www-form-urlencoded',
