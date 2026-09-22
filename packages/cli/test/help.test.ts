@@ -113,12 +113,12 @@ function helpWith(
 }
 
 describe('argumentHelpText', () => {
-  it('prefers help_text over description', () => {
+  it('prefers helpText over description', () => {
     expect(
       argumentHelpText({
         name: 'path',
         description: 'A long explanation of every path form',
-        help_text: 'Bucket or path',
+        helpText: 'Bucket or path',
       })
     ).toBe('Bucket or path');
   });

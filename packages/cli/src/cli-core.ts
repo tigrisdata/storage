@@ -475,7 +475,7 @@ export function registerCommands(
     const cmd = parent
       .command(spec.name, spec.removed ? { hidden: true } : undefined)
       .description(spec.description ?? '')
-      .summary(spec.help_text ?? '');
+      .summary(spec.helpText ?? '');
     if (spec.group) {
       cmd.helpGroup(groupHeading(spec.group));
     }

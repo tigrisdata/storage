@@ -5,7 +5,7 @@ export interface Argument {
    * Precise one-liner shown beside the argument in help. Falls back to
    * `description`, which stays the full text for the generated docs.
    */
-  help_text?: string;
+  helpText?: string;
   alias?: string;
   options?:
     | string[]
@@ -50,7 +50,7 @@ export interface CommandSpec {
    * Precise one-liner shown in the parent's command list. Falls back to
    * `description`, which is shown in full on the command's own help page.
    */
-  help_text?: string;
+  helpText?: string;
   alias?: string | string[];
   /** Heading this command is listed under; one of the parent's `groups`. */
   group?: string;
