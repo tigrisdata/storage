@@ -250,6 +250,48 @@ export async function getStorageConfig(options?: {
   return getEnvForcePathStyle() ? { ...config, forcePathStyle: true } : config;
 }
 
+export interface ServiceEndpoints {
+  storage: string;
+  iam: string;
+}
+
+/**
+ * The storage and IAM endpoints the active auth method talks to, and nothing
+ * else: no token refresh, no organization check, so it is safe to call for
+ * output that merely needs to name the endpoints. Each branch picks the
+ * storage endpoint exactly as the matching branch of resolveStorageConfig()
+ * does and the IAM endpoint as getIAMConfig() does; keep them in step.
+ */
+export async function resolveEndpoints(): Promise<ServiceEndpoints> {
+  const method = await resolveAuthMethod();
+  const config = getTigrisConfig();
+
+  switch (method.type) {
+    case 'aws-profile': {
+      const profileConfig = await getAwsProfileConfig(method.profile);
+      return {
+        storage:
+          profileConfig.endpoint || config.endpoint || DEFAULT_STORAGE_ENDPOINT,
+        iam: profileConfig.iamEndpoint || config.iamEndpoint,
+      };
+    }
+    case 'credentials':
+    case 'configured':
+      return {
+        storage: getStoredCredentials()?.endpoint || DEFAULT_STORAGE_ENDPOINT,
+        iam: config.iamEndpoint,
+      };
+    case 'environment':
+      return {
+        storage: getEnvCredentials()?.endpoint || DEFAULT_STORAGE_ENDPOINT,
+        iam: config.iamEndpoint,
+      };
+    default:
+      return { storage: config.endpoint, iam: config.iamEndpoint };
+  }
+}
+
+// Endpoint selection per auth method is mirrored in resolveEndpoints() above.
 async function resolveStorageConfig(options?: {
   withCredentialProvider?: boolean;
 }): Promise<TigrisStorageConfig> {

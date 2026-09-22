@@ -22,6 +22,7 @@ vi.mock('../../src/auth/provider.js', () => ({
 }));
 
 vi.mock('../../src/auth/storage.js', () => ({
+  getAwsProfileConfig: vi.fn(async () => ({})),
   getLoginMethod: vi.fn(),
   getSelectedOrganization: vi.fn(),
 }));
@@ -40,6 +41,7 @@ import { getAuthClient } from '../../src/auth/client.js';
 import { getIAMConfig, getOAuthIAMConfig } from '../../src/auth/iam.js';
 import { resolveAuthMethod } from '../../src/auth/provider.js';
 import {
+  getAwsProfileConfig,
   getLoginMethod,
   getSelectedOrganization,
 } from '../../src/auth/storage.js';
@@ -144,6 +146,23 @@ describe('getIAMConfig', () => {
       });
     }
   );
+
+  it("honours an AWS profile's IAM endpoint, as storage config does", async () => {
+    vi.mocked(resolveAuthMethod).mockResolvedValue({
+      type: 'aws-profile',
+      profile: 'custom',
+      accessKeyId: 'ak-123',
+      secretAccessKey: 'sk-456',
+    });
+    vi.mocked(getAwsProfileConfig).mockResolvedValueOnce({
+      iamEndpoint: 'https://iam.example.dev',
+    });
+    vi.mocked(getSelectedOrganization).mockReturnValue(null);
+
+    const config = await getIAMConfig(context);
+    expect(getAwsProfileConfig).toHaveBeenCalledWith('custom');
+    expect(config).toHaveProperty('iamEndpoint', 'https://iam.example.dev');
+  });
 
   it('throws when type is none', async () => {
     vi.mocked(resolveAuthMethod).mockResolvedValue({

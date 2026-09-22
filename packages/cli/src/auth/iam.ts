@@ -11,7 +11,11 @@ import { getAuthClient } from './client.js';
 export { isFlyOrganization } from './fly.js';
 
 import { getTigrisConfig, resolveAuthMethod } from './provider.js';
-import { getLoginMethod, getSelectedOrganization } from './storage.js';
+import {
+  getAwsProfileConfig,
+  getLoginMethod,
+  getSelectedOrganization,
+} from './storage.js';
 
 /**
  * OAuth-only IAM config. Exits on non-OAuth or unauthenticated.
@@ -60,7 +64,18 @@ export async function getIAMConfig(context: MessageContext) {
     case 'oauth':
       return getOAuthIAMConfig(context);
 
-    case 'aws-profile':
+    case 'aws-profile': {
+      // The profile's endpoint_url_iam, as resolveStorageConfig() already
+      // honours its endpoint_url_s3.
+      const profileConfig = await getAwsProfileConfig(method.profile);
+      return {
+        accessKeyId: method.accessKeyId,
+        secretAccessKey: method.secretAccessKey,
+        organizationId: getSelectedOrganization() ?? undefined,
+        iamEndpoint: profileConfig.iamEndpoint || getTigrisConfig().iamEndpoint,
+      };
+    }
+
     case 'credentials':
     case 'environment':
     case 'configured':

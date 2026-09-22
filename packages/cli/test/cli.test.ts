@@ -259,6 +259,15 @@ describe('CLI Help Commands', () => {
     expect(result.stdout).toContain('delete');
   });
 
+  it('should show access-keys create help', () => {
+    const result = runCli('access-keys create help');
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('Usage: tigris access-keys create');
+    expect(result.stdout).toContain('--env');
+    expect(result.stdout).toContain('--export');
+    expect(result.stdout).toContain('--bucket');
+  });
+
   it('should show access-keys help', () => {
     const result = runCli('access-keys help');
     expect(result.exitCode).toBe(0);

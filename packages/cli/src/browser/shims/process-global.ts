@@ -136,6 +136,9 @@ export const process = {
   exit: (code = 0): never => {
     throw new ExitSignal(code);
   },
+  // Set by a command that must finish its output before reporting failure;
+  // the harness reads it once the run has ended.
+  exitCode: undefined as number | undefined,
   on: () => process,
   once: () => process,
   off: () => process,
