@@ -179,9 +179,9 @@ describe('specs completeness', () => {
     }
   });
 
-  // Help lists show `help_text ?? description` on one row per entry. Past
+  // Help lists show `helpText ?? description` on one row per entry. Past
   // these lengths a row wraps to three or more lines on an 80-column terminal
-  // and the list stops being scannable — add a shorter `help_text` instead of
+  // and the list stops being scannable — add a shorter `helpText` instead of
   // trimming the `description`, which the command's own page and the docs use.
   describe('help text is precise', () => {
     const MAX_COMMAND_HELP = 60;
@@ -192,7 +192,7 @@ describe('specs completeness', () => {
       const tooLong = live
         .map(({ spec, path }) => ({
           label: path.join(' '),
-          text: spec.help_text ?? spec.description ?? '',
+          text: spec.helpText ?? spec.description ?? '',
         }))
         .filter(({ text }) => text.length > MAX_COMMAND_HELP)
         .map(({ label, text }) => `${label} (${text.length}): ${text}`);
@@ -210,7 +210,7 @@ describe('specs completeness', () => {
         .filter(({ arg }) => !arg.removed)
         .map(({ label, arg }) => ({
           label: `${label} --${arg.name}`,
-          text: arg.help_text ?? arg.description ?? '',
+          text: arg.helpText ?? arg.description ?? '',
         }))
         .filter(({ text }) => text.length > MAX_ARGUMENT_HELP)
         .map(({ label, text }) => `${label} (${text.length}): ${text}`);
@@ -236,20 +236,20 @@ describe('specs completeness', () => {
         return visible
           .filter(
             (cmd) =>
-              column + (cmd.help_text ?? cmd.description ?? '').length > 80
+              column + (cmd.helpText ?? cmd.description ?? '').length > 80
           )
           .map((cmd) => `${label} ${cmd.name}`);
       });
       expect(wrapped).toEqual([]);
     });
 
-    it('help_text is a single line without a trailing period', () => {
+    it('helpText is a single line without a trailing period', () => {
       const malformed = live
         .flatMap(({ spec, path }) => [
-          { label: path.join(' '), text: spec.help_text },
+          { label: path.join(' '), text: spec.helpText },
           ...(spec.arguments ?? []).map((arg) => ({
             label: `${path.join(' ')} --${arg.name}`,
-            text: arg.help_text,
+            text: arg.helpText,
           })),
         ])
         .filter(

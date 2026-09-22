@@ -114,7 +114,7 @@ commands:
     group: Get started
     alias: start
     description: Connect Tigris to your AI coding agent — MCP server config and agent skills
-    help_text: Connect Tigris to your AI coding agent
+    helpText: Connect Tigris to your AI coding agent
     examples:
       - "tigris init"
       - "npx tigris init"
@@ -126,7 +126,7 @@ commands:
     arguments:
       - name: agent
         description: Print a setup recipe for an AI coding agent to follow instead of running the interactive wizard
-        help_text: Print a setup recipe for an AI agent instead of running the wizard
+        helpText: Print a setup recipe for an AI agent instead of running the wizard
         type: flag
 
   #########################
@@ -136,7 +136,7 @@ commands:
   - name: configure
     group: Get started
     description: Save access-key credentials to ~/.tigris/config.json for persistent use across all commands
-    help_text: Save access-key credentials for all commands
+    helpText: Save access-key credentials for all commands
     alias: c
     examples:
       - "tigris configure --access-key tid_AaBb --access-secret tsec_XxYy"
@@ -168,7 +168,7 @@ commands:
   - name: login
     group: Get started
     description: Start a session via OAuth (default) or temporary credentials. Session state is cleared on logout
-    help_text: Start a session via OAuth or temporary credentials
+    helpText: Start a session via OAuth or temporary credentials
     examples:
       - "tigris login"
       - "tigris login oauth"
@@ -191,7 +191,7 @@ commands:
       # login (main interactive operation)
       - name: select
         description: Choose how to login - OAuth (browser) or credentials (access key)
-        help_text: "Choose how to log in: OAuth or access key"
+        helpText: "Choose how to log in: OAuth or access key"
         messages:
           onStart: ''
           onSuccess: 'Login successful'
@@ -199,7 +199,7 @@ commands:
       # oauth
       - name: oauth
         description: Login via browser using OAuth2 device flow. Best for interactive use
-        help_text: Log in through the browser with OAuth
+        helpText: Log in through the browser with OAuth
         alias: o
         examples:
           - "tigris login oauth"
@@ -217,7 +217,7 @@ commands:
       # credentials
       - name: credentials
         description: Login with an access key and secret. Creates a temporary session that is cleared on logout
-        help_text: Log in with an access key and secret
+        helpText: Log in with an access key and secret
         alias: c
         examples:
           - "tigris login credentials --access-key tid_AaBb --access-secret tsec_XxYy"
@@ -244,7 +244,7 @@ commands:
   - name: whoami
     group: Get started
     description: Print the currently authenticated user, organization, and auth method
-    help_text: Show the current user, organization, and auth method
+    helpText: Show the current user, organization, and auth method
     alias: w
     examples:
       - "tigris whoami"
@@ -269,7 +269,7 @@ commands:
   - name: logout
     group: Get started
     description: End the current session and clear login state. Credentials saved via 'configure' are kept
-    help_text: End the current session and clear login state
+    helpText: End the current session and clear login state
     examples:
       - "tigris logout"
     messages:
@@ -281,7 +281,7 @@ commands:
   - name: credentials
     group: Get started
     description: Test whether your current credentials can reach Tigris and optionally verify access to a specific bucket
-    help_text: Test whether your credentials can reach Tigris
+    helpText: Test whether your credentials can reach Tigris
     alias: creds
     examples:
       - "tigris credentials test"
@@ -289,7 +289,7 @@ commands:
     commands:
       - name: test
         description: Verify that current credentials are valid. Optionally checks access to a specific bucket
-        help_text: Verify credentials, optionally against a bucket
+        helpText: Verify credentials, optionally against a bucket
         alias: t
         examples:
           - "tigris credentials test"
@@ -312,7 +312,7 @@ commands:
   - name: telemetry
     group: CLI
     description: Show or change whether the CLI sends usage analytics and error reports
-    help_text: Show or change usage analytics and error reporting
+    helpText: Show or change usage analytics and error reporting
     default: status
     examples:
       - "tigris telemetry"
@@ -322,7 +322,7 @@ commands:
     commands:
       - name: status
         description: Show whether telemetry is enabled, what is collected, and which setting is in effect
-        help_text: Show whether telemetry is on and what is collected
+        helpText: Show whether telemetry is on and what is collected
         examples:
           - "tigris telemetry status"
         messages:
@@ -339,7 +339,7 @@ commands:
           onFailure: 'Failed to disable telemetry'
       - name: enable
         description: Turn usage analytics and error reports back on for this machine
-        help_text: Turn usage analytics and error reports back on
+        helpText: Turn usage analytics and error reports back on
         examples:
           - "tigris telemetry enable"
         messages:
@@ -354,7 +354,7 @@ commands:
   - name: ls
     group: Unix-style commands
     description: List all buckets (no arguments) or objects under a bucket/prefix path. Accepts bare names or t3:// URIs
-    help_text: List buckets, or objects under a bucket/prefix path
+    helpText: List buckets, or objects under a bucket/prefix path
     alias: list
     examples:
       - "tigris ls"
@@ -368,7 +368,7 @@ commands:
       - name: path
         type: positional
         description: A bucket name or bucket/prefix path. Omit to list all buckets. Supports t3:// and tigris:// prefixes
-        help_text: Bucket name or bucket/prefix path. Omit to list all buckets
+        helpText: Bucket name or bucket/prefix path. Omit to list all buckets
         examples:
           - my-bucket
           - my-bucket/my-path
@@ -376,7 +376,7 @@ commands:
           - t3://my-bucket/my-path
       - name: snapshot-version
         description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
-        help_text: Read from a bucket snapshot (version or UNIX nanosecond timestamp)
+        helpText: Read from a bucket snapshot (version or UNIX nanosecond timestamp)
         alias: snapshot
       - name: format
         description: Output format
@@ -389,14 +389,14 @@ commands:
         alias: pt
       - name: source
         description: List objects from a specific storage source on buckets with shadow migration enabled
-        help_text: Storage source to list from on shadow-migration buckets
+        helpText: Storage source to list from on shadow-migration buckets
         options: [tigris, shadow]
 
   # mk
   - name: mk
     group: Unix-style commands
     description: Create a bucket (bare name) or a folder inside a bucket (bucket/folder/ with trailing slash)
-    help_text: Create a bucket, or a folder inside a bucket
+    helpText: Create a bucket, or a folder inside a bucket
     alias: create
     examples:
       - "tigris mk my-bucket"
@@ -414,7 +414,7 @@ commands:
         required: true
         type: positional
         description: A bucket name or bucket/folder/ path. Trailing slash creates a folder inside the bucket. Supports t3:// and tigris:// prefixes
-        help_text: Bucket name, or bucket/folder/ path (trailing slash creates a folder)
+        helpText: Bucket name, or bucket/folder/ path (trailing slash creates a folder)
         examples:
           - my-bucket
           - my-bucket/my-path
@@ -439,7 +439,7 @@ commands:
         default: false
       - name: enable-directory-listing
         description: Enable directory listing, relevant for public buckets (only applies when creating a bucket)
-        help_text: Enable directory listing for a public bucket (bucket creation only)
+        helpText: Enable directory listing for a public bucket (bucket creation only)
         type: flag
         default: false
       - name: default-tier
@@ -465,14 +465,14 @@ commands:
         alias: fork
       - name: source-snapshot
         description: Fork from a specific snapshot of the source bucket. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Requires --fork-of
-        help_text: Fork from this snapshot (version or UNIX ns timestamp). Requires --fork-of
+        helpText: Fork from this snapshot (version or UNIX ns timestamp). Requires --fork-of
         alias: source-snap
 
   # touch
   - name: touch
     group: Unix-style commands
     description: Create an empty (zero-byte) object at the given bucket/key path
-    help_text: Create an empty object at a bucket/key path
+    helpText: Create an empty object at a bucket/key path
     examples:
       - "tigris touch my-bucket/placeholder.txt"
       - "tigris touch t3://my-bucket/logs/"
@@ -491,7 +491,7 @@ commands:
   - name: stat
     group: Unix-style commands
     description: Show storage stats (no args), bucket info, or object metadata
-    help_text: Show storage stats, bucket info, or object metadata
+    helpText: Show storage stats, bucket info, or object metadata
     examples:
       - "tigris stat"
       - "tigris stat t3://my-bucket"
@@ -515,17 +515,17 @@ commands:
         default: table
       - name: snapshot-version
         description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
-        help_text: Read from a bucket snapshot (version or UNIX nanosecond timestamp)
+        helpText: Read from a bucket snapshot (version or UNIX nanosecond timestamp)
         alias: snapshot
       - name: version-id
         description: Object version id to stat (requires bucket versioning). Omit to stat the latest version
-        help_text: Object version id to stat. Omit for the latest version
+        helpText: Object version id to stat. Omit for the latest version
 
   # presign
   - name: presign
     group: Unix-style commands
     description: Generate a presigned URL for temporary access to an object without credentials
-    help_text: Generate a presigned URL for temporary object access
+    helpText: Generate a presigned URL for temporary object access
     examples:
       - "tigris presign my-bucket/file.txt"
       - "tigris presign t3://my-bucket/report.pdf --method put --expires-in 7200"
@@ -554,7 +554,7 @@ commands:
         default: '3600'
       - name: access-key
         description: Access key ID to use for signing. If not provided, resolved from credentials or auto-selected
-        help_text: Access key ID to sign with. Defaults to your current credentials
+        helpText: Access key ID to sign with. Defaults to your current credentials
       - name: select
         description: Interactively select an access key (OAuth only)
         type: flag
@@ -564,14 +564,14 @@ commands:
         default: url
       - name: snapshot-version
         description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Only supported for GET requests.
-        help_text: Read from a bucket snapshot (version or UNIX nanosecond timestamp). GET only
+        helpText: Read from a bucket snapshot (version or UNIX nanosecond timestamp). GET only
         alias: snapshot
 
   # cp
   - name: cp
     group: Unix-style commands
     description: Copy files between local filesystem and Tigris, or between paths within Tigris. At least one side must be a remote t3:// path
-    help_text: Copy files to, from, or within Tigris
+    helpText: Copy files to, from, or within Tigris
     alias: copy
     examples:
       - "tigris cp ./file.txt t3://my-bucket/file.txt"
@@ -587,7 +587,7 @@ commands:
         required: true
         type: positional
         description: Source path. Use t3:// (or tigris://) prefix for remote Tigris paths, bare paths for local files. At least one side must be remote. Quote wildcard patterns to prevent shell expansion
-        help_text: Source path. Prefix remote paths with t3://; quote wildcards
+        helpText: Source path. Prefix remote paths with t3://; quote wildcards
         examples:
           - ./file.txt
           - ./dir/
@@ -598,7 +598,7 @@ commands:
         required: true
         type: positional
         description: Destination path. Use t3:// (or tigris://) prefix for remote Tigris paths, bare paths for local files
-        help_text: Destination path. Prefix remote paths with t3://
+        helpText: Destination path. Prefix remote paths with t3://
         examples:
           - .
           - ./local-dir/
@@ -614,13 +614,13 @@ commands:
         options: *access_options
       - name: cache-control
         description: Cache-Control header stored with uploaded objects (only applies to local-to-remote uploads)
-        help_text: Cache-Control header for uploaded objects (local-to-remote only)
+        helpText: Cache-Control header for uploaded objects (local-to-remote only)
 
   # mv
   - name: mv
     group: Unix-style commands
     description: Move (rename) objects within Tigris. Both source and destination must be remote t3:// paths
-    help_text: Move or rename objects within Tigris
+    helpText: Move or rename objects within Tigris
     alias: move
     examples:
       - "tigris mv t3://my-bucket/old.txt t3://my-bucket/new.txt -f"
@@ -634,7 +634,7 @@ commands:
         type: positional
         required: true
         description: Remote source path. Use t3:// (or tigris://) prefix. Quote wildcard patterns to prevent shell expansion
-        help_text: Remote source path (t3:// prefix). Quote wildcards
+        helpText: Remote source path (t3:// prefix). Quote wildcards
         examples:
           - t3://my-bucket/my-path/my-object.json
           - t3://my-bucket/my-path/
@@ -659,7 +659,7 @@ commands:
   - name: rm
     group: Unix-style commands
     description: Remove a bucket, folder, or object from Tigris. A bare bucket name deletes the bucket itself
-    help_text: Remove a bucket, folder, or object
+    helpText: Remove a bucket, folder, or object
     alias: remove
     examples:
       - "tigris rm t3://my-bucket/file.txt -f"
@@ -674,7 +674,7 @@ commands:
         type: positional
         required: true
         description: Remote path to remove. A bucket-only path removes the bucket. Use t3:// (or tigris://) prefix. Quote wildcard patterns to prevent shell expansion
-        help_text: Remote path to remove; a bucket-only path removes the bucket. Quote wildcards
+        helpText: Remote path to remove; a bucket-only path removes the bucket. Quote wildcards
         examples:
           - t3://my-bucket
           - t3://my-bucket/my-path/my-object.json
@@ -693,7 +693,7 @@ commands:
   - name: bundle
     group: Unix-style commands
     description: Download multiple objects as a streaming tar archive in a single request. Designed for batch workloads that need many objects without per-object HTTP overhead
-    help_text: Download multiple objects as a streaming tar archive
+    helpText: Download multiple objects as a streaming tar archive
     examples:
       - "tigris bundle my-bucket --keys key1.jpg,key2.jpg --output archive.tar"
       - "tigris bundle my-bucket --keys keys.txt --output archive.tar"
@@ -713,14 +713,14 @@ commands:
           - t3://my-bucket
       - name: keys
         description: "Comma-separated object keys, or path to a file with one key per line. If a local file matching the value exists, it is read as a keys file. If omitted, reads keys from stdin"
-        help_text: Comma-separated keys, or a file with one key per line. Omit to read stdin
+        helpText: Comma-separated keys, or a file with one key per line. Omit to read stdin
         alias: k
       - name: output
         description: Output file path. Defaults to stdout (for piping)
         alias: o
       - name: compression
         description: Compression algorithm for the archive. Auto-detected from output file extension when not specified
-        help_text: Archive compression. Auto-detected from the output file extension
+        helpText: Archive compression. Auto-detected from the output file extension
         options: [none, gzip, zstd]
       - name: on-error
         description: How to handle missing objects. 'skip' omits them, 'fail' aborts the request
@@ -734,7 +734,7 @@ commands:
     group: Manage resources
     alias: orgs
     description: List, create, and switch between organizations. An organization is a workspace that contains your resources like buckets and access keys
-    help_text: List, create, and switch between organizations
+    helpText: List, create, and switch between organizations
     examples:
       - "tigris orgs list"
       - "tigris orgs create my-org"
@@ -743,7 +743,7 @@ commands:
       # list
       - name: list
         description: List all organizations you belong to and interactively select one as active
-        help_text: List your organizations and select the active one
+        helpText: List your organizations and select the active one
         alias: l
         examples:
           - "tigris orgs list"
@@ -784,7 +784,7 @@ commands:
               - my-organization
       - name: select
         description: Set the named organization as your active org for all subsequent commands
-        help_text: Set your active organization
+        helpText: Set your active organization
         alias: s
         examples:
           - "tigris orgs select my-org"
@@ -812,7 +812,7 @@ commands:
     group: Manage resources
     groups: [Basics, Forks & snapshots, Configuration, Migration]
     description: Create, inspect, update, and delete buckets. Buckets are top-level containers that hold objects
-    help_text: Create, inspect, update, and delete buckets
+    helpText: Create, inspect, update, and delete buckets
     alias: b
     examples:
       - "tigris buckets list"
@@ -854,7 +854,7 @@ commands:
       - name: create
         group: Basics
         description: Create a new bucket with optional access, tier, and location settings
-        help_text: Create a new bucket
+        helpText: Create a new bucket
         alias: c
         examples:
           - "tigris buckets create my-bucket"
@@ -924,13 +924,13 @@ commands:
             alias: fork
           - name: source-snapshot
             description: Fork from a specific snapshot of the source bucket. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Requires --fork-of
-            help_text: Fork from this snapshot (version or UNIX ns timestamp). Requires --fork-of
+            helpText: Fork from this snapshot (version or UNIX ns timestamp). Requires --fork-of
             alias: source-snap
       # rebase
       - name: rebase
         group: Forks & snapshots
         description: Update a fork with the latest changes from its source bucket
-        help_text: Update a fork with its source bucket's latest changes
+        helpText: Update a fork with its source bucket's latest changes
         examples:
           - "tigris buckets rebase my-fork"
           - "tigris buckets rebase my-fork --yes"
@@ -978,13 +978,13 @@ commands:
             alias: source
           - name: from-snapshot
             description: Merge from a specific snapshot of the fork rather than its current state. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
-            help_text: Merge from a snapshot of the fork (version or UNIX nanosecond timestamp)
+            helpText: Merge from a snapshot of the fork (version or UNIX nanosecond timestamp)
             alias: from-snap
       # get
       - name: get
         group: Basics
         description: Show details for a bucket including access level, region, tier, and custom domain
-        help_text: Show a bucket's access level, region, tier, and domain
+        helpText: Show a bucket's access level, region, tier, and domain
         alias: g
         examples:
           - "tigris buckets get my-bucket"
@@ -1007,7 +1007,7 @@ commands:
       - name: delete
         group: Basics
         description: Delete one or more buckets by name. The bucket must be empty or delete-protection must be off
-        help_text: Delete one or more buckets
+        helpText: Delete one or more buckets
         alias: d
         examples:
           - "tigris buckets delete my-bucket --yes"
@@ -1035,7 +1035,7 @@ commands:
       - name: restore
         group: Basics
         description: Restore a soft-deleted bucket within its retention window. List recoverable buckets with "tigris buckets list --deleted"
-        help_text: Restore a soft-deleted bucket
+        helpText: Restore a soft-deleted bucket
         examples:
           - "tigris buckets restore my-bucket"
         messages:
@@ -1056,7 +1056,7 @@ commands:
       - name: set
         group: Basics
         description: Update settings on an existing bucket such as access level, default tier, location, caching, or custom domain
-        help_text: Update settings on an existing bucket
+        helpText: Update settings on an existing bucket
         alias: s
         examples:
           - "tigris buckets set my-bucket --access public"
@@ -1087,7 +1087,7 @@ commands:
             replaced_by: --locations
           - name: locations
             description: Bucket location (see https://www.tigrisdata.com/docs/buckets/locations/ for more details)
-            help_text: Bucket location(s), comma-separated
+            helpText: Bucket location(s), comma-separated
             options: *location_options
             multiple: true
           - name: allow-object-acl
@@ -1107,11 +1107,11 @@ commands:
             replaced_by: --soft-delete
           - name: soft-delete
             description: Enable or disable soft delete (recoverable deletes). Requires --retention-days when enabling
-            help_text: Enable or disable soft delete. Enabling requires --retention-days
+            helpText: Enable or disable soft delete. Enabling requires --retention-days
             options: [enable, disable]
           - name: retention-days
             description: Number of days to retain soft-deleted objects (required when enabling --soft-delete)
-            help_text: Days to retain soft-deleted objects (required when enabling soft delete)
+            helpText: Days to retain soft-deleted objects (required when enabling soft delete)
           - name: enable-additional-headers
             description: Enable additional HTTP headers (X-Content-Type-Options nosniff)
             type: boolean
@@ -1119,7 +1119,7 @@ commands:
       - name: enable-snapshots
         group: Forks & snapshots
         description: Enable snapshots on an existing bucket, converting it to a snapshot bucket
-        help_text: Enable snapshots on an existing bucket
+        helpText: Enable snapshots on an existing bucket
         examples:
           - "tigris buckets enable-snapshots my-bucket"
         messages:
@@ -1137,7 +1137,7 @@ commands:
       - name: disable-snapshots
         group: Forks & snapshots
         description: Disable snapshots on an existing bucket, converting it back to a regular bucket. Rejected while the bucket has dependent forks
-        help_text: Disable snapshots on an existing bucket
+        helpText: Disable snapshots on an existing bucket
         examples:
           - "tigris buckets disable-snapshots my-bucket"
         messages:
@@ -1183,7 +1183,7 @@ commands:
       - name: set-migration
         group: Migration
         description: Configure data migration from an external S3-compatible source bucket. Tigris will pull objects on demand from the source
-        help_text: Configure on-demand migration from an S3-compatible bucket
+        helpText: Configure on-demand migration from an S3-compatible bucket
         examples:
           - "tigris buckets set-migration my-bucket --bucket source-bucket --endpoint https://s3.amazonaws.com --region us-east-1 --access-key AKIA... --secret-key wJal..."
           - "tigris buckets set-migration my-bucket --bucket source-bucket --endpoint https://s3.amazonaws.com --region us-east-1 --access-key AKIA... --secret-key wJal... --write-through"
@@ -1224,7 +1224,7 @@ commands:
       - name: migrate
         group: Migration
         description: Actively migrate all objects from a shadow bucket to Tigris by scheduling server-side migration for unmigrated objects
-        help_text: Actively migrate all objects from a shadow bucket
+        helpText: Actively migrate all objects from a shadow bucket
         examples:
           - "tigris buckets migrate my-bucket"
           - "tigris buckets migrate my-bucket/images/"
@@ -1245,7 +1245,7 @@ commands:
               - t3://my-bucket/prefix/
           - name: max-in-flight-gb
             description: Max total gigabytes of scheduled-but-unconfirmed migrations to keep in flight. Accepts 1-100
-            help_text: Max gigabytes of unconfirmed migrations to keep in flight (1-100)
+            helpText: Max gigabytes of unconfirmed migrations to keep in flight (1-100)
             default: '50'
       # set-transition
       - name: set-transition
@@ -1255,7 +1255,7 @@ commands:
       - name: lifecycle
         group: Configuration
         description: Manage bucket lifecycle rules. Each rule combines an optional storage-class transition and/or expiration (TTL), scoped to an optional key prefix
-        help_text: Manage lifecycle rules (tier transitions and expiration)
+        helpText: Manage lifecycle rules (tier transitions and expiration)
         alias: lc
         examples:
           - "tigris buckets lifecycle list my-bucket"
@@ -1287,7 +1287,7 @@ commands:
                 default: table
           - name: create
             description: Create a new lifecycle rule. A rule must include a transition (--storage-class with --days or --date) and/or an expiration (--expire-days or --expire-date), and may optionally be scoped via --prefix
-            help_text: Create a lifecycle rule
+            helpText: Create a lifecycle rule
             alias: c
             examples:
               - "tigris buckets lifecycle create my-bucket --storage-class STANDARD_IA --days 30"
@@ -1317,7 +1317,7 @@ commands:
                 alias: d
               - name: date
                 description: Transition objects on this date (ISO-8601, e.g. 2026-06-01) (used with --storage-class)
-                help_text: Transition date, ISO-8601 (e.g. 2026-06-01). Used with --storage-class
+                helpText: Transition date, ISO-8601 (e.g. 2026-06-01). Used with --storage-class
               - name: expire-days
                 description: Expire (delete) objects after this many days
               - name: expire-date
@@ -1327,7 +1327,7 @@ commands:
                 type: flag
           - name: edit
             description: Edit an existing lifecycle rule by its id. Only specified fields are changed
-            help_text: Edit a lifecycle rule by its id
+            helpText: Edit a lifecycle rule by its id
             alias: e
             examples:
               - "tigris buckets lifecycle edit my-bucket abc123 --days 60"
@@ -1374,7 +1374,7 @@ commands:
       - name: set-notifications
         group: Configuration
         description: Configure object event notifications on a bucket. Sends webhook requests to a URL when objects are created, updated, or deleted
-        help_text: Configure object event webhooks on a bucket
+        helpText: Configure object event webhooks on a bucket
         examples:
           - "tigris buckets set-notifications my-bucket --url https://example.com/webhook"
           - "tigris buckets set-notifications my-bucket --url https://example.com/webhook --token secret123"
@@ -1420,7 +1420,7 @@ commands:
       - name: set-cors
         group: Configuration
         description: Configure CORS rules on a bucket. Each invocation adds a rule unless --override or --reset is used
-        help_text: Configure CORS rules on a bucket
+        helpText: Configure CORS rules on a bucket
         examples:
           - "tigris buckets set-cors my-bucket --origins '*' --methods GET,HEAD"
           - "tigris buckets set-cors my-bucket --origins https://example.com --methods GET,POST --headers Content-Type,Authorization --max-age 3600"
@@ -1460,7 +1460,7 @@ commands:
       - name: share
         group: Configuration
         description: Share a bucket with your whole organization, specific teams, or specific users. Existing shares are kept unless --override or --reset is used
-        help_text: Share a bucket with your organization, teams, or users
+        helpText: Share a bucket with your organization, teams, or users
         examples:
           - "tigris buckets share my-bucket --organization --role ReadOnly"
           - "tigris buckets share my-bucket --team tmid_MQQUhV --role Editor"
@@ -1482,22 +1482,22 @@ commands:
           - name: organization
             alias: org
             description: Give access to everyone in your organization. Takes exactly one --role and cannot be combined with --team or --user
-            help_text: Share with your whole organization. Takes one --role; excludes --team/--user
+            helpText: Share with your whole organization. Takes one --role; excludes --team/--user
             type: flag
           - name: team
             alias: t
             description: Team ID to share with (can specify multiple, comma-separated). Each team is paired positionally with a --role value
-            help_text: Team ID(s), comma-separated. Each pairs positionally with a --role
+            helpText: Team ID(s), comma-separated. Each pairs positionally with a --role
             multiple: true
           - name: user
             alias: u
             description: User ID to share with (can specify multiple, comma-separated). Each user is paired positionally with a --role value
-            help_text: User ID(s), comma-separated. Each pairs positionally with a --role
+            helpText: User ID(s), comma-separated. Each pairs positionally with a --role
             multiple: true
           - name: role
             alias: r
             description: Role to grant (can specify multiple, comma-separated). A single role applies to every target; otherwise each role pairs with the corresponding --team or --user value
-            help_text: Role(s) to grant, comma-separated. One role applies to every target
+            helpText: Role(s) to grant, comma-separated. One role applies to every target
             multiple: true
             options:
               - ReadOnly
@@ -1524,7 +1524,7 @@ commands:
   - name: snapshots
     group: Manage resources
     description: List, take, and delete snapshots. A snapshot is a point-in-time, read-only copy of a bucket's state
-    help_text: List, take, and delete bucket snapshots
+    helpText: List, take, and delete bucket snapshots
     alias: s
     examples:
       - "tigris snapshots list my-bucket"
@@ -1534,7 +1534,7 @@ commands:
       # list
       - name: list
         description: List all snapshots for the given bucket, ordered by creation time
-        help_text: List a bucket's snapshots, ordered by creation time
+        helpText: List a bucket's snapshots, ordered by creation time
         alias: l
         examples:
           - "tigris snapshots list my-bucket"
@@ -1563,7 +1563,7 @@ commands:
       # take
       - name: take
         description: Take a new snapshot of the bucket's current state. Optionally provide a name for the snapshot
-        help_text: Take a snapshot of a bucket's current state
+        helpText: Take a snapshot of a bucket's current state
         alias: t
         examples:
           - "tigris snapshots take my-bucket"
@@ -1588,7 +1588,7 @@ commands:
       # delete
       - name: delete
         description: Delete one or more snapshots of a bucket by version. Deletion is permanent; forks already created from a snapshot are unaffected
-        help_text: Permanently delete one or more snapshots
+        helpText: Permanently delete one or more snapshots
         alias: d
         examples:
           - "tigris snapshots delete my-bucket 1765889000501544464 --yes"
@@ -1610,7 +1610,7 @@ commands:
               - my-bucket
           - name: version
             description: Snapshot version, or comma separated list of versions. Find versions with "tigris snapshots list"
-            help_text: Snapshot version(s), comma-separated. See "tigris snapshots list"
+            helpText: Snapshot version(s), comma-separated. See "tigris snapshots list"
             type: positional
             required: true
             multiple: true
@@ -1629,7 +1629,7 @@ commands:
     group: Manage resources
     groups: [Basics, Versions & recovery, Archive]
     description: Low-level object operations for listing, downloading, uploading, and deleting individual objects in a bucket
-    help_text: List, download, upload, and delete objects
+    helpText: List, download, upload, and delete objects
     alias: o
     examples:
       - "tigris objects list my-bucket"
@@ -1642,7 +1642,7 @@ commands:
       - name: list
         group: Basics
         description: List objects in a bucket, optionally filtered by a key prefix
-        help_text: List objects in a bucket, optionally by key prefix
+        helpText: List objects in a bucket, optionally by key prefix
         alias: l
         examples:
           - "tigris objects list my-bucket"
@@ -1674,7 +1674,7 @@ commands:
             default: table
           - name: snapshot-version
             description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
-            help_text: Read from a bucket snapshot (version or UNIX nanosecond timestamp)
+            helpText: Read from a bucket snapshot (version or UNIX nanosecond timestamp)
             alias: snapshot
           - name: limit
             description: Maximum number of items to return per page
@@ -1683,17 +1683,17 @@ commands:
             alias: pt
           - name: source
             description: List objects from a specific storage source on buckets with shadow migration enabled
-            help_text: Storage source to list from on shadow-migration buckets
+            helpText: Storage source to list from on shadow-migration buckets
             options: [tigris, shadow]
           - name: deleted
             description: List soft-deleted objects instead of live ones. Requires soft delete on the bucket. On a snapshot bucket a plain delete records a delete marker instead, so use "tigris objects list-versions" for those
-            help_text: List soft-deleted objects instead of live ones
+            helpText: List soft-deleted objects instead of live ones
             type: flag
       # list-versions
       - name: list-versions
         group: Versions & recovery
         description: List object versions and delete markers in a bucket (requires bucket versioning), or with --deleted the recoverable versions of soft-deleted objects. Returns both arrays separately to match the S3 ListObjectVersions response
-        help_text: List object versions and delete markers
+        helpText: List object versions and delete markers
         alias: lv
         examples:
           - "tigris objects list-versions my-bucket"
@@ -1719,7 +1719,7 @@ commands:
             alias: p
           - name: delimiter
             description: Group keys sharing a common prefix up to the delimiter (e.g. "/" for folder-style grouping)
-            help_text: Group keys by common prefix up to the delimiter (e.g. "/")
+            helpText: Group keys by common prefix up to the delimiter (e.g. "/")
             alias: d
           - name: format
             description: Output format
@@ -1729,19 +1729,19 @@ commands:
             description: Maximum number of items to return per page
           - name: key-marker
             description: Pagination marker — the key to start listing from (from a prior nextKeyMarker)
-            help_text: "Pagination marker: key to start from (a prior nextKeyMarker)"
+            helpText: "Pagination marker: key to start from (a prior nextKeyMarker)"
           - name: version-id-marker
             description: Pagination marker — the version id to start listing from (from a prior nextVersionIdMarker)
-            help_text: "Pagination marker: version id to start from (a prior nextVersionIdMarker)"
+            helpText: "Pagination marker: version id to start from (a prior nextVersionIdMarker)"
           - name: deleted
             description: List the recoverable versions of soft-deleted objects. Use the version id with "tigris objects restore-deleted" or "tigris objects purge"
-            help_text: List the recoverable versions of soft-deleted objects
+            helpText: List the recoverable versions of soft-deleted objects
             type: flag
       # get
       - name: get
         group: Basics
         description: Download an object by key. Prints to stdout by default, or saves to a file with --output
-        help_text: Download an object to stdout or a file
+        helpText: Download an object to stdout or a file
         alias: g
         examples:
           - "tigris objects get my-bucket config.json"
@@ -1769,21 +1769,21 @@ commands:
             alias: o
           - name: mode
             description: 'Response mode: "string" loads into memory, "stream" writes in chunks (auto-detected from extension if not specified)'
-            help_text: "Response mode: string (in memory) or stream (chunked). Auto-detected"
+            helpText: "Response mode: string (in memory) or stream (chunked). Auto-detected"
             alias: m
             options: [string, stream]
           - name: snapshot-version
             description: Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
-            help_text: Read from a bucket snapshot (version or UNIX nanosecond timestamp)
+            helpText: Read from a bucket snapshot (version or UNIX nanosecond timestamp)
             alias: snapshot
           - name: version-id
             description: Object version id to download (requires bucket versioning). Omit to download the latest version
-            help_text: Object version id to download. Omit for the latest version
+            helpText: Object version id to download. Omit for the latest version
       # put
       - name: put
         group: Basics
         description: Upload a local file — or data piped via stdin — as an object. Content-type is auto-detected from the file extension unless overridden
-        help_text: Upload a local file or stdin as an object
+        helpText: Upload a local file or stdin as an object
         alias: p
         examples:
           - "tigris objects put my-bucket report.pdf ./report.pdf"
@@ -1814,7 +1814,7 @@ commands:
               - my-file.txt
           - name: file
             description: Path to the local file to upload. Omit to read the object data from stdin (piped input)
-            help_text: Local file to upload. Omit to read from stdin
+            helpText: Local file to upload. Omit to read from stdin
             type: positional
             examples:
               - ./my-file.txt
@@ -1828,7 +1828,7 @@ commands:
             alias: t
           - name: cache-control
             description: Cache-Control header stored with the object and returned on every read (e.g. "public, max-age=31536000, immutable")
-            help_text: Cache-Control header stored with the object and returned on reads
+            helpText: Cache-Control header stored with the object and returned on reads
           - name: format
             description: Output format
             options: [json, table, xml]
@@ -1837,7 +1837,7 @@ commands:
       - name: delete
         group: Basics
         description: Delete one or more objects by key from the given bucket. On a versioned bucket, the default creates a delete marker; use --version-id or --all-versions to hard-delete versions
-        help_text: Delete one or more objects by key
+        helpText: Delete one or more objects by key
         alias: d
         examples:
           - "tigris objects delete my-bucket old-file.txt --yes"
@@ -1863,17 +1863,17 @@ commands:
               - t3://my-bucket/old-file.txt
           - name: key
             description: Key of the object (comma separated for multiple, omit if bucket contains the full path)
-            help_text: Object key(s), comma-separated. Omit if the bucket arg has the full path
+            helpText: Object key(s), comma-separated. Omit if the bucket arg has the full path
             type: positional
             multiple: true
             examples:
               - my-file.txt
           - name: version-id
             description: Hard-delete a specific object version (requires bucket versioning). Targets a single key. To destroy a soft-deleted version, use "tigris objects purge"
-            help_text: Hard-delete a specific object version (single key only)
+            helpText: Hard-delete a specific object version (single key only)
           - name: all-versions
             description: Hard-delete every version and delete marker for the given key(s). Mutually exclusive with --version-id
-            help_text: Hard-delete every version and delete marker. Excludes --version-id
+            helpText: Hard-delete every version and delete marker. Excludes --version-id
             type: flag
           - name: force
             type: flag
@@ -1882,7 +1882,7 @@ commands:
       - name: set
         group: Basics
         description: (Deprecated) Update settings on an existing object such as access level. Use `tigris objects set-access` for ACL changes and `tigris mv` to rename
-        help_text: (Deprecated) Update settings on an existing object
+        helpText: (Deprecated) Update settings on an existing object
         alias: s
         deprecated: true
         examples:
@@ -1914,7 +1914,7 @@ commands:
       - name: set-access
         group: Basics
         description: Set the access level (public or private) on an existing object
-        help_text: Set an object's access level (public or private)
+        helpText: Set an object's access level (public or private)
         alias: sa
         examples:
           - "tigris objects set-access my-bucket my-file.txt public"
@@ -1933,7 +1933,7 @@ commands:
             type: positional
           - name: access
             description: Access level (public or private)
-            help_text: Access level
+            helpText: Access level
             type: positional
             options: *access_options
           - name: format
@@ -1944,7 +1944,7 @@ commands:
       - name: info
         group: Basics
         description: Show metadata for an object (content type, size, modified date)
-        help_text: Show an object's content type, size, and modified date
+        helpText: Show an object's content type, size, and modified date
         alias: i
         examples:
           - "tigris objects info my-bucket report.pdf"
@@ -1976,7 +1976,7 @@ commands:
       - name: restore
         group: Archive
         description: Restore an archived object (e.g. one in the GLACIER tier) into an actively-readable copy for a number of days
-        help_text: Restore an archived object for a number of days
+        helpText: Restore an archived object for a number of days
         alias: rs
         examples:
           - "tigris objects restore my-bucket archived.bin"
@@ -1997,15 +1997,15 @@ commands:
             description: Key of the object (omit if bucket contains the full path)
           - name: days
             description: How many days the restored copy stays available before reverting to its archived tier
-            help_text: Days the restored copy stays available before re-archiving
+            helpText: Days the restored copy stays available before re-archiving
             alias: d
             default: 1
           - name: version-id
             description: Restore a specific object version (requires bucket versioning). Omit to restore the current version
-            help_text: Object version to restore. Omit for the current version
+            helpText: Object version to restore. Omit for the current version
           - name: snapshot-version
             description: Restore the object as of a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
-            help_text: Restore as of a bucket snapshot (version or UNIX nanosecond timestamp)
+            helpText: Restore as of a bucket snapshot (version or UNIX nanosecond timestamp)
             alias: snapshot
           - name: format
             description: Output format
@@ -2015,7 +2015,7 @@ commands:
       - name: restore-info
         group: Archive
         description: Show the restore state of an archived object (archived, in-progress, or restored)
-        help_text: Show the restore state of an archived object
+        helpText: Show the restore state of an archived object
         alias: ri
         examples:
           - "tigris objects restore-info my-bucket archived.bin"
@@ -2036,10 +2036,10 @@ commands:
             description: Key of the object (omit if bucket contains the full path)
           - name: version-id
             description: Inspect a specific object version (requires bucket versioning). Omit to read the current version
-            help_text: Object version to inspect. Omit for the current version
+            helpText: Object version to inspect. Omit for the current version
           - name: snapshot-version
             description: Inspect the object as of a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)
-            help_text: Inspect as of a bucket snapshot (version or UNIX nanosecond timestamp)
+            helpText: Inspect as of a bucket snapshot (version or UNIX nanosecond timestamp)
             alias: snapshot
           - name: format
             description: Output format
@@ -2049,7 +2049,7 @@ commands:
       - name: restore-deleted
         group: Versions & recovery
         description: Restore a soft-deleted object within its retention window. List recoverable objects with "tigris objects list --deleted", then pick a version with "tigris objects list-versions --deleted"
-        help_text: Restore a soft-deleted object
+        helpText: Restore a soft-deleted object
         alias: rd
         examples:
           - "tigris objects restore-deleted my-bucket report.pdf --version-id 1787749774802410496"
@@ -2077,7 +2077,7 @@ commands:
           - name: version-id
             required: true
             description: The soft-deleted version to bring back, from "tigris objects list-versions --deleted"
-            help_text: Soft-deleted version to restore (see "objects list-versions --deleted")
+            helpText: Soft-deleted version to restore (see "objects list-versions --deleted")
           - name: format
             description: Output format
             options: [json, table, xml]
@@ -2086,7 +2086,7 @@ commands:
       - name: purge
         group: Versions & recovery
         description: Permanently destroy a soft-deleted object version before its retention period expires. This cannot be undone — the version can no longer be restored with "tigris objects restore-deleted"
-        help_text: Permanently destroy a soft-deleted object version
+        helpText: Permanently destroy a soft-deleted object version
         alias: pg
         examples:
           - "tigris objects purge my-bucket report.pdf --version-id 1787749774802410496 --yes"
@@ -2112,7 +2112,7 @@ commands:
           - name: version-id
             required: true
             description: The soft-deleted version to destroy, from "tigris objects list-versions --deleted"
-            help_text: Soft-deleted version to destroy (see "objects list-versions --deleted")
+            helpText: Soft-deleted version to destroy (see "objects list-versions --deleted")
           - name: force
             type: flag
             description: Skip confirmation prompts (alias for --yes)
@@ -2127,7 +2127,7 @@ commands:
   - name: access-keys
     group: Manage resources
     description: Create, list, inspect, delete, and assign roles to access keys. Access keys are credentials used for programmatic API access
-    help_text: Manage access keys and their bucket roles
+    helpText: Manage access keys and their bucket roles
     alias: keys
     examples:
       - "tigris access-keys list"
@@ -2156,7 +2156,7 @@ commands:
             alias: pt
       - name: create
         description: Create a new access key with the given name. Returns the key ID and secret (shown only once)
-        help_text: Create a new access key
+        helpText: Create a new access key
         alias: c
         examples:
           - "tigris access-keys create my-ci-key"
@@ -2176,7 +2176,7 @@ commands:
               - my-key
       - name: delete
         description: Permanently delete an access key by its ID. This revokes all access immediately
-        help_text: Permanently delete an access key
+        helpText: Permanently delete an access key
         alias: d
         examples:
           - "tigris access-keys delete tid_AaBbCcDdEeFf --yes"
@@ -2197,7 +2197,7 @@ commands:
             description: Skip confirmation prompts (alias for --yes)
       - name: get
         description: Show details for an access key including its name, creation date, and assigned bucket roles
-        help_text: Show an access key's details and bucket roles
+        helpText: Show an access key's details and bucket roles
         alias: g
         examples:
           - "tigris access-keys get tid_AaBbCcDdEeFf"
@@ -2214,7 +2214,7 @@ commands:
               - tid_AaBbCcDdEeFf
       - name: assign
         description: Assign per-bucket roles to an access key. Pair each --bucket with a --role (Editor, ReadWrite, or ReadOnly), or use --admin for org-wide access
-        help_text: Assign per-bucket roles to an access key
+        helpText: Assign per-bucket roles to an access key
         alias: a
         examples:
           - "tigris access-keys assign tid_AaBb --bucket my-bucket --role Editor"
@@ -2238,12 +2238,12 @@ commands:
           - name: bucket
             alias: b
             description: Bucket name (can specify multiple, comma-separated). Each bucket is paired positionally with a --role value
-            help_text: Bucket name(s), comma-separated. Each pairs positionally with a --role
+            helpText: Bucket name(s), comma-separated. Each pairs positionally with a --role
             multiple: true
           - name: role
             alias: r
             description: Role to assign (can specify multiple, comma-separated). Each role pairs with the corresponding --bucket value
-            help_text: Role(s) to assign, comma-separated. Each pairs with a --bucket
+            helpText: Role(s) to assign, comma-separated. Each pairs with a --bucket
             multiple: true
             options:
               - Editor
@@ -2257,7 +2257,7 @@ commands:
             type: flag
       - name: rotate
         description: Rotate an access key's secret. The current secret is immediately invalidated and a new one is returned (shown only once)
-        help_text: Rotate an access key's secret
+        helpText: Rotate an access key's secret
         alias: r
         examples:
           - "tigris access-keys rotate tid_AaBbCcDdEeFf --yes"
@@ -2281,7 +2281,7 @@ commands:
             description: Skip confirmation prompts (alias for --yes)
       - name: attach-policy
         description: Attach an IAM policy to an access key. If no policy ARN is provided, shows interactive selection of available policies
-        help_text: Attach an IAM policy to an access key
+        helpText: Attach an IAM policy to an access key
         alias: ap
         examples:
           - "tigris access-keys attach-policy tid_AaBb --policy-arn arn:aws:iam::org_id:policy/my-policy"
@@ -2303,7 +2303,7 @@ commands:
               - arn:aws:iam::org_id:policy/my-policy
       - name: detach-policy
         description: Detach an IAM policy from an access key. If no policy ARN is provided, shows interactive selection of attached policies
-        help_text: Detach an IAM policy from an access key
+        helpText: Detach an IAM policy from an access key
         alias: dp
         examples:
           - "tigris access-keys detach-policy tid_AaBb --policy-arn arn:aws:iam::org_id:policy/my-policy --yes"
@@ -2360,7 +2360,7 @@ commands:
   - name: iam
     group: Manage resources
     description: Identity and Access Management - manage policies, users, and permissions
-    help_text: Manage IAM policies, users, and teams
+    helpText: Manage IAM policies, users, and teams
     examples:
       - "tigris iam policies list"
       - "tigris iam policies create my-policy --document policy.json"
@@ -2369,7 +2369,7 @@ commands:
     commands:
       - name: policies
         description: Manage IAM policies. Policies define permissions for access keys
-        help_text: Manage IAM policies
+        helpText: Manage IAM policies
         alias: p
         examples:
           - "tigris iam policies list"
@@ -2397,7 +2397,7 @@ commands:
                 alias: pt
           - name: get
             description: Show details for a policy including its document and attached users. If no ARN provided, shows interactive selection
-            help_text: Show a policy's document and attached users
+            helpText: Show a policy's document and attached users
             alias: g
             examples:
               - "tigris iam policies get"
@@ -2420,7 +2420,7 @@ commands:
                 default: table
           - name: create
             description: Create a new policy with the given name and policy document. Document can be provided via file, inline JSON, or stdin
-            help_text: Create a policy from a file, inline JSON, or stdin
+            helpText: Create a policy from a file, inline JSON, or stdin
             alias: c
             examples:
               - "tigris iam policies create my-policy --document policy.json"
@@ -2439,14 +2439,14 @@ commands:
                   - my-policy
               - name: document
                 description: Policy document (JSON file path or inline JSON). If omitted, reads from stdin
-                help_text: Policy document (JSON file or inline JSON). Omit to read stdin
+                helpText: Policy document (JSON file or inline JSON). Omit to read stdin
                 alias: d
                 required: false
               - name: description
                 description: Policy description
           - name: edit
             description: Update an existing policy's document. Document can be provided via file, inline JSON, or stdin. If no ARN provided, shows interactive selection
-            help_text: Update an existing policy's document
+            helpText: Update an existing policy's document
             alias: e
             examples:
               - "tigris iam policies edit --document policy.json"
@@ -2466,7 +2466,7 @@ commands:
                   - arn:aws:iam::org_id:policy/my-policy
               - name: document
                 description: New policy document (JSON file path or inline JSON). If omitted, reads from stdin
-                help_text: New policy document (JSON file or inline JSON). Omit to read stdin
+                helpText: New policy document (JSON file or inline JSON). Omit to read stdin
                 alias: d
                 required: false
               - name: description
@@ -2474,7 +2474,7 @@ commands:
                 required: false
           - name: delete
             description: Delete a policy. If no ARN provided, shows interactive selection
-            help_text: Delete a policy
+            helpText: Delete a policy
             alias: d
             examples:
               - "tigris iam policies delete"
@@ -2497,7 +2497,7 @@ commands:
                 description: Skip confirmation prompts (alias for --yes)
           - name: link-key
             description: Link an access key to a policy. If no policy ARN is provided, shows interactive selection. If no access key ID is provided, shows interactive selection of unlinked keys
-            help_text: Link an access key to a policy
+            helpText: Link an access key to a policy
             alias: lnk
             examples:
               - "tigris iam policies link-key arn:aws:iam::org_id:policy/my-policy --id tid_AaBb"
@@ -2520,7 +2520,7 @@ commands:
                   - tid_AaBbCcDdEeFf
           - name: unlink-key
             description: Unlink an access key from a policy. If no policy ARN is provided, shows interactive selection. If no access key ID is provided, shows interactive selection of linked keys
-            help_text: Unlink an access key from a policy
+            helpText: Unlink an access key from a policy
             alias: ulnk
             examples:
               - "tigris iam policies unlink-key arn:aws:iam::org_id:policy/my-policy --id tid_AaBb --yes"
@@ -2547,7 +2547,7 @@ commands:
                 description: Skip confirmation prompts (alias for --yes)
           - name: list-keys
             description: List all access keys attached to a policy. If no policy ARN is provided, shows interactive selection
-            help_text: List the access keys attached to a policy
+            helpText: List the access keys attached to a policy
             alias: lk
             examples:
               - "tigris iam policies list-keys arn:aws:iam::org_id:policy/my-policy"
@@ -2620,7 +2620,7 @@ commands:
                 default: member
           - name: revoke-invitation
             description: Revoke pending invitations. If no invitation ID provided, shows interactive selection
-            help_text: Revoke pending invitations
+            helpText: Revoke pending invitations
             alias: ri
             examples:
               - "tigris iam users revoke-invitation"
@@ -2635,7 +2635,7 @@ commands:
               - *yes_argument
               - name: resource
                 description: Invitation ID(s) (comma-separated for multiple). If omitted, shows interactive selection
-                help_text: Invitation ID(s), comma-separated. Omit to select interactively
+                helpText: Invitation ID(s), comma-separated. Omit to select interactively
                 type: positional
                 required: false
                 multiple: true
@@ -2644,7 +2644,7 @@ commands:
                 description: Skip confirmation prompts (alias for --yes)
           - name: update-role
             description: Update user roles in the organization. If no user ID provided, shows interactive selection
-            help_text: Update user roles in the organization
+            helpText: Update user roles in the organization
             alias: ur
             examples:
               - "tigris iam users update-role --role admin"
@@ -2659,20 +2659,20 @@ commands:
             arguments:
               - name: resource
                 description: User ID(s) (comma-separated for multiple). If omitted, shows interactive selection
-                help_text: User ID(s), comma-separated. Omit to select interactively
+                helpText: User ID(s), comma-separated. Omit to select interactively
                 type: positional
                 required: false
                 multiple: true
               - name: role
                 description: Role(s) to assign (comma-separated). Each role pairs with the corresponding user ID. If one role is given, it applies to all users
-                help_text: Role(s), comma-separated. One role applies to all users
+                helpText: Role(s), comma-separated. One role applies to all users
                 alias: r
                 required: true
                 options: [admin, member]
                 multiple: true
           - name: remove
             description: Remove users from the organization. If no user ID provided, shows interactive selection
-            help_text: Remove users from the organization
+            helpText: Remove users from the organization
             alias: rm
             examples:
               - "tigris iam users remove"
@@ -2687,7 +2687,7 @@ commands:
               - *yes_argument
               - name: resource
                 description: User ID(s) (comma-separated for multiple). If omitted, shows interactive selection
-                help_text: User ID(s), comma-separated. Omit to select interactively
+                helpText: User ID(s), comma-separated. Omit to select interactively
                 type: positional
                 required: false
                 multiple: true
@@ -2745,7 +2745,7 @@ commands:
                 multiple: true
           - name: edit
             description: Update a team's name, description, or members. Members are replaced with the provided list
-            help_text: Update a team's name, description, or members
+            helpText: Update a team's name, description, or members
             alias: e
             examples:
               - "tigris iam teams edit team_id --name platform"
@@ -2768,6 +2768,6 @@ commands:
                 alias: d
               - name: members
                 description: Replace the team's members with these email address(es) (comma-separated for multiple)
-                help_text: Member email(s), comma-separated. Replaces the current members
+                helpText: Member email(s), comma-separated. Replaces the current members
                 alias: m
                 multiple: true

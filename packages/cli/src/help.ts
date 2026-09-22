@@ -8,7 +8,7 @@
  * altogether. This layout follows what cobra-based CLIs (flyctl, auth0) do
  * instead:
  *
- *   - command lists show the bare command name and a one-line `help_text`;
+ *   - command lists show the bare command name and a one-line `helpText`;
  *     the full `description` is kept for the command's own help page
  *   - long flags line up whether or not they have a short form
  *   - each section sizes its own term column, capped at `MAX_TERM_WIDTH`; a
@@ -83,12 +83,12 @@ function orderSections<T>(
 }
 
 /**
- * The text shown next to an argument or flag in help: the precise `help_text`
+ * The text shown next to an argument or flag in help: the precise `helpText`
  * when the spec has one, otherwise the description, followed by the facts a
  * user needs to fill the value in.
  */
 export function argumentHelpText(arg: Argument): string {
-  let text = arg.help_text ?? arg.description ?? '';
+  let text = arg.helpText ?? arg.description ?? '';
 
   if (arg.deprecated) {
     const hint = arg.replaced_by ? ` Use ${arg.replaced_by} instead.` : '';
