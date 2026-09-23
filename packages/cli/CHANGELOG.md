@@ -1,5 +1,35 @@
 # @tigrisdata/cli
 
+## 3.13.0
+
+### Minor Changes
+
+- [#331](https://github.com/tigrisdata/storage/pull/331) [`8fb552e`](https://github.com/tigrisdata/storage/commit/8fb552e8b379796edc02237011ddca99400a9aa4) Thanks [@designcode](https://github.com/designcode)! - `tigris access-keys create` can now scope the key and hand its credentials over where they are needed:
+  
+  - `--bucket` / `--role` / `--admin` scope the key at creation, with the same pairing rules as `access-keys assign`, so a scoped key no longer needs a second command.
+  - `--env [path]` writes the credentials to a dotenv file (default `./.env`). Existing assignments are replaced in place, everything else in the file is left alone (permissions included), a new file is created readable by its owner only, and the secret is no longer printed to the terminal. Warns when the file is not covered by `.gitignore`. A key scoped to one bucket also writes the bucket variable. The file is replaced atomically, so a write that fails part-way leaves it as it was; if it cannot be written at all, the credentials are printed instead and the command exits 1, so the one-time secret is never lost.
+  - `--export` prints `export VAR=...` lines and nothing else on stdout, for `eval "$(tigris access-keys create my-key --bucket my-app-bucket --role Editor --export)"`.
+  - `--for tigris|aws` chooses which SDK the variables are named for: `TIGRIS_STORAGE_*` for Tigris SDKs, or `AWS_*` plus Tigris endpoints and region for the AWS SDK. The endpoints are the ones the CLI itself is using (`configure --endpoint`, `TIGRIS_STORAGE_ENDPOINT`, `AWS_ENDPOINT_URL_*`, or the defaults), so a key made against a custom deployment points the SDK at that deployment.
+  
+  Access-key commands now honour an AWS profile's `endpoint_url_iam`, as storage commands already did.
+  
+  The `tigris init --agent` recipe now uses `tigris access-keys create … --env` instead of asking the agent to route the secret through a temporary file and `jq`.
+
+- [#327](https://github.com/tigrisdata/storage/pull/327) [`4016e5e`](https://github.com/tigrisdata/storage/commit/4016e5ec9c7e6efacc0a8c328fcd3d10879e6dcd) Thanks [@designcode](https://github.com/designcode)! - Cleaner, narrower help output, modelled on cobra-based CLIs such as flyctl and auth0.
+  
+  - Commands and arguments in `specs.yaml` take a new optional `helpText`: a precise one-liner shown in help lists. The full `description` still appears on the command's own help page and in the generated docs.
+  - Command lists show the bare command name instead of `cp|copy [options] <src> <dest>`; aliases move to an `Aliases:` section and the usage line no longer advertises the hidden `help` subcommand.
+  - Long flags line up whether or not they have a short form, each section sizes its own column, an over-long flag sits on its own line instead of squeezing every description, and global flags are listed under `Global Options:`.
+  - Long command lists are split under headings: the root list (Get started, Unix-style commands, Manage resources, CLI), `buckets` and `objects`. Specs declare them with `groups` on the parent and `group` on each command.
+  - Headings, command names and flags are bold and the bracketed notes are dimmed on a colour terminal. Piped output and `NO_COLOR` stay plain.
+  - `--format` and `--json` are always listed together under `Global Options:`, including on the root page. `-y, --yes` is still accepted everywhere but, apart from the root page, is only listed by the commands that ask for confirmation.
+  - `--help` now shows allowed values, required flags and `Examples:`, and drops the `(default: false)` noise on plain flags.
+  - `tigris help` and `tigris <command> help` print the same page as `--help`. They previously used a separate renderer that never wrapped, emitting lines over 200 characters.
+
+### Patch Changes
+
+- [#332](https://github.com/tigrisdata/storage/pull/332) [`46ea309`](https://github.com/tigrisdata/storage/commit/46ea30932ec73d3af58f091641c6feb5c9c57eef) Thanks [@designcode](https://github.com/designcode)! - In the browser build (`@tigrisdata/cli/browser`, used by `@tigrisdata/cli-shell`), `tigris login` now signs in with OAuth directly instead of first asking whether to use OAuth or an access key. Pass `--access-key`/`--access-secret`, or run `tigris login credentials`, to sign in with an access key.
+
 ## 3.12.2
 
 ### Patch Changes
