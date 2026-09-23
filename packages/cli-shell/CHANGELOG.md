@@ -1,5 +1,13 @@
 # @tigrisdata/cli-shell
 
+## 0.2.2
+
+### Patch Changes
+
+- [#332](https://github.com/tigrisdata/storage/pull/332) [`46ea309`](https://github.com/tigrisdata/storage/commit/46ea30932ec73d3af58f091641c6feb5c9c57eef) Thanks [@designcode](https://github.com/designcode)! - `tigris login` in the shell now signs in with OAuth directly instead of first asking whether to use OAuth or an access key. Pass `--access-key`/`--access-secret`, or run `tigris login credentials`, to sign in with an access key.
+- Updated dependencies [[`8fb552e`](https://github.com/tigrisdata/storage/commit/8fb552e8b379796edc02237011ddca99400a9aa4), [`46ea309`](https://github.com/tigrisdata/storage/commit/46ea30932ec73d3af58f091641c6feb5c9c57eef), [`4016e5e`](https://github.com/tigrisdata/storage/commit/4016e5ec9c7e6efacc0a8c328fcd3d10879e6dcd)]:
+  - @tigrisdata/cli@3.13.0
+
 ## 0.2.1
 
 ### Patch Changes
