@@ -90,6 +90,7 @@ const pathSubstitutions: Array<[RegExp, string]> = [
     shim('noop-update.ts'),
   ],
   [/src[\\/]lib[\\/]login[\\/]oauth\.ts$/, shim('login-oauth.ts')],
+  [/src[\\/]lib[\\/]login[\\/]select\.ts$/, shim('login-select.ts')],
   [/src[\\/]lib[\\/]logout\.ts$/, shim('logout.ts')],
 ];
 
@@ -103,7 +104,7 @@ const substitutions: esbuild.Plugin = {
         // "login" anywhere in it. The resolved-path check below is what
         // actually decides whether to substitute.
         filter:
-          /(telemetry|telemetry-config|analytics|update-check|install-method|oauth|logout)/,
+          /(telemetry|telemetry-config|analytics|update-check|install-method|oauth|select|logout)/,
       },
       async (args) => {
         // Guard against recursing through our own resolve() call.

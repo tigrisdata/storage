@@ -6,9 +6,9 @@
  * headers. The host performs the login instead (Auth0's SPA SDK) and stores
  * the result through the CLI's own credential store.
  *
- * Deliberately not substituting `lib/login/select.ts`: that is the picker
- * between OAuth and access keys, and both branches work here — the access-key
- * branch needs nothing special, so the CLI keeps offering the real choice.
+ * The picker between OAuth and access keys (`lib/login/select.ts`) is
+ * replaced separately, by `login-select.ts`, so that `tigris login` goes
+ * straight to OAuth in a page.
  */
 
 import { getHost } from '../host.js';

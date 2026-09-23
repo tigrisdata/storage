@@ -53,6 +53,8 @@ To skip the popup, pass an access key:
 <TigrisShell accessKey={{ accessKeyId, secretAccessKey }} />
 ```
 
+or, from inside the shell, `tigris login --access-key … --access-secret …`.
+
 The two credential types are stored differently:
 
 | | Stored in | Survives a reload |

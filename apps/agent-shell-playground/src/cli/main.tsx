@@ -22,7 +22,7 @@ function present(
 
 // Tenant and endpoints come from the repo-root .env; vite.config.ts lists
 // exactly which keys are exposed. Sign in from inside the shell with
-// `tigris login`, which offers OAuth or an access key.
+// `tigris login` (OAuth), or `tigris login --access-key … --access-secret …`.
 const env = import.meta.env;
 
 const auth: Auth0Options = present({
