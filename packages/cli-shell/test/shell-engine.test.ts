@@ -1,5 +1,5 @@
 import { resetVolume } from '@tigrisdata/cli/browser';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ReplIO } from '../src/repl/io';
 import { ShellEngine } from '../src/shell';
@@ -19,6 +19,18 @@ describe('ShellEngine', () => {
   beforeEach(() => {
     resetVolume();
     engine = new ShellEngine({ io: makeIO() });
+  });
+
+  it('signs in with OAuth on a bare `tigris login`, without the picker', async () => {
+    // The CLI asks "user or machine?"; in a page the host has a browser
+    // session to offer, so the question is skipped.
+    const io = makeIO();
+    const login = vi.fn(async () => {});
+    const result = await new ShellEngine({ io, login }).exec('tigris login');
+
+    expect(login).toHaveBeenCalledOnce();
+    expect(io.written.join('')).not.toContain('Choose login method');
+    expect(result.exitCode).toBe(0);
   });
 
   it('runs bash builtins', async () => {
