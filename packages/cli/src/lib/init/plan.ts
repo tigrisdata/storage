@@ -21,26 +21,14 @@ const SETUP_STEPS = [
   'Run `tigris whoami` to get the authentication state. If the user is not authenticated, run `tigris login oauth`.',
   'Run `tigris orgs list --format json`. If there is more than one org, ask the user which org to use. If there is more than one org, run `tigris orgs select <org>` to make that org active. The commands that come after target the active org.',
   'Read the project name from a metadata file, for example package.json, go.mod, or pyproject.toml. Run `tigris buckets list --format json` first. If the bucket is absent, run `tigris buckets create <name> --format json`. If anything is ambiguous, ask the user.',
-  `Create the access key in a private temporary file. Use \`>\` to overwrite the file. Do not use \`>>\` to append. Then print only the ID:
-   \`umask 077; tmpfile=$(mktemp); tigris access-keys create <username>-<project>-devel --format json > "$tmpfile" && jq -r '.id' < "$tmpfile"\``,
-  'Give the access key the Editor role on the bucket: `tigris access-keys assign <id> --bucket <bucket> --role Editor --format json`.',
-  `Identify the SDK that the code uses: the Tigris SDK, or the AWS SDK. Then use a small script to append the correct variables to \`.env\`:
-   - The script reads \`.id\` and \`.secret\` from the temporary file.
-   - Do not read the secret into your own context. Only the script reads the secret.
-   - When the script is complete, delete the temporary file: \`rm -f "$tmpfile"\`.
+  `Identify the SDK that the code uses: Tigris SDK (@tigrisdata/storage, storage-go) or the AWS SDK. Check that \`.env\` can be written: \`test -w . && { test ! -e .env || test -w .env; }\`. If that fails, fix the permissions before you continue. Then create an access key with the Editor role on the bucket and write its credentials to \`.env\` in one step:
+   \`tigris access-keys create <username>-<project>-devel --bucket <bucket> --role Editor --env --for tigris\`
+   Pass \`--for aws\` instead for the AWS SDK. While the write succeeds, the secret goes to \`.env\` only and is not printed. Do not read \`.env\` into your context. If \`tigris access-keys create\` exits non-zero, it printed the credentials instead: delete that key with \`tigris access-keys delete <id> --yes\`, fix the cause, and run it again. If the command warns that \`.env\` is not ignored by \`.gitignore\`, add it.
 
-   Tigris SDK (@tigrisdata/storage, storage-go):
-     TIGRIS_STORAGE_ACCESS_KEY_ID     = .id
-     TIGRIS_STORAGE_SECRET_ACCESS_KEY = .secret   (secret)
-     TIGRIS_STORAGE_BUCKET            = <bucket>
-
-   AWS SDK:
-     AWS_ACCESS_KEY_ID       = .id
-     AWS_SECRET_ACCESS_KEY   = .secret            (secret)
-     AWS_ENDPOINT_URL_S3     = https://t3.storage.dev    (required)
-     AWS_ENDPOINT_URL_IAM    = https://iam.storageapi.dev (required)
-     AWS_REGION              = auto                        (required)
-`,
+   Variables written for Tigris SDK:
+     TIGRIS_STORAGE_ACCESS_KEY_ID, TIGRIS_STORAGE_SECRET_ACCESS_KEY, TIGRIS_STORAGE_BUCKET
+   Variables written for the AWS SDK:
+     AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL_S3, AWS_ENDPOINT_URL_IAM, AWS_REGION`,
   `Congratulate the user. Then give these links:
    - JS:    https://www.tigrisdata.com/docs/sdks/tigris/
    - Go:    https://pkg.go.dev/github.com/tigrisdata/storage-go

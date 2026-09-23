@@ -1335,7 +1335,7 @@ Create, list, inspect, delete, and assign roles to access keys. Access keys are 
 | Command | Description |
 |---------|-------------|
 | `tigris access-keys list` (l) | List all access keys in the current organization |
-| `tigris access-keys create` (c) | Create a new access key with the given name. Returns the key ID and secret (shown only once) |
+| `tigris access-keys create` (c) | Create a new access key, optionally scoped to buckets, and export its credentials to a dotenv file or your shell. Returns the key ID and secret (shown only once) |
 | `tigris access-keys delete` (d) | Permanently delete an access key by its ID. This revokes all access immediately |
 | `tigris access-keys get` (g) | Show details for an access key including its name, creation date, and assigned bucket roles |
 | `tigris access-keys assign` (a) | Assign per-bucket roles to an access key. Pair each --bucket with a --role (Editor, ReadWrite, or ReadOnly), or use --admin for org-wide access |
@@ -1365,15 +1365,26 @@ tigris access-keys list
 
 #### `tigris access-keys create` (c)
 
-Create a new access key with the given name. Returns the key ID and secret (shown only once)
+Create a new access key, optionally scoped to buckets, and export its credentials to a dotenv file or your shell. Returns the key ID and secret (shown only once)
 
 ```
-tigris access-keys create <name>
+tigris access-keys create <name> [flags]
 ```
+
+| Flag | Description |
+|------|-------------|
+| `-b, --bucket` | Bucket name (can specify multiple, comma-separated). Each bucket is paired positionally with a --role value |
+| `-r, --role` | Role to assign (can specify multiple, comma-separated). Each role pairs with the corresponding --bucket value |
+| `--admin` | Grant admin access to all buckets in the organization |
+| `--env` | Write the credentials to a dotenv file, merging into it when it already exists. Defaults to ./.env. The secret is then not printed |
+| `--export` | Print the credentials as shell "export" lines and nothing else on stdout, for eval "$(tigris access-keys create <name> --export)" |
+| `--for` | Which SDK the credentials are for. --env and --export then use that SDK's variable names. tigris writes TIGRIS_STORAGE_*; aws writes AWS_* plus Tigris endpoints and region (default: tigris) |
 
 **Examples:**
 ```bash
 tigris access-keys create my-ci-key
+tigris access-keys create my-app --bucket my-app-bucket --role Editor --env
+eval "$(tigris access-keys create dev --bucket my-app-bucket --role Editor --export)"
 ```
 
 #### `tigris access-keys delete` (d)

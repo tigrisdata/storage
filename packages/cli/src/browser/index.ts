@@ -173,6 +173,7 @@ export function createBrowserCli(host: BrowserHost): BrowserCli {
       resetAutoLogin();
 
       let exitCode = 0;
+      process.exitCode = undefined;
 
       try {
         const program = createProgram({
@@ -195,6 +196,9 @@ export function createBrowserCli(host: BrowserHost): BrowserCli {
           program.parseAsync(argv, { from: 'user' }),
           interrupted,
         ]);
+        // A command that printed its output and then flagged failure, the
+        // way a Node process would end with this code.
+        exitCode = process.exitCode ?? 0;
       } catch (error) {
         if (isExitSignal(error)) {
           exitCode = error.exitCode;

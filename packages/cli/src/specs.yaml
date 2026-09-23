@@ -84,6 +84,29 @@ definitions:
     type: flag
     alias: "y"
 
+  # Bucket roles for an access key, shared by `access-keys assign` and the
+  # create-time scoping on `access-keys create`.
+  key_bucket_argument: &key_bucket_argument
+    name: bucket
+    alias: b
+    description: Bucket name (can specify multiple, comma-separated). Each bucket is paired positionally with a --role value
+    helpText: Bucket name(s), comma-separated. Each pairs positionally with a --role
+    multiple: true
+  key_role_argument: &key_role_argument
+    name: role
+    alias: r
+    description: Role to assign (can specify multiple, comma-separated). Each role pairs with the corresponding --bucket value
+    helpText: Role(s) to assign, comma-separated. Each pairs with a --bucket
+    multiple: true
+    options:
+      - Editor
+      - ReadWrite
+      - ReadOnly
+  key_admin_argument: &key_admin_argument
+    name: admin
+    description: Grant admin access to all buckets in the organization
+    type: flag
+
   global_arguments: &global_arguments
     - name: format
       description: Output format
@@ -2131,7 +2154,7 @@ commands:
     alias: keys
     examples:
       - "tigris access-keys list"
-      - "tigris access-keys create my-ci-key"
+      - "tigris access-keys create my-app --bucket my-app-bucket --role Editor --env"
       - "tigris access-keys assign tid_AaBb --bucket my-bucket --role Editor"
     commands:
       - name: list
@@ -2155,11 +2178,13 @@ commands:
             description: Pagination token from a previous request to fetch the next page
             alias: pt
       - name: create
-        description: Create a new access key with the given name. Returns the key ID and secret (shown only once)
-        helpText: Create a new access key
+        description: Create a new access key, optionally scoped to buckets, and export its credentials to a dotenv file or your shell. Returns the key ID and secret (shown only once)
+        helpText: Create a new access key and export its credentials
         alias: c
         examples:
           - "tigris access-keys create my-ci-key"
+          - "tigris access-keys create my-app --bucket my-app-bucket --role Editor --env"
+          - 'eval "$(tigris access-keys create dev --bucket my-app-bucket --role Editor --export)"'
         messages:
           onStart: 'Creating access key...'
           onSuccess: 'Access key created'
@@ -2174,6 +2199,21 @@ commands:
             required: true
             examples:
               - my-key
+          - *key_bucket_argument
+          - *key_role_argument
+          - *key_admin_argument
+          - name: env
+            description: Write the credentials to a dotenv file, merging into it when it already exists. Defaults to ./.env. The secret is then not printed
+            helpText: Write the credentials to a dotenv file (default ./.env)
+          - name: export
+            type: flag
+            description: Print the credentials as shell "export" lines and nothing else on stdout, for eval "$(tigris access-keys create <name> --export)"
+            helpText: Print shell "export" lines for eval "$(...)"
+          - name: for
+            description: Which SDK the credentials are for. --env and --export then use that SDK's variable names. tigris writes TIGRIS_STORAGE_*; aws writes AWS_* plus Tigris endpoints and region
+            helpText: SDK the variables are named for (with --env or --export)
+            options: [tigris, aws]
+            default: tigris
       - name: delete
         description: Permanently delete an access key by its ID. This revokes all access immediately
         helpText: Permanently delete an access key
@@ -2235,23 +2275,9 @@ commands:
             required: true
             examples:
               - tid_AaBbCcDdEeFf
-          - name: bucket
-            alias: b
-            description: Bucket name (can specify multiple, comma-separated). Each bucket is paired positionally with a --role value
-            helpText: Bucket name(s), comma-separated. Each pairs positionally with a --role
-            multiple: true
-          - name: role
-            alias: r
-            description: Role to assign (can specify multiple, comma-separated). Each role pairs with the corresponding --bucket value
-            helpText: Role(s) to assign, comma-separated. Each pairs with a --bucket
-            multiple: true
-            options:
-              - Editor
-              - ReadWrite
-              - ReadOnly
-          - name: admin
-            description: Grant admin access to all buckets in the organization
-            type: flag
+          - *key_bucket_argument
+          - *key_role_argument
+          - *key_admin_argument
           - name: revoke-roles
             description: Revoke all bucket roles from the access key
             type: flag
