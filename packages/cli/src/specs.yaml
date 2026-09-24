@@ -276,6 +276,31 @@ commands:
       onSuccess: ''
       onFailure: 'Failed to get user information'
       onAlreadyDone: "Not authenticated\nRun \"tigris login\" to authenticate"
+  # env
+  - name: env
+    description: Print the current credentials as environment variables for the AWS SDKs, the AWS CLI and the Tigris SDKs, ready for eval "$(tigris env)"
+    examples:
+      - 'eval "$(tigris env)"'
+      - "tigris env --format dotenv > .env"
+      - "tigris env --shell fish | source"
+      - "tigris env --tigris"
+    messages:
+      onStart: ''
+      onSuccess: ''
+      onFailure: 'Failed to export credentials'
+    arguments:
+      - name: format
+        description: Output format
+        options: [shell, dotenv, json]
+        default: shell
+      - name: shell
+        description: Shell syntax for the shell format
+        options: [sh, fish, powershell]
+        default: sh
+      - name: tigris
+        description: Use the TIGRIS_STORAGE_* names the Tigris SDKs read instead of the AWS_* names
+        type: flag
+
   # update
   - name: update
     group: CLI
