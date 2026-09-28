@@ -25,6 +25,7 @@ function buildProgram(columns: number, colors = false): Command {
   const program = new Command()
     .name('tigris')
     .description('Command line interface for Tigris')
+    .version('1.2.3', '-V, --version', 'Show the CLI version')
     .helpOption('-h, --help', 'Show help')
     .configureHelp(helpConfiguration)
     .configureOutput({
@@ -93,6 +94,11 @@ function buildProgram(columns: number, colors = false): Command {
     ],
     globalArgs
   );
+
+  // A group that runs a default subcommand when invoked bare.
+  const login = program.command('login').summary('Sign in').helpGroup('CLI:');
+  login.command('select').summary('Choose how to sign in');
+  setHelpDetails(login, { defaultCommand: 'select' });
 
   return program;
 }
@@ -203,9 +209,34 @@ describe('helpConfiguration', () => {
 
   it('keeps aliases and hidden subcommands out of the usage line', () => {
     const help = helpFor(80, 'cp');
-    expect(help).toContain('Usage: tigris cp [options] <src>\n');
+    expect(help).toContain('Usage: tigris cp <src> [options]\n');
     expect(help).toContain('Aliases:\n  cp, copy\n');
     expect(help).not.toContain('Commands:');
+  });
+
+  it('opens the root page with the name and version, and no other page', () => {
+    expect(helpFor(80)).toMatch(
+      /^Tigris CLI 1\.2\.3 — Command line interface for Tigris\n\nUsage: tigris <command> \[options\]\n/
+    );
+    expect(helpFor(80, 'cp')).not.toContain('Tigris CLI');
+    const bold = (text: string) => `\x1b[1m${text}\x1b[22m`;
+    expect(
+      helpWith({ columns: 80, colors: true }).startsWith(
+        `${bold('Tigris CLI')} 1.2.3 — `
+      )
+    ).toBe(true);
+  });
+
+  it('writes the usage line the way the command is typed', () => {
+    // Command and arguments first, options last; a group takes a command.
+    expect(helpFor(80)).toContain('Usage: tigris <command> [options]\n');
+    expect(helpFor(80, 'remove-everything')).toContain(
+      'Usage: tigris remove-everything [options]\n'
+    );
+    // A group with a default subcommand is complete on its own.
+    expect(helpFor(80, 'login')).toContain(
+      'Usage: tigris login [command] [options]\n'
+    );
   });
 
   it('lines long flags up with or without a short form', () => {
