@@ -37,6 +37,7 @@ Run `tigris help` to see all available commands, or `tigris <command> help` for 
 | `tigris configure` (c) | Save access-key credentials to ~/.tigris/config.json for persistent use across all commands |
 | `tigris login` (l) | Start a session via OAuth (default) or temporary credentials. Session state is cleared on logout |
 | `tigris whoami` (w) | Print the currently authenticated user, organization, and auth method |
+| `tigris env` | Print the current credentials as environment variables for the AWS SDKs, the AWS CLI and the Tigris SDKs, ready for eval "$(tigris env)" |
 | `tigris update` | Update the CLI to the latest version |
 | `tigris logout` | End the current session and clear login state. Credentials saved via 'configure' are kept |
 | `tigris credentials` (creds) | Test whether your current credentials can reach Tigris and optionally verify access to a specific bucket |
@@ -159,6 +160,28 @@ tigris whoami
 **Examples:**
 ```bash
 tigris whoami
+```
+
+### `tigris env`
+
+Print the current credentials as environment variables for the AWS SDKs, the AWS CLI and the Tigris SDKs, ready for eval "$(tigris env)"
+
+```
+tigris env [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--format` | Output format (default: shell) |
+| `--shell` | Shell syntax for the shell format (default: sh) |
+| `--tigris` | Use the TIGRIS_STORAGE_* names the Tigris SDKs read instead of the AWS_* names |
+
+**Examples:**
+```bash
+eval "$(tigris env)"
+tigris env --format dotenv > .env
+tigris env --shell fish | source
+tigris env --tigris
 ```
 
 ### `tigris update`
