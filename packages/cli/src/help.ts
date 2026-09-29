@@ -40,6 +40,8 @@ const MIN_COLUMN_DESCRIPTION_WIDTH = 28;
 const STACKED_DESCRIPTION_INDENT = 10;
 const MIN_WRAP_WIDTH = 20;
 const USAGE_PREFIX = 'Usage: ';
+/** Opens the root page, with the version: what a bug report needs. */
+const ROOT_TITLE = 'Tigris CLI';
 
 export const OPTIONS_HEADING = 'Options:';
 export const GLOBAL_OPTIONS_HEADING = 'Global Options:';
@@ -58,6 +60,8 @@ interface HelpDetails {
    * own command does not take them (the root).
    */
   globalOptions?: Option[];
+  /** The subcommand a group runs when invoked bare, if it has one. */
+  defaultCommand?: string;
 }
 
 const helpDetails = new WeakMap<Command, HelpDetails>();
@@ -163,14 +167,20 @@ export const helpConfiguration = {
     return argument.description;
   },
 
+  // Command and arguments first, options last, the way the command is typed
+  // (and the way cobra-based CLIs and the generated README show it).
   commandUsage(this: Help, cmd: Command): string {
     const parts = [commandPath(cmd)];
-    if (this.visibleOptions(cmd).length > 0) parts.push('[options]');
-    if (this.visibleCommands(cmd).length > 0) parts.push('[command]');
+    if (this.visibleCommands(cmd).length > 0) {
+      // A group that runs a default subcommand is complete on its own.
+      const optional = helpDetails.get(cmd)?.defaultCommand !== undefined;
+      parts.push(optional ? '[command]' : '<command>');
+    }
     for (const argument of cmd.registeredArguments) {
       const name = `${argument.name()}${argument.variadic ? '...' : ''}`;
       parts.push(argument.required ? `<${name}>` : `[${name}]`);
     }
+    if (this.visibleOptions(cmd).length > 0) parts.push('[options]');
     return parts.join(' ');
   },
 
@@ -241,6 +251,23 @@ export const helpConfiguration = {
       helper.styleOptionDescription(helper.optionDescription(option)),
     ];
 
+    // The root page opens with the CLI's name and version, folded into its
+    // description so nothing is said twice; every other page just describes
+    // its command.
+    const description = helper.commandDescription(cmd);
+    if (!cmd.parent) {
+      const banner = [helper.styleTitle(ROOT_TITLE), cmd.version()]
+        .filter(Boolean)
+        .join(' ');
+      output.push(
+        helper.boxWrap(
+          description ? `${banner} — ${description}` : banner,
+          helpWidth
+        ),
+        ''
+      );
+    }
+
     output.push(
       `${helper.styleTitle(USAGE_PREFIX.trimEnd())} ${hang(
         helper.boxWrap(
@@ -252,8 +279,7 @@ export const helpConfiguration = {
       ''
     );
 
-    const description = helper.commandDescription(cmd);
-    if (description) {
+    if (description && cmd.parent) {
       output.push(helper.boxWrap(description, helpWidth), '');
     }
 

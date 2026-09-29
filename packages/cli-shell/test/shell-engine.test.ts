@@ -96,7 +96,8 @@ describe('ShellEngine', () => {
   it('pipes CLI output into bash builtins', async () => {
     const result = await engine.exec('tigris --help | head -1');
     expect(result.exitCode).toBe(0);
-    expect(result.stdout.trim()).toContain('Usage: tigris');
+    // The root page opens with the name and version.
+    expect(result.stdout.trim()).toMatch(/^Tigris CLI \d+\.\d+\.\d+ — /);
   });
 
   it('shares one filesystem with the CLI', async () => {

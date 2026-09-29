@@ -121,17 +121,36 @@ export function setupErrorHandlers() {
     exitWithError(error, undefined, { skipCapture: true });
   };
 
+  const exitCancelled = () => {
+    console.error('\nOperation cancelled');
+    process.exit(1);
+  };
+
   process.on('unhandledRejection', (reason) => {
-    if (reason === '' || reason === undefined) {
-      console.error('\nOperation cancelled');
-      process.exit(1);
-    }
+    if (isPromptCancellation(reason)) exitCancelled();
     void reportCrashAndExit(reason);
   });
 
   process.on('uncaughtException', (error) => {
+    if (isPromptCancellation(error)) exitCancelled();
     void reportCrashAndExit(error);
   });
+}
+
+/**
+ * Whether an escaped error is the user backing out of a prompt rather than a
+ * crash. enquirer rejects with an empty reason on Ctrl-C; a readline used
+ * after Node closed it (Ctrl-C or stdin ending mid-prompt, on Node 24)
+ * surfaces as ERR_USE_AFTER_CLOSE instead. Neither is worth a stack trace
+ * or a telemetry report.
+ */
+export function isPromptCancellation(reason: unknown): boolean {
+  if (reason === '' || reason === undefined) return true;
+  return (
+    typeof reason === 'object' &&
+    reason !== null &&
+    (reason as { code?: unknown }).code === 'ERR_USE_AFTER_CLOSE'
+  );
 }
 
 /**
@@ -479,7 +498,11 @@ export function registerCommands(
     if (spec.group) {
       cmd.helpGroup(groupHeading(spec.group));
     }
-    setHelpDetails(cmd, { examples: spec.examples, groups: spec.groups });
+    setHelpDetails(cmd, {
+      examples: spec.examples,
+      groups: spec.groups,
+      defaultCommand: spec.default,
+    });
 
     if (spec.alias) {
       const aliases = Array.isArray(spec.alias) ? spec.alias : [spec.alias];
