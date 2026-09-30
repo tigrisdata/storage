@@ -6,7 +6,12 @@ export type ListBucketsOptions = {
   config?: TigrisStorageConfig;
   paginationToken?: string;
   limit?: number;
+  /** Only soft-deleted buckets. */
   deleted?: boolean;
+  /** Only buckets that are forks of another bucket. */
+  forksOnly?: boolean;
+  /** Only buckets owned by this user, by username (an email address). */
+  owner?: string;
 };
 
 export type ListBucketsResponse = {
@@ -25,6 +30,8 @@ export async function listBuckets(
       includeTypeInfo: true,
       includeVisibility: true,
       onlyDeleted: options?.deleted,
+      forksOnly: options?.forksOnly,
+      owner: options?.owner,
     },
     paginationToken: options?.paginationToken,
     limit: options?.limit,

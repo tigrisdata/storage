@@ -11,6 +11,10 @@ type ListingFlags = {
   includeForkInfo?: boolean;
   includeStats?: boolean;
   onlyDeleted?: boolean;
+  /** Only buckets that are forks of another bucket. */
+  forksOnly?: boolean;
+  /** Only buckets owned by this user, by username (an email address). */
+  owner?: string;
   forksOf?: string;
 };
 
@@ -85,6 +89,8 @@ export async function fetchBucketListing(
   if (flags.includeForkInfo) query.set('IncludeForkInfo', 'true');
   if (flags.includeStats) query.set('IncludeStats', 'true');
   if (flags.onlyDeleted) query.set('OnlyDeleted', 'true');
+  if (flags.forksOnly) query.set('OnlyForked', 'true');
+  if (flags.owner) query.set('OwnedBy', flags.owner);
   if (options?.paginationToken) {
     query.set('continuation-token', options.paginationToken);
   }

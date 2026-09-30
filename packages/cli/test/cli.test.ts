@@ -214,9 +214,17 @@ describe('CLI Help Commands', () => {
     const result = runCli('buckets help');
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('Basics:');
+    expect(runCli('buckets list help').stdout).toContain('--forks-only');
+    expect(runCli('buckets list help').stdout).toContain('--owner');
     expect(result.stdout).toContain('Forks & snapshots:');
     expect(result.stdout).toContain('list');
     expect(result.stdout).toContain('create');
+  });
+
+  it('rejects a bare --owner before making any request', () => {
+    const result = runCli('buckets list --owner');
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain('--owner requires a username');
   });
 
   it('should show objects help', () => {

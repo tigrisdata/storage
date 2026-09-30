@@ -830,6 +830,9 @@ listBuckets(options?: ListBucketsOptions): Promise<TigrisStorageResponse<ListBuc
 | --------------- | ------------ | -------------------------------------------------------------------------------- |
 | limit           | No           | The maximum number of buckets to return.                                         |
 | paginationToken | No           | The pagination token to continue listing buckets from the previous request.      |
+| deleted         | No           | `true` to list only soft-deleted buckets.                                        |
+| forksOnly      | No           | `true` to list only buckets that are forks of another bucket.                    |
+| owner         | No           | List only buckets owned by this user, by username (an email address).            |
 | config          | No           | A configuration object to override the [default configuration](#authentication). |
 
 In case of successful `list`, the `data` property will be set to the list of buckets and contains the following properties:

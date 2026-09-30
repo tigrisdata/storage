@@ -852,6 +852,8 @@ commands:
           - "tigris buckets list"
           - "tigris buckets list --format json"
           - "tigris buckets list --forks-of my-bucket"
+          - "tigris buckets list --forks-only"
+          - "tigris buckets list --owner alice@example.com"
           - "tigris buckets list --deleted"
         messages:
           onStart: 'Listing buckets...'
@@ -868,6 +870,12 @@ commands:
           - name: deleted
             description: Only list soft-deleted buckets
             type: flag
+          - name: forks-only
+            description: Only list buckets that are forks of another bucket
+            type: flag
+          - name: owner
+            description: Only list buckets owned by this user, by username (an email address)
+            helpText: Only buckets owned by this user (email)
           - name: limit
             description: Maximum number of items to return per page
           - name: page-token

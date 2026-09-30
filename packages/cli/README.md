@@ -560,6 +560,8 @@ tigris buckets list [flags]
 | `--format` | Output format (default: table) |
 | `--forks-of` | Only list buckets that are forks of the named source bucket |
 | `--deleted` | Only list soft-deleted buckets |
+| `--forks-only` | Only list buckets that are forks of another bucket |
+| `--owner` | Only list buckets owned by this user, by username (an email address) |
 | `--limit` | Maximum number of items to return per page |
 | `-pt, --page-token` | Pagination token from a previous request to fetch the next page |
 
@@ -568,6 +570,8 @@ tigris buckets list [flags]
 tigris buckets list
 tigris buckets list --format json
 tigris buckets list --forks-of my-bucket
+tigris buckets list --forks-only
+tigris buckets list --owner alice@example.com
 tigris buckets list --deleted
 ```
 

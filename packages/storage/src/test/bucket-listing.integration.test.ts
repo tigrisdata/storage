@@ -66,3 +66,91 @@ describe.skipIf(skipTests)('listBuckets pagination', () => {
     expect(secondNames.some((n) => !firstNames.includes(n))).toBe(true);
   });
 });
+
+describe.skipIf(skipTests)('listBuckets filters', () => {
+  const stamp = `${Date.now()}-${process.pid}`;
+  const sourceName = `tigris-list-filter-src-${stamp}`;
+  const forkName = `tigris-list-filter-fork-${stamp}`;
+
+  beforeAll(async () => {
+    const source = await createBucket(sourceName, {
+      enableSnapshot: true,
+      config,
+    });
+    expect(source.error).toBeUndefined();
+    const fork = await createBucket(forkName, {
+      sourceBucketName: sourceName,
+      config,
+    });
+    expect(fork.error).toBeUndefined();
+    // Bucket listing is eventually consistent: filter only once the plain
+    // listing shows both, so a miss below means the filter, not the lag.
+    await waitUntilListed([sourceName, forkName]);
+  }, 60_000);
+
+  afterAll(async () => {
+    for (const name of [forkName, sourceName]) {
+      await removeBucket(name, { force: true, config });
+    }
+  });
+
+  /** Poll the unfiltered listing until every name is in it. */
+  async function waitUntilListed(names: string[]): Promise<void> {
+    const deadline = Date.now() + 45_000;
+    for (;;) {
+      const listed = await allNames({});
+      const missing = names.filter((name) => !listed.includes(name));
+      if (missing.length === 0) return;
+      if (Date.now() > deadline) {
+        throw new Error(`Not listed after 45s: ${missing.join(', ')}`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+    }
+  }
+
+  /** Every page of a listing, so the assertion does not depend on ordering. */
+  async function allNames(
+    options: Parameters<typeof listBuckets>[0]
+  ): Promise<string[]> {
+    const names: string[] = [];
+    let paginationToken: string | undefined;
+    do {
+      const { data, error } = await listBuckets({
+        ...options,
+        paginationToken,
+        config,
+      });
+      expect(error).toBeUndefined();
+      names.push(...(data?.buckets.map((bucket) => bucket.name) ?? []));
+      paginationToken = data?.paginationToken;
+    } while (paginationToken);
+    return names;
+  }
+
+  it('forksOnly lists the fork but not its source', async () => {
+    const names = await allNames({ forksOnly: true });
+    expect(names).toContain(forkName);
+    expect(names).not.toContain(sourceName);
+  });
+
+  it('an unknown owner lists nothing', async () => {
+    const names = await allNames({ owner: `nobody-${stamp}@example.com` });
+    expect(names).toEqual([]);
+  });
+
+  it('the listing owner as owner includes the buckets it just created', async ({
+    skip,
+  }) => {
+    const { data, error } = await listBuckets({ config, limit: 1 });
+    expect(error).toBeUndefined();
+    // OwnedBy takes a username (an email address). The listing's owner
+    // display name is that username on the gateway this runs against; if it
+    // ever is not, skip visibly rather than assert nothing.
+    const owner = data?.owner?.name;
+    if (!owner?.includes('@')) {
+      skip(`owner display name is not a username: ${JSON.stringify(owner)}`);
+    }
+    const names = await allNames({ owner: owner });
+    expect(names).toEqual(expect.arrayContaining([sourceName, forkName]));
+  });
+});
