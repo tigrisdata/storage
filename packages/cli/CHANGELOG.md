@@ -1,5 +1,19 @@
 # @tigrisdata/cli
 
+## 3.14.0
+
+### Minor Changes
+
+- [#342](https://github.com/tigrisdata/storage/pull/342) [`a075099`](https://github.com/tigrisdata/storage/commit/a07509989bcc21c1a3d9450e4f7aaad4e6073508) Thanks [@designcode](https://github.com/designcode)! - `tigris buckets list` takes `--forks-only` (only buckets that are forks of another bucket) and `--owner <username>` (only buckets owned by that user). Both compose with `--deleted` and pagination; like `--deleted`, they do not apply to the separate `--forks-of` listing.
+
+### Patch Changes
+
+- [#340](https://github.com/tigrisdata/storage/pull/340) [`4389df5`](https://github.com/tigrisdata/storage/commit/4389df5e7bf86170ca0e2bdd6677109464a3bc33) Thanks [@designcode](https://github.com/designcode)! - - Pressing Ctrl-C at a prompt prints `Operation cancelled` again. On Node 24 it printed `Error: readline was closed` and was reported as a crash.
+  - Usage lines now read the way a command is typed: `tigris <command> [options]` and `tigris access-keys create <name> [options]` rather than `tigris [options] [command]`.
+  - `tigris --help` opens with the CLI's name and version again (`Tigris CLI 3.13.0 — command line interface for Tigris`).
+- Updated dependencies [[`a075099`](https://github.com/tigrisdata/storage/commit/a07509989bcc21c1a3d9450e4f7aaad4e6073508)]:
+  - @tigrisdata/storage@3.22.0
+
 ## 3.13.0
 
 ### Minor Changes

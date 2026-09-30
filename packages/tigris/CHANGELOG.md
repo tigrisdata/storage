@@ -1,5 +1,12 @@
 # tigris
 
+## 3.14.0
+
+### Patch Changes
+
+- Updated dependencies [[`a075099`](https://github.com/tigrisdata/storage/commit/a07509989bcc21c1a3d9450e4f7aaad4e6073508), [`4389df5`](https://github.com/tigrisdata/storage/commit/4389df5e7bf86170ca0e2bdd6677109464a3bc33)]:
+  - @tigrisdata/cli@3.14.0
+
 ## 3.13.0
 
 ### Patch Changes

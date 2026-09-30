@@ -1,5 +1,11 @@
 # @tigrisdata/storage
 
+## 3.22.0
+
+### Minor Changes
+
+- [#342](https://github.com/tigrisdata/storage/pull/342) [`a075099`](https://github.com/tigrisdata/storage/commit/a07509989bcc21c1a3d9450e4f7aaad4e6073508) Thanks [@designcode](https://github.com/designcode)! - `listBuckets` takes two new filters: `forksOnly` (only buckets that are forks of another bucket) and `owner` (only buckets owned by the given username, an email address). They are sent to the gateway as the `OnlyForked` and `OwnedBy` query parameters and compose with `deleted` and pagination.
+
 ## 3.21.0
 
 ### Minor Changes
