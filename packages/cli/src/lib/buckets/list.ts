@@ -19,12 +19,27 @@ export default async function list(options: Record<string, unknown>) {
   const format = getFormat(options);
   const forksOf = getOption<string>(options, ['forks-of', 'forksOf']);
   const deleted = getOption<boolean>(options, ['deleted']);
+  const forksOnly = getOption<boolean>(options, ['forks-only', 'forksOnly']);
+  const owner = getOption<string>(options, ['owner']);
+  // A bare `--owner` parses as `true`: a missing value, not a filter.
+  if (
+    owner !== undefined &&
+    (typeof owner !== 'string' || owner.trim() === '')
+  ) {
+    failWithError(context, '--owner requires a username (an email address)');
+  }
   const { limit, pageToken } = getPaginationOptions(options);
   const config = await getStorageConfig();
 
-  if (forksOf && deleted) {
+  // --forks-of is its own listing; the filters below do not apply to it.
+  const ignoredWithForksOf = [
+    deleted && '--deleted',
+    forksOnly && '--forks-only',
+    owner && '--owner',
+  ].filter(Boolean);
+  if (forksOf && ignoredWithForksOf.length > 0) {
     console.warn(
-      '⚠ --deleted is ignored when --forks-of is used; use --deleted on its own to list soft-deleted buckets'
+      `⚠ ${ignoredWithForksOf.join(', ')} ignored when --forks-of is used; use ${ignoredWithForksOf.length > 1 ? 'them' : 'it'} without --forks-of`
     );
   }
 
@@ -81,6 +96,8 @@ export default async function list(options: Record<string, unknown>) {
     ...(limit !== undefined ? { limit } : {}),
     ...(pageToken ? { paginationToken: pageToken } : {}),
     ...(deleted ? { deleted } : {}),
+    ...(forksOnly ? { forksOnly } : {}),
+    ...(owner ? { owner } : {}),
     config,
   });
 
