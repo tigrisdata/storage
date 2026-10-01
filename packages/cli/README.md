@@ -35,10 +35,10 @@ Run `tigris help` to see all available commands, or `tigris <command> help` for 
 |---------|-------------|
 | `tigris init` (start) | Connect Tigris to your AI coding agent — MCP server config and agent skills |
 | `tigris configure` (c) | Save access-key credentials to ~/.tigris/config.json for persistent use across all commands |
-| `tigris login` (l) | Start a session via OAuth (default) or temporary credentials. Session state is cleared on logout |
+| `tigris login` (l, signin) | Start a session via OAuth (default) or temporary credentials. Session state is cleared on logout |
 | `tigris whoami` (w) | Print the currently authenticated user, organization, and auth method |
 | `tigris update` | Update the CLI to the latest version |
-| `tigris logout` | End the current session and clear login state. Credentials saved via 'configure' are kept |
+| `tigris logout` (signout) | End the current session and clear sign-in state. Credentials saved via 'configure' are kept |
 | `tigris credentials` (creds) | Test whether your current credentials can reach Tigris and optionally verify access to a specific bucket |
 | `tigris telemetry` | Show or change whether the CLI sends usage analytics and error reports |
 | `tigris ls` (list) | List all buckets (no arguments) or objects under a bucket/prefix path. Accepts bare names or t3:// URIs |
@@ -98,19 +98,19 @@ tigris configure --access-key tid_AaBb --access-secret tsec_XxYy
 tigris configure --endpoint https://custom.endpoint.dev
 ```
 
-### `tigris login` (l)
+### `tigris login` (l, signin)
 
 Start a session via OAuth (default) or temporary credentials. Session state is cleared on logout
 
 | Command | Description |
 |---------|-------------|
-| `tigris login select` | Choose how to login - OAuth (browser) or credentials (access key) |
-| `tigris login oauth` (o) | Login via browser using OAuth2 device flow. Best for interactive use |
-| `tigris login credentials` (c) | Login with an access key and secret. Creates a temporary session that is cleared on logout |
+| `tigris login select` | Choose how to sign in - OAuth (browser) or credentials (access key) |
+| `tigris login oauth` (o) | Sign in via browser using OAuth2 device flow. Best for interactive use |
+| `tigris login credentials` (c) | Sign in with an access key and secret. Creates a temporary session that is cleared on logout |
 
 #### `tigris login select`
 
-Choose how to login - OAuth (browser) or credentials (access key)
+Choose how to sign in - OAuth (browser) or credentials (access key)
 
 ```
 tigris login select
@@ -118,7 +118,7 @@ tigris login select
 
 #### `tigris login oauth` (o)
 
-Login via browser using OAuth2 device flow. Best for interactive use
+Sign in via browser using OAuth2 device flow. Best for interactive use
 
 ```
 tigris login oauth
@@ -131,7 +131,7 @@ tigris login oauth
 
 #### `tigris login credentials` (c)
 
-Login with an access key and secret. Creates a temporary session that is cleared on logout
+Sign in with an access key and secret. Creates a temporary session that is cleared on logout
 
 ```
 tigris login credentials [flags]
@@ -174,9 +174,9 @@ tigris update
 tigris update
 ```
 
-### `tigris logout`
+### `tigris logout` (signout)
 
-End the current session and clear login state. Credentials saved via 'configure' are kept
+End the current session and clear sign-in state. Credentials saved via 'configure' are kept
 
 ```
 tigris logout

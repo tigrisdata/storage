@@ -198,9 +198,10 @@ commands:
       - "tigris login credentials --access-key tid_AaBb --access-secret tsec_XxYy"
     messages:
       onStart: ''
-      onSuccess: 'Login successful'
-      onFailure: 'Login failed'
-    alias: l
+      onSuccess: 'Sign-in successful'
+      onFailure: 'Sign-in failed'
+    # `signin` matches the "sign in" wording used across Tigris.
+    alias: [l, signin]
     arguments:
       - name: access-key
         description: Use temporary credentials instead of OAuth (useful for testing different keys)
@@ -213,24 +214,24 @@ commands:
     commands:
       # login (main interactive operation)
       - name: select
-        description: Choose how to login - OAuth (browser) or credentials (access key)
-        helpText: "Choose how to log in: OAuth or access key"
+        description: Choose how to sign in - OAuth (browser) or credentials (access key)
+        helpText: "Choose how to sign in: OAuth or access key"
         messages:
           onStart: ''
-          onSuccess: 'Login successful'
-          onFailure: 'Login failed'
+          onSuccess: 'Sign-in successful'
+          onFailure: 'Sign-in failed'
       # oauth
       - name: oauth
-        description: Login via browser using OAuth2 device flow. Best for interactive use
-        helpText: Log in through the browser with OAuth
+        description: Sign in via browser using OAuth2 device flow. Best for interactive use
+        helpText: Sign in through the browser with OAuth
         alias: o
         examples:
           - "tigris login oauth"
         messages:
           onStart: 'Opening browser for authentication...'
-          onSuccess: "Logged in successfully\nOrganization '{{org}}' selected"
+          onSuccess: "Signed in successfully\nOrganization '{{org}}' selected"
           onFailure: 'Authentication failed'
-          onAlreadyDone: "Already logged in.\nRun \"tigris logout\" first to switch accounts."
+          onAlreadyDone: "Already signed in.\nRun \"tigris logout\" first to switch accounts."
           hint: "You have {{count}} organizations.\nRun \"tigris orgs list\" to switch."
           nextActions:
             - command: 'tigris orgs list'
@@ -239,15 +240,15 @@ commands:
               description: 'List your buckets'
       # credentials
       - name: credentials
-        description: Login with an access key and secret. Creates a temporary session that is cleared on logout
-        helpText: Log in with an access key and secret
+        description: Sign in with an access key and secret. Creates a temporary session that is cleared on logout
+        helpText: Sign in with an access key and secret
         alias: c
         examples:
           - "tigris login credentials --access-key tid_AaBb --access-secret tsec_XxYy"
           - "tigris login credentials"
         messages:
           onStart: 'Authenticating...'
-          onSuccess: 'Logged in with credentials'
+          onSuccess: 'Signed in with credentials'
           onFailure: 'Authentication failed'
           nextActions:
             - command: 'tigris ls'
@@ -291,14 +292,16 @@ commands:
   # logout
   - name: logout
     group: Get started
-    description: End the current session and clear login state. Credentials saved via 'configure' are kept
-    helpText: End the current session and clear login state
+    description: End the current session and clear sign-in state. Credentials saved via 'configure' are kept
+    helpText: End the current session and clear sign-in state
+    # `signout` matches the "sign out" wording used across Tigris.
+    alias: signout
     examples:
       - "tigris logout"
     messages:
-      onStart: 'Logging out...'
-      onSuccess: 'Logged out. Your configured credentials are still saved.'
-      onFailure: 'Failed to logout'
+      onStart: 'Signing out...'
+      onSuccess: 'Signed out. Your configured credentials are still saved.'
+      onFailure: 'Failed to sign out'
 
   # credentials
   - name: credentials

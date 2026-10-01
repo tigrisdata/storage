@@ -129,7 +129,7 @@ export function resetAutoLogin(): void {
 async function triggerAutoLogin(): Promise<boolean> {
   if (autoLoginAttempted || !process.stdin.isTTY) return false;
   autoLoginAttempted = true;
-  console.log('Not authenticated. Starting login...\n');
+  console.log('Not authenticated. Starting sign-in...\n');
   const { default: login } = await import('../lib/login/select.js');
   await login({});
   console.log();
@@ -409,12 +409,12 @@ export function requireOAuthLogin(operation: string): boolean {
   if (getEnvCredentials() || getStoredCredentials()) {
     console.log(
       `You are using access key credentials, which belong to a single organization.\n` +
-        `${operation} is only available with OAuth login.\n\n` +
-        `Run "tigris login" to login with your Tigris account.`
+        `${operation} is only available with OAuth sign-in.\n\n` +
+        `Run "tigris login" to sign in with your Tigris account.`
     );
   } else {
     console.log(
-      'Not authenticated. Please run "tigris login" to login with your Tigris account.'
+      'Not authenticated. Please run "tigris login" to sign in with your Tigris account.'
     );
   }
   return true;
