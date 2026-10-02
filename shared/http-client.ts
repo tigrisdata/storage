@@ -170,17 +170,19 @@ async function safeText(response: Response): Promise<string> {
 }
 
 /**
- * Mirror the pre-retry error-message extraction: a JSON body's `Message`
- * field, else the status text.
+ * The reason in an error body, else the status text. S3-style errors carry
+ * `Message`; the IAM gateway writes `{ status: "error", message }`.
  */
 function extractErrorMessage(text: string, statusText: string): string {
   if (text) {
     try {
-      const parsed = JSON.parse(text) as { Message?: string };
-      // `||`, not `??`: an empty `Message` or an empty `statusText` should
+      const parsed = JSON.parse(text) as { Message?: string; message?: string };
+      // `||`, not `??`: an empty message or an empty `statusText` should
       // fall through rather than produce `new Error('')`. `fetch` leaves
       // `statusText` empty for HTTP/2 responses, which have no reason phrase.
-      return parsed?.Message || statusText || 'Unknown error';
+      return (
+        parsed?.Message || parsed?.message || statusText || 'Unknown error'
+      );
     } catch {
       // Not JSON — fall through to the status text, as before.
     }
