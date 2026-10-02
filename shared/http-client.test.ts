@@ -754,3 +754,37 @@ describe('client caching', () => {
     );
   });
 });
+
+describe('error messages', () => {
+  it("surfaces the IAM gateway's reason, not the status text", async () => {
+    // The IAM gateway writes `{ status, message }` with the HTTP error code;
+    // S3 errors carry `Message`. Both must beat "Bad Request".
+    fetchMock.mockImplementation(() =>
+      json(
+        400,
+        { status: 'error', message: 'organization is not Tigris native' },
+        { statusText: 'Bad Request' }
+      )
+    );
+
+    const response = await makeClient().request({
+      method: 'DELETE',
+      path: '/x',
+    });
+
+    expect(response.error?.message).toBe('organization is not Tigris native');
+  });
+
+  it('falls back to the status text when the body has no message', async () => {
+    fetchMock.mockImplementation(() =>
+      json(401, { status: 'error' }, { statusText: 'Unauthorized' })
+    );
+
+    const response = await makeClient().request({
+      method: 'DELETE',
+      path: '/x',
+    });
+
+    expect(response.error?.message).toBe('Unauthorized');
+  });
+});

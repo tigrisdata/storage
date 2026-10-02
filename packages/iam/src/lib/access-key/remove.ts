@@ -29,16 +29,24 @@ export async function removeAccessKey(
     Accept: 'application/json',
   };
 
-  const response = await client.request<URLSearchParams, unknown>({
-    method: 'POST',
-    path: IAM_ENDPOINTS.removeAccessKey,
-    body: formData,
-    headers,
-  });
+  try {
+    const response = await client.request<URLSearchParams, unknown>({
+      method: 'POST',
+      path: IAM_ENDPOINTS.removeAccessKey,
+      body: formData,
+      headers,
+    });
 
-  if (response.error) {
-    return { error: response.error };
+    if (response.error) {
+      return { error: response.error };
+    }
+
+    return { data: undefined };
+  } catch (error) {
+    // Transport failures propagate from the client as throws; callers of
+    // this package only ever look at `{ error }`.
+    return {
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
   }
-
-  return { data: undefined };
 }
