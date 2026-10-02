@@ -477,6 +477,7 @@ List, create, and switch between organizations. An organization is a workspace t
 | `tigris organizations list` (l) | List all organizations you belong to and interactively select one as active |
 | `tigris organizations create` (c) | Create a new organization with the given name |
 | `tigris organizations select` (s) | Set the named organization as your active org for all subsequent commands |
+| `tigris organizations delete` (d) | Delete an organization you own, picked from a list or given by ID. It must be empty first (no buckets, access keys, policies, teams, or other members); only its shares and invitations are removed with it. Requires OAuth login and is not available for Fly.io organizations |
 
 #### `tigris organizations list` (l)
 
@@ -521,6 +522,24 @@ tigris organizations select <name>
 **Examples:**
 ```bash
 tigris orgs select my-org
+```
+
+#### `tigris organizations delete` (d)
+
+Delete an organization you own, picked from a list or given by ID. It must be empty first (no buckets, access keys, policies, teams, or other members); only its shares and invitations are removed with it. Requires OAuth login and is not available for Fly.io organizations
+
+```
+tigris organizations delete [id] [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
+
+**Examples:**
+```bash
+tigris orgs delete
+tigris orgs delete <org-id> --yes
 ```
 
 ### `tigris buckets` (b)
@@ -1340,7 +1359,7 @@ Create, list, inspect, delete, and assign roles to access keys. Access keys are 
 |---------|-------------|
 | `tigris access-keys list` (l) | List all access keys in the current organization |
 | `tigris access-keys create` (c) | Create a new access key, optionally scoped to buckets, and export its credentials to a dotenv file or your shell. Returns the key ID and secret (shown only once) |
-| `tigris access-keys delete` (d) | Permanently delete an access key by its ID. This revokes all access immediately |
+| `tigris access-keys delete` (d) | Permanently delete one or more access keys by ID. This revokes all access immediately |
 | `tigris access-keys get` (g) | Show details for an access key including its name, creation date, and assigned bucket roles |
 | `tigris access-keys assign` (a) | Assign per-bucket roles to an access key. Pair each --bucket with a --role (Editor, ReadWrite, or ReadOnly), or use --admin for org-wide access |
 | `tigris access-keys rotate` (r) | Rotate an access key's secret. The current secret is immediately invalidated and a new one is returned (shown only once) |
@@ -1393,7 +1412,7 @@ eval "$(tigris access-keys create dev --bucket my-app-bucket --role Editor --exp
 
 #### `tigris access-keys delete` (d)
 
-Permanently delete an access key by its ID. This revokes all access immediately
+Permanently delete one or more access keys by ID. This revokes all access immediately
 
 ```
 tigris access-keys delete <id> [flags]
@@ -1407,6 +1426,7 @@ tigris access-keys delete <id> [flags]
 **Examples:**
 ```bash
 tigris access-keys delete tid_AaBbCcDdEeFf --yes
+tigris access-keys delete tid_AaBb,tid_CcDd --yes
 ```
 
 #### `tigris access-keys get` (g)

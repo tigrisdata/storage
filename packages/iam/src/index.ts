@@ -58,6 +58,11 @@ export {
   createOrganization,
 } from './lib/organization/create';
 export {
+  type DeleteOrganizationOptions,
+  type DeleteOrganizationResponse,
+  deleteOrganization,
+} from './lib/organization/delete';
+export {
   type ListOrganizationsOptions,
   type ListOrganizationsResponse,
   listOrganizations,

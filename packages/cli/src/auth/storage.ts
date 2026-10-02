@@ -287,6 +287,17 @@ export function getSelectedOrganization(): string | null {
   return config.oauth?.selectedOrganization ?? null;
 }
 
+/**
+ * Forget the selected OAuth organization, e.g. once it has been deleted.
+ * The next command that needs one asks for it, as after a fresh login.
+ */
+export async function clearSelectedOrganization(): Promise<void> {
+  const config = readConfig();
+  if (config.oauth?.selectedOrganization === undefined) return;
+  config.oauth.selectedOrganization = undefined;
+  await writeConfig(config);
+}
+
 // ---------------------------------------------------------------------------
 // Credential accessors
 // ---------------------------------------------------------------------------

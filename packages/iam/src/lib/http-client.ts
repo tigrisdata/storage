@@ -15,6 +15,7 @@ export const IAM_ENDPOINTS = {
   updateUserRole: '/tigris-iam/namespaces',
   // Organizations
   createOrganization: '/tigris-iam/namespaces',
+  deleteOrganization: '/tigris-iam/namespaces',
   listOrganizations: '/tigris-iam/namespaces',
   // Access Keys
   assignAccessKeys: '/?Action=UpdateAccessKeyWithBucketsRole',

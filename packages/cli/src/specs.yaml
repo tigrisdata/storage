@@ -762,6 +762,7 @@ commands:
       - "tigris orgs list"
       - "tigris orgs create my-org"
       - "tigris orgs select my-org"
+      - "tigris orgs delete"
     commands:
       # list
       - name: list
@@ -827,6 +828,28 @@ commands:
             description: Name of the organization
             examples:
               - my-organization
+      - name: delete
+        description: Delete an organization you own, picked from a list or given by ID. It must be empty first (no buckets, access keys, policies, teams, or other members); only its shares and invitations are removed with it. Requires OAuth login and is not available for Fly.io organizations
+        helpText: Delete an empty organization you own
+        alias: d
+        examples:
+          - "tigris orgs delete"
+          - "tigris orgs delete <org-id> --yes"
+        messages:
+          onStart: 'Deleting organization...'
+          onSuccess: "Organization '{{name}}' deleted"
+          onFailure: 'Failed to delete organization'
+          onEmpty: 'That was your active organization and you have no others left'
+          hint: "That was your active organization. '{{next}}' ({{nextId}}) is active now; run \"tigris orgs list\" to switch"
+          nextActions:
+            - command: 'tigris orgs list'
+              description: 'List your remaining organizations'
+        arguments:
+          - *yes_argument
+          - name: id
+            type: positional
+            description: ID of the organization. Omit to pick one from a list (names are not unique, so they are not accepted)
+            helpText: Organization ID. Omit to pick one from a list
 
   #########################
   # Manage buckets
@@ -2223,21 +2246,26 @@ commands:
             options: [tigris, aws]
             default: tigris
       - name: delete
-        description: Permanently delete an access key by its ID. This revokes all access immediately
-        helpText: Permanently delete an access key
+        description: Permanently delete one or more access keys by ID. This revokes all access immediately
+        helpText: Permanently delete one or more access keys
         alias: d
         examples:
           - "tigris access-keys delete tid_AaBbCcDdEeFf --yes"
+          - "tigris access-keys delete tid_AaBb,tid_CcDd --yes"
         messages:
           onStart: 'Deleting access key...'
-          onSuccess: 'Access key deleted'
-          onFailure: 'Failed to delete access key'
+          onSuccess: "Access key '{{id}}' deleted"
+          onFailure: "Failed to delete access key '{{id}}'"
+          nextActions:
+            - command: 'tigris access-keys list'
+              description: 'List remaining access keys'
         arguments:
           - *yes_argument
           - name: id
-            description: Access key ID
+            description: Access key ID or comma separated list of IDs
             type: positional
             required: true
+            multiple: true
             examples:
               - tid_AaBbCcDdEeFf
           - name: force
