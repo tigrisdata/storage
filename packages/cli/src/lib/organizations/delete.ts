@@ -88,7 +88,11 @@ export default async function deleteOrg(options: Record<string, unknown>) {
     }
   }
 
-  const { error: deleteError } = await deleteOrganization(org.id, { config });
+  // One attempt only: a retried DELETE after the gateway already committed
+  // the first one would report "not found" for a deletion that succeeded.
+  const { error: deleteError } = await deleteOrganization(org.id, {
+    config: { ...config, retry: false },
+  });
 
   if (deleteError) {
     failWithError(context, deleteError);

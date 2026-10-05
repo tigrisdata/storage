@@ -85,7 +85,7 @@ describe('orgs delete', () => {
       "Delete organization 'alpha' (org-a)? This cannot be undone."
     );
     expect(deleteOrganization).toHaveBeenCalledWith('org-a', {
-      config: { sessionToken: 'tok' },
+      config: { sessionToken: 'tok', retry: false },
     });
     expect(storeOrganizations).toHaveBeenCalledWith([
       { id: 'org-b', name: 'beta' },
@@ -117,7 +117,7 @@ describe('orgs delete', () => {
       })
     );
     expect(deleteOrganization).toHaveBeenCalledWith('org-a', {
-      config: { sessionToken: 'tok' },
+      config: { sessionToken: 'tok', retry: false },
     });
   });
 

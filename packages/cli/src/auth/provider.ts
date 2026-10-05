@@ -4,6 +4,7 @@
  */
 
 import { fromIni } from '@aws-sdk/credential-providers';
+import type { RetryConfig } from '@tigrisdata/storage';
 
 import {
   DEFAULT_IAM_ENDPOINT,
@@ -230,6 +231,7 @@ export type TigrisStorageConfig = {
   secretAccessKey?: string;
   endpoint?: string;
   forcePathStyle?: boolean;
+  retry?: RetryConfig;
   sessionToken?: string;
   organizationId?: string;
   iamEndpoint?: string;
@@ -246,8 +248,15 @@ export async function getStorageConfig(options?: {
   withCredentialProvider?: boolean;
 }): Promise<TigrisStorageConfig> {
   const config = await resolveStorageConfig(options);
-  // Transport-level override that applies regardless of auth method.
-  return getEnvForcePathStyle() ? { ...config, forcePathStyle: true } : config;
+  // Transport-level settings that apply regardless of auth method. Retries
+  // (3 attempts, backoff with full jitter on 408/429/5xx and network errors)
+  // absorb transient gateway blips; requests that go through the AWS SDK's
+  // S3 client keep its own retry policy, this covers the rest.
+  return {
+    ...config,
+    retry: true,
+    ...(getEnvForcePathStyle() ? { forcePathStyle: true } : {}),
+  };
 }
 
 export interface ServiceEndpoints {
