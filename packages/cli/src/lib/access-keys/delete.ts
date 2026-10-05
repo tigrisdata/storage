@@ -1,8 +1,18 @@
 import { getIAMConfig } from '@auth/iam.js';
 import { removeAccessKey } from '@tigrisdata/iam';
-import { failWithError } from '@utils/exit.js';
+import {
+  exitWithError,
+  failWithError,
+  getSuccessNextActions,
+  printNextActions,
+} from '@utils/exit.js';
 import { confirm, requireInteractive } from '@utils/interactive.js';
-import { msg, printStart, printSuccess } from '@utils/messages.js';
+import {
+  msg,
+  printFailure,
+  printStart,
+  printSuccess,
+} from '@utils/messages.js';
 import { getFormat, getOption } from '@utils/options.js';
 
 const context = msg('access-keys', 'delete');
@@ -12,16 +22,22 @@ export default async function remove(options: Record<string, unknown>) {
 
   const format = getFormat(options);
 
-  const id = getOption<string>(options, ['id']);
+  const idOption = getOption<string | string[]>(options, ['id']);
   const force = getOption<boolean>(options, ['yes', 'y', 'force']);
 
-  if (!id) {
+  if (!idOption) {
     failWithError(context, 'Access key ID is required');
   }
 
+  const ids = Array.isArray(idOption) ? idOption : [idOption];
+
   if (!force) {
     requireInteractive('Use --yes to skip confirmation');
-    const confirmed = await confirm(`Delete access key '${id}'?`);
+    const confirmed = await confirm(
+      ids.length === 1
+        ? `Delete access key '${ids[0]}'?`
+        : `Delete ${ids.length} access keys: ${ids.join(', ')}?`
+    );
     if (!confirmed) {
       console.log('Aborted');
       return;
@@ -30,15 +46,34 @@ export default async function remove(options: Record<string, unknown>) {
 
   const config = await getIAMConfig(context);
 
-  const { error } = await removeAccessKey(id, { config });
+  const deleted: string[] = [];
+  const errors: { id: string; error: string }[] = [];
+  for (const id of ids) {
+    const { error } = await removeAccessKey(id, { config });
 
-  if (error) {
-    failWithError(context, error);
+    if (error) {
+      printFailure(context, error.message, { id });
+      errors.push({ id, error: error.message });
+    } else {
+      deleted.push(id);
+      printSuccess(context, { id });
+    }
   }
 
   if (format === 'json') {
-    console.log(JSON.stringify({ action: 'deleted', id }));
+    const nextActions = getSuccessNextActions(context);
+    const output: Record<string, unknown> = {
+      action: 'deleted',
+      ids: deleted,
+      errors,
+    };
+    if (nextActions.length > 0) output.nextActions = nextActions;
+    console.log(JSON.stringify(output));
   }
 
-  printSuccess(context);
+  if (errors.length > 0) {
+    exitWithError(errors[0].error, context);
+  }
+
+  printNextActions(context);
 }

@@ -63,6 +63,36 @@ function runCli(args: string): {
   }
 }
 
+/** Assert an exit code, and show the command's stderr when it is wrong. */
+function expectExit(
+  result: { exitCode: number; stderr: string },
+  code: number
+): void {
+  expect(result.exitCode, result.stderr).toBe(code);
+}
+
+/**
+ * Re-run a read-only command until it exits 0. For gateway-side aggregates
+ * that settle after the churn earlier tests cause (org-wide stats), vitest's
+ * own retries fire back-to-back and give the gateway no time to settle.
+ */
+function runCliEventually(
+  args: string,
+  { attempts = 3, delayMs = 3_000 } = {}
+): ReturnType<typeof runCli> {
+  let result = runCli(args);
+  for (
+    let attempt = 1;
+    attempt < attempts && result.exitCode !== 0;
+    attempt++
+  ) {
+    // Synchronous, to match runCli.
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delayMs);
+    result = runCli(args);
+  }
+  return result;
+}
+
 // Like runCli, but pipes `input` to the command's stdin. execSync's `input`
 // makes stdin a pipe (not a TTY), so commands that read piped data — e.g.
 // `objects put` from stdin — take the stdin path. runCli itself ignores stdin.
@@ -117,7 +147,7 @@ function setupCredentials(): boolean {
 describe('CLI Help Commands', () => {
   it('should show main help', () => {
     const result = runCli('help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('Usage: tigris');
     expect(result.stdout).toContain('Get started:');
     expect(result.stdout).toContain('Manage resources:');
@@ -132,14 +162,14 @@ describe('CLI Help Commands', () => {
 
   it('should show ls help', () => {
     const result = runCli('ls help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('ls');
     expect(result.stdout).toContain('List all buckets');
   });
 
   it('should show cp help', () => {
     const result = runCli('cp help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('cp');
     expect(result.stdout).toContain('src');
     expect(result.stdout).toContain('dest');
@@ -147,42 +177,42 @@ describe('CLI Help Commands', () => {
 
   it('should show mv help', () => {
     const result = runCli('mv help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('mv');
     expect(result.stdout).toContain('--force');
   });
 
   it('should show rm help', () => {
     const result = runCli('rm help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('rm');
     expect(result.stdout).toContain('--force');
   });
 
   it('should show mk help', () => {
     const result = runCli('mk help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('mk');
     expect(result.stdout).toContain('path');
   });
 
   it('should show touch help', () => {
     const result = runCli('touch help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('touch');
     expect(result.stdout).toContain('path');
   });
 
   it('should show stat help', () => {
     const result = runCli('stat help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('stat');
     expect(result.stdout).toContain('path');
   });
 
   it('should show bundle help', () => {
     const result = runCli('bundle help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('bundle');
     expect(result.stdout).toContain('--keys');
     expect(result.stdout).toContain('--output');
@@ -192,27 +222,27 @@ describe('CLI Help Commands', () => {
 
   it('should show configure help', () => {
     const result = runCli('configure help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('configure');
     expect(result.stdout).toContain('--access-key');
   });
 
   it('should show login help', () => {
     const result = runCli('login help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('login');
     expect(result.stdout).toContain('Commands:');
   });
 
   it('should show whoami help', () => {
     const result = runCli('whoami help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('whoami');
   });
 
   it('should show buckets help', () => {
     const result = runCli('buckets help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('Basics:');
     expect(runCli('buckets list help').stdout).toContain('--forks-only');
     expect(runCli('buckets list help').stdout).toContain('--owner');
@@ -229,7 +259,7 @@ describe('CLI Help Commands', () => {
 
   it('should show objects help', () => {
     const result = runCli('objects help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('Basics:');
     expect(result.stdout).toContain('Versions & recovery:');
     expect(result.stdout).toContain('list');
@@ -239,7 +269,7 @@ describe('CLI Help Commands', () => {
 
   it('should show organizations help', () => {
     const result = runCli('organizations help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('Commands:');
     expect(result.stdout).toContain('list');
     expect(result.stdout).toContain('create');
@@ -247,7 +277,7 @@ describe('CLI Help Commands', () => {
 
   it('should show orgs alias help', () => {
     const result = runCli('orgs help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('Commands:');
   });
 
@@ -260,7 +290,7 @@ describe('CLI Help Commands', () => {
 
   it('should show snapshots help', () => {
     const result = runCli('snapshots help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('Commands:');
     expect(result.stdout).toContain('list');
     expect(result.stdout).toContain('take');
@@ -269,7 +299,7 @@ describe('CLI Help Commands', () => {
 
   it('should show access-keys create help', () => {
     const result = runCli('access-keys create help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('Usage: tigris access-keys create');
     expect(result.stdout).toContain('--env');
     expect(result.stdout).toContain('--export');
@@ -278,7 +308,7 @@ describe('CLI Help Commands', () => {
 
   it('should show access-keys help', () => {
     const result = runCli('access-keys help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('Commands:');
     expect(result.stdout).toContain('list');
     expect(result.stdout).toContain('create');
@@ -288,14 +318,14 @@ describe('CLI Help Commands', () => {
   // Nested command tests (iam policies)
   it('should show iam help', () => {
     const result = runCli('iam help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('Commands:');
     expect(result.stdout).toContain('policies');
   });
 
   it('should show iam policies help', () => {
     const result = runCli('iam policies help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('Commands:');
     expect(result.stdout).toContain('list');
     expect(result.stdout).toContain('get');
@@ -306,14 +336,14 @@ describe('CLI Help Commands', () => {
 
   it('should show iam policies list help', () => {
     const result = runCli('iam policies list help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('list');
     expect(result.stdout).toContain('--format');
   });
 
   it('should support iam alias', () => {
     const result = runCli('iam p help');
-    expect(result.exitCode).toBe(0);
+    expectExit(result, 0);
     expect(result.stdout).toContain('Commands:');
     expect(result.stdout).toContain('list');
   });
@@ -499,13 +529,13 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
   describe('ls command', () => {
     it('should list buckets', () => {
       const result = runCli('ls');
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain(testBucket);
     });
 
     it('should list empty bucket', () => {
       const result = runCli(`ls ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Key');
     });
   });
@@ -515,14 +545,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should create a folder', () => {
       const result = runCli(`mk ${testBucket}/${folderName}/`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Folder');
       expect(result.stdout).toContain('created');
     });
 
     it('should show folder in ls', () => {
       const result = runCli(`ls ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain(`${folderName}/`);
     });
   });
@@ -532,13 +562,13 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should create empty object', () => {
       const result = runCli(`touch ${testBucket}/${fileName}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout.toLowerCase()).toContain('created');
     });
 
     it('should show touched file in ls', () => {
       const result = runCli(`ls ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain(fileName);
     });
   });
@@ -553,20 +583,20 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects put ${testBucket} ${putTestFile} ${tempFile}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       // Output shows a table with the file info
       expect(result.stdout).toContain(putTestFile);
     });
 
     it('should get an object', () => {
       const result = runCli(`objects get ${testBucket} ${putTestFile}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain(testContent);
     });
 
     it('should list objects', () => {
       const result = runCli(`objects list ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain(putTestFile);
     });
 
@@ -599,13 +629,13 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `cp ${t3(testBucket)}/${srcFile} ${t3(testBucket)}/${destFile}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Copied');
     });
 
     it('should show copied object in ls', () => {
       const result = runCli(`ls ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain(destFile);
     });
   });
@@ -622,13 +652,13 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `mv ${t3(testBucket)}/${srcFile} ${t3(testBucket)}/${destFile} -f`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Moved');
     });
 
     it('should not show source after move', () => {
       const result = runCli(`ls ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).not.toContain(srcFile);
       expect(result.stdout).toContain(destFile);
     });
@@ -643,13 +673,13 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should remove an object with force flag', () => {
       const result = runCli(`rm ${t3(testBucket)}/${fileName} -f`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Removed');
     });
 
     it('should not show removed object in ls', () => {
       const result = runCli(`ls ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).not.toContain(fileName);
     });
   });
@@ -697,7 +727,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `bundle ${testBucket} --keys ${rootTxt},${rootJson} --output ${output}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(existsSync(output)).toBe(true);
 
       // Verify tar contents
@@ -714,7 +744,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `bundle ${testBucket} --keys ${keysFile} --output ${output}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
 
       const tarList = execSync(`tar tf ${output}`, { encoding: 'utf-8' });
       expect(tarList).toContain(rootTxt);
@@ -726,7 +756,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `bundle ${t3(testBucket)}/${bundleDir} --keys nested.txt,nested.json --output ${output}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
 
       const tarList = execSync(`tar tf ${output}`, { encoding: 'utf-8' });
       expect(tarList).toContain('nested.txt');
@@ -738,7 +768,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `bundle ${testBucket} --keys ${rootTxt},${rootJson} --output ${output}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
 
       // tar should be able to decompress gzip
       const tarList = execSync(`tar tzf ${output}`, { encoding: 'utf-8' });
@@ -751,7 +781,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `bundle ${testBucket} --keys ${rootTxt} --compression gzip --output ${output}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
 
       // Despite .tar extension, content is gzip-compressed
       const tarList = execSync(`tar tzf ${output}`, { encoding: 'utf-8' });
@@ -763,7 +793,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `bundle ${testBucket} --keys ${rootTxt},${rootJson} --output ${output} --json`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
 
       const parsed = JSON.parse(result.stdout.trim());
       expect(parsed.action).toBe('bundled');
@@ -793,7 +823,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `cp ${t3(testBucket)}/${autoFolder} ${t3(testBucket)}/${copiedFolder} -r`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Copied');
       expect(result.stdout).toContain('2 object(s)');
     });
@@ -802,7 +832,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `mv ${t3(testBucket)}/${copiedFolder} ${t3(testBucket)}/${movedFolder} -r -f`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Moved');
       // cp nests: autodetect → copied/autodetect/. The nested folder marker
       // moves with the files but isn't an object, so 2 rather than 3.
@@ -811,7 +841,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should auto-detect folder for rm without trailing slash', () => {
       const result = runCli(`rm ${t3(testBucket)}/${movedFolder} -r -f`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Removed');
     });
 
@@ -834,14 +864,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `cp ${t3(testBucket)}/${emptyFolder}/ ${t3(testBucket)}/${copiedEmptyFolder}/ -r`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Copied');
       expect(result.stdout).toContain('1 object(s)');
     });
 
     it('should show copied empty folder in ls', () => {
       const result = runCli(`ls ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain(`${copiedEmptyFolder}/`);
     });
 
@@ -849,14 +879,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `mv ${t3(testBucket)}/${copiedEmptyFolder}/ ${t3(testBucket)}/${movedEmptyFolder}/ -r -f`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Moved');
       expect(result.stdout).toContain('1 object(s)');
     });
 
     it('should not show source after moving empty folder', () => {
       const result = runCli(`ls ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).not.toContain(`${copiedEmptyFolder}/`);
       expect(result.stdout).toContain(`${movedEmptyFolder}/`);
     });
@@ -885,7 +915,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `cp ${t3(testBucket)}/${srcFile} ${t3(testBucket)}/${targetFolder}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Copied');
       expect(result.stdout).toContain(`${targetFolder}/${srcFile}`);
     });
@@ -894,7 +924,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `cp ${t3(testBucket)}/${srcFile2} ${t3(testBucket)}/${targetFolder}/`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Copied');
       expect(result.stdout).toContain(`${targetFolder}/${srcFile2}`);
     });
@@ -903,14 +933,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `mv ${t3(testBucket)}/${srcFile3} ${t3(testBucket)}/${targetFolder} -f`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Moved');
       expect(result.stdout).toContain(`${targetFolder}/${srcFile3}`);
     });
 
     it('should show all files inside target folder', () => {
       const result = runCli(`ls ${testBucket}/${targetFolder}/`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain(srcFile);
       expect(result.stdout).toContain(srcFile2);
       expect(result.stdout).toContain(srcFile3);
@@ -966,14 +996,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should remove files matching wildcard pattern', () => {
       const result = runCli(`rm ${t3(testBucket)}/${wildcardPrefix}-* -f`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Removed');
       expect(result.stdout).toContain('3 object(s)');
     });
 
     it('should not show wildcard files after removal', () => {
       const result = runCli(`ls ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).not.toContain(`${wildcardPrefix}-`);
     });
   });
@@ -994,14 +1024,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `cp ${t3(testBucket)}/${wcFolder}/* ${t3(testBucket)}/${wcCopied}/`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Copied');
       expect(result.stdout).toContain('2 object(s)');
     });
 
     it('should show copied folder marker in ls', () => {
       const result = runCli(`ls ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain(`${wcCopied}/`);
     });
 
@@ -1009,14 +1039,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `mv ${t3(testBucket)}/${wcCopied}/* ${t3(testBucket)}/${wcMoved}/ -f`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Moved');
       expect(result.stdout).toContain('2 object(s)');
     });
 
     it('should not show source folder after wildcard move', () => {
       const result = runCli(`ls ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).not.toContain(`${wcCopied}/`);
       expect(result.stdout).toContain(`${wcMoved}/`);
     });
@@ -1046,7 +1076,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `cp '${t3(testBucket)}/${wcmFolder}/*.txt' ${t3(testBucket)}/${wcmCopied}/`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('2 object(s)');
     });
 
@@ -1059,29 +1089,29 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `mv '${t3(testBucket)}/${wcmFolder}/*.zip' ${t3(testBucket)}/wcm-moved/ -f`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('No objects to move');
     });
 
     it('should keep the source marker after a zero-match wildcard move', () => {
       const result = runCli(`stat ${t3(testBucket)}/${wcmFolder}/`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should empty a folder with a wildcard without deleting the folder', () => {
       const result = runCli(`rm '${t3(testBucket)}/${wcmFolder}/*' -f`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('3 object(s)');
     });
 
     it('should leave the emptied folder in place', () => {
       const result = runCli(`stat ${t3(testBucket)}/${wcmFolder}/`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should remove the folder itself when no wildcard is used', () => {
       const result = runCli(`rm ${t3(testBucket)}/${wcmFolder}/ -r -f`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
 
       const stat = runCli(`stat ${t3(testBucket)}/${wcmFolder}/`);
       expect(stat.exitCode).not.toBe(0);
@@ -1107,7 +1137,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const name = `${testPrefix}-mk-pub`;
       mkBuckets.push(name);
       const result = runCli(`mk ${name} --public`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('created');
     });
 
@@ -1115,7 +1145,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const name = `${testPrefix}-mk-snap`;
       mkBuckets.push(name);
       const result = runCli(`mk ${name} --enable-snapshots`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('created');
 
       // Verify snapshots enabled via buckets get (table format)
@@ -1129,7 +1159,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const name = `${testPrefix}-mk-tier`;
       mkBuckets.push(name);
       const result = runCli(`mk ${name} --default-tier STANDARD_IA`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('created');
     });
 
@@ -1137,7 +1167,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const name = `${testPrefix}-mk-loc`;
       mkBuckets.push(name);
       const result = runCli(`mk ${name} --locations usa`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('created');
     });
 
@@ -1145,7 +1175,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const name = `${testPrefix}-mk-fork`;
       mkBuckets.push(name);
       const result = runCli(`mk ${name} --fork-of ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('created');
     });
 
@@ -1195,7 +1225,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     it('should download a remote file to local path', () => {
       const localDest = join(tmpBase, 'downloaded.txt');
       const result = runCli(`cp ${t3(testBucket)}/cp-dl-test.txt ${localDest}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Downloaded');
       expect(existsSync(localDest)).toBe(true);
     });
@@ -1204,7 +1234,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const localSrc = join(tmpBase, 'to-upload.txt');
       writeFileSync(localSrc, 'upload test content');
       const result = runCli(`cp ${localSrc} ${t3(testBucket)}/cp-ul-test.txt`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Uploaded');
 
       // Verify it exists
@@ -1218,7 +1248,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       writeFileSync(join(localDir, 'a.txt'), 'file-a');
       writeFileSync(join(localDir, 'b.txt'), 'file-b');
       const result = runCli(`cp ${localDir}/ ${t3(testBucket)}/cp-ul-dir/ -r`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Uploaded');
       expect(result.stdout).toContain('2 file(s)');
     });
@@ -1230,7 +1260,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const localDest = join(tmpBase, 'dl-dir');
       mkdirSync(localDest, { recursive: true });
       const result = runCli(`cp ${t3(testBucket)}/cp-dl-dir/ ${localDest} -r`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Downloaded');
       expect(result.stdout).toContain('2 file(s)');
     });
@@ -1241,7 +1271,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `cp ${t3(testBucket)}/cp-wc-* ${t3(testBucket)}/cp-wc-dest/`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Copied');
       expect(result.stdout).toContain('2 object(s)');
 
@@ -1264,7 +1294,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `cp ${t3(testBucket)}/${cpFile} ${t3(otherBucket)}/${cpFile}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Copied');
 
       // Source still present in original bucket
@@ -1280,7 +1310,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `mv ${t3(testBucket)}/${mvFile} ${t3(otherBucket)}/${mvFile} -f`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Moved');
 
       // Source gone from original bucket
@@ -1300,7 +1330,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `mv ${t3(testBucket)}/mv-wc-* ${t3(testBucket)}/mv-wc-dest/ -f`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Moved');
       expect(result.stdout).toContain('2 object(s)');
 
@@ -1327,7 +1357,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const name = `${testPrefix}-rm-bkt`;
       runCli(`mk ${name}`);
       const result = runCli(`rm ${t3(name)} -f`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain(`Removed bucket '${name}'`);
     });
 
@@ -1364,7 +1394,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects get ${testBucket} objget-test.txt --output ${outPath}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(existsSync(outPath)).toBe(true);
       const content = readFileSync(outPath, 'utf-8');
       expect(content).toContain(testContent);
@@ -1374,7 +1404,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects get ${testBucket} objget-test.txt --mode string`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain(testContent);
     });
   });
@@ -1399,7 +1429,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects put ${testBucket} objput-pub.txt ${tmpFile} --access public`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should upload with --content-type application/json', () => {
@@ -1408,7 +1438,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects put ${testBucket} objput-ct.json ${tmpFile} --content-type application/json`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should upload with --format json', () => {
@@ -1417,7 +1447,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects put ${testBucket} objput-fmt.txt ${tmpFile} --format json`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       // stdout contains progress line then JSON; extract just the JSON portion
       const jsonStart = result.stdout.indexOf('[');
       expect(jsonStart).toBeGreaterThanOrEqual(0);
@@ -1438,14 +1468,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should list with --prefix filter', () => {
       const result = runCli(`objects list ${testBucket} --prefix objlist-a`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('objlist-a.txt');
       expect(result.stdout).not.toContain('objlist-b.txt');
     });
 
     it('should list with --format json', () => {
       const result = runCli(`objects list ${testBucket} --format json`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
     });
 
@@ -1453,7 +1483,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects list ${testBucket} --prefix nonexistent-prefix-xyz`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
   });
 
@@ -1469,41 +1499,43 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     });
 
     it('should show overall stats (no path)', () => {
-      const result = runCli('stat');
-      expect(result.exitCode).toBe(0);
+      // Aggregated across the whole organization, so it may lag behind the
+      // bucket churn of the earlier blocks.
+      const result = runCliEventually('stat');
+      expectExit(result, 0);
       expect(result.stdout).toContain('Active Buckets');
       expect(result.stdout).toContain('Total Objects');
-    });
+    }, 60_000);
 
     it('should show bucket info', () => {
       const result = runCli(`stat ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       // Bucket stat shows a table with metrics
       expect(result.stdout).toContain('Metric');
     });
 
     it('should show object metadata', () => {
       const result = runCli(`stat ${testBucket}/stat-test.txt`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Size');
       expect(result.stdout).toContain('Content-Type');
     });
 
     it('should output --format json for overall stats', () => {
-      const result = runCli('stat --format json');
-      expect(result.exitCode).toBe(0);
+      const result = runCliEventually('stat --format json');
+      expectExit(result, 0);
       expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
-    });
+    }, 60_000);
 
     it('should output --format json for bucket info', () => {
       const result = runCli(`stat ${testBucket} --format json`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
     });
 
     it('should output --format json for object info', () => {
       const result = runCli(`stat ${testBucket}/stat-test.txt --format json`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
     });
   });
@@ -1531,7 +1563,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `presign ${testBucket}/presign-test.txt --access-key ${accessKey}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout.trim()).toMatch(/^https:\/\//);
     });
 
@@ -1539,7 +1571,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `presign ${testBucket}/presign-test.txt --method put --access-key ${accessKey}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout.trim()).toMatch(/^https:\/\//);
     });
 
@@ -1547,14 +1579,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `presign ${testBucket}/presign-test.txt --expires-in 600 --access-key ${accessKey}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should output --format json', () => {
       const result = runCli(
         `presign ${testBucket}/presign-test.txt --format json --access-key ${accessKey}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       expect(parsed).toHaveProperty('url');
       expect(parsed).toHaveProperty('method');
@@ -1566,7 +1598,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `presign ${testBucket}/presign-test.txt --access-key ${accessKey}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       // Should not be JSON, just a URL
       expect(() => JSON.parse(result.stdout.trim())).toThrow();
       expect(result.stdout.trim()).toMatch(/^https:\/\//);
@@ -1588,7 +1620,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `presign ${testBucket}/presign-test.txt --snapshot-version ${snapshotVersion} --access-key ${accessKey}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout.trim()).toMatch(/^https:\/\//);
     });
 
@@ -1596,7 +1628,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `presign ${testBucket}/presign-test.txt --snapshot ${snapshotVersion} --access-key ${accessKey}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout.trim()).toMatch(/^https:\/\//);
     });
 
@@ -1614,13 +1646,13 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
   describe('buckets list command', () => {
     it('should list buckets', () => {
       const result = runCli('buckets list');
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain(testBucket);
     });
 
     it('should list buckets with --format json', () => {
       const result = runCli('buckets list --format json');
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       expect(Array.isArray(parsed.items)).toBe(true);
       expect(
@@ -1632,7 +1664,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
   describe('buckets get command', () => {
     it('should get bucket info', () => {
       const result = runCli(`buckets get ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Property');
     });
 
@@ -1648,7 +1680,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const name = `${testPrefix}-bd-1`;
       runCli(`mk ${name}`);
       const result = runCli(`buckets delete ${name} --yes`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should delete multiple buckets with --yes', () => {
@@ -1657,14 +1689,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       runCli(`mk ${name1}`);
       runCli(`mk ${name2}`);
       const result = runCli(`buckets delete ${name1},${name2} --yes`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should delete a bucket with --force (backwards compat)', () => {
       const name = `${testPrefix}-bd-force`;
       runCli(`mk ${name}`);
       const result = runCli(`buckets delete ${name} --force`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should fail without --yes in non-TTY', () => {
@@ -1704,7 +1736,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const name = `${testPrefix}-bc-1`;
       bcBuckets.push(name);
       const result = runCli(`buckets create ${name}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should create with all flags', () => {
@@ -1713,14 +1745,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `buckets create ${name} --access private --default-tier STANDARD --enable-snapshots --locations global`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should actually enable snapshots with --enable-snapshots', () => {
       const name = `${testPrefix}-bc-snap`;
       bcBuckets.push(name);
       const result = runCli(`buckets create ${name} --enable-snapshots`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
 
       // Regression: --enable-snapshots must actually enable snapshots, not
       // just create the bucket. The flag arrives camelCased (enableSnapshots)
@@ -1756,7 +1788,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     describe('buckets set', () => {
       it('should set --access public', () => {
         const result = runCli(`buckets set ${setBucket} --access public`);
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
         // Reset back
         runCli(`buckets set ${setBucket} --access private`);
       });
@@ -1765,14 +1797,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
         const result = runCli(
           `buckets set ${setBucket} --cache-control "max-age=3600"`
         );
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
       });
 
       it('should set --enable-delete-protection true', () => {
         const result = runCli(
           `buckets set ${setBucket} --enable-delete-protection true`
         );
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
         // Disable for cleanup
         runCli(`buckets set ${setBucket} --enable-delete-protection false`);
       });
@@ -1781,14 +1813,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
         const result = runCli(
           `buckets set ${setBucket} --soft-delete enable --retention-days 30`
         );
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
         // Disable for cleanup
         runCli(`buckets set ${setBucket} --soft-delete disable`);
       });
 
       it('should set --soft-delete disable', () => {
         const result = runCli(`buckets set ${setBucket} --soft-delete disable`);
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
       });
 
       it('should error when enabling soft delete without --retention-days', () => {
@@ -1834,7 +1866,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
       it('should set --locations usa', () => {
         const result = runCli(`buckets set ${setBucket} --locations usa`);
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
       });
 
       it('should error when no settings provided', () => {
@@ -1864,14 +1896,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
         const result = runCli(
           `buckets set-locations ${setBucket} --locations usa`
         );
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
       });
     });
 
     describe('buckets set-migration', () => {
       it('should disable migration', () => {
         const result = runCli(`buckets set-migration ${setBucket} --disable`);
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
       });
 
       it('should error on --disable with other options', () => {
@@ -1909,33 +1941,33 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
         const result = runCli(
           `buckets set-notifications ${setBucket} --url https://example.com/webhook`
         );
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
       });
 
       it('should disable', () => {
         const result = runCli(
           `buckets set-notifications ${setBucket} --disable`
         );
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
       });
 
       it('should reset', () => {
         const result = runCli(`buckets set-notifications ${setBucket} --reset`);
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
       });
 
       it('should accept --token auth', () => {
         const result = runCli(
           `buckets set-notifications ${setBucket} --url https://example.com/webhook --token my-secret-token`
         );
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
       });
 
       it('should accept --username/--password auth', () => {
         const result = runCli(
           `buckets set-notifications ${setBucket} --url https://example.com/webhook --username user1 --password pass1`
         );
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
       });
 
       it('should error on multiple action flags', () => {
@@ -1990,19 +2022,19 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
         const result = runCli(
           `buckets set-cors ${setBucket} --origins "*" --methods "GET,POST"`
         );
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
       });
 
       it('should reset with --reset', () => {
         const result = runCli(`buckets set-cors ${setBucket} --reset`);
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
       });
 
       it('should set with --override', () => {
         const result = runCli(
           `buckets set-cors ${setBucket} --origins "*" --override`
         );
-        expect(result.exitCode).toBe(0);
+        expectExit(result, 0);
       });
 
       it('should error on --reset with other options', () => {
@@ -2035,7 +2067,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     it('should delete a single object with --yes', () => {
       runCli(`touch ${testBucket}/objdel-1.txt`);
       const result = runCli(`objects delete ${testBucket} objdel-1.txt --yes`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should delete multiple objects with --yes', () => {
@@ -2044,7 +2076,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects delete ${testBucket} objdel-2.txt,objdel-3.txt --yes`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should delete an object with --force (backwards compat)', () => {
@@ -2052,7 +2084,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects delete ${testBucket} objdel-force.txt --force`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should fail without --yes in non-TTY', () => {
@@ -2080,21 +2112,21 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects set ${testBucket} objset-test.txt --access public`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should set --access private', () => {
       const result = runCli(
         `objects set ${testBucket} objset-test.txt --access private`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should rename with --new-key', () => {
       const result = runCli(
         `objects set ${testBucket} objset-test.txt --access private --new-key objset-renamed.txt`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
 
       // Verify rename
       const ls = runCli(`ls ${testBucket}`);
@@ -2117,21 +2149,21 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects set-access ${testBucket} ${testFile} public`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should set access to private via positional', () => {
       const result = runCli(
         `objects set-access ${testBucket} ${testFile} private`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should accept t3:// path with access as second positional', () => {
       const result = runCli(
         `objects set-access ${t3(testBucket)}/${testFile} public`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should error when the access positional is missing', () => {
@@ -2162,7 +2194,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const name = `${testPrefix}-acl-mk`;
       aclBuckets.push(name);
       const result = runCli(`mk ${name} --allow-object-acl`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('created');
 
       // buckets get surfaces the setting as "Allow Object ACL: Yes"
@@ -2176,7 +2208,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const name = `${testPrefix}-acl-bc`;
       aclBuckets.push(name);
       const result = runCli(`buckets create ${name} --allow-object-acl`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
 
       const info = runCli(`buckets get ${name}`);
       expect(info.stdout).toContain('Allow Object ACL');
@@ -2189,7 +2221,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const name = `${testPrefix}-dirlist`;
       aclBuckets.push(name);
       const result = runCli(`mk ${name} --public --enable-directory-listing`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('created');
     });
   });
@@ -2212,7 +2244,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `cp ${tmpFile} ${t3(testBucket)}/cp-access-pub.txt --access public`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Uploaded');
     });
 
@@ -2252,7 +2284,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects restore-info ${testBucket} ${restoreFile} --format json`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('"status":null');
     });
 
@@ -2324,7 +2356,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects put t3://${testBucket}/t3path-put.txt ${tmpFile}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('t3path-put.txt');
     });
 
@@ -2334,7 +2366,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects put ${testBucket}/t3path-put2.txt ${tmpFile}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('t3path-put2.txt');
     });
 
@@ -2345,32 +2377,32 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       runCli(`objects put ${testBucket} t3path-get.txt ${tmpFile}`);
 
       const result = runCli(`objects get t3://${testBucket}/t3path-get.txt`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('t3 path get test');
     });
 
     it('should list with t3://bucket', () => {
       const result = runCli(`objects list t3://${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('t3path-put.txt');
     });
 
     it('should list with t3://bucket/prefix', () => {
       const result = runCli(`objects list t3://${testBucket}/t3path-put`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('t3path-put');
     });
 
     it('should info with t3://bucket/key', () => {
       const result = runCli(`objects info t3://${testBucket}/t3path-put.txt`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Size');
       expect(result.stdout).toContain('Content-Type');
     });
 
     it('should info with bare bucket/key', () => {
       const result = runCli(`objects info ${testBucket}/t3path-put.txt`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Size');
     });
 
@@ -2380,7 +2412,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects set t3://${testBucket}/t3path-set.txt --access public`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should delete with t3://bucket/key', () => {
@@ -2388,7 +2420,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects delete t3://${testBucket}/t3path-del.txt --yes`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should delete with bare bucket/key', () => {
@@ -2396,7 +2428,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects delete ${testBucket}/t3path-del.txt --yes`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
   });
 
@@ -2418,23 +2450,23 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should take a snapshot', () => {
       const result = runCli(`snapshots take ${snapBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should take a named snapshot with --snapshot-name', () => {
       const result = runCli(`snapshots take ${snapBucket} test-snap`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should list snapshots', () => {
       const result = runCli(`snapshots list ${snapBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Version');
     });
 
     it('should list snapshots with --format json', () => {
       const result = runCli(`snapshots list ${snapBucket} --format json`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       expect(Array.isArray(parsed.items)).toBe(true);
       expect(parsed.items.length).toBeGreaterThan(0);
@@ -2447,7 +2479,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `ls ${snapBucket} --snapshot-version ${snapshotVersion}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('snap-file.txt');
     });
 
@@ -2455,14 +2487,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `objects list ${snapBucket} --snapshot-version ${snapshotVersion}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should stat object with --snapshot-version', () => {
       const result = runCli(
         `stat ${snapBucket}/snap-file.txt --snapshot-version ${snapshotVersion}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Size');
     });
 
@@ -2470,14 +2502,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `buckets create ${forkBucket} --fork-of ${snapBucket}`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should list forks via buckets list --forks-of (json)', () => {
       const result = runCli(
         `buckets list --forks-of ${snapBucket} --format json`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       if (result.stdout.trim()) {
         expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
       }
@@ -2491,7 +2523,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
         if (result.exitCode === 0 && result.stdout.includes(forkBucket)) break;
         if (i < 2) execSync('sleep 5');
       }
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain(forkBucket);
     }, 120_000);
 
@@ -2499,7 +2531,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     // fork's teardown, leaking the fork and its (undeletable) source bucket.
     it.skip('should rebase the fork onto its source', () => {
       const result = runCli(`buckets rebase ${forkBucket} --yes --format json`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       expect(parsed.action).toBe('rebased');
       expect(parsed.fork).toBe(forkBucket);
@@ -2516,7 +2548,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
         if (result.exitCode === 0) break;
         if (i < 2) execSync('sleep 5');
       }
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       expect(parsed.action).toBe('merged');
       expect(parsed.fork).toBe(forkBucket);
@@ -2580,7 +2612,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `snapshots delete ${snapDelBucket} ${version} --yes --format json`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       expect(parsed.action).toBe('deleted');
       expect(parsed.bucket).toBe(snapDelBucket);
@@ -2601,7 +2633,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `snapshots delete ${snapDelBucket} ${first},${second} --yes --format json`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       expect(parsed.versions).toEqual([first, second]);
       const remaining = listSnapshotVersions();
@@ -2629,14 +2661,14 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should enable snapshots on an existing regular bucket', () => {
       const result = runCli(`buckets enable-snapshots ${toggleBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should output JSON with --json on enable-snapshots', () => {
       const result = runCli(
         `buckets enable-snapshots ${toggleJsonBucket} --json`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       expect(parsed).toMatchObject({
         action: 'snapshots-enabled',
@@ -2646,20 +2678,20 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should disable snapshots on a bucket with no forks', () => {
       const result = runCli(`buckets disable-snapshots ${toggleBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
   });
 
   describe('credentials test command', () => {
     it('should verify credentials (no bucket)', () => {
       const result = runCli('credentials test');
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Access verified');
     });
 
     it('should verify credentials for specific bucket', () => {
       const result = runCli(`credentials test --bucket ${testBucket}`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(result.stdout).toContain('Access verified');
     });
   });
@@ -2676,7 +2708,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
 
     it('should create an access key', () => {
       const result = runCli(`access-keys create ${keyName} --format json`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       createdKeyId = parsed.id;
       expect(parsed.name).toBe(keyName);
@@ -2686,7 +2718,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     it('should get the access key', () => {
       if (!createdKeyId) return;
       const result = runCli(`access-keys get ${createdKeyId} --format json`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       expect(parsed.name).toBe(keyName);
       expect(parsed.id).toBe(createdKeyId);
@@ -2695,7 +2727,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     it('should list access keys and include the created one', () => {
       if (!createdKeyId) return;
       const result = runCli('access-keys list --format json');
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       const found = parsed.items.some(
         (k: { id: string }) => k.id === createdKeyId
@@ -2708,7 +2740,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `access-keys assign ${createdKeyId} --bucket ${testBucket} --role Editor`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should assign admin role', () => {
@@ -2716,7 +2748,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       // Revoke bucket roles first, then assign admin
       runCli(`access-keys assign ${createdKeyId} --revoke-roles`);
       const result = runCli(`access-keys assign ${createdKeyId} --admin`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should revoke all roles', () => {
@@ -2724,7 +2756,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `access-keys assign ${createdKeyId} --revoke-roles`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should rotate the access key', () => {
@@ -2732,7 +2764,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       const result = runCli(
         `access-keys rotate ${createdKeyId} --yes --format json`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       expect(parsed.secret).toBeTruthy();
     });
@@ -2740,7 +2772,7 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
     it('should delete the access key', () => {
       if (!createdKeyId) return;
       const result = runCli(`access-keys delete ${createdKeyId} --yes`);
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       createdKeyId = undefined;
     });
   });
@@ -2770,12 +2802,12 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
   describe('whoami command', () => {
     it('should show auth info', () => {
       const result = runCli('whoami');
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should show auth info with --format json', () => {
       const result = runCli('whoami --format json');
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
     });
   });
@@ -2810,7 +2842,7 @@ describe.skipIf(skipTests || skipOAuth)('OAuth Integration Tests', () => {
       const result = runCli(
         `iam policies create --name ${policyName} --document '${doc}' --format json`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       policyArn = parsed.arn;
       expect(parsed.name).toBe(policyName);
@@ -2819,7 +2851,7 @@ describe.skipIf(skipTests || skipOAuth)('OAuth Integration Tests', () => {
     it('should list policies and include the created one', () => {
       if (!policyArn) return;
       const result = runCli('iam policies list --format json');
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       const found = parsed.items.some(
         (p: { resource: string }) => p.resource === policyArn
@@ -2832,7 +2864,7 @@ describe.skipIf(skipTests || skipOAuth)('OAuth Integration Tests', () => {
       const result = runCli(
         `iam policies get --resource ${policyArn} --format json`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       const [statement] = parsed.document.statements;
       expect(statement.sid).toBe('OfficeOnly');
@@ -2851,7 +2883,7 @@ describe.skipIf(skipTests || skipOAuth)('OAuth Integration Tests', () => {
       const result = runCli(
         `iam policies get --resource ${policyArn} --format json`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       const parsed = JSON.parse(result.stdout.trim());
       expect(parsed.description).toBe('edited');
       expect(parsed.document.statements[0].condition).toEqual({
@@ -2864,7 +2896,7 @@ describe.skipIf(skipTests || skipOAuth)('OAuth Integration Tests', () => {
       const result = runCli(
         `iam policies delete --resource ${policyArn} --yes`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       policyArn = undefined;
     });
   });
@@ -2906,19 +2938,19 @@ describe.skipIf(skipTests || skipOAuth)('OAuth Integration Tests', () => {
       const result = runCli(
         `iam teams edit ${createdTeamId} --name ${teamName}-renamed`
       );
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
   });
 
   describe('organizations', () => {
     it('should list organizations with --format table', () => {
       const result = runCli('organizations list --format table');
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
     });
 
     it('should list organizations with --format json', () => {
       const result = runCli('organizations list --format json');
-      expect(result.exitCode).toBe(0);
+      expectExit(result, 0);
       if (result.stdout.trim()) {
         expect(() => JSON.parse(result.stdout.trim())).not.toThrow();
       }

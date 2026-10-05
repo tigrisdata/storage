@@ -449,6 +449,17 @@ describe('getStorageConfig forcePathStyle overlay', () => {
     expect(config.accessKeyId).toBe('TIG-AK');
   });
 
+  it('enables transport retries whatever the auth method', async () => {
+    writeRawConfig({ version: 2 });
+    process.env.TIGRIS_STORAGE_ACCESS_KEY_ID = 'TIG-AK';
+    process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY = 'TIG-SK';
+
+    const { getStorageConfig } = await import('../../src/auth/provider.js');
+    const config = await getStorageConfig();
+
+    expect(config.retry).toBe(true);
+  });
+
   it('omits forcePathStyle when TIGRIS_FORCE_PATH_STYLE is unset', async () => {
     writeRawConfig({ version: 2 });
     process.env.TIGRIS_STORAGE_ACCESS_KEY_ID = 'TIG-AK';
