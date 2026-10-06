@@ -110,6 +110,14 @@ export {
   listTeams,
   type Team,
 } from './lib/team/list';
+export {
+  type GetUsageOptions,
+  getUsage,
+  type UsageCharge,
+  type UsageChargeTier,
+  type UsageCreditGrant,
+  type UsageResponse,
+} from './lib/usage/get';
 export { type InviteUserOptions, inviteUser } from './lib/users/invite';
 export {
   type ListUsersOptions,

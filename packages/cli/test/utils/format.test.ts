@@ -103,6 +103,25 @@ describe('formatTable', () => {
     expect(result).toContain('42 MB');
   });
 
+  it('sets footer rows apart with a rule and sizes columns to fit them', () => {
+    const items = [{ name: 'a', size: '1 KB' }];
+    const footer = [{ name: 'Grand total', size: '1 KB' }];
+    const lines = formatTable(items, columns, footer).trim().split('\n');
+    const totalLine = lines.findIndex((line) => line.includes('Grand total'));
+    expect(totalLine).toBeGreaterThan(0);
+    expect(lines[totalLine - 1]).toMatch(/^├[─┼]+┤$/);
+    expect(lines[totalLine - 2]).toContain('│ a ');
+    // Only one rule between data and footer, plus the one under the header.
+    expect(lines.filter((line) => line.startsWith('├'))).toHaveLength(2);
+  });
+
+  it('renders a footer-only table with a single rule', () => {
+    const footer = [{ name: 'Grand total', size: '0 B' }];
+    const lines = formatTable([], columns, footer).trim().split('\n');
+    expect(lines.filter((line) => line.startsWith('├'))).toHaveLength(1);
+    expect(lines[3]).toContain('Grand total');
+  });
+
   it('right-aligns when specified', () => {
     const cols: TableColumn[] = [
       { key: 'name', header: 'Name' },

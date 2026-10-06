@@ -276,6 +276,33 @@ commands:
       onSuccess: ''
       onFailure: 'Failed to get user information'
       onAlreadyDone: "Not authenticated\nRun \"tigris login\" to authenticate"
+
+  # usage
+  - name: usage
+    group: Get started
+    description: Show the active organization's usage and charges for a billing month, as on the console's Usage page. Requires OAuth login
+    helpText: Show this month's usage and charges
+    examples:
+      - "tigris usage"
+      - "tigris usage --month 2026-09"
+      - "tigris usage --all"
+      - "tigris usage --format json"
+    messages:
+      onStart: ''
+      onSuccess: ''
+      onFailure: 'Failed to get usage'
+      onEmpty: 'No usage recorded for {{month}}'
+      hint: '{{action}}: {{url}}'
+    arguments:
+      - name: month
+        description: Billing month as YYYY-MM (default is the current month)
+      - name: all
+        description: Show every line item, even those with zero usage
+        type: flag
+      - name: format
+        description: Output format
+        options: [json, table, xml]
+        default: table
   # update
   - name: update
     group: CLI

@@ -7,6 +7,8 @@ export const IAM_ENDPOINTS = {
   teams: '/tigris-iam/teams',
   // Whoami
   whoami: '/users/whoami',
+  // Usage
+  usage: '/usage/invoice',
   // Users
   revokeInvitation: '/tigris-iam/invitations',
   removeUser: '/tigris-iam/namespaces',
