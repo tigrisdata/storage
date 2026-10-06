@@ -1,5 +1,21 @@
 # @tigrisdata/cli
 
+## 3.15.0
+
+### Minor Changes
+
+- [#344](https://github.com/tigrisdata/storage/pull/344) [`2cffc3b`](https://github.com/tigrisdata/storage/commit/2cffc3b863da017fbbdfccc3e56ba3a5aa4821fd) Thanks [@designcode](https://github.com/designcode)! - `tigris access-keys delete` takes a comma-separated list of IDs, like `buckets delete`: one confirmation for the batch that names every key, each key deleted in turn, failures reported per key without stopping the rest, and a non-zero exit if any failed.
+
+- [#344](https://github.com/tigrisdata/storage/pull/344) [`2cffc3b`](https://github.com/tigrisdata/storage/commit/2cffc3b863da017fbbdfccc3e56ba3a5aa4821fd) Thanks [@designcode](https://github.com/designcode)! - `tigris orgs delete [id]` deletes an organization you own, after a confirmation (`--yes` skips it). With no ID it lets you pick one from a list; organization names are not unique, so they are not accepted. The organization must be empty first; the gateway's reason is shown otherwise (IAM gateway errors now surface their message instead of the HTTP status text, for every IAM command). Your last organization cannot be deleted, and Fly.io organizations are not offered. If the deleted organization was the active one, the first remaining organization becomes active and is named, so the next command just works; JSON output always reports `activeOrganization`.
+
+- [#356](https://github.com/tigrisdata/storage/pull/356) [`ef397c4`](https://github.com/tigrisdata/storage/commit/ef397c48bac56359535c48228158044f7585ffce) Thanks [@designcode](https://github.com/designcode)! - `tigris usage` shows the active organization's usage and charges for the current month, or any month with `--month YYYY-MM`. Line items with zero usage are hidden unless `--all` is given; `--format json` returns the full invoice. Requires OAuth login.
+
+### Patch Changes
+
+- [#344](https://github.com/tigrisdata/storage/pull/344) [`2cffc3b`](https://github.com/tigrisdata/storage/commit/2cffc3b863da017fbbdfccc3e56ba3a5aa4821fd) Thanks [@designcode](https://github.com/designcode)! - Requests the CLI makes through the Tigris HTTP client (bucket listing and stats, copy/move, bucket settings) are retried on transient failures — 3 attempts with backoff and full jitter on 408/429/5xx and network errors — instead of failing on the first blip. Requests that go through the AWS SDK's S3 client keep its own retry policy, as before.
+- Updated dependencies [[`2cffc3b`](https://github.com/tigrisdata/storage/commit/2cffc3b863da017fbbdfccc3e56ba3a5aa4821fd), [`ef397c4`](https://github.com/tigrisdata/storage/commit/ef397c48bac56359535c48228158044f7585ffce)]:
+  - @tigrisdata/iam@2.7.0
+
 ## 3.14.0
 
 ### Minor Changes
