@@ -1,5 +1,15 @@
 # @tigrisdata/iam
 
+## 2.7.0
+
+### Minor Changes
+
+- [#344](https://github.com/tigrisdata/storage/pull/344) [`2cffc3b`](https://github.com/tigrisdata/storage/commit/2cffc3b863da017fbbdfccc3e56ba3a5aa4821fd) Thanks [@designcode](https://github.com/designcode)! - `deleteOrganization(organizationId)` deletes an organization you own, through `DELETE /tigris-iam/namespaces` scoped to that organization. The gateway accepts it only from an OAuth session, only for Tigris-native organizations, only from the owner, and only once the organization is empty (no buckets, access keys, policies, teams, or other members); its shares and invitations are removed with it. Gateway errors are returned as is, and so are transport failures — as `{ error }`, never a throw; `removeAccessKey` now does the same.
+  
+  Errors from the IAM gateway now carry its reason (`{ status: "error", message }`) instead of the HTTP status text, so a refused request says why rather than `Bad Request`.
+
+- [#356](https://github.com/tigrisdata/storage/pull/356) [`ef397c4`](https://github.com/tigrisdata/storage/commit/ef397c48bac56359535c48228158044f7585ffce) Thanks [@designcode](https://github.com/designcode)! - `getUsage({ month })` fetches the organization's usage and charges for a billing month from the management API — the data behind the console's Usage page: every charge with its quantity, billed quantity, tiers and amount, plus subtotal, credits, total, plan and invoice state. Defaults to the current month; needs a session token.
+
 ## 2.6.0
 
 ### Minor Changes
