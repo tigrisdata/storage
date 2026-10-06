@@ -37,6 +37,7 @@ Run `tigris help` to see all available commands, or `tigris <command> help` for 
 | `tigris configure` (c) | Save access-key credentials to ~/.tigris/config.json for persistent use across all commands |
 | `tigris login` (l) | Start a session via OAuth (default) or temporary credentials. Session state is cleared on logout |
 | `tigris whoami` (w) | Print the currently authenticated user, organization, and auth method |
+| `tigris usage` | Show the active organization's usage and charges for a billing month, as on the console's Usage page. Requires OAuth login |
 | `tigris update` | Update the CLI to the latest version |
 | `tigris logout` | End the current session and clear login state. Credentials saved via 'configure' are kept |
 | `tigris credentials` (creds) | Test whether your current credentials can reach Tigris and optionally verify access to a specific bucket |
@@ -159,6 +160,28 @@ tigris whoami
 **Examples:**
 ```bash
 tigris whoami
+```
+
+### `tigris usage`
+
+Show the active organization's usage and charges for a billing month, as on the console's Usage page. Requires OAuth login
+
+```
+tigris usage [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--month` | Billing month as YYYY-MM (default is the current month) |
+| `--all` | Show every line item, even those with zero usage |
+| `--format` | Output format (default: table) |
+
+**Examples:**
+```bash
+tigris usage
+tigris usage --month 2026-09
+tigris usage --all
+tigris usage --format json
 ```
 
 ### `tigris update`

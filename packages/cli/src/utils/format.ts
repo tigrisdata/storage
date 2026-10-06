@@ -183,12 +183,14 @@ function calculateColumnWidths<T extends Record<string, unknown>>(
  */
 export function formatTable<T extends Record<string, unknown>>(
   items: T[],
-  columns: TableColumn[]
+  columns: TableColumn[],
+  /** Summary rows (totals and the like), set apart from the data by a rule. */
+  footer: T[] = []
 ): string {
   const lines: string[] = [];
 
   // Calculate widths based on content
-  const widths = calculateColumnWidths(items, columns);
+  const widths = calculateColumnWidths([...items, ...footer], columns);
 
   // Build header separator
   const topBorder = `┌${widths.map((w) => '─'.repeat(w + 2)).join('┬')}┐`;
@@ -210,8 +212,7 @@ export function formatTable<T extends Record<string, unknown>>(
   // Middle border
   lines.push(middleBorder);
 
-  // Data rows
-  items.forEach((item) => {
+  const renderRow = (item: T) => {
     const cells = columns.map((col, i) => {
       const value = truncate(formatCellValue(item[col.key]), widths[i]);
       return col.align === 'right'
@@ -219,7 +220,16 @@ export function formatTable<T extends Record<string, unknown>>(
         : value.padEnd(widths[i]);
     });
     lines.push(`│ ${cells.join(' │ ')} │`);
-  });
+  };
+
+  // Data rows
+  items.forEach(renderRow);
+
+  if (footer.length > 0) {
+    // With no data rows the header rule already sets the footer apart.
+    if (items.length > 0) lines.push(middleBorder);
+    footer.forEach(renderRow);
+  }
 
   // Bottom border
   lines.push(`${bottomBorder}\n`);
