@@ -145,6 +145,7 @@ Generate presigned URLs for sharing or uploading.
 presign /path/to/file.txt                    # GET URL, 1 hour expiry
 presign /path/to/file.txt --expires 7200     # GET URL, 2 hour expiry
 presign /path/to/file.txt --put              # PUT URL for uploads
+presign /path/to/file.txt --key tid_...      # Sign with this access key (required after 'login')
 ```
 
 ### snapshot
@@ -159,19 +160,13 @@ snapshot my-bucket --list                    # List all snapshots
 
 ### fork
 
-Branch your dataset. Create a copy-on-write fork for safe experimentation.
+Branch your dataset. Create a copy-on-write fork for safe experimentation, or list the forks of a bucket.
 
 ```bash
-fork source-bucket my-fork                   # Fork a bucket
-fork source-bucket my-fork --snapshot 1713200000   # Fork from a specific snapshot
-```
-
-### forks
-
-List forks of a bucket.
-
-```bash
-forks my-bucket
+fork source-bucket --name my-fork            # Fork a bucket
+fork source-bucket --name my-fork --snapshot 1713200000   # Fork from a specific snapshot
+fork --name my-fork                          # Fork the bucket mounted at the current directory
+fork source-bucket --list                    # List forks of a bucket
 ```
 
 ## Multi-Bucket
@@ -239,11 +234,11 @@ await bash.exec("cp /datasets/data.csv ./local.csv");
 
 ### `@tigrisdata/agent-shell`
 
-| Export         | Description                                                                                           |
-| -------------- | ----------------------------------------------------------------------------------------------------- |
-| `TigrisShell`  | Main class — persisted storage shell backed by Tigris                                                 |
-| `TigrisConfig` | Config type: `{ accessKeyId?, secretAccessKey?, sessionToken?, organizationId?, bucket?, endpoint? }` |
-| `ShellOptions` | Shell options type: `{ cwd?, env? }`                                                                  |
+| Export         | Description                                                                                                            |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `TigrisShell`  | Main class — persisted storage shell backed by Tigris                                                                  |
+| `TigrisConfig` | Config type: `{ accessKeyId?, secretAccessKey?, sessionToken?, organizationId?, bucket?, endpoint?, forcePathStyle? }` |
+| `ShellOptions` | Shell options type: `{ cwd?, env? }`                                                                                   |
 
 #### `TigrisShell`
 
@@ -269,13 +264,12 @@ new TigrisShell(config: TigrisConfig, shellOptions?: ShellOptions)
 
 ### `@tigrisdata/agent-shell/commands`
 
-| Export                           | Description                  |
-| -------------------------------- | ---------------------------- |
-| `createTigrisCommands(config)`   | Create all Tigris commands   |
-| `createPresignCommand(config)`   | Create presign command only  |
-| `createSnapshotCommand(config)`  | Create snapshot command only |
-| `createForkCommand(config)`      | Create fork command only     |
-| `createForksListCommand(config)` | Create forks command only    |
+| Export                          | Description                  |
+| ------------------------------- | ---------------------------- |
+| `createTigrisCommands(config)`  | Create all Tigris commands   |
+| `createPresignCommand(config)`  | Create presign command only  |
+| `createSnapshotCommand(config)` | Create snapshot command only |
+| `createForkCommand(config)`     | Create fork command only     |
 
 ## Examples
 
@@ -291,21 +285,21 @@ All examples require `TIGRIS_STORAGE_ACCESS_KEY_ID`, `TIGRIS_STORAGE_SECRET_ACCE
 ## Development
 
 ```bash
-# Install dependencies
-npm install
+# Install dependencies (from the monorepo root)
+pnpm install
 
 # Type check
-npm run typecheck
+pnpm --filter @tigrisdata/agent-shell typecheck
 
 # Lint and format
-npm run lint
-npm run lint:fix
+pnpm --filter @tigrisdata/agent-shell lint
+pnpm --filter @tigrisdata/agent-shell lint:fix
 
 # Run tests
-npm test
+pnpm --filter @tigrisdata/agent-shell test
 
 # Build
-npm run build
+pnpm --filter @tigrisdata/agent-shell build
 ```
 
 ## License
