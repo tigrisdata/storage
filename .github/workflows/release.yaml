@@ -111,6 +111,48 @@ jobs:
             echo "published=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Tell tigrisdata/tigris-os-docs which agent-facing packages this release
+      # published. Its agent-docs-release-check workflow opens an issue to
+      # check the agent docs against the new versions. Stable releases only.
+      #
+      # Needs a DOCS_REPO_DISPATCH_TOKEN secret: a fine-grained token (or a
+      # GitHub App token) for tigrisdata/tigris-os-docs with the Contents
+      # read-and-write permission, which repository_dispatch requires. The step
+      # skips with a notice when the secret is absent, and continue-on-error
+      # keeps a failed dispatch from failing the release.
+      - name: Notify docs repo of agent package releases
+        if: ${{ github.event_name == 'push' && steps.changesets.outputs.published == 'true' }}
+        continue-on-error: true
+        env:
+          PUBLISHED: ${{ steps.changesets.outputs.published-packages }}
+          DOCS_REPO_DISPATCH_TOKEN: ${{ secrets.DOCS_REPO_DISPATCH_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # secrets can't be used in a step `if:`, so gate here: no token means
+          # the docs repo can't be notified, so skip rather than fail.
+          if [ -z "${DOCS_REPO_DISPATCH_TOKEN:-}" ]; then
+            echo "::notice::DOCS_REPO_DISPATCH_TOKEN not set — skipping docs repo notification."
+            exit 0
+          fi
+
+          # Only the packages that the agent docs describe.
+          packages="$(printf '%s' "$PUBLISHED" | jq -c '[.[] | select(.name | IN(
+            "@tigrisdata/cli",
+            "@tigrisdata/agent-kit",
+            "@tigrisdata/agent-shell",
+            "@tigrisdata/storage"
+          )) | { name, version }]')"
+
+          if [ "$packages" = "[]" ]; then
+            echo "No agent-facing packages published — skipping docs repo notification."
+            exit 0
+          fi
+
+          echo "Notifying tigrisdata/tigris-os-docs: $packages"
+          jq -n --argjson packages "$packages" --arg run_url "$RUN_URL" \
+            '{ event_type: "agent-packages-released", client_payload: { packages: $packages, run_url: $run_url } }' \
+            | GH_TOKEN="$DOCS_REPO_DISPATCH_TOKEN" gh api repos/tigrisdata/tigris-os-docs/dispatches --method POST --input -
+
       # Beta pre-release (manual dispatch from any branch): apply pending
       # changesets as an ephemeral snapshot version (e.g. 3.13.0-beta-<timestamp>)
       # and publish it under the chosen dist-tag, without moving `latest`. The
