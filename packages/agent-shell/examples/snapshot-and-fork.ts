@@ -22,7 +22,7 @@ console.log('Snapshot:', snap.stdout.trim());
 
 // Create a fork to experiment safely
 const forkName = `${bucket}-experiment`;
-const fork = await shell.exec(`fork ${bucket} ${forkName}`);
+const fork = await shell.exec(`fork ${bucket} --name ${forkName}`);
 console.log('Fork created:', fork.stdout.trim());
 
 // List snapshots
