@@ -1132,6 +1132,34 @@ commands:
             required: true
             examples:
               - my-bucket
+      # purge
+      - name: purge
+        group: Basics
+        description: Permanently destroy one or more soft-deleted buckets before their retention period expires. This cannot be undone — they can no longer be restored with "tigris buckets restore". List them with "tigris buckets list --deleted"
+        helpText: Permanently destroy soft-deleted buckets
+        alias: pg
+        examples:
+          - "tigris buckets purge my-bucket --yes"
+          - "tigris buckets purge bucket-a,bucket-b --yes"
+        messages:
+          onStart: 'Purging bucket...'
+          onSuccess: "Bucket '{{name}}' purged"
+          onFailure: "Failed to purge bucket '{{name}}'"
+          nextActions:
+            - command: 'tigris buckets list --deleted'
+              description: 'List the remaining soft-deleted buckets'
+        arguments:
+          - *yes_argument
+          - name: name
+            description: Name of the soft-deleted bucket or comma separated list of buckets
+            type: positional
+            required: true
+            multiple: true
+            examples:
+              - my-bucket
+          - name: force
+            type: flag
+            description: Skip confirmation prompts (alias for --yes)
       # set
       - name: set
         group: Basics

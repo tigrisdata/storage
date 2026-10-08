@@ -578,6 +578,7 @@ Create, inspect, update, and delete buckets. Buckets are top-level containers th
 | `tigris buckets get` (g) | Show details for a bucket including access level, region, tier, and custom domain |
 | `tigris buckets delete` (d) | Delete one or more buckets by name. The bucket must be empty or delete-protection must be off |
 | `tigris buckets restore` | Restore a soft-deleted bucket within its retention window. List recoverable buckets with "tigris buckets list --deleted" |
+| `tigris buckets purge` (pg) | Permanently destroy one or more soft-deleted buckets before their retention period expires. This cannot be undone — they can no longer be restored with "tigris buckets restore". List them with "tigris buckets list --deleted" |
 | `tigris buckets set` (s) | Update settings on an existing bucket such as access level, default tier, location, caching, or custom domain |
 | `tigris buckets enable-snapshots` | Enable snapshots on an existing bucket, converting it to a snapshot bucket |
 | `tigris buckets disable-snapshots` | Disable snapshots on an existing bucket, converting it back to a regular bucket. Rejected while the bucket has dependent forks |
@@ -735,6 +736,25 @@ tigris buckets restore <name>
 **Examples:**
 ```bash
 tigris buckets restore my-bucket
+```
+
+#### `tigris buckets purge` (pg)
+
+Permanently destroy one or more soft-deleted buckets before their retention period expires. This cannot be undone — they can no longer be restored with "tigris buckets restore". List them with "tigris buckets list --deleted"
+
+```
+tigris buckets purge <name> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-y, --yes` | Skip confirmation prompts |
+| `--force` | Skip confirmation prompts (alias for --yes) |
+
+**Examples:**
+```bash
+tigris buckets purge my-bucket --yes
+tigris buckets purge bucket-a,bucket-b --yes
 ```
 
 #### `tigris buckets set` (s)

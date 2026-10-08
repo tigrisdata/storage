@@ -24,6 +24,11 @@ export {
   type ListBucketsResponse,
   listBuckets,
 } from './lib/bucket/list';
+export {
+  type PurgeBucketOptions,
+  type PurgeBucketResponse,
+  purgeBucket,
+} from './lib/bucket/purge';
 export { type RemoveBucketOptions, removeBucket } from './lib/bucket/remove';
 export {
   type RestoreBucketOptions,

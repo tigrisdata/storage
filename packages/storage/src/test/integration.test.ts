@@ -10,6 +10,7 @@ import {
 import { createBucket } from '../lib/bucket/create';
 import { getBucketInfo } from '../lib/bucket/info';
 import { listBuckets } from '../lib/bucket/list';
+import { purgeBucket } from '../lib/bucket/purge';
 import { removeBucket } from '../lib/bucket/remove';
 import { restoreBucket } from '../lib/bucket/restore';
 import {
@@ -1139,6 +1140,62 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
           return buckets.map((b) => b.name);
         }, POLL)
         .not.toContain(bucket);
+    });
+
+    it('should purge a soft-deleted bucket for good', async () => {
+      const bucket = `test-soft-purge-${ts}`.toLowerCase();
+      bucketsToCleanup.push(bucket);
+
+      const created = await createBucket(bucket, { config });
+      expect(created.error).toBeUndefined();
+
+      const enabled = await updateBucket(bucket, {
+        softDelete: { enabled: true, retentionDays: 7 },
+        config,
+      });
+      expect(enabled.error).toBeUndefined();
+
+      // Soft delete (no force) so there is something to purge.
+      const removed = await removeBucket(bucket, { config });
+      expect(
+        removed.error,
+        `soft delete failed: ${removed.error?.message}`
+      ).toBeUndefined();
+
+      await expect
+        .poll(async () => {
+          const buckets = await listAllBuckets({ deleted: true });
+          return buckets.map((b) => b.name);
+        }, POLL)
+        .toContain(bucket);
+
+      const purged = await purgeBucket(bucket, { config });
+      expect(
+        purged.error,
+        `purge failed: ${purged.error?.message}`
+      ).toBeUndefined();
+      expect(purged.data).toEqual({ bucket, purged: true });
+
+      // Gone from the deleted view...
+      await expect
+        .poll(async () => {
+          const buckets = await listAllBuckets({ deleted: true });
+          return buckets.map((b) => b.name);
+        }, POLL)
+        .not.toContain(bucket);
+
+      // ...and not back among the live buckets either.
+      const live = await listAllBuckets();
+      expect(live.map((b) => b.name)).not.toContain(bucket);
+    });
+
+    it('should refuse to purge a bucket that is not soft-deleted', async () => {
+      const result = await purgeBucket(softDeleteBucket, { config });
+      expect(result.error?.message).toContain('soft-delete state');
+
+      // Still there, untouched.
+      const live = await listAllBuckets();
+      expect(live.map((b) => b.name)).toContain(softDeleteBucket);
     });
   });
 

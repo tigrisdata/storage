@@ -18,6 +18,11 @@ export enum TigrisHeaders {
   RESTORE_TYPE = 'X-Tigris-Restore-Type',
   /** The soft-deleted version to bring back. */
   RESTORE_VERSION = 'X-Tigris-Restore-Version',
+  /**
+   * Turns a DeleteBucket on a soft-deleted bucket into the hard delete that
+   * destroys it for good. The gateway rejects it for a live bucket.
+   */
+  FORCE_HARD_DELETE = 'X-Tigris-Force-Hard-Delete',
 
   BUCKET_LIST_SOURCE = 'X-Tigris-List-Source', // tigris or shadow
   SCHEDULE_MIGRATION = 'X-Tigris-Schedule-Migration',
