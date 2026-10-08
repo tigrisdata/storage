@@ -1,5 +1,11 @@
 # @tigrisdata/storage
 
+## 3.23.0
+
+### Minor Changes
+
+- [#360](https://github.com/tigrisdata/storage/pull/360) [`198eaad`](https://github.com/tigrisdata/storage/commit/198eaadbb5ee006fe904d890bc5db13a8a7bf771) Thanks [@designcode](https://github.com/designcode)! - `purgeBucket(name)` permanently destroys a soft-deleted bucket before its retention period expires — the counterpart of `restoreBucket`. The bucket must already be soft-deleted (the gateway rejects a live one) and can no longer be restored afterwards; list the candidates with `listBuckets({ deleted: true })`.
+
 ## 3.22.0
 
 ### Minor Changes

@@ -1,5 +1,16 @@
 # @tigrisdata/cli
 
+## 3.16.0
+
+### Minor Changes
+
+- [#360](https://github.com/tigrisdata/storage/pull/360) [`198eaad`](https://github.com/tigrisdata/storage/commit/198eaadbb5ee006fe904d890bc5db13a8a7bf771) Thanks [@designcode](https://github.com/designcode)! - `tigris buckets purge` permanently destroys one or more soft-deleted buckets (comma-separated), after a confirmation that names them; `--yes` skips it. Each bucket is purged in turn, failures are reported per bucket without stopping the rest, and the exit code is non-zero if any failed. Purged buckets can no longer be restored.
+
+### Patch Changes
+
+- Updated dependencies [[`198eaad`](https://github.com/tigrisdata/storage/commit/198eaadbb5ee006fe904d890bc5db13a8a7bf771)]:
+  - @tigrisdata/storage@3.23.0
+
 ## 3.15.0
 
 ### Minor Changes
