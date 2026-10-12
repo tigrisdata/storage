@@ -11,6 +11,8 @@ import {
 } from '@utils/messages.js';
 import { getFormat, getPaginationOptions } from '@utils/options.js';
 
+import { describeDefaultPermissions } from './default-permissions.js';
+
 const context = msg('access-keys', 'list');
 
 export default async function list(options: Record<string, unknown>) {
@@ -40,19 +42,30 @@ export default async function list(options: Record<string, unknown>) {
     name: key.name,
     id: key.id,
     status: key.status,
+    scope: key.scope,
     created: key.createdAt,
   }));
+
+  // JSON and XML carry the SDK's `scope`; the table reads like the console.
+  const machineReadable = format === 'json' || format === 'xml';
+  const rows = machineReadable
+    ? keys
+    : keys.map((key) => ({
+        ...key,
+        scope: key.scope && describeDefaultPermissions(key.scope),
+      }));
 
   const columns = [
     { key: 'name', header: 'Name' },
     { key: 'id', header: 'ID' },
     { key: 'status', header: 'Status' },
+    { key: 'scope', header: 'Default permissions' },
     { key: 'created', header: 'Created' },
   ];
 
   const nextToken = data.paginationToken || undefined;
 
-  const output = formatPaginatedOutput(keys, format!, 'keys', 'key', columns, {
+  const output = formatPaginatedOutput(rows, format!, 'keys', 'key', columns, {
     paginationToken: nextToken,
   });
 

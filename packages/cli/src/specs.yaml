@@ -106,6 +106,11 @@ definitions:
     name: admin
     description: Grant admin access to all buckets in the organization
     type: flag
+  key_default_permissions_argument: &key_default_permissions_argument
+    name: default-permissions
+    description: Whether the key also gets the default-allowed operations (such as creating and listing buckets) on top of its roles and policies — the console's "Enable default permissions" toggle. Enabled unless disabled
+    helpText: Default permissions beyond the key's roles and policies (enable or disable)
+    options: [enable, disable]
 
   global_arguments: &global_arguments
     - name: format
@@ -2269,6 +2274,7 @@ commands:
         examples:
           - "tigris access-keys create my-ci-key"
           - "tigris access-keys create my-app --bucket my-app-bucket --role Editor --env"
+          - "tigris access-keys create ci --bucket my-app-bucket --role ReadOnly --default-permissions disable"
           - 'eval "$(tigris access-keys create dev --bucket my-app-bucket --role Editor --export)"'
         messages:
           onStart: 'Creating access key...'
@@ -2287,6 +2293,7 @@ commands:
           - *key_bucket_argument
           - *key_role_argument
           - *key_admin_argument
+          - *key_default_permissions_argument
           - name: env
             description: Write the credentials to a dotenv file, merging into it when it already exists. Defaults to ./.env. The secret is then not printed
             helpText: Write the credentials to a dotenv file (default ./.env)
@@ -2326,8 +2333,8 @@ commands:
             type: flag
             description: Skip confirmation prompts (alias for --yes)
       - name: get
-        description: Show details for an access key including its name, creation date, and assigned bucket roles
-        helpText: Show an access key's details and bucket roles
+        description: Show details for an access key including its name, creation date, default permissions, and assigned bucket roles
+        helpText: Show an access key's details, permissions, and bucket roles
         alias: g
         examples:
           - "tigris access-keys get tid_AaBbCcDdEeFf"
@@ -2371,6 +2378,25 @@ commands:
           - name: revoke-roles
             description: Revoke all bucket roles from the access key
             type: flag
+      - name: set
+        description: Update settings on an existing access key — currently its default permissions, the console's "Enable default permissions" toggle. Bucket roles are left as they are
+        helpText: Update settings on an existing access key
+        alias: s
+        examples:
+          - "tigris access-keys set tid_AaBb --default-permissions disable"
+          - "tigris access-keys set tid_AaBb --default-permissions enable"
+        messages:
+          onStart: 'Updating access key...'
+          onSuccess: "Default permissions {{setting}} for access key '{{id}}'"
+          onFailure: 'Failed to update access key'
+        arguments:
+          - name: id
+            description: Access key ID
+            type: positional
+            required: true
+            examples:
+              - tid_AaBbCcDdEeFf
+          - *key_default_permissions_argument
       - name: rotate
         description: Rotate an access key's secret. The current secret is immediately invalidated and a new one is returned (shown only once)
         helpText: Rotate an access key's secret

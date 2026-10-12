@@ -4,6 +4,8 @@ import { failWithError } from '@utils/exit.js';
 import { msg, printStart, printSuccess } from '@utils/messages.js';
 import { getFormat, getOption } from '@utils/options.js';
 
+import { describeDefaultPermissions } from './default-permissions.js';
+
 const context = msg('access-keys', 'get');
 
 export default async function get(options: Record<string, unknown>) {
@@ -33,6 +35,11 @@ export default async function get(options: Record<string, unknown>) {
     console.log(`  Status: ${data.status}`);
     console.log(`  Created: ${data.createdAt}`);
     console.log(`  Organization: ${data.organizationId}`);
+    if (data.scope) {
+      console.log(
+        `  Default permissions: ${describeDefaultPermissions(data.scope)}`
+      );
+    }
 
     if (data.roles && data.roles.length > 0) {
       console.log(`  Roles:`);

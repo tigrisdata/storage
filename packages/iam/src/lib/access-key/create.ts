@@ -1,10 +1,18 @@
 import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
 import type { TigrisIAMConfig, TigrisIAMResponse } from '../types';
-import type { AccessKey, BucketRoleAssignment } from './types';
+import {
+  ACCESS_KEY_SCOPES,
+  type AccessKey,
+  type AccessKeyScope,
+  type BucketRoleAssignment,
+  toWireScope,
+} from './types';
 
 export type CreateAccessKeyOptions = {
   config?: TigrisIAMConfig;
   bucketsRole?: BucketRoleAssignment[];
+  /** Defaults to `standard` on the gateway when omitted. */
+  scope?: AccessKeyScope;
 };
 
 type IAMCreateAccessKeyResponse = {
@@ -22,6 +30,20 @@ export async function createAccessKey(
   name: string,
   options?: CreateAccessKeyOptions
 ): Promise<TigrisIAMResponse<AccessKey, Error>> {
+  // An unknown scope must not fall through to the gateway's default: that
+  // would silently create a key with the permissions the caller tried to
+  // withhold.
+  if (
+    options?.scope !== undefined &&
+    !ACCESS_KEY_SCOPES.includes(options.scope)
+  ) {
+    return {
+      error: new Error(
+        `Invalid scope "${options.scope}". Valid scopes are: ${ACCESS_KEY_SCOPES.join(', ')}`
+      ),
+    };
+  }
+
   const { data: client, error } = createIAMClient(options?.config);
   if (error) {
     return { error };
@@ -34,6 +56,9 @@ export async function createAccessKey(
       req_uuid: crypto.randomUUID(),
       name,
       buckets_role: options?.bucketsRole ?? [],
+      ...(options?.scope !== undefined
+        ? { access_key_scope: toWireScope(options.scope) }
+        : {}),
     })
   );
 
@@ -73,6 +98,8 @@ export async function createAccessKey(
         bucket: role.bucket,
         role: role.role,
       })),
+      // Not echoed by the gateway; what was asked for is what the key got.
+      scope: options?.scope ?? 'standard',
     },
   };
 }
