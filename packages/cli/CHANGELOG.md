@@ -1,5 +1,16 @@
 # @tigrisdata/cli
 
+## 3.17.0
+
+### Minor Changes
+
+- [#368](https://github.com/tigrisdata/storage/pull/368) [`d9c5e75`](https://github.com/tigrisdata/storage/commit/d9c5e753ec7c31a88f543de338b9352ca9a03c99) Thanks [@designcode](https://github.com/designcode)! - `tigris access-keys create --default-permissions disable` creates a key without the default permissions — it can do only what its roles and policies explicitly allow — and `tigris access-keys set <id> --default-permissions enable|disable` changes the setting on an existing key, leaving its bucket roles as they are. This is the console's "Enable default permissions" toggle; JSON output carries it as the SDK's `scope` (`standard` or `no_default_allow`). `access-keys get` and `access-keys list` show the setting for every key.
+
+### Patch Changes
+
+- Updated dependencies [[`d9c5e75`](https://github.com/tigrisdata/storage/commit/d9c5e753ec7c31a88f543de338b9352ca9a03c99)]:
+  - @tigrisdata/iam@2.8.0
+
 ## 3.16.0
 
 ### Minor Changes

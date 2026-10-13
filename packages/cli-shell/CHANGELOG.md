@@ -1,5 +1,13 @@
 # @tigrisdata/cli-shell
 
+## 0.2.3
+
+### Patch Changes
+
+- [#366](https://github.com/tigrisdata/storage/pull/366) [`e983443`](https://github.com/tigrisdata/storage/commit/e983443ea1eb74b53f51fb987e32368d96057c9f) Thanks [@renovate](https://github.com/apps/renovate)! - Builds against `@auth0/auth0-spa-js` 2.25 and later, where `getTokenSilently` is typed as possibly returning nothing. An empty result — which the modes the shell uses cannot produce — is reported as an error instead of being read as a token.
+- Updated dependencies [[`d9c5e75`](https://github.com/tigrisdata/storage/commit/d9c5e753ec7c31a88f543de338b9352ca9a03c99)]:
+  - @tigrisdata/cli@3.17.0
+
 ## 0.2.2
 
 ### Patch Changes
