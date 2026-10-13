@@ -144,16 +144,23 @@ interface MintedTokens {
   expiresAt?: number;
 }
 
-function getSilentToken(
+async function getSilentToken(
   auth0: Auth0Client,
   config: ResolvedAuth0Config,
   cacheMode: 'on' | 'off'
 ) {
-  return auth0.getTokenSilently({
+  const token = await auth0.getTokenSilently({
     authorizationParams: { audience: config.audience },
     detailedResponse: true,
     cacheMode,
   });
+  // Since auth0-spa-js 2.25 the result may be undefined, for a cache-only
+  // lookup that misses. Both modes used here go to the tenant when the cache
+  // cannot serve, so an empty result means the SDK broke its contract.
+  if (!token) {
+    throw new Error('Auth0 returned no token');
+  }
+  return token;
 }
 
 /** The `exp` claim of a JWT, in seconds — or undefined if it is not one. */
