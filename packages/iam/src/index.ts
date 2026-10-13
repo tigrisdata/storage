@@ -46,9 +46,15 @@ export {
   rotateAccessKey,
 } from './lib/access-key/rotate';
 export {
+  type SetAccessKeyScopeOptions,
+  setAccessKeyScope,
+} from './lib/access-key/set-scope';
+export {
   ACCESS_KEY_ROLES,
+  ACCESS_KEY_SCOPES,
   type AccessKey,
   type AccessKeyRole,
+  type AccessKeyScope,
   type BucketRoleAssignment,
   type BucketScopedRole,
 } from './lib/access-key/types';

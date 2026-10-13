@@ -59,7 +59,10 @@ beforeEach(() => {
   vi.spyOn(process, 'exit').mockImplementation(() => {
     throw new ExitSignal();
   });
-  vi.mocked(createAccessKey).mockResolvedValue({ data: created });
+  // The SDK echoes the requested scope, or standard when none was asked for.
+  vi.mocked(createAccessKey).mockImplementation(async (_name, options) => ({
+    data: { ...created, scope: options?.scope ?? 'standard' },
+  }));
   vi.mocked(resolveEndpoints).mockResolvedValue({
     storage: 'https://t3.storage.dev',
     iam: 'https://iam.storageapi.dev',
@@ -82,6 +85,8 @@ describe('access-keys create', () => {
       bucketsRole: undefined,
     });
     expect(stdout.join('\n')).toContain('Secret Access Key: tsec_XxYy');
+    // The setting is reported even when it was left at its default.
+    expect(stdout.join('\n')).toContain('Default permissions: enabled');
     expect(stdout.join('\n')).toContain('will not be shown again');
     // The plain path is what it always was: no endpoint lookup at all.
     expect(resolveEndpoints).not.toHaveBeenCalled();
@@ -233,6 +238,49 @@ describe('access-keys create', () => {
   it('rejects an unknown --for', async () => {
     await expect(run({ for: 'gcp' })).rejects.toThrow(ExitSignal);
     expect(stderr.join('\n')).toContain('Invalid --for "gcp"');
+  });
+
+  it('turns --default-permissions disable into the no_default_allow scope', async () => {
+    await run({
+      bucket: 'my-app',
+      role: 'ReadOnly',
+      defaultPermissions: 'disable',
+    });
+    expect(createAccessKey).toHaveBeenCalledWith('my-app', {
+      config: {},
+      bucketsRole: [{ bucket: 'my-app', role: 'ReadOnly' }],
+      scope: 'no_default_allow',
+    });
+    expect(stdout.join('\n')).toContain('Default permissions: disabled');
+  });
+
+  it('accepts the kebab-case key and enable', async () => {
+    await run({ 'default-permissions': 'enable' });
+    expect(createAccessKey).toHaveBeenCalledWith('my-app', {
+      config: {},
+      bucketsRole: undefined,
+      scope: 'standard',
+    });
+    expect(stdout.join('\n')).toContain('Default permissions: enabled');
+  });
+
+  it("reports the SDK's scope in JSON, flag or no flag", async () => {
+    await run({ defaultPermissions: 'disable', json: true });
+    expect(JSON.parse(stdout[0]).scope).toBe('no_default_allow');
+
+    stdout = [];
+    await run({ json: true });
+    expect(JSON.parse(stdout[0]).scope).toBe('standard');
+  });
+
+  it('rejects an unknown --default-permissions before creating anything', async () => {
+    await expect(run({ defaultPermissions: 'off' })).rejects.toThrow(
+      ExitSignal
+    );
+    expect(stderr.join('\n')).toContain(
+      'Invalid --default-permissions "off". Valid values are: enable, disable'
+    );
+    expect(createAccessKey).not.toHaveBeenCalled();
   });
 
   it('reports roles and the written file in JSON, and keeps the secret', async () => {

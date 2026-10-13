@@ -1,6 +1,10 @@
 import { createIAMClient, IAM_ENDPOINTS } from '../http-client';
 import type { TigrisIAMConfig, TigrisIAMResponse } from '../types';
-import type { AccessKey, IAMAccessKeysResponse } from './types';
+import {
+  type AccessKey,
+  fromWireScope,
+  type IAMAccessKeysResponse,
+} from './types';
 
 export type ListAccessKeysOptions = {
   limit?: number;
@@ -65,6 +69,7 @@ export async function listAccessKeys(
             bucket: role.bucket,
             role: role.role,
           })),
+          scope: fromWireScope(key.access_key_scope),
         })) ?? [],
     },
   };

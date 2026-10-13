@@ -23,7 +23,10 @@ import {
   printSuccess,
 } from '@utils/messages.js';
 import { getFormat, getOption } from '@utils/options.js';
-
+import {
+  describeDefaultPermissions,
+  getDefaultPermissions,
+} from './default-permissions.js';
 import {
   buildRoleAssignments,
   getRoleRequest,
@@ -65,6 +68,8 @@ export default async function create(options: Record<string, unknown>) {
     );
   }
 
+  const scope = getDefaultPermissions(context, options);
+
   const assignments = requestsRoles(request)
     ? buildRoleAssignments(context, request, ' (or use --admin)')
     : undefined;
@@ -90,6 +95,7 @@ export default async function create(options: Record<string, unknown>) {
   const { data, error } = await createAccessKey(name, {
     config,
     bucketsRole: assignments,
+    ...(scope ? { scope } : {}),
   });
 
   if (error) {
@@ -151,6 +157,7 @@ export default async function create(options: Record<string, unknown>) {
       secret: data.secret,
     };
     if (assignments) output.roles = assignments;
+    if (data.scope) output.scope = data.scope;
     if (writtenPath) output.env = writtenPath;
     if (gitignored !== undefined) output.gitignored = gitignored;
     if (envError) output.envError = envError.message;
@@ -170,6 +177,11 @@ export default async function create(options: Record<string, unknown>) {
     if (assignments) {
       console.log(
         `  Roles: ${assignments.map((a) => `${a.role} on ${a.bucket}`).join(', ')}`
+      );
+    }
+    if (data.scope) {
+      console.log(
+        `  Default permissions: ${describeDefaultPermissions(data.scope)}`
       );
     }
     if (!writtenPath) {
