@@ -280,6 +280,20 @@ describe('renewAuth0Session', () => {
     expect(client.getTokenSilently).toHaveBeenCalledTimes(1);
   });
 
+  it('reports an empty token result instead of dereferencing it', async () => {
+    // auth0-spa-js 2.25+ types getTokenSilently as possibly undefined (a
+    // cache-only miss). Neither mode used here can miss, so treat it as a
+    // broken contract rather than a session.
+    const client = fakeClient({
+      getTokenSilently: vi.fn(async () => undefined),
+    });
+    createAuth0Client.mockResolvedValue(client);
+
+    await expect(renewAuth0Session(options())).rejects.toThrow(
+      /Auth0 returned no token/
+    );
+  });
+
   it('never leaks the tenant audience or scope into the error', async () => {
     // What the user actually saw: the SDK's raw "Missing Refresh Token
     // (audience: ..., scope: ...)" plus tenant-config advice, straight to a
