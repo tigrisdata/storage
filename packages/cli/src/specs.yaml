@@ -1931,6 +1931,9 @@ commands:
             type: positional
             examples:
               - ./my-file.txt
+          - name: if-absent
+            description: Atomically create only if absent. Regular files up to 5 MiB only; stdin and multipart are unsupported
+            type: flag
           - name: access
             description: Access level
             alias: a
