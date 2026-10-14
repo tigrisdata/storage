@@ -7,6 +7,8 @@
 import { fs } from '../volume.js';
 
 export const {
+  constants,
+  fstatSync,
   existsSync,
   readFileSync,
   writeFileSync,
