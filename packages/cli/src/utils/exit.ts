@@ -57,11 +57,10 @@ export function exitWithError(
     }
   }
 
-  // Best-effort capture on the synchronous command path: the exit below halts
-  // immediately (callers rely on this `never` contract), so the event may not
-  // flush in time. Crashes are captured and flushed reliably by the global
-  // handlers in setupErrorHandlers(), which pass skipCapture to avoid a double
-  // report here.
+  // Capture is synchronous: the event is queued before the exit below, and
+  // the detached telemetry sender posts it after this process is gone.
+  // Crashes are captured by the global handlers in setupErrorHandlers(), which
+  // pass skipCapture to avoid a double report here.
   if (!opts?.skipCapture) {
     captureError(error, {
       category: classified.category,

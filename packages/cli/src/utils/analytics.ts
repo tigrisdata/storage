@@ -1,7 +1,3 @@
-import { request as httpRequest } from 'node:http';
-import { request as httpsRequest } from 'node:https';
-import { Worker } from 'node:worker_threads';
-
 import { version } from '../../package.json';
 import { POSTHOG_HOST, POSTHOG_KEY } from '../constants.js';
 import { classifyError, type ErrorCategory, ExitCode } from './errors.js';
@@ -13,6 +9,11 @@ import {
   markNoticeShown,
   shouldShowNotice,
 } from './telemetry-config.js';
+import {
+  queueTelemetry,
+  resetTelemetryQueueForTesting,
+  sendQueuedTelemetry,
+} from './telemetry-sender.js';
 
 /**
  * Usage analytics (PostHog) for the CLI.
@@ -52,18 +53,17 @@ import {
  *      is being tracked, so no call site needs to know about analytics.
  *   3. Ctrl-C — a SIGINT listener records `exit_code: 130` and re-raises.
  *
- * Why a worker thread: most exits are synchronous `never` calls, so the event
- * cannot be awaited the ordinary way, and an in-flight request on the main
- * thread dies with process.exit(). Instead a worker owns the HTTP request and
- * the main thread blocks (Atomics.wait) until the worker reports delivery or
- * the timeout passes. Blocking keeps the `never` contract intact — the caller
- * cannot run on — and the worker opens the connection to the ingest host when
- * the command *starts*, so by the end only one round trip remains.
+ * Most exits are synchronous `never` calls, and a request in flight dies with
+ * process.exit(), so the event is not sent from this process: it is handed to
+ * a detached sender child (telemetry-sender.ts) that posts it after the CLI
+ * has exited. The command pays for writing a temp file and a spawn, not for a
+ * round trip.
  *
  * Known gaps, all of which simply lose the one event:
- * - SIGKILL, a native crash, or a second Ctrl-C while the first is flushing.
- * - A runtime where the worker cannot start (it falls back to an unawaited
- *   request, which survives a natural exit but not a hard process.exit()).
+ * - SIGKILL, a native crash, or a second Ctrl-C before the first is handled.
+ * - A restricted environment where the sender child cannot start: the event is
+ *   posted in-process instead, which survives a natural exit but not a hard
+ *   process.exit().
  * - Exits in the same tick the command starts (local validation) are sent
  *   before the stored login has been read, so they carry the machine's
  *   anonymous id and `auth_method: 'unknown'`. PostHog still attributes them to
@@ -71,27 +71,6 @@ import {
  */
 
 const CAPTURE_PATH = '/i/v0/e/';
-
-/**
- * Upper bound on what analytics can cost a user, and deliberately tight.
- *
- * The main thread waits for delivery when the command ends, so this timeout is
- * the worst case a user pays when PostHog is *blackholed* — packets dropped
- * with no RST, as on some restrictive corporate networks. Measured round-trip
- * to the ingest host is ~200ms including the TLS handshake, which happens while
- * the command runs, so 1s leaves ample headroom for a slow connection while
- * capping the pathological case at something a person barely notices. Ordinary
- * offline failures (DNS failure, connection refused) error out immediately and
- * never reach the timeout.
- */
-const REQUEST_TIMEOUT_MS = 1000;
-
-/**
- * How long the main thread blocks for the worker: the request budget plus
- * headroom for a worker that had not finished booting when the command ended
- * (a local validation error exits within the same tick it starts).
- */
-const FLUSH_WAIT_MS = REQUEST_TIMEOUT_MS + 250;
 
 /** Exit code for a run ended by Ctrl-C, matching the shell convention. */
 const SIGINT_EXIT_CODE = 130;
@@ -270,60 +249,15 @@ function baseProperties(): Record<string, unknown> {
   };
 }
 
-/**
- * POST a single event from the main thread. Never rejects and never throws —
- * every outcome (success, network error, timeout, malformed host) resolves
- * quietly. Used for `$identify`, which is awaited by the login command, and as
- * the fallback when the sender worker cannot start.
- */
-function post(payload: string): Promise<void> {
-  return new Promise((resolve) => {
-    let settled = false;
-    const done = () => {
-      if (!settled) {
-        settled = true;
-        resolve();
-      }
-    };
-
-    try {
-      const url = new URL(CAPTURE_PATH, resolveHost());
-      // http support exists only so a local PostHog can be pointed at via
-      // TIGRIS_POSTHOG_HOST; the shipped default is always https.
-      const request = url.protocol === 'http:' ? httpRequest : httpsRequest;
-
-      const req = request(
-        {
-          protocol: url.protocol,
-          hostname: url.hostname,
-          port: url.port || undefined,
-          path: url.pathname,
-          method: 'POST',
-          timeout: REQUEST_TIMEOUT_MS,
-          headers: {
-            'content-type': 'application/json',
-            'content-length': Buffer.byteLength(payload),
-            'user-agent': `tigris-cli/${version}`,
-          },
-        },
-        (res) => {
-          // Drain so the socket can close, then settle regardless of status —
-          // there is nothing useful to do about a rejected event.
-          res.resume();
-          res.on('end', done);
-          res.on('error', done);
-        }
-      );
-
-      req.on('error', done);
-      req.on('timeout', () => {
-        req.destroy();
-        done();
-      });
-      req.end(payload);
-    } catch {
-      done();
-    }
+/** Queue one PostHog event for the detached sender. */
+function queueEvent(event: Record<string, unknown>): void {
+  queueTelemetry({
+    url: new URL(CAPTURE_PATH, resolveHost()).href,
+    headers: {
+      'content-type': 'application/json',
+      'user-agent': `tigris-cli/${version}`,
+    },
+    body: JSON.stringify(event),
   });
 }
 
@@ -364,154 +298,9 @@ function printTelemetryNoticeOnce(): void {
   markNoticeShown();
 }
 
-/**
- * The sender worker, as source so it bundles into both the npm build and the
- * single-file binary without a second entry point. Plain CommonJS on purpose:
- * eval workers are not module-resolved, and this needs nothing but Node core.
- *
- * It opens the connection as soon as it boots, then waits for the one event.
- * If that pre-opened connection has gone stale by the time the command ends
- * (a long `cp`, a server idle timeout), it retries once on a fresh connection
- * within the same budget. Whatever happens, it flips `flag` so the main thread
- * stops waiting, and it never prints.
- */
-const SENDER_SOURCE = `
-'use strict';
-const { parentPort, workerData } = require('node:worker_threads');
-const { url: target, timeoutMs, userAgent, flag } = workerData;
-const signalDone = () => {
-  Atomics.store(flag, 0, 1);
-  Atomics.notify(flag, 0);
-};
-try {
-  const url = new URL(target);
-  const secure = url.protocol === 'https:';
-  const lib = require(secure ? 'node:https' : 'node:http');
-  const port = Number(url.port) || (secure ? 443 : 80);
-
-  let warm = null;
-  try {
-    const socket = secure
-      ? require('node:tls').connect({
-          host: url.hostname,
-          port,
-          servername: url.hostname,
-          ALPNProtocols: ['http/1.1'],
-        })
-      : require('node:net').connect({ host: url.hostname, port });
-    const drop = () => {
-      if (warm === socket) warm = null;
-    };
-    socket.on('error', drop);
-    socket.on('close', drop);
-    warm = socket;
-  } catch {
-    warm = null;
-  }
-
-  const attempt = (payload, socket, deadline, callback) => {
-    const remaining = deadline - Date.now();
-    if (remaining <= 0) {
-      callback(false);
-      return;
-    }
-    let settled = false;
-    let req = null;
-    const finish = (ok) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      callback(ok);
-    };
-    const timer = setTimeout(() => {
-      if (req) req.destroy();
-      finish(false);
-    }, remaining);
-    try {
-      req = lib.request(
-        {
-          hostname: url.hostname,
-          port,
-          path: url.pathname,
-          method: 'POST',
-          ...(socket ? { createConnection: () => socket } : { agent: false }),
-          headers: {
-            'content-type': 'application/json',
-            'content-length': Buffer.byteLength(payload),
-            'user-agent': userAgent,
-          },
-        },
-        (res) => {
-          res.resume();
-          res.on('end', () => finish(true));
-          res.on('error', () => finish(false));
-        }
-      );
-      req.on('error', () => finish(false));
-      req.end(payload);
-    } catch {
-      finish(false);
-    }
-  };
-
-  parentPort.on('message', (payload) => {
-    const deadline = Date.now() + timeoutMs;
-    const socket = warm && !warm.destroyed ? warm : null;
-    warm = null;
-    attempt(payload, socket, deadline, (ok) => {
-      if (ok || !socket) {
-        signalDone();
-        return;
-      }
-      attempt(payload, null, deadline, signalDone);
-    });
-  });
-} catch {
-  parentPort.on('message', signalDone);
-}
-`;
-
-interface Sender {
-  /** Send one event, blocking until it is delivered or the budget runs out. */
-  deliver(payload: string): void;
-}
-
-/**
- * Boot the sender worker. Returns null when the runtime cannot start one; the
- * caller then falls back to an unawaited request on the main thread.
- */
-function startSender(): Sender | null {
-  try {
-    const flag = new Int32Array(new SharedArrayBuffer(4));
-    const worker = new Worker(SENDER_SOURCE, {
-      eval: true,
-      workerData: {
-        url: new URL(CAPTURE_PATH, resolveHost()).href,
-        timeoutMs: REQUEST_TIMEOUT_MS,
-        userAgent: `tigris-cli/${version}`,
-        flag,
-      },
-    });
-    // Never keep the CLI alive, and never surface a worker failure: the main
-    // thread's wait is bounded either way.
-    worker.unref();
-    worker.on('error', () => {});
-    return {
-      deliver(payload) {
-        Atomics.store(flag, 0, 0);
-        worker.postMessage(payload);
-        Atomics.wait(flag, 0, 0, FLUSH_WAIT_MS);
-      },
-    };
-  } catch {
-    return null;
-  }
-}
-
 interface TrackedCommand {
   path: string[];
   startedAt: number;
-  sender: Sender | null;
   /** Filled in asynchronously; absent if the command ends first. */
   identity?: Identity;
   error?: unknown;
@@ -685,7 +474,7 @@ function installExitHooks(): void {
 
 /**
  * Start tracking a command run: show the disclosure notice if it is owed, and
- * boot the sender so its connection opens while the command works. Called by
+ * hook the ways the run can end. Called by
  * the dispatcher as soon as it knows which command is running — before local
  * validation, so a rejected invocation is recorded too. The first call wins;
  * later calls for the same run are ignored.
@@ -702,7 +491,6 @@ export function trackCommand(commandPath: string[]): void {
     const state: TrackedCommand = {
       path: [...commandPath],
       startedAt: performance.now(),
-      sender: startSender(),
     };
     tracked = state;
     void resolveIdentity().then((identity) => {
@@ -733,10 +521,11 @@ export function recordCommandError(
 }
 
 /**
- * Send the tracked command's `cli_command` event with its outcome, blocking
- * until it is delivered or the timeout passes. Idempotent: only the first call
- * in a run sends. Called by the dispatcher when a command returns, and by the
- * process.exit and SIGINT hooks.
+ * Hand the tracked command's `cli_command` event, with its outcome, to the
+ * detached sender, along with anything else queued (a `$identify`, Sentry
+ * envelopes). Returns without waiting on the network. Idempotent: only the
+ * first call in a run sends. Called by the dispatcher when a command returns,
+ * and by the process.exit and SIGINT hooks.
  */
 export function finishCommand(code?: number | string | null): void {
   const state = tracked;
@@ -750,14 +539,8 @@ export function finishCommand(code?: number | string | null): void {
     sigintListener = null;
   }
   try {
-    const payload = JSON.stringify(
-      buildCommandEvent(state, normalizeExitCode(code))
-    );
-    if (state.sender) {
-      state.sender.deliver(payload);
-    } else {
-      void post(payload);
-    }
+    queueEvent(buildCommandEvent(state, normalizeExitCode(code)));
+    sendQueuedTelemetry();
   } catch {
     // Analytics must never affect the CLI.
   }
@@ -775,6 +558,7 @@ export function resetCommandTrackingForTesting(): void {
   }
   tracked = null;
   ended = false;
+  resetTelemetryQueueForTesting();
 }
 
 /**
@@ -797,28 +581,27 @@ export async function identifyOnLogin(): Promise<void> {
       return;
     }
 
-    await post(
-      JSON.stringify({
-        api_key: apiKey,
-        event: '$identify',
-        distinct_id: identity.distinctId,
-        properties: {
-          ...baseProperties(),
-          $anon_distinct_id: identity.anonymousId,
-          $set: {
-            email: identity.distinctId,
-            cli_version: version,
-            cli_install_method: getInstallMethod(),
-          },
-          // Only takes effect if the person has no first touch yet, e.g. one
-          // recorded by the console.
-          $set_once: firstTouchProperties(),
-          ...(identity.organizationId
-            ? { $groups: { company: identity.organizationId } }
-            : {}),
+    // Queued, not sent: it goes out with the login command's own event.
+    queueEvent({
+      api_key: apiKey,
+      event: '$identify',
+      distinct_id: identity.distinctId,
+      properties: {
+        ...baseProperties(),
+        $anon_distinct_id: identity.anonymousId,
+        $set: {
+          email: identity.distinctId,
+          cli_version: version,
+          cli_install_method: getInstallMethod(),
         },
-      })
-    );
+        // Only takes effect if the person has no first touch yet, e.g. one
+        // recorded by the console.
+        $set_once: firstTouchProperties(),
+        ...(identity.organizationId
+          ? { $groups: { company: identity.organizationId } }
+          : {}),
+      },
+    });
   } catch {
     // Analytics must never affect the CLI.
   }
