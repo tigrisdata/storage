@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { hostname, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -41,10 +41,10 @@ vi.mock('../../src/auth/storage.js', () => ({
 // Capture what would go over the wire instead of sending it.
 const { sentBodies, requestMock } = vi.hoisted(() => {
   const sentBodies: string[] = [];
-  const requestMock = (
-    _options: unknown,
-    callback?: (res: unknown) => void
-  ) => {
+  const requestMock = (...args: unknown[]) => {
+    const callback = args.find((a) => typeof a === 'function') as
+      | ((res: unknown) => void)
+      | undefined;
     const res = {
       resume: () => {},
       on: (event: string, handler: () => void) => {
@@ -70,37 +70,60 @@ const { sentBodies, requestMock } = vi.hoisted(() => {
 vi.mock('node:https', () => ({ request: requestMock }));
 vi.mock('node:http', () => ({ request: requestMock }));
 
-// The sender worker is the transport for cli_command. Stand in for it at the
-// thread boundary: take the payload it would POST and flip the shared flag the
-// way the real worker does once delivered, so the main thread's wait returns.
-const { workers } = vi.hoisted(() => ({
-  workers: { failToStart: false, started: 0, urls: [] as string[] },
-}));
-
-vi.mock('node:worker_threads', () => ({
-  Worker: class {
-    private readonly flag: Int32Array;
-    constructor(
-      _source: string,
-      options: { workerData: { flag: Int32Array; url: string } }
-    ) {
-      if (workers.failToStart) {
-        throw new Error('workers unavailable');
-      }
-      workers.started += 1;
-      workers.urls.push(options.workerData.url);
-      this.flag = options.workerData.flag;
-    }
-    unref() {}
-    on() {
-      return this;
-    }
-    postMessage(payload: string) {
-      sentBodies.push(payload);
-      Atomics.store(this.flag, 0, 1);
-    }
+// The detached sender child is the transport. Stand in for it at the spawn
+// boundary: read the payload file it would be handed, record each request it
+// would POST, and delete the file as the child does.
+const { spawns } = vi.hoisted(() => ({
+  spawns: {
+    fail: false,
+    calls: [] as Array<{
+      command: string;
+      args: string[];
+      options: Record<string, unknown>;
+      mode: number;
+      urls: string[];
+    }>,
   },
 }));
+
+vi.mock('node:child_process', async () => {
+  const fs = await import('node:fs');
+  return {
+    spawn: (
+      command: string,
+      args: string[],
+      options: Record<string, unknown>
+    ) => {
+      const file = args[args.length - 1];
+      const child = {
+        pid: 4242 as number | undefined,
+        on: () => child,
+        unref: () => {},
+      };
+      if (spawns.fail) {
+        child.pid = undefined;
+        return child;
+      }
+      const mode = fs.statSync(file).mode & 0o777;
+      const batch = JSON.parse(fs.readFileSync(file, 'utf8')) as Array<{
+        url: string;
+        body: string;
+      }>;
+      fs.unlinkSync(file);
+      spawns.calls.push({
+        command,
+        args,
+        options,
+        mode,
+        urls: batch.map((r) => r.url),
+      });
+      for (const request of batch) {
+        sentBodies.push(request.body);
+      }
+      return child;
+    },
+  };
+});
 
 const {
   decodeTokenEmail,
@@ -112,6 +135,9 @@ const {
   trackCommand,
   usedFlags,
 } = await import('../../src/utils/analytics.js');
+const { sendQueuedTelemetry, TELEMETRY_SEND_COMMAND } = await import(
+  '../../src/utils/telemetry-sender.js'
+);
 const { createProgram } = await import('../../src/cli-core.js');
 const { exitWithError } = await import('../../src/utils/exit.js');
 
@@ -131,6 +157,13 @@ const CI_VARS = [
   'TEAMCITY_VERSION',
   'TF_BUILD',
 ];
+
+/** Payload files currently in the temp dir. */
+function tigrisTempFiles(): string[] {
+  return readdirSync(tmpdir())
+    .filter((name) => name.startsWith('tigris-telemetry-'))
+    .sort();
+}
 
 /** Let the mocked request's setImmediate callbacks settle. */
 const flush = () => new Promise((resolve) => setTimeout(resolve, 20));
@@ -255,9 +288,8 @@ class ExitCalled extends Error {
 let exitStub: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
-  workers.failToStart = false;
-  workers.started = 0;
-  workers.urls.length = 0;
+  spawns.fail = false;
+  spawns.calls.length = 0;
   process.exitCode = undefined;
   exitStub = vi.spyOn(process, 'exit').mockImplementation((code) => {
     throw new ExitCalled(code);
@@ -342,28 +374,60 @@ describe('cli_command event', () => {
     });
   });
 
-  it('sends through the worker, pointed at the configured host', async () => {
+  it('hands the event to a detached sender child, pointed at the configured host', async () => {
     process.env.TIGRIS_POSTHOG_HOST = 'http://127.0.0.1:9';
+    process.argv = ['/usr/bin/node', '/opt/tigris/dist/cli.js', 'ls'];
     try {
       await capture(['ls']);
     } finally {
       delete process.env.TIGRIS_POSTHOG_HOST;
     }
-    expect(workers.started).toBe(1);
-    expect(workers.urls).toEqual(['http://127.0.0.1:9/i/v0/e/']);
+    expect(spawns.calls).toHaveLength(1);
+    const [call] = spawns.calls;
+    expect(call.command).toBe(process.execPath);
+    expect(call.args.slice(0, 2)).toEqual([
+      '/opt/tigris/dist/cli.js',
+      TELEMETRY_SEND_COMMAND,
+    ]);
+    // A private, uniquely named file in the temp dir.
+    const file = call.args[2];
+    expect(file.startsWith(tmpdir())).toBe(true);
+    expect(file).toMatch(/tigris-telemetry-\d+-[0-9a-f]{16}\.json$/);
+    expect(call.mode).toBe(0o600);
+    expect(call.options).toMatchObject({
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    expect(call.urls).toEqual(['http://127.0.0.1:9/i/v0/e/']);
   });
 
-  it('falls back to a main-thread request when no worker can start', async () => {
-    workers.failToStart = true;
+  it('launches the compiled binary as itself', async () => {
+    (globalThis as { __TIGRIS_BINARY?: boolean }).__TIGRIS_BINARY = true;
+    try {
+      await capture(['ls']);
+    } finally {
+      delete (globalThis as { __TIGRIS_BINARY?: boolean }).__TIGRIS_BINARY;
+    }
+    const [call] = spawns.calls;
+    expect(call.command).toBe(process.execPath);
+    expect(call.args[0]).toBe(TELEMETRY_SEND_COMMAND);
+  });
+
+  it('posts in-process and leaves no file behind when the child cannot start', async () => {
+    spawns.fail = true;
+    const before = tigrisTempFiles();
     await capture(['ls']);
     await flush();
     expect(lastEvent().properties.success).toBe(true);
+    expect(tigrisTempFiles()).toEqual(before);
   });
 
   it('sends once per run, however many paths try to end it', async () => {
     await capture(['ls']);
     finishCommand(1);
     expect(sentBodies).toHaveLength(1);
+    expect(spawns.calls).toHaveLength(1);
     expect(lastEvent().properties.exit_code).toBe(0);
   });
 
@@ -453,9 +517,11 @@ describe('cli_command event', () => {
     ['TIGRIS_ENV', 'development'],
   ])('sends nothing and hooks nothing when %s=%s', async (name, value) => {
     process.env[name] = value;
+    const before = tigrisTempFiles();
     await capture(['ls']);
     expect(sentBodies).toHaveLength(0);
-    expect(workers.started).toBe(0);
+    expect(spawns.calls).toHaveLength(0);
+    expect(tigrisTempFiles()).toEqual(before);
     expect(process.exit).toBe(exitStub);
   });
 
@@ -729,6 +795,9 @@ describe('identifyOnLogin', () => {
     identity.loginMethod = 'oauth';
 
     await identifyOnLogin();
+    // Queued, not sent: it rides along with the command's own event.
+    expect(sentBodies).toHaveLength(0);
+    sendQueuedTelemetry();
 
     expect(sentBodies).toHaveLength(1);
     const body = JSON.parse(sentBodies[0]);
@@ -749,6 +818,7 @@ describe('identifyOnLogin', () => {
     identity.loginMethod = 'oauth';
 
     await identifyOnLogin();
+    sendQueuedTelemetry();
 
     const { properties } = JSON.parse(sentBodies[0]);
     expect(properties.$set_once).toEqual({
@@ -760,6 +830,7 @@ describe('identifyOnLogin', () => {
 
   it('does nothing when there is no signed-in identity to link', async () => {
     await identifyOnLogin();
+    sendQueuedTelemetry();
     expect(sentBodies).toHaveLength(0);
   });
 });

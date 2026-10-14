@@ -5,21 +5,14 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { version } from '../package.json';
+import type { ImplementationChecker, ModuleLoader } from './cli-core.js';
 import {
-  createProgram,
-  type ImplementationChecker,
-  type ModuleLoader,
-  setupErrorHandlers,
-} from './cli-core.js';
-import { loadSpecs } from './utils/specs.js';
-import { checkForUpdates } from './utils/update-check.js';
-
-setupErrorHandlers();
+  runTelemetrySender,
+  TELEMETRY_SEND_COMMAND,
+} from './utils/telemetry-sender.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-const specs = loadSpecs();
 
 /**
  * Check if a command path has an implementation (filesystem-based)
@@ -56,12 +49,32 @@ const loadModule: ModuleLoader = async (pathParts) => {
   return { module: null, error: `Command not found: ${cmdDisplay}` };
 };
 
-const program = createProgram({
-  specs,
-  version,
-  loadModule,
-  hasImplementation,
-});
+async function main(): Promise<void> {
+  const [{ createProgram, setupErrorHandlers }, { loadSpecs }, updates] =
+    await Promise.all([
+      import('./cli-core.js'),
+      import('./utils/specs.js'),
+      import('./utils/update-check.js'),
+    ]);
 
-program.parse();
-checkForUpdates();
+  setupErrorHandlers();
+
+  const program = createProgram({
+    specs: loadSpecs(),
+    version,
+    loadModule,
+    hasImplementation,
+  });
+
+  program.parse();
+  updates.checkForUpdates();
+}
+
+// Internal: the detached telemetry sender (see utils/telemetry-sender.ts).
+// Checked before the CLI itself is loaded, so the sender starts quickly and
+// never initializes telemetry of its own.
+if (process.argv[2] === TELEMETRY_SEND_COMMAND) {
+  void runTelemetrySender(process.argv[3]).finally(() => process.exit(0));
+} else {
+  void main();
+}

@@ -15,13 +15,11 @@ import {
 import { commandRegistry } from './command-registry.js';
 import { loadSpecs } from './specs-embedded.js';
 import { setSpecs } from './utils/specs.js';
+import {
+  runTelemetrySender,
+  TELEMETRY_SEND_COMMAND,
+} from './utils/telemetry-sender.js';
 import { checkForUpdates } from './utils/update-check.js';
-
-// Pre-populate the shared specs cache so command modules work without filesystem access
-const specs = loadSpecs();
-setSpecs(specs);
-
-setupErrorHandlers();
 
 /**
  * Check if a command has an implementation (registry-based)
@@ -45,12 +43,24 @@ const loadModule: ModuleLoader = async (commandPath) => {
   return { module: null, error: `Command not found: ${commandPath.join(' ')}` };
 };
 
-const program = createProgram({
-  specs,
-  version,
-  loadModule,
-  hasImplementation,
-});
+// Internal: the detached telemetry sender (see utils/telemetry-sender.ts).
+// Handled before anything else so it never initializes telemetry itself.
+if (process.argv[2] === TELEMETRY_SEND_COMMAND) {
+  void runTelemetrySender(process.argv[3]).finally(() => process.exit(0));
+} else {
+  // Pre-populate the shared specs cache so command modules work without filesystem access
+  const specs = loadSpecs();
+  setSpecs(specs);
 
-program.parse();
-checkForUpdates();
+  setupErrorHandlers();
+
+  const program = createProgram({
+    specs,
+    version,
+    loadModule,
+    hasImplementation,
+  });
+
+  program.parse();
+  checkForUpdates();
+}

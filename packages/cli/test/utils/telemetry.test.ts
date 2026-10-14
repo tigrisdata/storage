@@ -19,6 +19,11 @@ describe('selectIntegrations', () => {
     'LocalVariablesAsync',
     'Console',
     'ChildProcess',
+    // Not user data, but they delay exit or make capture asynchronous, which
+    // the detached sender depends on not happening.
+    'ProcessSession',
+    'Context',
+    'ContextLines',
   ];
 
   it('still finds every guarded integration among the defaults', () => {
