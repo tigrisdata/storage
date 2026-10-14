@@ -1,4 +1,5 @@
 import type { NextAction } from '../types.js';
+import { recordCommandError } from './analytics.js';
 import { classifyError } from './errors.js';
 import type { MessageContext, MessageVariables } from './messages.js';
 import { interpolate, printFailure } from './messages.js';
@@ -68,6 +69,10 @@ export function exitWithError(
       exitCode: classified.exitCode,
     });
   }
+
+  // Attach the outcome to the command's analytics event, which the
+  // process.exit() hook sends before the process ends.
+  recordCommandError(error);
 
   process.exit(classified.exitCode);
 }

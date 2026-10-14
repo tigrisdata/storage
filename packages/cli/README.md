@@ -1975,6 +1975,21 @@ tigris telemetry enable
 `TIGRIS_NO_TELEMETRY=1` or `DO_NOT_TRACK=1` also disable it and take precedence
 over the stored setting. Telemetry is off in development builds and test runs.
 
+Usage analytics send one `cli_command` event per command, when it finishes.
+Besides the command, its scrubbed arguments, flag names, CLI and OS versions,
+install method and auth method, each event records the outcome:
+
+| Property | Meaning |
+|----------|---------|
+| `success` | `true` when the command exited 0 |
+| `exit_code` | The process exit code (`130` for Ctrl-C) |
+| `duration_ms` | Time from dispatch to exit |
+| `error_category` | On failure: `auth`, `permission`, `not_found`, `rate_limit`, `network`, `general`, `usage` (rejected before any work, e.g. an unknown flag) or `interrupted` |
+| `error_code` | On failure, when the error carries one: a short machine code such as an S3 error name or `commander.unknownOption`. Never the error message |
+
+The first event or login from a machine also records, once per person,
+`first_interface: cli`, `first_cli_install_method` and `first_cli_version`.
+
 ## License
 
 MIT

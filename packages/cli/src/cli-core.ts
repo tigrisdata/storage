@@ -2,7 +2,11 @@
  * Shared CLI core functionality used by both cli.ts (npm) and cli-binary.ts (binary)
  */
 
-import { trackCommand } from '@utils/analytics.js';
+import {
+  finishCommand,
+  recordCommandError,
+  trackCommand,
+} from '@utils/analytics.js';
 import { classifyError } from '@utils/errors.js';
 import { exitWithError } from '@utils/exit.js';
 import { printDeprecated } from '@utils/messages.js';
@@ -22,6 +26,21 @@ import {
   setHelpDetails,
 } from './help.js';
 import type { Argument, CommandSpec, Specs } from './types.js';
+
+/**
+ * Analytics `command` for an invocation that names no real command (`tigris
+ * frobnicate`, `tigris --bogus`). A fixed placeholder, never the raw input.
+ */
+const UNKNOWN_COMMAND_PATH = ['(unknown)'];
+
+/**
+ * Record a local-validation failure against `commandPath` for analytics. The
+ * process.exit() that follows is what sends the event.
+ */
+function trackUsageError(commandPath: string[], code: string): void {
+  trackCommand(commandPath.length > 0 ? commandPath : UNKNOWN_COMMAND_PATH);
+  recordCommandError(undefined, { code, category: 'usage' });
+}
 
 /**
  * Check if the first positional arg is an unrecognized subcommand.
@@ -71,6 +90,7 @@ function checkUnknownSubcommand(
         ? `${specs.name} ${currentPath.join(' ')} help`
         : `${specs.name} help`;
     console.error(`\nRun "${helpCmd}" for usage.`);
+    trackUsageError(currentPath, 'unknown_command');
     process.exit(1);
   }
 
@@ -122,6 +142,10 @@ export function setupErrorHandlers() {
   };
 
   const exitCancelled = () => {
+    recordCommandError(undefined, {
+      code: 'prompt_cancelled',
+      category: 'interrupted',
+    });
     console.error('\nOperation cancelled');
     process.exit(1);
   };
@@ -217,6 +241,10 @@ function checkRemovedArguments(
     if (!arg.removed) continue;
     const value = getOptionValue(options, arg.name, args);
     if (value !== undefined) {
+      recordCommandError(undefined, {
+        code: 'removed_argument',
+        category: 'usage',
+      });
       printRemovedAndExit(`--${arg.name}`, arg.replaced_by);
     }
   }
@@ -444,6 +472,7 @@ async function loadAndExecuteCommand(
 
   if (loadError || !module) {
     console.error(loadError);
+    recordCommandError(undefined, { code: 'command_load_failed' });
     process.exit(1);
   }
 
@@ -452,16 +481,17 @@ async function loadAndExecuteCommand(
 
   if (typeof commandFunction !== 'function') {
     console.error(`Command not implemented: ${pathParts.join(' ')}`);
+    recordCommandError(undefined, { code: 'command_not_implemented' });
     process.exit(1);
   }
 
-  // Usage analytics, recorded at the start of the command so the request
-  // overlaps the command's own work and survives the synchronous exits that
-  // most commands take. Never awaited: it must add neither latency nor a
-  // failure mode to the command path.
-  trackCommand(pathParts);
-
   await commandFunction({ ...options, _positional: positionalArgs });
+
+  // The command returned rather than exiting. Send its analytics event with
+  // the outcome; a command that printed its output and then flagged failure
+  // set process.exitCode. Throws and process.exit() are recorded by the hooks
+  // in utils/analytics.ts instead, so this line is not their only chance.
+  finishCommand(process.exitCode);
 }
 
 /**
@@ -498,6 +528,16 @@ export function registerCommands(
     if (spec.group) {
       cmd.helpGroup(groupHeading(spec.group));
     }
+    // commander is about to process.exit() for a usage error it caught while
+    // parsing (unknown option, missing argument). Record it against this
+    // command; returning lets commander exit as usual. Help and --version exit
+    // 0 and are not command runs.
+    cmd.exitOverride((error) => {
+      if (error.exitCode !== 0) {
+        trackCommand(currentPath);
+        recordCommandError(error, { category: 'usage' });
+      }
+    });
     setHelpDetails(cmd, {
       examples: spec.examples,
       groups: spec.groups,
@@ -517,6 +557,7 @@ export function registerCommands(
       cmd.allowUnknownOption(true);
       cmd.allowExcessArguments(true);
       cmd.action(() => {
+        trackUsageError(currentPath, 'removed_command');
         printRemovedAndExit(
           `${specs.name} ${currentPath.join(' ')}`,
           spec.replaced_by
@@ -549,6 +590,9 @@ export function registerCommands(
               hasImplementation
             );
 
+            // Tracked before validation so a rejected invocation counts.
+            trackCommand([...currentPath, defaultCmd.name]);
+
             const extracted = extractArgumentValues(
               allArguments,
               positionalArgs,
@@ -562,6 +606,10 @@ export function registerCommands(
               // validateRequiredWhen has already printed the reason. Exit
               // non-zero so scripts can tell a rejected invocation from a
               // successful one — returning here reported success.
+              recordCommandError(undefined, {
+                code: 'missing_required_argument',
+                category: 'usage',
+              });
               process.exit(1);
             }
 
@@ -601,6 +649,9 @@ export function registerCommands(
       );
 
       cmd.action(async (...args) => {
+        // Tracked before validation so a rejected invocation counts.
+        trackCommand(currentPath);
+
         const options = args.pop();
         const positionalArgs = args;
 
@@ -616,6 +667,10 @@ export function registerCommands(
         ) {
           // See the matching branch above: exit non-zero rather than
           // returning, so a rejected invocation is visible to callers.
+          recordCommandError(undefined, {
+            code: 'missing_required_argument',
+            category: 'usage',
+          });
           process.exit(1);
         }
 
@@ -655,7 +710,13 @@ export function createProgram(config: CLIConfig): CommanderCommand {
     .version(version, '-V, --version', 'Show the CLI version')
     // Set before registerCommands(): subcommands inherit both settings.
     .helpOption('-h, --help', 'Show help')
-    .configureHelp(helpConfiguration);
+    .configureHelp(helpConfiguration)
+    // A usage error at the root (`tigris --bogus`); see registerCommands.
+    .exitOverride((error) => {
+      if (error.exitCode !== 0) {
+        trackUsageError([], error.code);
+      }
+    });
 
   registerCommands(config, program, specs.commands);
 
