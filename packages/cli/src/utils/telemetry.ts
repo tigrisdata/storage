@@ -1,9 +1,11 @@
+import { release } from 'node:os';
 import * as Sentry from '@sentry/node';
 import { version } from '../../package.json';
 import { SENTRY_DSN } from '../constants.js';
 import type { ErrorCategory } from './errors.js';
 import { redactSecrets, scrubArgv } from './redact.js';
 import { isTelemetryDisabled } from './telemetry-config.js';
+import { queueTelemetry } from './telemetry-sender.js';
 
 /**
  * Error telemetry (Sentry) for the CLI.
@@ -51,20 +53,71 @@ export function invocationCommand(argv: string[]): string | undefined {
   return first && !first.startsWith('-') ? first : undefined;
 }
 
-// Sentry default integrations we deliberately drop:
-// - OnUncaughtException / OnUnhandledRejection: we own process exit ourselves.
-// - LocalVariables(Async): captures local variable values (e.g. credentials)
-//   into stack frames, which beforeSend does not scrub.
-// - Console / ChildProcess: record breadcrumbs that can carry user data
-//   (printed output, spawned command lines).
-const DISABLED_INTEGRATIONS: ReadonlySet<string> = new Set([
-  'OnUncaughtException',
-  'OnUnhandledRejection',
-  'LocalVariables',
-  'LocalVariablesAsync',
-  'Console',
-  'ChildProcess',
-]);
+/**
+ * The Sentry integrations the CLI uses, listed explicitly rather than filtered
+ * from the defaults: building the default list constructs every integration,
+ * which cost each command ~10ms even for the ones then dropped. The defaults
+ * left out, and why:
+ * - OnUncaughtException / OnUnhandledRejection: we own process exit ourselves.
+ * - LocalVariables: captures local variable values (e.g. credentials) into
+ *   stack frames, which beforeSend does not scrub.
+ * - Console / ChildProcess: record breadcrumbs that can carry user data
+ *   (printed output, spawned command lines).
+ * - ProcessSession: sends a release-health session from a 'beforeExit'
+ *   listener, which held every naturally exiting command open for a TLS round
+ *   trip (~300ms) and never ran on process.exit() anyway.
+ * - Context / ContextLines: gather OS details and source lines asynchronously,
+ *   so an error captured right before process.exit() was still being
+ *   processed when the process ended. Without them capture is synchronous; the
+ *   OS release is set below instead, and source lines of the minified bundle
+ *   say little.
+ * - RequestData / ConversationId: describe server requests and AI SDK calls,
+ *   neither of which a CLI run has.
+ */
+function cliIntegrations() {
+  return [
+    Sentry.eventFiltersIntegration(),
+    Sentry.functionToStringIntegration(),
+    Sentry.linkedErrorsIntegration(),
+    Sentry.systemErrorIntegration(),
+    Sentry.httpIntegration(),
+    Sentry.nativeNodeFetchIntegration(),
+    Sentry.modulesIntegration(),
+  ];
+}
+
+type TransportOptions = Parameters<typeof Sentry.makeNodeTransport>[0];
+
+/**
+ * A transport that never touches the network: each envelope is queued for the
+ * detached sender (telemetry-sender.ts), which posts it to the DSN's envelope
+ * endpoint after the CLI exits. Events reach it already scrubbed by
+ * beforeSend.
+ */
+export function makeQueuedTransport(
+  options: TransportOptions
+): ReturnType<typeof Sentry.makeNodeTransport> {
+  const endpoint = new URL(options.url);
+  // The SDK puts auth in the query string; send it as the header instead.
+  const key = endpoint.searchParams.get('sentry_key') ?? '';
+  endpoint.search = '';
+  const headers = {
+    'content-type': 'application/x-sentry-envelope',
+    'user-agent': `tigris-cli/${version}`,
+    'x-sentry-auth': `Sentry sentry_version=7, sentry_key=${key}, sentry_client=tigris-cli/${version}`,
+  };
+  return Sentry.createTransport(options, (request) => {
+    queueTelemetry({
+      url: endpoint.href,
+      headers,
+      body:
+        typeof request.body === 'string'
+          ? request.body
+          : Buffer.from(request.body).toString('utf8'),
+    });
+    return Promise.resolve({});
+  });
+}
 
 /**
  * Recursively redact every string value in a value tree. Sentry events are
@@ -122,12 +175,19 @@ export function initTelemetry(): void {
       // Error reporting only — no performance tracing.
       tracesSampleRate: 0,
       sendDefaultPii: false,
-      // Drop integrations that either fight our exit handling or capture user
-      // data we don't scrub (local variables, console/child-process
-      // breadcrumbs). See DISABLED_INTEGRATIONS.
-      integrations: (defaults) =>
-        defaults.filter((i) => !DISABLED_INTEGRATIONS.has(i.name)),
+      // Only integrations that neither fight our exit handling nor capture
+      // user data we don't scrub. See cliIntegrations.
+      defaultIntegrations: false,
+      integrations: cliIntegrations(),
       beforeSend,
+      // Delivered by the detached sender; see makeQueuedTransport.
+      transport: makeQueuedTransport,
+      // Client reports would add an envelope to otherwise clean runs.
+      sendClientReports: false,
+      // The ESM loader hooks exist for tracing third-party ESM packages, which
+      // this CLI does not do; registering them starts a loader thread that
+      // cost every command ~17ms.
+      registerEsmLoaderHooks: false,
     });
 
     Sentry.setContext('cli', {
@@ -135,6 +195,7 @@ export function initTelemetry(): void {
       node: process.version,
       platform: process.platform,
       arch: process.arch,
+      os_release: release(),
     });
     // The full command with credentials and PII (access keys, tokens, emails,
     // names) redacted. Kept for debugging; identifies the command on the crash
@@ -198,11 +259,11 @@ export function captureError(
 }
 
 /**
- * Flush any queued events (best effort, bounded). Awaitable, and a no-op when
- * telemetry is disabled. Used by the global crash handlers, which run at the top
- * of the stack and can afford to await before exiting. The synchronous command
- * path cannot await (exitWithError must halt immediately), so handled errors are
- * captured best-effort and may not flush before exit.
+ * Wait for captured events to finish processing into the sender queue
+ * (bounded; no network I/O happens here). Awaitable, and a no-op when telemetry
+ * is disabled. Used by the global crash handlers before they exit. Handled
+ * errors on the synchronous exitWithError path do not need it: capture is
+ * synchronous, so the envelope is queued before process.exit() runs.
  */
 export async function flushTelemetry(timeoutMs = 2000): Promise<void> {
   if (!enabled) {

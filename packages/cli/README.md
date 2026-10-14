@@ -1988,6 +1988,11 @@ install method and auth method, each event records the outcome:
 The first event or login from a machine also records, once per person,
 `first_interface: cli`, `first_cli_install_method` and `first_cli_version`.
 
+Commands never wait on telemetry: events and error reports are written to a
+private temp file and sent by a short-lived background copy of the CLI after
+the command exits (`tigris __telemetry-send` is that internal step, not a
+command to run yourself).
+
 ## License
 
 MIT
