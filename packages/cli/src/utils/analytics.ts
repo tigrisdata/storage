@@ -306,6 +306,8 @@ interface TrackedCommand {
   error?: unknown;
   errorCode?: string;
   errorCategory?: AnalyticsErrorCategory;
+  /** Ctrl-C was seen while a command with its own handler was running. */
+  interrupted?: boolean;
 }
 
 let tracked: TrackedCommand | null = null;
@@ -369,7 +371,7 @@ function failureProperties(
   let category: AnalyticsErrorCategory;
   if (state.errorCategory) {
     category = state.errorCategory;
-  } else if (exitCode === SIGINT_EXIT_CODE) {
+  } else if (exitCode === SIGINT_EXIT_CODE || state.interrupted) {
     category = 'interrupted';
   } else if (state.error !== undefined) {
     category = classifyError(state.error).category;
@@ -457,6 +459,11 @@ function installExitHooks(): void {
     // gracefully on the first one) owns the outcome; when it exits, the
     // process.exit hook above records it.
     if (process.listenerCount('SIGINT') > 1) {
+      // Remember it so the outcome reads `interrupted` rather than whatever
+      // exit code the command's own handler chooses.
+      if (tracked) {
+        tracked.interrupted = true;
+      }
       return;
     }
     finishCommand(SIGINT_EXIT_CODE);
