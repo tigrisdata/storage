@@ -785,6 +785,23 @@ describe('Ctrl-C', () => {
       process.removeListener('SIGINT', own);
     }
   });
+
+  it('reports interrupted when a self-handling command then exits non-zero', () => {
+    vi.spyOn(process, 'kill').mockImplementation(() => true);
+    const own = () => {};
+    trackCommand(['buckets', 'migrate']);
+    process.on('SIGINT', own);
+    try {
+      process.emit('SIGINT');
+      finishCommand(1);
+      const { properties } = lastEvent();
+      expect(properties.success).toBe(false);
+      expect(properties.exit_code).toBe(1);
+      expect(properties.error_category).toBe('interrupted');
+    } finally {
+      process.removeListener('SIGINT', own);
+    }
+  });
 });
 
 describe('identifyOnLogin', () => {
