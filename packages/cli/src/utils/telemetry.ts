@@ -1,4 +1,4 @@
-import * as Sentry from '@sentry/node';
+import type { ErrorEvent, NodeOptions } from '@sentry/node';
 import { version } from '../../package.json';
 import { SENTRY_DSN } from '../constants.js';
 import type { ErrorCategory } from './errors.js';
@@ -17,15 +17,35 @@ import { isTelemetryDisabled } from './telemetry-config.js';
  * dev/test and whenever the user opts out (the shared gate lives in
  * telemetry-config.ts and covers usage analytics too). It must never change the
  * CLI's behavior or throw into the command path.
+ *
+ * The SDK is loaded only when telemetry is on, and asynchronously: a user who
+ * opted out never loads it, and a runtime the SDK refuses to run on (it wants
+ * Node 20.19 or later) gets a CLI without error reporting rather than no CLI.
  */
+
+type SentryModule = typeof import('@sentry/node');
 
 // Categories worth reporting for a handled (failWithError) exit. Crashes are
 // always reported regardless of category.
 const REPORTABLE_CATEGORIES: ReadonlySet<ErrorCategory> =
   new Set<ErrorCategory>(['general', 'network']);
 
+/**
+ * off: never requested (no DSN, opted out, or not initialized yet).
+ * loading: the SDK import is in flight; reports queue up meanwhile.
+ * on: configured and reporting. failed: the SDK could not load or start.
+ */
+type State = 'off' | 'loading' | 'on' | 'failed';
+
 let initialized = false;
-let enabled = false;
+let state: State = 'off';
+/** The SDK once configured; only set while `state` is `on`. */
+let sentry: SentryModule | undefined;
+/** Settles once the SDK is configured or has failed; awaited by flush. */
+let loading: Promise<void> | undefined;
+/** Reports made while the SDK was loading, replayed once it is up. */
+const pending: Array<(sdk: SentryModule) => void> = [];
+const MAX_PENDING = 20;
 
 /**
  * DSN resolution: explicit env override (staging / self-hosted) wins, otherwise
@@ -57,7 +77,7 @@ export function invocationCommand(argv: string[]): string | undefined {
 //   into stack frames, which beforeSend does not scrub.
 // - Console / ChildProcess: record breadcrumbs that can carry user data
 //   (printed output, spawned command lines).
-const DISABLED_INTEGRATIONS: ReadonlySet<string> = new Set([
+export const DISABLED_INTEGRATIONS: ReadonlySet<string> = new Set([
   'OnUncaughtException',
   'OnUnhandledRejection',
   'LocalVariables',
@@ -65,6 +85,33 @@ const DISABLED_INTEGRATIONS: ReadonlySet<string> = new Set([
   'Console',
   'ChildProcess',
 ]);
+
+/** The SDK's default integrations minus DISABLED_INTEGRATIONS. */
+export function selectIntegrations<T extends { name: string }>(
+  defaults: T[]
+): T[] {
+  return defaults.filter((i) => !DISABLED_INTEGRATIONS.has(i.name));
+}
+
+/**
+ * What the SDK may collect on its own. Since Sentry 11 it gathers user info,
+ * HTTP headers and bodies, query strings and stack-frame locals unless told
+ * otherwise; none of that belongs in a CLI crash report, and beforeSend was
+ * never written to scrub it. This keeps collection where `sendDefaultPii:
+ * false` had it, minus locals, which we drop the integration for anyway.
+ */
+export const DATA_COLLECTION = {
+  userInfo: false,
+  cookies: false,
+  httpHeaders: false,
+  httpBodies: [],
+  urlQueryParams: false,
+  graphQL: { document: false, variables: false },
+  genAI: { inputs: false, outputs: false },
+  databaseQueryData: false,
+  queues: false,
+  stackFrameVariables: false,
+} satisfies NonNullable<NodeOptions['dataCollection']>;
 
 /**
  * Recursively redact every string value in a value tree. Sentry events are
@@ -94,14 +141,16 @@ function deepRedact(value: unknown): unknown {
  * just exception values and messages but also structured breadcrumb `data`
  * (e.g. request URLs) and any other field a default integration may attach.
  */
-export function beforeSend(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
+export function beforeSend(event: ErrorEvent): ErrorEvent {
   event.server_name = undefined;
-  return deepRedact(event) as Sentry.ErrorEvent;
+  return deepRedact(event) as ErrorEvent;
 }
 
 /**
  * Initialize telemetry. Idempotent, and a no-op when disabled or unconfigured.
- * Called once from setupErrorHandlers() before the program runs.
+ * Called once from setupErrorHandlers() before the program runs. Returns at
+ * once; the SDK finishes loading in the background and reports made in the
+ * meantime are replayed.
  */
 export function initTelemetry(): void {
   if (initialized) {
@@ -114,51 +163,62 @@ export function initTelemetry(): void {
     return;
   }
 
-  try {
-    Sentry.init({
-      dsn,
-      release: `@tigrisdata/cli@${version}`,
-      environment,
-      // Error reporting only — no performance tracing.
-      tracesSampleRate: 0,
-      sendDefaultPii: false,
-      // Drop integrations that either fight our exit handling or capture user
-      // data we don't scrub (local variables, console/child-process
-      // breadcrumbs). See DISABLED_INTEGRATIONS.
-      integrations: (defaults) =>
-        defaults.filter((i) => !DISABLED_INTEGRATIONS.has(i.name)),
-      beforeSend,
+  state = 'loading';
+  loading = import('@sentry/node')
+    .then((sdk) => configure(sdk, dsn))
+    .catch(() => {
+      // Never let telemetry setup break the CLI.
+      state = 'failed';
+      pending.length = 0;
     });
+}
 
-    Sentry.setContext('cli', {
-      version,
-      node: process.version,
-      platform: process.platform,
-      arch: process.arch,
-    });
-    // The full command with credentials and PII (access keys, tokens, emails,
-    // names) redacted. Kept for debugging; identifies the command on the crash
-    // path too, where there is no MessageContext.
-    const argv = process.argv.slice(2);
-    Sentry.setContext('invocation', {
-      command: scrubArgv(argv).join(' '),
-    });
-    // Searchable tag for the top-level command (a fixed CLI keyword, not data).
-    const command = invocationCommand(argv);
-    if (command) {
-      Sentry.setTag('command', command);
-    }
+function configure(sdk: SentryModule, dsn: string): void {
+  sdk.init({
+    dsn,
+    release: `@tigrisdata/cli@${version}`,
+    environment,
+    // Error reporting only — no performance tracing.
+    tracesSampleRate: 0,
+    dataCollection: DATA_COLLECTION,
+    // Drop integrations that either fight our exit handling or capture user
+    // data we don't scrub (local variables, console/child-process
+    // breadcrumbs). See DISABLED_INTEGRATIONS.
+    integrations: selectIntegrations,
+    beforeSend,
+  });
 
-    enabled = true;
-  } catch {
-    // Never let telemetry setup break the CLI.
-    enabled = false;
+  sdk.setContext('cli', {
+    version,
+    node: process.version,
+    platform: process.platform,
+    arch: process.arch,
+  });
+  // The full command with credentials and PII (access keys, tokens, emails,
+  // names) redacted. Kept for debugging; identifies the command on the crash
+  // path too, where there is no MessageContext.
+  const argv = process.argv.slice(2);
+  sdk.setContext('invocation', {
+    command: scrubArgv(argv).join(' '),
+  });
+  // Searchable tag for the top-level command (a fixed CLI keyword, not data).
+  const command = invocationCommand(argv);
+  if (command) {
+    sdk.setTag('command', command);
+  }
+
+  sentry = sdk;
+  state = 'on';
+  for (const report of pending.splice(0)) {
+    report(sdk);
   }
 }
 
 /**
  * Report an error. Crashes are always reported; handled exits are reported only
- * for the categories we care about. No-op when telemetry is disabled.
+ * for the categories we care about. No-op when telemetry is disabled. While the
+ * SDK is still loading the report is queued (bounded) and sent once it is up —
+ * best effort, like every report on the synchronous exit path.
  */
 export function captureError(
   error: unknown,
@@ -169,7 +229,7 @@ export function captureError(
     exitCode?: number;
   } = {}
 ): void {
-  if (!enabled) {
+  if (state === 'off' || state === 'failed') {
     return;
   }
 
@@ -178,22 +238,30 @@ export function captureError(
     return;
   }
 
-  try {
-    Sentry.captureException(error, (scope) => {
-      scope.setTag('crash', crash === true);
-      if (category) {
-        scope.setTag('error.category', category);
-      }
-      if (command) {
-        scope.setTag('command', command);
-      }
-      if (exitCode !== undefined) {
-        scope.setTag('exit_code', exitCode);
-      }
-      return scope;
-    });
-  } catch {
-    // Telemetry must never break the CLI.
+  const report = (sdk: SentryModule) => {
+    try {
+      sdk.captureException(error, (scope) => {
+        scope.setTag('crash', crash === true);
+        if (category) {
+          scope.setTag('error.category', category);
+        }
+        if (command) {
+          scope.setTag('command', command);
+        }
+        if (exitCode !== undefined) {
+          scope.setTag('exit_code', exitCode);
+        }
+        return scope;
+      });
+    } catch {
+      // Telemetry must never break the CLI.
+    }
+  };
+
+  if (sentry) {
+    report(sentry);
+  } else if (pending.length < MAX_PENDING) {
+    pending.push(report);
   }
 }
 
@@ -205,11 +273,14 @@ export function captureError(
  * captured best-effort and may not flush before exit.
  */
 export async function flushTelemetry(timeoutMs = 2000): Promise<void> {
-  if (!enabled) {
+  if (state === 'off' || state === 'failed') {
     return;
   }
   try {
-    await Sentry.flush(timeoutMs);
+    await loading;
+    if (sentry) {
+      await sentry.flush(timeoutMs);
+    }
   } catch {
     // Never let telemetry break the CLI.
   }
