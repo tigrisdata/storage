@@ -4,6 +4,8 @@ Command line interface for Tigris object storage.
 
 ## Installation
 
+Requires Node.js 20.19 or later.
+
 ```bash
 npm install -g @tigrisdata/cli
 ```

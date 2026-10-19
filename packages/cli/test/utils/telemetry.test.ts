@@ -1,11 +1,48 @@
+import { getDefaultIntegrations } from '@sentry/node';
 import { describe, expect, it } from 'vitest';
 
 import {
   beforeSend,
+  DISABLED_INTEGRATIONS,
   invocationCommand,
   redactSecrets,
   scrubArgv,
+  selectIntegrations,
 } from '../../src/utils/telemetry.js';
+
+describe('selectIntegrations', () => {
+  // The filter works by name, so a rename upstream would silently stop
+  // dropping an integration. Pin the ones that carry user data.
+  const guarded = [
+    'OnUncaughtException',
+    'OnUnhandledRejection',
+    'LocalVariablesAsync',
+    'Console',
+    'ChildProcess',
+  ];
+
+  it('still finds every guarded integration among the defaults', () => {
+    const names = getDefaultIntegrations({}).map((i) => i.name);
+    for (const name of guarded) {
+      expect(
+        names,
+        `${name} is no longer a default integration name`
+      ).toContain(name);
+    }
+  });
+
+  it('drops them and keeps the rest', () => {
+    const defaults = getDefaultIntegrations({});
+    const kept = selectIntegrations(defaults).map((i) => i.name);
+    for (const name of DISABLED_INTEGRATIONS) {
+      expect(kept).not.toContain(name);
+    }
+    expect(kept.length).toBe(
+      defaults.filter((i) => !DISABLED_INTEGRATIONS.has(i.name)).length
+    );
+    expect(kept).toContain('LinkedErrors');
+  });
+});
 
 describe('redactSecrets', () => {
   it('redacts a JWT mid-string without injecting the match offset', () => {
