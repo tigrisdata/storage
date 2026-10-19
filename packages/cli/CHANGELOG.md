@@ -1,5 +1,11 @@
 # @tigrisdata/cli
 
+## 3.17.1
+
+### Patch Changes
+
+- [#378](https://github.com/tigrisdata/storage/pull/378) [`0baa6a6`](https://github.com/tigrisdata/storage/commit/0baa6a62dca246835d0d459ed496aac6b1e45bd6) Thanks [@renovate](https://github.com/apps/renovate)! - Error reporting moves to Sentry 11 with data collection kept exactly as restricted as before: no user info, headers, bodies, query strings or stack-frame locals, and the same redaction of everything that is sent. The reporter is now loaded only when telemetry is on, and in the background, so an opted-out install never loads it and a runtime it does not support gets a CLI without error reporting rather than a crash on startup. The CLI now declares Node.js 20.19 or later as its minimum.
+
 ## 3.17.0
 
 ### Minor Changes
