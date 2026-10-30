@@ -40,6 +40,7 @@ vi.mock('node:child_process', async () => {
 
 const {
   PAYLOAD_FILE_PREFIX,
+  post,
   queueTelemetry,
   resetTelemetryQueueForTesting,
   runTelemetrySender,
@@ -53,6 +54,15 @@ const received: Array<{
   body: string;
 }> = [];
 const server = createServer((req, res) => {
+  if (req.url === '/trickle') {
+    // Never finishes: a byte every 50ms keeps the socket "active" so Node's
+    // inactivity timeout alone would let a request run forever.
+    res.writeHead(200);
+    const tick = setInterval(() => res.write('.'), 50);
+    res.on('close', () => clearInterval(tick));
+    req.resume();
+    return;
+  }
   const chunks: Buffer[] = [];
   req.on('data', (c) => chunks.push(c));
   req.on('end', () => {
@@ -90,6 +100,16 @@ function payloadFile(content: string, dir = tmpdir()): string {
   writeFileSync(file, content, { mode: 0o600 });
   return file;
 }
+
+describe('post', () => {
+  it('gives up at the wall-clock deadline even when the response keeps trickling', async () => {
+    const started = Date.now();
+    await post({ url: `${base}/trickle`, headers: {}, body: '{}' }, 300);
+    const elapsed = Date.now() - started;
+    expect(elapsed).toBeGreaterThanOrEqual(250);
+    expect(elapsed).toBeLessThan(1500);
+  });
+});
 
 describe('the __telemetry-send handler', () => {
   it('posts every request in the payload file, then deletes it', async () => {
