@@ -1,4 +1,5 @@
 import type { NextAction } from '../types.js';
+import { recordCommandError } from './analytics.js';
 import { classifyError } from './errors.js';
 import type { MessageContext, MessageVariables } from './messages.js';
 import { interpolate, printFailure } from './messages.js';
@@ -56,11 +57,10 @@ export function exitWithError(
     }
   }
 
-  // Best-effort capture on the synchronous command path: the exit below halts
-  // immediately (callers rely on this `never` contract), so the event may not
-  // flush in time. Crashes are captured and flushed reliably by the global
-  // handlers in setupErrorHandlers(), which pass skipCapture to avoid a double
-  // report here.
+  // Capture is synchronous: the event is queued before the exit below, and
+  // the detached telemetry sender posts it after this process is gone.
+  // Crashes are captured by the global handlers in setupErrorHandlers(), which
+  // pass skipCapture to avoid a double report here.
   if (!opts?.skipCapture) {
     captureError(error, {
       category: classified.category,
@@ -68,6 +68,10 @@ export function exitWithError(
       exitCode: classified.exitCode,
     });
   }
+
+  // Attach the outcome to the command's analytics event, which the
+  // process.exit() hook sends before the process ends.
+  recordCommandError(error);
 
   process.exit(classified.exitCode);
 }

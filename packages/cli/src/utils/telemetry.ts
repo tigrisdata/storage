@@ -1,9 +1,11 @@
+import { release } from 'node:os';
 import type { ErrorEvent, NodeOptions } from '@sentry/node';
 import { version } from '../../package.json';
 import { SENTRY_DSN } from '../constants.js';
 import type { ErrorCategory } from './errors.js';
 import { redactSecrets, scrubArgv } from './redact.js';
 import { isTelemetryDisabled } from './telemetry-config.js';
+import { queueTelemetry } from './telemetry-sender.js';
 
 /**
  * Error telemetry (Sentry) for the CLI.
@@ -21,6 +23,10 @@ import { isTelemetryDisabled } from './telemetry-config.js';
  * The SDK is loaded only when telemetry is on, and asynchronously: a user who
  * opted out never loads it, and a runtime the SDK refuses to run on (it wants
  * Node 20.19 or later) gets a CLI without error reporting rather than no CLI.
+ *
+ * Nothing here touches the network: envelopes go through makeQueuedTransport
+ * to the detached sender (telemetry-sender.ts), which posts them after the CLI
+ * has exited.
  */
 
 type SentryModule = typeof import('@sentry/node');
@@ -77,6 +83,14 @@ export function invocationCommand(argv: string[]): string | undefined {
 //   into stack frames, which beforeSend does not scrub.
 // - Console / ChildProcess: record breadcrumbs that can carry user data
 //   (printed output, spawned command lines).
+// - ProcessSession: sends a release-health session from a 'beforeExit'
+//   listener, which held every naturally exiting command open for a TLS round
+//   trip (~300ms) and never ran on process.exit() anyway.
+// - Context / ContextLines: gather OS details and source lines asynchronously,
+//   so an error captured right before process.exit() was still being
+//   processed when the process ended. Without them capture is synchronous; the
+//   OS release is set in configure() instead, and source lines of the minified
+//   bundle say little.
 export const DISABLED_INTEGRATIONS: ReadonlySet<string> = new Set([
   'OnUncaughtException',
   'OnUnhandledRejection',
@@ -84,6 +98,9 @@ export const DISABLED_INTEGRATIONS: ReadonlySet<string> = new Set([
   'LocalVariablesAsync',
   'Console',
   'ChildProcess',
+  'ProcessSession',
+  'Context',
+  'ContextLines',
 ]);
 
 /** The SDK's default integrations minus DISABLED_INTEGRATIONS. */
@@ -112,6 +129,43 @@ export const DATA_COLLECTION = {
   queues: false,
   stackFrameVariables: false,
 } satisfies NonNullable<NodeOptions['dataCollection']>;
+
+type TransportOptions = Parameters<SentryModule['makeNodeTransport']>[0];
+type Transport = ReturnType<SentryModule['makeNodeTransport']>;
+
+/**
+ * A transport that never touches the network: each envelope is queued for the
+ * detached sender (telemetry-sender.ts), which posts it to the DSN's envelope
+ * endpoint after the CLI exits. Events reach it already scrubbed by
+ * beforeSend. Takes the SDK's createTransport so this module can keep the SDK
+ * itself out of its static imports.
+ */
+export function makeQueuedTransport(
+  createTransport: SentryModule['createTransport']
+): (options: TransportOptions) => Transport {
+  return (options) => {
+    const endpoint = new URL(options.url);
+    // The SDK puts auth in the query string; send it as the header instead.
+    const key = endpoint.searchParams.get('sentry_key') ?? '';
+    endpoint.search = '';
+    const headers = {
+      'content-type': 'application/x-sentry-envelope',
+      'user-agent': `tigris-cli/${version}`,
+      'x-sentry-auth': `Sentry sentry_version=7, sentry_key=${key}, sentry_client=tigris-cli/${version}`,
+    };
+    return createTransport(options, (request) => {
+      queueTelemetry({
+        url: endpoint.href,
+        headers,
+        body:
+          typeof request.body === 'string'
+            ? request.body
+            : Buffer.from(request.body).toString('utf8'),
+      });
+      return Promise.resolve({});
+    });
+  };
+}
 
 /**
  * Recursively redact every string value in a value tree. Sentry events are
@@ -181,11 +235,17 @@ function configure(sdk: SentryModule, dsn: string): void {
     // Error reporting only — no performance tracing.
     tracesSampleRate: 0,
     dataCollection: DATA_COLLECTION,
-    // Drop integrations that either fight our exit handling or capture user
-    // data we don't scrub (local variables, console/child-process
-    // breadcrumbs). See DISABLED_INTEGRATIONS.
+    // Drop integrations that fight our exit handling, delay capture, or
+    // capture user data we don't scrub. See DISABLED_INTEGRATIONS.
     integrations: selectIntegrations,
     beforeSend,
+    // Delivered by the detached sender; see makeQueuedTransport.
+    transport: makeQueuedTransport(sdk.createTransport),
+    // Client reports would add an envelope to otherwise clean runs.
+    sendClientReports: false,
+    // The module hooks exist for instrumenting third-party packages, which
+    // this CLI does not do. (Sentry 10 called this registerEsmLoaderHooks.)
+    enableRuntimeChannelInjection: false,
   });
 
   sdk.setContext('cli', {
@@ -193,6 +253,7 @@ function configure(sdk: SentryModule, dsn: string): void {
     node: process.version,
     platform: process.platform,
     arch: process.arch,
+    os_release: release(),
   });
   // The full command with credentials and PII (access keys, tokens, emails,
   // names) redacted. Kept for debugging; identifies the command on the crash
@@ -216,9 +277,12 @@ function configure(sdk: SentryModule, dsn: string): void {
 
 /**
  * Report an error. Crashes are always reported; handled exits are reported only
- * for the categories we care about. No-op when telemetry is disabled. While the
- * SDK is still loading the report is queued (bounded) and sent once it is up —
- * best effort, like every report on the synchronous exit path.
+ * for the categories we care about. No-op when telemetry is disabled.
+ *
+ * Once the SDK is up, capture is synchronous: the envelope is in the sender
+ * queue before this returns, so a process.exit() right after still delivers it.
+ * While the SDK is still loading the report is queued (bounded) and replayed
+ * once it is up — best effort on the synchronous exit path, which cannot wait.
  */
 export function captureError(
   error: unknown,
@@ -266,18 +330,27 @@ export function captureError(
 }
 
 /**
- * Flush any queued events (best effort, bounded). Awaitable, and a no-op when
- * telemetry is disabled. Used by the global crash handlers, which run at the top
- * of the stack and can afford to await before exiting. The synchronous command
- * path cannot await (exitWithError must halt immediately), so handled errors are
- * captured best-effort and may not flush before exit.
+ * Wait until every captured event has been handed to the sender queue
+ * (bounded; no network I/O happens here, the detached sender posts after
+ * exit). Awaitable, and a no-op when telemetry is disabled. Used by the global
+ * crash handlers before they exit: awaiting `loading` lets a crash reported
+ * while the SDK was still loading be replayed into the transport, so it is
+ * queued before process.exit() hands the queue to the sender.
  */
 export async function flushTelemetry(timeoutMs = 2000): Promise<void> {
   if (state === 'off' || state === 'failed') {
     return;
   }
   try {
-    await loading;
+    // The import is local, but a wedged one must not hold a crash open.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      loading,
+      new Promise<void>((done) => {
+        timer = setTimeout(done, timeoutMs);
+      }),
+    ]);
+    clearTimeout(timer);
     if (sentry) {
       await sentry.flush(timeoutMs);
     }
