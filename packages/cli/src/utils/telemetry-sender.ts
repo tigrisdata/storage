@@ -162,11 +162,28 @@ export function post(
   request: TelemetryRequest,
   timeoutMs: number
 ): Promise<void> {
-  return new Promise((done) => {
+  return new Promise((resolve) => {
+    // Node's `timeout` option is socket inactivity, not elapsed time: a
+    // connection that stalls before connecting or a response that trickles
+    // small chunks can outlive it. A wall-clock timer caps the whole request.
+    let settled = false;
+    let deadline: NodeJS.Timeout | undefined;
+    let req: ReturnType<typeof httpsRequest> | undefined;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      if (deadline) clearTimeout(deadline);
+      resolve();
+    };
     try {
+      deadline = setTimeout(() => {
+        req?.destroy();
+        done();
+      }, timeoutMs);
+      deadline.unref?.();
       const url = new URL(request.url);
       const send = url.protocol === 'http:' ? httpRequest : httpsRequest;
-      const req = send(
+      req = send(
         url,
         {
           method: 'POST',
@@ -179,13 +196,13 @@ export function post(
         (res) => {
           // Drain so the socket can close; the status changes nothing.
           res.resume();
-          res.on('end', () => done());
-          res.on('error', () => done());
+          res.on('end', done);
+          res.on('error', done);
         }
       );
-      req.on('error', () => done());
+      req.on('error', done);
       req.on('timeout', () => {
-        req.destroy();
+        req?.destroy();
         done();
       });
       req.end(request.body);
