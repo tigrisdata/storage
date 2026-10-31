@@ -131,7 +131,7 @@ importers:
         version: 2.4.1
       jose:
         specifier: ^6.2.3
-        version: 6.2.13
+        version: 6.2.14
       jsonc-parser:
         specifier: ^3.3.1
         version: 3.3.1
@@ -1655,6 +1655,7 @@ packages:
   '@smithy/core@3.37.0':
     resolution: {integrity: sha512-97imTcCyiPd8k0e9+ts/Sp0W65Dn9Ti357J7M09Ov4tI8Q1JDJVFSoAJtjEVKqfHEr3Pdo2jfolqKCaaiszH0g==}
     engines: {node: '>=18.0.0'}
+    deprecated: Deprecated due to a bug in custom logger data redaction. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/credential-provider-imds@4.5.2':
     resolution: {integrity: sha512-A9uSdn72ozbRUSit0eib0TW7nXuNPlaeM0zcGkJ+nE6tFcSDbnmtwoxbTCFBukVQcszDAyvsd7+rTduPTXpygg==}
@@ -2567,8 +2568,8 @@ packages:
   jju@1.4.0:
     resolution: {integrity: sha512-8wb9Yw966OSxApiCt0K3yNJL8pnNeIv+OEq2YMidz4FKP6nonSRoOXc80iXY4JaN2FC11B9qsNmDsm+ZOfMROA==}
 
-  jose@6.2.13:
-    resolution: {integrity: sha512-7TIg10ZE1x82YediN+lcrPNvGMKge9yFHQD+Qho/b8y2adfugU3AsvvHfxV0fzyFllT6l9xCjf4RWY9g/Z9PJQ==}
+  jose@6.2.14:
+    resolution: {integrity: sha512-3JasLuki1NRLQvY4wCoC37KZk4qxoBx2k2aFqLxT84IezqW0bkJKnNtxnZj/Fu1xsQivoc/lytxaRHJoGLjJ1A==}
 
   joycon@3.1.1:
     resolution: {integrity: sha512-34wB/Y7MW7bzjKRjUKTa46I2Z7eV62Rkhva+KkopW7Qvv/OSWBqvkSY7vusOPrNuZcUG3tApvdVgNB8POj3SPw==}
@@ -3621,7 +3622,7 @@ snapshots:
 
   '@auth0/auth0-auth-js@1.18.0':
     dependencies:
-      jose: 6.2.13
+      jose: 6.2.14
       openid-client: 6.8.8
 
   '@auth0/auth0-spa-js@2.29.0':
@@ -5791,7 +5792,7 @@ snapshots:
 
   jju@1.4.0: {}
 
-  jose@6.2.13: {}
+  jose@6.2.14: {}
 
   joycon@3.1.1: {}
 
@@ -6159,7 +6160,7 @@ snapshots:
 
   openid-client@6.8.8:
     dependencies:
-      jose: 6.2.13
+      jose: 6.2.14
       oauth4webapi: 3.8.8
 
   oxc-parser@0.152.0:
