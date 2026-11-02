@@ -50,9 +50,9 @@
     "@keyv/serialize": "^1.1.1",
     "@tigrisdata/storage": "workspace:^",
     "dotenv": "^18.0.0",
-    "keyv": "^5.6.0"
+    "keyv": "^6.0.0"
   },
   "devDependencies": {
-    "@keyv/test-suite": "^2.1.2"
+    "@keyv/test-suite": "^6.0.0"
   }
 }
