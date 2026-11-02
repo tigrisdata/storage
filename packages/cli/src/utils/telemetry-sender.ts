@@ -94,9 +94,11 @@ export function senderCommand(file: string): [string, string[]] | null {
   if (isBinaryBuild()) {
     return [process.execPath, [TELEMETRY_SEND_COMMAND, file]];
   }
+  // Node and Bun both report an absolute argv[1]; resolve it anyway, since
+  // the child runs from the temp dir, where a relative path would not exist.
   const entry = process.argv[1];
   return entry
-    ? [process.execPath, [entry, TELEMETRY_SEND_COMMAND, file]]
+    ? [process.execPath, [resolve(entry), TELEMETRY_SEND_COMMAND, file]]
     : null;
 }
 

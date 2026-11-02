@@ -1,6 +1,6 @@
 import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { hostname, tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import {
   afterAll,
   afterEach,
@@ -405,6 +405,13 @@ describe('cli_command event', () => {
     expect(call.urls).toEqual(['http://127.0.0.1:9/i/v0/e/']);
   });
 
+  it('hands the child an absolute entry path, since it runs from the temp dir', async () => {
+    process.argv = ['/usr/bin/node', 'dist/cli.js', 'ls'];
+    await capture(['ls']);
+    const [call] = spawns.calls;
+    expect(call.args[0]).toBe(resolve('dist/cli.js'));
+  });
+
   it('launches the compiled binary as itself', async () => {
     (globalThis as { __TIGRIS_BINARY?: boolean }).__TIGRIS_BINARY = true;
     try {
@@ -615,6 +622,7 @@ describe('outcomes through the dispatcher', () => {
             arguments: [
               { name: 'name', type: 'positional', required: true },
               { name: 'region', description: 'region', required: true },
+              { name: 'json', description: 'json', type: 'flag' },
             ],
           },
         ],
@@ -728,6 +736,18 @@ describe('outcomes through the dispatcher', () => {
     expect(properties.success).toBe(false);
     expect(properties.error_category).toBe('usage');
     expect(properties.error_code).toBe('missing_required_argument');
+  });
+
+  it('knows about --json before a rejected invocation is recorded', async () => {
+    try {
+      expect(await run(['buckets', 'create', 'b1', '--json'])).toBe(1);
+      const { properties } = lastEvent();
+      expect(properties.error_code).toBe('missing_required_argument');
+      expect(properties.json_mode).toBe(true);
+    } finally {
+      delete (globalThis as { __TIGRIS_JSON_MODE?: boolean })
+        .__TIGRIS_JSON_MODE;
+    }
   });
 
   it('records an unknown flag caught by commander', async () => {

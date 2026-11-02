@@ -406,29 +406,36 @@ export function validateRequiredWhen(
   return true;
 }
 
+/**
+ * The parsed option values, given either commander's command object (what an
+ * action handler receives) or an already plain record.
+ */
+function optionValues(
+  commandOrOptions: Record<string, unknown>
+): Record<string, unknown> {
+  if (
+    'optsWithGlobals' in commandOrOptions &&
+    typeof commandOrOptions.optsWithGlobals === 'function'
+  ) {
+    return (
+      commandOrOptions.optsWithGlobals as () => Record<string, unknown>
+    )();
+  }
+  if (
+    'opts' in commandOrOptions &&
+    typeof commandOrOptions.opts === 'function'
+  ) {
+    return (commandOrOptions.opts as () => Record<string, unknown>)();
+  }
+  return commandOrOptions;
+}
+
 export function extractArgumentValues(
   args: Argument[],
   positionalArgs: string[],
   commandOrOptions: Record<string, unknown>
 ): Record<string, unknown> {
-  let options: Record<string, unknown>;
-
-  if (
-    'optsWithGlobals' in commandOrOptions &&
-    typeof commandOrOptions.optsWithGlobals === 'function'
-  ) {
-    options = (
-      commandOrOptions.optsWithGlobals as () => Record<string, unknown>
-    )();
-  } else if (
-    'opts' in commandOrOptions &&
-    typeof commandOrOptions.opts === 'function'
-  ) {
-    options = (commandOrOptions.opts as () => Record<string, unknown>)();
-  } else {
-    options = commandOrOptions;
-  }
-
+  const options = optionValues(commandOrOptions);
   const result = { ...options };
 
   const positionalArgDefs = args.filter((arg) => arg.type === 'positional');
@@ -457,16 +464,26 @@ export function extractArgumentValues(
   return result;
 }
 
+/**
+ * Enter JSON mode as soon as the parsed options are known. The error
+ * handlers, the telemetry notice and the event's `json_mode` all read the
+ * global, and a run can end (local validation, an unknown subcommand) before
+ * the command itself is loaded.
+ */
+function applyJsonMode(commandOrOptions: Record<string, unknown>): void {
+  const options = optionValues(commandOrOptions);
+  if (options.json || options.format === 'json') {
+    globalThis.__TIGRIS_JSON_MODE = true;
+  }
+}
+
 async function loadAndExecuteCommand(
   loadModule: ModuleLoader,
   pathParts: string[],
   positionalArgs: string[] = [],
   options: Record<string, unknown> = {}
 ) {
-  // Set JSON mode globally for error handlers
-  if (options.json || options.format === 'json') {
-    globalThis.__TIGRIS_JSON_MODE = true;
-  }
+  applyJsonMode(options);
 
   const { module, error: loadError } = await loadModule(pathParts);
 
@@ -582,6 +599,7 @@ export function registerCommands(
 
           cmd.action(async (...args) => {
             const options = args.pop();
+            applyJsonMode(options);
             const positionalArgs = checkUnknownSubcommand(
               [options],
               spec,
@@ -649,10 +667,11 @@ export function registerCommands(
       );
 
       cmd.action(async (...args) => {
+        const options = args.pop();
+        applyJsonMode(options);
         // Tracked before validation so a rejected invocation counts.
         trackCommand(currentPath);
 
-        const options = args.pop();
         const positionalArgs = args;
 
         const extracted = extractArgumentValues(
