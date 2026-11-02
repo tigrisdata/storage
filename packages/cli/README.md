@@ -33,32 +33,32 @@ Run `tigris help` to see all available commands, or `tigris <command> help` for 
 
 ### Commands
 
-| Command | Description |
-|---------|-------------|
-| `tigris init` (start) | Connect Tigris to your AI coding agent — MCP server config and agent skills |
-| `tigris configure` (c) | Save access-key credentials to ~/.tigris/config.json for persistent use across all commands |
-| `tigris login` (l) | Start a session via OAuth (default) or temporary credentials. Session state is cleared on logout |
-| `tigris whoami` (w) | Print the currently authenticated user, organization, and auth method |
-| `tigris usage` | Show the active organization's usage and charges for a billing month, as on the console's Usage page. Requires OAuth login |
-| `tigris update` | Update the CLI to the latest version |
-| `tigris logout` | End the current session and clear login state. Credentials saved via 'configure' are kept |
-| `tigris credentials` (creds) | Test whether your current credentials can reach Tigris and optionally verify access to a specific bucket |
-| `tigris telemetry` | Show or change whether the CLI sends usage analytics and error reports |
-| `tigris ls` (list) | List all buckets (no arguments) or objects under a bucket/prefix path. Accepts bare names or t3:// URIs |
-| `tigris mk` (create) | Create a bucket (bare name) or a folder inside a bucket (bucket/folder/ with trailing slash) |
-| `tigris touch` | Create an empty (zero-byte) object at the given bucket/key path |
-| `tigris stat` | Show storage stats (no args), bucket info, or object metadata |
-| `tigris presign` | Generate a presigned URL for temporary access to an object without credentials |
-| `tigris cp` (copy) | Copy files between local filesystem and Tigris, or between paths within Tigris. At least one side must be a remote t3:// path |
-| `tigris mv` (move) | Move (rename) objects within Tigris. Both source and destination must be remote t3:// paths |
-| `tigris rm` (remove) | Remove a bucket, folder, or object from Tigris. A bare bucket name deletes the bucket itself |
-| `tigris bundle` | Download multiple objects as a streaming tar archive in a single request. Designed for batch workloads that need many objects without per-object HTTP overhead |
-| `tigris organizations` (orgs) | List, create, and switch between organizations. An organization is a workspace that contains your resources like buckets and access keys |
-| `tigris buckets` (b) | Create, inspect, update, and delete buckets. Buckets are top-level containers that hold objects |
-| `tigris snapshots` (s) | List, take, and delete snapshots. A snapshot is a point-in-time, read-only copy of a bucket's state |
-| `tigris objects` (o) | Low-level object operations for listing, downloading, uploading, and deleting individual objects in a bucket |
-| `tigris access-keys` (keys) | Create, list, inspect, delete, and assign roles to access keys. Access keys are credentials used for programmatic API access |
-| `tigris iam` | Identity and Access Management - manage policies, users, and permissions |
+| Command                       | Description                                                                                                                                                    |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tigris init` (start)         | Connect Tigris to your AI coding agent — MCP server config and agent skills                                                                                    |
+| `tigris configure` (c)        | Save access-key credentials to ~/.tigris/config.json for persistent use across all commands                                                                    |
+| `tigris login` (l)            | Start a session via OAuth (default) or temporary credentials. Session state is cleared on logout                                                               |
+| `tigris whoami` (w)           | Print the currently authenticated user, organization, and auth method                                                                                          |
+| `tigris usage`                | Show the active organization's usage and charges for a billing month, as on the console's Usage page. Requires OAuth login                                     |
+| `tigris update`               | Update the CLI to the latest version                                                                                                                           |
+| `tigris logout`               | End the current session and clear login state. Credentials saved via 'configure' are kept                                                                      |
+| `tigris credentials` (creds)  | Test whether your current credentials can reach Tigris and optionally verify access to a specific bucket                                                       |
+| `tigris telemetry`            | Show or change whether the CLI sends usage analytics and error reports                                                                                         |
+| `tigris ls` (list)            | List all buckets (no arguments) or objects under a bucket/prefix path. Accepts bare names or t3:// URIs                                                        |
+| `tigris mk` (create)          | Create a bucket (bare name) or a folder inside a bucket (bucket/folder/ with trailing slash)                                                                   |
+| `tigris touch`                | Create an empty (zero-byte) object at the given bucket/key path                                                                                                |
+| `tigris stat`                 | Show storage stats (no args), bucket info, or object metadata                                                                                                  |
+| `tigris presign`              | Generate a presigned URL for temporary access to an object without credentials                                                                                 |
+| `tigris cp` (copy)            | Copy files between local filesystem and Tigris, or between paths within Tigris. At least one side must be a remote t3:// path                                  |
+| `tigris mv` (move)            | Move (rename) objects within Tigris. Both source and destination must be remote t3:// paths                                                                    |
+| `tigris rm` (remove)          | Remove a bucket, folder, or object from Tigris. A bare bucket name deletes the bucket itself                                                                   |
+| `tigris bundle`               | Download multiple objects as a streaming tar archive in a single request. Designed for batch workloads that need many objects without per-object HTTP overhead |
+| `tigris organizations` (orgs) | List, create, and switch between organizations. An organization is a workspace that contains your resources like buckets and access keys                       |
+| `tigris buckets` (b)          | Create, inspect, update, and delete buckets. Buckets are top-level containers that hold objects                                                                |
+| `tigris snapshots` (s)        | List, take, and delete snapshots. A snapshot is a point-in-time, read-only copy of a bucket's state                                                            |
+| `tigris objects` (o)          | Low-level object operations for listing, downloading, uploading, and deleting individual objects in a bucket                                                   |
+| `tigris access-keys` (keys)   | Create, list, inspect, delete, and assign roles to access keys. Access keys are credentials used for programmatic API access                                   |
+| `tigris iam`                  | Identity and Access Management - manage policies, users, and permissions                                                                                       |
 
 ---
 
@@ -70,8 +70,8 @@ Connect Tigris to your AI coding agent — MCP server config and agent skills
 tigris init [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag      | Description                                                                                     |
+| --------- | ----------------------------------------------------------------------------------------------- |
 | `--agent` | Print a setup recipe for an AI coding agent to follow instead of running the interactive wizard |
 
 **Examples:**
@@ -89,11 +89,11 @@ Save access-key credentials to ~/.tigris/config.json for persistent use across a
 tigris configure [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-key, --access-key` | Your Tigris access key ID |
-| `-secret, --access-secret` | Your Tigris secret access key |
-| `-e, --endpoint` | Tigris API endpoint (default: https://t3.storage.dev) |
+| Flag                       | Description                                           |
+| -------------------------- | ----------------------------------------------------- |
+| `-key, --access-key`       | Your Tigris access key ID                             |
+| `-secret, --access-secret` | Your Tigris secret access key                         |
+| `-e, --endpoint`           | Tigris API endpoint (default: https://t3.storage.dev) |
 
 **Examples:**
 ```bash
@@ -105,10 +105,10 @@ tigris configure --endpoint https://custom.endpoint.dev
 
 Start a session via OAuth (default) or temporary credentials. Session state is cleared on logout
 
-| Command | Description |
-|---------|-------------|
-| `tigris login select` | Choose how to login - OAuth (browser) or credentials (access key) |
-| `tigris login oauth` (o) | Login via browser using OAuth2 device flow. Best for interactive use |
+| Command                        | Description                                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------------------ |
+| `tigris login select`          | Choose how to login - OAuth (browser) or credentials (access key)                          |
+| `tigris login oauth` (o)       | Login via browser using OAuth2 device flow. Best for interactive use                       |
 | `tigris login credentials` (c) | Login with an access key and secret. Creates a temporary session that is cleared on logout |
 
 #### `tigris login select`
@@ -140,9 +140,9 @@ Login with an access key and secret. Creates a temporary session that is cleared
 tigris login credentials [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-key, --access-key` | Your access key ID (will prompt if not provided) |
+| Flag                       | Description                                          |
+| -------------------------- | ---------------------------------------------------- |
+| `-key, --access-key`       | Your access key ID (will prompt if not provided)     |
 | `-secret, --access-secret` | Your secret access key (will prompt if not provided) |
 
 **Examples:**
@@ -172,11 +172,11 @@ Show the active organization's usage and charges for a billing month, as on the 
 tigris usage [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--month` | Billing month as YYYY-MM (default is the current month) |
-| `--all` | Show every line item, even those with zero usage |
-| `--format` | Output format (default: table) |
+| Flag       | Description                                             |
+| ---------- | ------------------------------------------------------- |
+| `--month`  | Billing month as YYYY-MM (default is the current month) |
+| `--all`    | Show every line item, even those with zero usage        |
+| `--format` | Output format (default: table)                          |
 
 **Examples:**
 ```bash
@@ -216,8 +216,8 @@ tigris logout
 
 Test whether your current credentials can reach Tigris and optionally verify access to a specific bucket
 
-| Command | Description |
-|---------|-------------|
+| Command                       | Description                                                                              |
+| ----------------------------- | ---------------------------------------------------------------------------------------- |
 | `tigris credentials test` (t) | Verify that current credentials are valid. Optionally checks access to a specific bucket |
 
 #### `tigris credentials test` (t)
@@ -228,8 +228,8 @@ Verify that current credentials are valid. Optionally checks access to a specifi
 tigris credentials test [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag           | Description                                   |
+| -------------- | --------------------------------------------- |
 | `-b, --bucket` | Bucket name to test access against (optional) |
 
 **Examples:**
@@ -242,11 +242,11 @@ tigris credentials test --bucket my-bucket
 
 Show or change whether the CLI sends usage analytics and error reports
 
-| Command | Description |
-|---------|-------------|
-| `tigris telemetry status` | Show whether telemetry is enabled, what is collected, and which setting is in effect |
-| `tigris telemetry disable` | Turn off usage analytics and error reports on this machine |
-| `tigris telemetry enable` | Turn usage analytics and error reports back on for this machine |
+| Command                    | Description                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| `tigris telemetry status`  | Show whether telemetry is enabled, what is collected, and which setting is in effect |
+| `tigris telemetry disable` | Turn off usage analytics and error reports on this machine                           |
+| `tigris telemetry enable`  | Turn usage analytics and error reports back on for this machine                      |
 
 #### `tigris telemetry status`
 
@@ -295,13 +295,13 @@ List all buckets (no arguments) or objects under a bucket/prefix path. Accepts b
 tigris ls [path] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag                            | Description                                                                                                                                   |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `-snapshot, --snapshot-version` | Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464) |
-| `--format` | Output format (default: table) |
-| `--limit` | Maximum number of items to return per page |
-| `-pt, --page-token` | Pagination token from a previous request to fetch the next page |
-| `--source` | List objects from a specific storage source on buckets with shadow migration enabled |
+| `--format`                      | Output format (default: table)                                                                                                                |
+| `--limit`                       | Maximum number of items to return per page                                                                                                    |
+| `-pt, --page-token`             | Pagination token from a previous request to fetch the next page                                                                               |
+| `--source`                      | List objects from a specific storage source on buckets with shadow migration enabled                                                          |
 
 **Examples:**
 ```bash
@@ -319,16 +319,16 @@ Create a bucket (bare name) or a folder inside a bucket (bucket/folder/ with tra
 tigris mk <path> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-a, --access` | Access level (only applies when creating a bucket) (default: private) |
-| `--public` | Shorthand for --access public (only applies when creating a bucket) |
-| `-s, --enable-snapshots` | Enable snapshots for the bucket (only applies when creating a bucket) (default: false) |
-| `--allow-object-acl` | Allow per-object ACLs on the bucket (only applies when creating a bucket) (default: false) |
-| `--enable-directory-listing` | Enable directory listing, relevant for public buckets (only applies when creating a bucket) (default: false) |
-| `-t, --default-tier` | Default storage tier (only applies when creating a bucket) (default: STANDARD) |
-| `-l, --locations` | Location for the bucket (only applies when creating a bucket) (default: global) |
-| `-fork, --fork-of` | Create this bucket as a fork (copy-on-write clone) of the named source bucket |
+| Flag                              | Description                                                                                                                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-a, --access`                    | Access level (only applies when creating a bucket) (default: private)                                                                                                           |
+| `--public`                        | Shorthand for --access public (only applies when creating a bucket)                                                                                                             |
+| `-s, --enable-snapshots`          | Enable snapshots for the bucket (only applies when creating a bucket) (default: false)                                                                                          |
+| `--allow-object-acl`              | Allow per-object ACLs on the bucket (only applies when creating a bucket) (default: false)                                                                                      |
+| `--enable-directory-listing`      | Enable directory listing, relevant for public buckets (only applies when creating a bucket) (default: false)                                                                    |
+| `-t, --default-tier`              | Default storage tier (only applies when creating a bucket) (default: STANDARD)                                                                                                  |
+| `-l, --locations`                 | Location for the bucket (only applies when creating a bucket) (default: global)                                                                                                 |
+| `-fork, --fork-of`                | Create this bucket as a fork (copy-on-write clone) of the named source bucket                                                                                                   |
 | `-source-snap, --source-snapshot` | Fork from a specific snapshot of the source bucket. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Requires --fork-of |
 
 **Examples:**
@@ -365,11 +365,11 @@ Show storage stats (no args), bucket info, or object metadata
 tigris stat [path] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--format` | Output format (default: table) |
+| Flag                            | Description                                                                                                                                   |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--format`                      | Output format (default: table)                                                                                                                |
 | `-snapshot, --snapshot-version` | Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464) |
-| `--version-id` | Object version id to stat (requires bucket versioning). Omit to stat the latest version |
+| `--version-id`                  | Object version id to stat (requires bucket versioning). Omit to stat the latest version                                                       |
 
 **Examples:**
 ```bash
@@ -386,13 +386,13 @@ Generate a presigned URL for temporary access to an object without credentials
 tigris presign <path> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-m, --method` | HTTP method for the presigned URL (default: get) |
-| `-e, --expires-in` | URL expiry time in seconds (default: 3600) |
-| `--access-key` | Access key ID to use for signing. If not provided, resolved from credentials or auto-selected |
-| `--select` | Interactively select an access key (OAuth only) |
-| `--format` | Output format (default: url) |
+| Flag                            | Description                                                                                                                                                                     |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-m, --method`                  | HTTP method for the presigned URL (default: get)                                                                                                                                |
+| `-e, --expires-in`              | URL expiry time in seconds (default: 3600)                                                                                                                                      |
+| `--access-key`                  | Access key ID to use for signing. If not provided, resolved from credentials or auto-selected                                                                                   |
+| `--select`                      | Interactively select an access key (OAuth only)                                                                                                                                 |
+| `--format`                      | Output format (default: url)                                                                                                                                                    |
 | `-snapshot, --snapshot-version` | Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Only supported for GET requests. |
 
 **Examples:**
@@ -411,10 +411,10 @@ Copy files between local filesystem and Tigris, or between paths within Tigris. 
 tigris cp <src> <dest> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-r, --recursive` | Copy directories recursively |
-| `-a, --access` | Access level for uploaded objects (only applies to local-to-remote uploads) |
+| Flag              | Description                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| `-r, --recursive` | Copy directories recursively                                                                |
+| `-a, --access`    | Access level for uploaded objects (only applies to local-to-remote uploads)                 |
 | `--cache-control` | Cache-Control header stored with uploaded objects (only applies to local-to-remote uploads) |
 
 **Examples:**
@@ -435,11 +435,11 @@ Move (rename) objects within Tigris. Both source and destination must be remote 
 tigris mv <src> <dest> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-y, --yes` | Skip confirmation prompts |
-| `-r, --recursive` | Move directories recursively |
-| `-f, --force` | Skip confirmation prompts (alias for --yes) |
+| Flag              | Description                                 |
+| ----------------- | ------------------------------------------- |
+| `-y, --yes`       | Skip confirmation prompts                   |
+| `-r, --recursive` | Move directories recursively                |
+| `-f, --force`     | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
 ```bash
@@ -456,11 +456,11 @@ Remove a bucket, folder, or object from Tigris. A bare bucket name deletes the b
 tigris rm <path> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-y, --yes` | Skip confirmation prompts |
-| `-r, --recursive` | Remove directories recursively |
-| `-f, --force` | Skip confirmation prompts (alias for --yes) |
+| Flag              | Description                                 |
+| ----------------- | ------------------------------------------- |
+| `-y, --yes`       | Skip confirmation prompts                   |
+| `-r, --recursive` | Remove directories recursively              |
+| `-f, --force`     | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
 ```bash
@@ -478,12 +478,12 @@ Download multiple objects as a streaming tar archive in a single request. Design
 tigris bundle <bucket> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-k, --keys` | Comma-separated object keys, or path to a file with one key per line. If a local file matching the value exists, it is read as a keys file. If omitted, reads keys from stdin |
-| `-o, --output` | Output file path. Defaults to stdout (for piping) |
-| `--compression` | Compression algorithm for the archive. Auto-detected from output file extension when not specified |
-| `--on-error` | How to handle missing objects. 'skip' omits them, 'fail' aborts the request (default: skip) |
+| Flag            | Description                                                                                                                                                                   |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-k, --keys`    | Comma-separated object keys, or path to a file with one key per line. If a local file matching the value exists, it is read as a keys file. If omitted, reads keys from stdin |
+| `-o, --output`  | Output file path. Defaults to stdout (for piping)                                                                                                                             |
+| `--compression` | Compression algorithm for the archive. Auto-detected from output file extension when not specified                                                                            |
+| `--on-error`    | How to handle missing objects. 'skip' omits them, 'fail' aborts the request (default: skip)                                                                                   |
 
 **Examples:**
 ```bash
@@ -497,11 +497,11 @@ cat keys.txt | tigris bundle my-bucket > archive.tar
 
 List, create, and switch between organizations. An organization is a workspace that contains your resources like buckets and access keys
 
-| Command | Description |
-|---------|-------------|
-| `tigris organizations list` (l) | List all organizations you belong to and interactively select one as active |
-| `tigris organizations create` (c) | Create a new organization with the given name |
-| `tigris organizations select` (s) | Set the named organization as your active org for all subsequent commands |
+| Command                           | Description                                                                                                                                                                                                                                                                                                               |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tigris organizations list` (l)   | List all organizations you belong to and interactively select one as active                                                                                                                                                                                                                                               |
+| `tigris organizations create` (c) | Create a new organization with the given name                                                                                                                                                                                                                                                                             |
+| `tigris organizations select` (s) | Set the named organization as your active org for all subsequent commands                                                                                                                                                                                                                                                 |
 | `tigris organizations delete` (d) | Delete an organization you own, picked from a list or given by ID. It must be empty first (no buckets, access keys, policies, teams, or other members); only its shares and invitations are removed with it. Your last organization cannot be deleted. Requires OAuth login and is not available for Fly.io organizations |
 
 #### `tigris organizations list` (l)
@@ -512,10 +512,10 @@ List all organizations you belong to and interactively select one as active
 tigris organizations list [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--format` | Output format (default: select) |
-| `-i, --select` | Interactive selection mode |
+| Flag           | Description                     |
+| -------------- | ------------------------------- |
+| `--format`     | Output format (default: select) |
+| `-i, --select` | Interactive selection mode      |
 
 **Examples:**
 ```bash
@@ -557,8 +557,8 @@ Delete an organization you own, picked from a list or given by ID. It must be em
 tigris organizations delete [id] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag        | Description               |
+| ----------- | ------------------------- |
 | `-y, --yes` | Skip confirmation prompts |
 
 **Examples:**
@@ -571,26 +571,26 @@ tigris orgs delete <org-id> --yes
 
 Create, inspect, update, and delete buckets. Buckets are top-level containers that hold objects
 
-| Command | Description |
-|---------|-------------|
-| `tigris buckets list` (l) | List all buckets in the current organization |
-| `tigris buckets create` (c) | Create a new bucket with optional access, tier, and location settings |
-| `tigris buckets rebase` | Update a fork with the latest changes from its source bucket |
-| `tigris buckets merge` | Merge a fork's changes back into its source bucket |
-| `tigris buckets get` (g) | Show details for a bucket including access level, region, tier, and custom domain |
-| `tigris buckets delete` (d) | Delete one or more buckets by name. The bucket must be empty or delete-protection must be off |
-| `tigris buckets restore` | Restore a soft-deleted bucket within its retention window. List recoverable buckets with "tigris buckets list --deleted" |
-| `tigris buckets purge` (pg) | Permanently destroy one or more soft-deleted buckets before their retention period expires. This cannot be undone — they can no longer be restored with "tigris buckets restore". List them with "tigris buckets list --deleted" |
-| `tigris buckets set` (s) | Update settings on an existing bucket such as access level, default tier, location, caching, or custom domain |
-| `tigris buckets enable-snapshots` | Enable snapshots on an existing bucket, converting it to a snapshot bucket |
-| `tigris buckets disable-snapshots` | Disable snapshots on an existing bucket, converting it back to a regular bucket. Rejected while the bucket has dependent forks |
-| `tigris buckets set-locations` | Set the data locations for a bucket |
-| `tigris buckets set-migration` | Configure data migration from an external S3-compatible source bucket. Tigris will pull objects on demand from the source |
-| `tigris buckets migrate` | Actively migrate all objects from a shadow bucket to Tigris by scheduling server-side migration for unmigrated objects |
-| `tigris buckets lifecycle` (lc) | Manage bucket lifecycle rules. Each rule combines an optional storage-class transition and/or expiration (TTL), scoped to an optional key prefix |
-| `tigris buckets set-notifications` | Configure object event notifications on a bucket. Sends webhook requests to a URL when objects are created, updated, or deleted |
-| `tigris buckets set-cors` | Configure CORS rules on a bucket. Each invocation adds a rule unless --override or --reset is used |
-| `tigris buckets share` | Share a bucket with your whole organization, specific teams, or specific users. Existing shares are kept unless --override or --reset is used |
+| Command                            | Description                                                                                                                                                                                                                      |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tigris buckets list` (l)          | List all buckets in the current organization                                                                                                                                                                                     |
+| `tigris buckets create` (c)        | Create a new bucket with optional access, tier, and location settings                                                                                                                                                            |
+| `tigris buckets rebase`            | Update a fork with the latest changes from its source bucket                                                                                                                                                                     |
+| `tigris buckets merge`             | Merge a fork's changes back into its source bucket                                                                                                                                                                               |
+| `tigris buckets get` (g)           | Show details for a bucket including access level, region, tier, and custom domain                                                                                                                                                |
+| `tigris buckets delete` (d)        | Delete one or more buckets by name. The bucket must be empty or delete-protection must be off                                                                                                                                    |
+| `tigris buckets restore`           | Restore a soft-deleted bucket within its retention window. List recoverable buckets with "tigris buckets list --deleted"                                                                                                         |
+| `tigris buckets purge` (pg)        | Permanently destroy one or more soft-deleted buckets before their retention period expires. This cannot be undone — they can no longer be restored with "tigris buckets restore". List them with "tigris buckets list --deleted" |
+| `tigris buckets set` (s)           | Update settings on an existing bucket such as access level, default tier, location, caching, or custom domain                                                                                                                    |
+| `tigris buckets enable-snapshots`  | Enable snapshots on an existing bucket, converting it to a snapshot bucket                                                                                                                                                       |
+| `tigris buckets disable-snapshots` | Disable snapshots on an existing bucket, converting it back to a regular bucket. Rejected while the bucket has dependent forks                                                                                                   |
+| `tigris buckets set-locations`     | Set the data locations for a bucket                                                                                                                                                                                              |
+| `tigris buckets set-migration`     | Configure data migration from an external S3-compatible source bucket. Tigris will pull objects on demand from the source                                                                                                        |
+| `tigris buckets migrate`           | Actively migrate all objects from a shadow bucket to Tigris by scheduling server-side migration for unmigrated objects                                                                                                           |
+| `tigris buckets lifecycle` (lc)    | Manage bucket lifecycle rules. Each rule combines an optional storage-class transition and/or expiration (TTL), scoped to an optional key prefix                                                                                 |
+| `tigris buckets set-notifications` | Configure object event notifications on a bucket. Sends webhook requests to a URL when objects are created, updated, or deleted                                                                                                  |
+| `tigris buckets set-cors`          | Configure CORS rules on a bucket. Each invocation adds a rule unless --override or --reset is used                                                                                                                               |
+| `tigris buckets share`             | Share a bucket with your whole organization, specific teams, or specific users. Existing shares are kept unless --override or --reset is used                                                                                    |
 
 #### `tigris buckets list` (l)
 
@@ -600,15 +600,15 @@ List all buckets in the current organization
 tigris buckets list [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--format` | Output format (default: table) |
-| `--forks-of` | Only list buckets that are forks of the named source bucket |
-| `--deleted` | Only list soft-deleted buckets |
-| `--forks-only` | Only list buckets that are forks of another bucket |
-| `--owner` | Only list buckets owned by this user, by username (an email address) |
-| `--limit` | Maximum number of items to return per page |
-| `-pt, --page-token` | Pagination token from a previous request to fetch the next page |
+| Flag                | Description                                                          |
+| ------------------- | -------------------------------------------------------------------- |
+| `--format`          | Output format (default: table)                                       |
+| `--forks-of`        | Only list buckets that are forks of the named source bucket          |
+| `--deleted`         | Only list soft-deleted buckets                                       |
+| `--forks-only`      | Only list buckets that are forks of another bucket                   |
+| `--owner`           | Only list buckets owned by this user, by username (an email address) |
+| `--limit`           | Maximum number of items to return per page                           |
+| `-pt, --page-token` | Pagination token from a previous request to fetch the next page      |
 
 **Examples:**
 ```bash
@@ -628,16 +628,16 @@ Create a new bucket with optional access, tier, and location settings
 tigris buckets create [name] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-a, --access` | Access level (default: private) |
-| `--public` | Shorthand for --access public |
-| `-s, --enable-snapshots` | Enable snapshots for the bucket (default: false) |
-| `--allow-object-acl` | Allow per-object ACLs on the bucket (default: false) |
-| `--enable-directory-listing` | Enable directory listing, relevant for public buckets (default: false) |
-| `-t, --default-tier` | Choose the default tier for the bucket (default: STANDARD) |
-| `-l, --locations` | Location for the bucket (default: global) |
-| `-fork, --fork-of` | Create this bucket as a fork (copy-on-write clone) of the named source bucket |
+| Flag                              | Description                                                                                                                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-a, --access`                    | Access level (default: private)                                                                                                                                                 |
+| `--public`                        | Shorthand for --access public                                                                                                                                                   |
+| `-s, --enable-snapshots`          | Enable snapshots for the bucket (default: false)                                                                                                                                |
+| `--allow-object-acl`              | Allow per-object ACLs on the bucket (default: false)                                                                                                                            |
+| `--enable-directory-listing`      | Enable directory listing, relevant for public buckets (default: false)                                                                                                          |
+| `-t, --default-tier`              | Choose the default tier for the bucket (default: STANDARD)                                                                                                                      |
+| `-l, --locations`                 | Location for the bucket (default: global)                                                                                                                                       |
+| `-fork, --fork-of`                | Create this bucket as a fork (copy-on-write clone) of the named source bucket                                                                                                   |
 | `-source-snap, --source-snapshot` | Fork from a specific snapshot of the source bucket. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Requires --fork-of |
 
 **Examples:**
@@ -659,8 +659,8 @@ Update a fork with the latest changes from its source bucket
 tigris buckets rebase <fork> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag        | Description               |
+| ----------- | ------------------------- |
 | `-y, --yes` | Skip confirmation prompts |
 
 **Examples:**
@@ -677,10 +677,10 @@ Merge a fork's changes back into its source bucket
 tigris buckets merge <fork> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-y, --yes` | Skip confirmation prompts |
-| `-source, --into` | Source bucket to merge into. Defaults to the fork's parent source bucket |
+| Flag                          | Description                                                                                                                                                                       |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-y, --yes`                   | Skip confirmation prompts                                                                                                                                                         |
+| `-source, --into`             | Source bucket to merge into. Defaults to the fork's parent source bucket                                                                                                          |
 | `-from-snap, --from-snapshot` | Merge from a specific snapshot of the fork rather than its current state. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464) |
 
 **Examples:**
@@ -699,8 +699,8 @@ Show details for a bucket including access level, region, tier, and custom domai
 tigris buckets get <name> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag       | Description                    |
+| ---------- | ------------------------------ |
 | `--format` | Output format (default: table) |
 
 **Examples:**
@@ -716,10 +716,10 @@ Delete one or more buckets by name. The bucket must be empty or delete-protectio
 tigris buckets delete <name> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-y, --yes` | Skip confirmation prompts |
-| `--force` | Skip confirmation prompts (alias for --yes) |
+| Flag        | Description                                 |
+| ----------- | ------------------------------------------- |
+| `-y, --yes` | Skip confirmation prompts                   |
+| `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
 ```bash
@@ -748,10 +748,10 @@ Permanently destroy one or more soft-deleted buckets before their retention peri
 tigris buckets purge <name> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-y, --yes` | Skip confirmation prompts |
-| `--force` | Skip confirmation prompts (alias for --yes) |
+| Flag        | Description                                 |
+| ----------- | ------------------------------------------- |
+| `-y, --yes` | Skip confirmation prompts                   |
+| `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
 ```bash
@@ -767,19 +767,19 @@ Update settings on an existing bucket such as access level, default tier, locati
 tigris buckets set <name> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--access` | Bucket access level |
-| `--default-tier` | Change the default storage tier for objects uploaded to the bucket |
-| `--locations` | Bucket location (see https://www.tigrisdata.com/docs/buckets/locations/ for more details) |
-| `--allow-object-acl` | Enable object-level ACL |
-| `--disable-directory-listing` | Disable directory listing |
-| `--cache-control` | Default cache-control header value |
-| `--custom-domain` | Custom domain for the bucket |
-| `--enable-delete-protection` | Enable delete protection |
-| `--soft-delete` | Enable or disable soft delete (recoverable deletes). Requires --retention-days when enabling |
-| `--retention-days` | Number of days to retain soft-deleted objects (required when enabling --soft-delete) |
-| `--enable-additional-headers` | Enable additional HTTP headers (X-Content-Type-Options nosniff) |
+| Flag                          | Description                                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------------------- |
+| `--access`                    | Bucket access level                                                                          |
+| `--default-tier`              | Change the default storage tier for objects uploaded to the bucket                           |
+| `--locations`                 | Bucket location (see https://www.tigrisdata.com/docs/buckets/locations/ for more details)    |
+| `--allow-object-acl`          | Enable object-level ACL                                                                      |
+| `--disable-directory-listing` | Disable directory listing                                                                    |
+| `--cache-control`             | Default cache-control header value                                                           |
+| `--custom-domain`             | Custom domain for the bucket                                                                 |
+| `--enable-delete-protection`  | Enable delete protection                                                                     |
+| `--soft-delete`               | Enable or disable soft delete (recoverable deletes). Requires --retention-days when enabling |
+| `--retention-days`            | Number of days to retain soft-deleted objects (required when enabling --soft-delete)         |
+| `--enable-additional-headers` | Enable additional HTTP headers (X-Content-Type-Options nosniff)                              |
 
 **Examples:**
 ```bash
@@ -825,8 +825,8 @@ Set the data locations for a bucket
 tigris buckets set-locations <name> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag              | Description     |
+| ----------------- | --------------- |
 | `-l, --locations` | Bucket location |
 
 **Examples:**
@@ -844,15 +844,15 @@ Configure data migration from an external S3-compatible source bucket. Tigris wi
 tigris buckets set-migration <name> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-b, --bucket` | Name of the source bucket to migrate from |
-| `-e, --endpoint` | Endpoint URL of the source S3-compatible service |
-| `-r, --region` | Region of the source bucket |
-| `-key, --access-key` | Access key for the source bucket |
-| `-secret, --secret-key` | Secret key for the source bucket |
-| `--write-through` | Enable write-through mode (writes go to both source and Tigris) |
-| `--disable` | Disable migration and clear all migration settings |
+| Flag                    | Description                                                     |
+| ----------------------- | --------------------------------------------------------------- |
+| `-b, --bucket`          | Name of the source bucket to migrate from                       |
+| `-e, --endpoint`        | Endpoint URL of the source S3-compatible service                |
+| `-r, --region`          | Region of the source bucket                                     |
+| `-key, --access-key`    | Access key for the source bucket                                |
+| `-secret, --secret-key` | Secret key for the source bucket                                |
+| `--write-through`       | Enable write-through mode (writes go to both source and Tigris) |
+| `--disable`             | Disable migration and clear all migration settings              |
 
 **Examples:**
 ```bash
@@ -869,8 +869,8 @@ Actively migrate all objects from a shadow bucket to Tigris by scheduling server
 tigris buckets migrate <path> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag                 | Description                                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `--max-in-flight-gb` | Max total gigabytes of scheduled-but-unconfirmed migrations to keep in flight. Accepts 1-100 (default: 50) |
 
 **Examples:**
@@ -885,11 +885,11 @@ tigris buckets migrate my-bucket --max-in-flight-gb 100
 
 Manage bucket lifecycle rules. Each rule combines an optional storage-class transition and/or expiration (TTL), scoped to an optional key prefix
 
-| Command | Description |
-|---------|-------------|
-| `tigris buckets lifecycle list` (l) | List lifecycle rules on a bucket |
+| Command                               | Description                                                                                                                                                                                            |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tigris buckets lifecycle list` (l)   | List lifecycle rules on a bucket                                                                                                                                                                       |
 | `tigris buckets lifecycle create` (c) | Create a new lifecycle rule. A rule must include a transition (--storage-class with --days or --date) and/or an expiration (--expire-days or --expire-date), and may optionally be scoped via --prefix |
-| `tigris buckets lifecycle edit` (e) | Edit an existing lifecycle rule by its id. Only specified fields are changed |
+| `tigris buckets lifecycle edit` (e)   | Edit an existing lifecycle rule by its id. Only specified fields are changed                                                                                                                           |
 
 ##### `tigris buckets lifecycle list` (l)
 
@@ -899,8 +899,8 @@ List lifecycle rules on a bucket
 tigris buckets lifecycle list <name> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag       | Description                    |
+| ---------- | ------------------------------ |
 | `--format` | Output format (default: table) |
 
 **Examples:**
@@ -917,15 +917,15 @@ Create a new lifecycle rule. A rule must include a transition (--storage-class w
 tigris buckets lifecycle create <name> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-p, --prefix` | Key prefix to scope the rule to. Omit for a bucket-wide rule |
-| `-s, --storage-class` | Target storage class for the transition |
-| `-d, --days` | Transition objects after this many days (used with --storage-class) |
-| `--date` | Transition objects on this date (ISO-8601, e.g. 2026-06-01) (used with --storage-class) |
-| `--expire-days` | Expire (delete) objects after this many days |
-| `--expire-date` | Expire (delete) objects on this date (ISO-8601, e.g. 2026-06-01) |
-| `--disable` | Create the rule in a disabled state |
+| Flag                  | Description                                                                             |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| `-p, --prefix`        | Key prefix to scope the rule to. Omit for a bucket-wide rule                            |
+| `-s, --storage-class` | Target storage class for the transition                                                 |
+| `-d, --days`          | Transition objects after this many days (used with --storage-class)                     |
+| `--date`              | Transition objects on this date (ISO-8601, e.g. 2026-06-01) (used with --storage-class) |
+| `--expire-days`       | Expire (delete) objects after this many days                                            |
+| `--expire-date`       | Expire (delete) objects on this date (ISO-8601, e.g. 2026-06-01)                        |
+| `--disable`           | Create the rule in a disabled state                                                     |
 
 **Examples:**
 ```bash
@@ -943,16 +943,16 @@ Edit an existing lifecycle rule by its id. Only specified fields are changed
 tigris buckets lifecycle edit <name> <id> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-p, --prefix` | Replace the rule's key prefix |
-| `-s, --storage-class` | Replace the rule's transition target |
-| `-d, --days` | Replace the rule's transition days |
-| `--date` | Replace the rule's transition date (ISO-8601) |
-| `--expire-days` | Replace the rule's expiration days |
-| `--expire-date` | Replace the rule's expiration date (ISO-8601) |
-| `--enable` | Enable the rule |
-| `--disable` | Disable the rule (does not remove it) |
+| Flag                  | Description                                   |
+| --------------------- | --------------------------------------------- |
+| `-p, --prefix`        | Replace the rule's key prefix                 |
+| `-s, --storage-class` | Replace the rule's transition target          |
+| `-d, --days`          | Replace the rule's transition days            |
+| `--date`              | Replace the rule's transition date (ISO-8601) |
+| `--expire-days`       | Replace the rule's expiration days            |
+| `--expire-date`       | Replace the rule's expiration date (ISO-8601) |
+| `--enable`            | Enable the rule                               |
+| `--disable`           | Disable the rule (does not remove it)         |
 
 **Examples:**
 ```bash
@@ -969,16 +969,16 @@ Configure object event notifications on a bucket. Sends webhook requests to a UR
 tigris buckets set-notifications <name> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-u, --url` | Webhook URL to send notifications to (must be http or https) |
+| Flag           | Description                                                                  |
+| -------------- | ---------------------------------------------------------------------------- |
+| `-u, --url`    | Webhook URL to send notifications to (must be http or https)                 |
 | `-f, --filter` | SQL WHERE clause to filter events by key (e.g. WHERE `key` REGEXP "^images") |
-| `-t, --token` | Token for webhook authentication |
-| `--username` | Username for basic webhook authentication |
-| `--password` | Password for basic webhook authentication |
-| `--enable` | Enable notifications on the bucket (uses existing config) |
-| `--disable` | Disable notifications on the bucket (preserves existing config) |
-| `--reset` | Clear all notification settings on the bucket |
+| `-t, --token`  | Token for webhook authentication                                             |
+| `--username`   | Username for basic webhook authentication                                    |
+| `--password`   | Password for basic webhook authentication                                    |
+| `--enable`     | Enable notifications on the bucket (uses existing config)                    |
+| `--disable`    | Disable notifications on the bucket (preserves existing config)              |
+| `--reset`      | Clear all notification settings on the bucket                                |
 
 **Examples:**
 ```bash
@@ -999,15 +999,15 @@ Configure CORS rules on a bucket. Each invocation adds a rule unless --override 
 tigris buckets set-cors <name> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-o, --origins` | Allowed origins (comma-separated, or '*' for all) |
-| `-m, --methods` | Allowed HTTP methods (comma-separated, e.g. GET,POST,PUT) |
-| `--headers` | Allowed request headers (comma-separated, or '*' for all) |
-| `--expose-headers` | Response headers to expose (comma-separated) |
-| `--max-age` | Preflight cache duration in seconds (default: 3600) |
-| `--override` | Replace all existing CORS rules instead of appending |
-| `--reset` | Clear all CORS rules on the bucket |
+| Flag               | Description                                               |
+| ------------------ | --------------------------------------------------------- |
+| `-o, --origins`    | Allowed origins (comma-separated, or '*' for all)         |
+| `-m, --methods`    | Allowed HTTP methods (comma-separated, e.g. GET,POST,PUT) |
+| `--headers`        | Allowed request headers (comma-separated, or '*' for all) |
+| `--expose-headers` | Response headers to expose (comma-separated)              |
+| `--max-age`        | Preflight cache duration in seconds (default: 3600)       |
+| `--override`       | Replace all existing CORS rules instead of appending      |
+| `--reset`          | Clear all CORS rules on the bucket                        |
 
 **Examples:**
 ```bash
@@ -1025,14 +1025,14 @@ Share a bucket with your whole organization, specific teams, or specific users. 
 tigris buckets share <name> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-org, --organization` | Give access to everyone in your organization. Takes exactly one --role and cannot be combined with --team or --user |
-| `-t, --team` | Team ID to share with (can specify multiple, comma-separated). Each team is paired positionally with a --role value |
-| `-u, --user` | User ID to share with (can specify multiple, comma-separated). Each user is paired positionally with a --role value |
-| `-r, --role` | Role to grant (can specify multiple, comma-separated). A single role applies to every target; otherwise each role pairs with the corresponding --team or --user value |
-| `--override` | Replace all existing shares instead of merging with them |
-| `--reset` | Remove all shares from the bucket |
+| Flag                   | Description                                                                                                                                                           |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-org, --organization` | Give access to everyone in your organization. Takes exactly one --role and cannot be combined with --team or --user                                                   |
+| `-t, --team`           | Team ID to share with (can specify multiple, comma-separated). Each team is paired positionally with a --role value                                                   |
+| `-u, --user`           | User ID to share with (can specify multiple, comma-separated). Each user is paired positionally with a --role value                                                   |
+| `-r, --role`           | Role to grant (can specify multiple, comma-separated). A single role applies to every target; otherwise each role pairs with the corresponding --team or --user value |
+| `--override`           | Replace all existing shares instead of merging with them                                                                                                              |
+| `--reset`              | Remove all shares from the bucket                                                                                                                                     |
 
 **Examples:**
 ```bash
@@ -1048,10 +1048,10 @@ tigris buckets share my-bucket --reset
 
 List, take, and delete snapshots. A snapshot is a point-in-time, read-only copy of a bucket's state
 
-| Command | Description |
-|---------|-------------|
-| `tigris snapshots list` (l) | List all snapshots for the given bucket, ordered by creation time |
-| `tigris snapshots take` (t) | Take a new snapshot of the bucket's current state. Optionally provide a name for the snapshot |
+| Command                       | Description                                                                                                                      |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `tigris snapshots list` (l)   | List all snapshots for the given bucket, ordered by creation time                                                                |
+| `tigris snapshots take` (t)   | Take a new snapshot of the bucket's current state. Optionally provide a name for the snapshot                                    |
 | `tigris snapshots delete` (d) | Delete one or more snapshots of a bucket by version. Deletion is permanent; forks already created from a snapshot are unaffected |
 
 #### `tigris snapshots list` (l)
@@ -1062,10 +1062,10 @@ List all snapshots for the given bucket, ordered by creation time
 tigris snapshots list <name> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--format` | Output format (default: table) |
-| `--limit` | Maximum number of items to return per page |
+| Flag                | Description                                                     |
+| ------------------- | --------------------------------------------------------------- |
+| `--format`          | Output format (default: table)                                  |
+| `--limit`           | Maximum number of items to return per page                      |
 | `-pt, --page-token` | Pagination token from a previous request to fetch the next page |
 
 **Examples:**
@@ -1096,10 +1096,10 @@ Delete one or more snapshots of a bucket by version. Deletion is permanent; fork
 tigris snapshots delete <name> <version> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-y, --yes` | Skip confirmation prompts |
-| `--force` | Skip confirmation prompts (alias for --yes) |
+| Flag        | Description                                 |
+| ----------- | ------------------------------------------- |
+| `-y, --yes` | Skip confirmation prompts                   |
+| `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
 ```bash
@@ -1111,20 +1111,20 @@ tigris snapshots delete my-bucket 1765889000501544464,1765889000501544465 --yes
 
 Low-level object operations for listing, downloading, uploading, and deleting individual objects in a bucket
 
-| Command | Description |
-|---------|-------------|
-| `tigris objects list` (l) | List objects in a bucket, optionally filtered by a key prefix |
-| `tigris objects list-versions` (lv) | List object versions and delete markers in a bucket (requires bucket versioning), or with --deleted the recoverable versions of soft-deleted objects. Returns both arrays separately to match the S3 ListObjectVersions response |
-| `tigris objects get` (g) | Download an object by key. Prints to stdout by default, or saves to a file with --output |
-| `tigris objects put` (p) | Upload a local file — or data piped via stdin — as an object. Content-type is auto-detected from the file extension unless overridden |
-| `tigris objects delete` (d) | Delete one or more objects by key from the given bucket. On a versioned bucket, the default creates a delete marker; use --version-id or --all-versions to hard-delete versions |
-| `tigris objects set` (s) | (Deprecated) Update settings on an existing object such as access level. Use `tigris objects set-access` for ACL changes and `tigris mv` to rename |
-| `tigris objects set-access` (sa) | Set the access level (public or private) on an existing object |
-| `tigris objects info` (i) | Show metadata for an object (content type, size, modified date) |
-| `tigris objects restore` (rs) | Restore an archived object (e.g. one in the GLACIER tier) into an actively-readable copy for a number of days |
-| `tigris objects restore-info` (ri) | Show the restore state of an archived object (archived, in-progress, or restored) |
-| `tigris objects restore-deleted` (rd) | Restore a soft-deleted object within its retention window. List recoverable objects with "tigris objects list --deleted", then pick a version with "tigris objects list-versions --deleted" |
-| `tigris objects purge` (pg) | Permanently destroy a soft-deleted object version before its retention period expires. This cannot be undone — the version can no longer be restored with "tigris objects restore-deleted" |
+| Command                               | Description                                                                                                                                                                                                                      |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tigris objects list` (l)             | List objects in a bucket, optionally filtered by a key prefix                                                                                                                                                                    |
+| `tigris objects list-versions` (lv)   | List object versions and delete markers in a bucket (requires bucket versioning), or with --deleted the recoverable versions of soft-deleted objects. Returns both arrays separately to match the S3 ListObjectVersions response |
+| `tigris objects get` (g)              | Download an object by key. Prints to stdout by default, or saves to a file with --output                                                                                                                                         |
+| `tigris objects put` (p)              | Upload a local file — or data piped via stdin — as an object. Content-type is auto-detected from the file extension unless overridden                                                                                            |
+| `tigris objects delete` (d)           | Delete one or more objects by key from the given bucket. On a versioned bucket, the default creates a delete marker; use --version-id or --all-versions to hard-delete versions                                                  |
+| `tigris objects set` (s)              | (Deprecated) Update settings on an existing object such as access level. Use `tigris objects set-access` for ACL changes and `tigris mv` to rename                                                                               |
+| `tigris objects set-access` (sa)      | Set the access level (public or private) on an existing object                                                                                                                                                                   |
+| `tigris objects info` (i)             | Show metadata for an object (content type, size, modified date)                                                                                                                                                                  |
+| `tigris objects restore` (rs)         | Restore an archived object (e.g. one in the GLACIER tier) into an actively-readable copy for a number of days                                                                                                                    |
+| `tigris objects restore-info` (ri)    | Show the restore state of an archived object (archived, in-progress, or restored)                                                                                                                                                |
+| `tigris objects restore-deleted` (rd) | Restore a soft-deleted object within its retention window. List recoverable objects with "tigris objects list --deleted", then pick a version with "tigris objects list-versions --deleted"                                      |
+| `tigris objects purge` (pg)           | Permanently destroy a soft-deleted object version before its retention period expires. This cannot be undone — the version can no longer be restored with "tigris objects restore-deleted"                                       |
 
 #### `tigris objects list` (l)
 
@@ -1134,15 +1134,15 @@ List objects in a bucket, optionally filtered by a key prefix
 tigris objects list <bucket> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-p, --prefix` | Filter objects by key prefix (e.g. "images/" to list only images) |
-| `--format` | Output format (default: table) |
-| `-snapshot, --snapshot-version` | Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464) |
-| `--limit` | Maximum number of items to return per page |
-| `-pt, --page-token` | Pagination token from a previous request to fetch the next page |
-| `--source` | List objects from a specific storage source on buckets with shadow migration enabled |
-| `--deleted` | List soft-deleted objects instead of live ones. Requires soft delete on the bucket. On a snapshot bucket a plain delete records a delete marker instead, so use "tigris objects list-versions" for those |
+| Flag                            | Description                                                                                                                                                                                              |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-p, --prefix`                  | Filter objects by key prefix (e.g. "images/" to list only images)                                                                                                                                        |
+| `--format`                      | Output format (default: table)                                                                                                                                                                           |
+| `-snapshot, --snapshot-version` | Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464)                                                            |
+| `--limit`                       | Maximum number of items to return per page                                                                                                                                                               |
+| `-pt, --page-token`             | Pagination token from a previous request to fetch the next page                                                                                                                                          |
+| `--source`                      | List objects from a specific storage source on buckets with shadow migration enabled                                                                                                                     |
+| `--deleted`                     | List soft-deleted objects instead of live ones. Requires soft delete on the bucket. On a snapshot bucket a plain delete records a delete marker instead, so use "tigris objects list-versions" for those |
 
 **Examples:**
 ```bash
@@ -1162,15 +1162,15 @@ List object versions and delete markers in a bucket (requires bucket versioning)
 tigris objects list-versions <bucket> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-p, --prefix` | Filter by key prefix |
-| `-d, --delimiter` | Group keys sharing a common prefix up to the delimiter (e.g. "/" for folder-style grouping) |
-| `--format` | Output format (default: table) |
-| `--limit` | Maximum number of items to return per page |
-| `--key-marker` | Pagination marker — the key to start listing from (from a prior nextKeyMarker) |
-| `--version-id-marker` | Pagination marker — the version id to start listing from (from a prior nextVersionIdMarker) |
-| `--deleted` | List the recoverable versions of soft-deleted objects. Use the version id with "tigris objects restore-deleted" or "tigris objects purge" |
+| Flag                  | Description                                                                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `-p, --prefix`        | Filter by key prefix                                                                                                                      |
+| `-d, --delimiter`     | Group keys sharing a common prefix up to the delimiter (e.g. "/" for folder-style grouping)                                               |
+| `--format`            | Output format (default: table)                                                                                                            |
+| `--limit`             | Maximum number of items to return per page                                                                                                |
+| `--key-marker`        | Pagination marker — the key to start listing from (from a prior nextKeyMarker)                                                            |
+| `--version-id-marker` | Pagination marker — the version id to start listing from (from a prior nextVersionIdMarker)                                               |
+| `--deleted`           | List the recoverable versions of soft-deleted objects. Use the version id with "tigris objects restore-deleted" or "tigris objects purge" |
 
 **Examples:**
 ```bash
@@ -1189,12 +1189,12 @@ Download an object by key. Prints to stdout by default, or saves to a file with 
 tigris objects get <bucket> [key] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-o, --output` | Output file path (if not specified, prints to stdout) |
-| `-m, --mode` | Response mode: "string" loads into memory, "stream" writes in chunks (auto-detected from extension if not specified) |
+| Flag                            | Description                                                                                                                                   |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-o, --output`                  | Output file path (if not specified, prints to stdout)                                                                                         |
+| `-m, --mode`                    | Response mode: "string" loads into memory, "stream" writes in chunks (auto-detected from extension if not specified)                          |
 | `-snapshot, --snapshot-version` | Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464) |
-| `--version-id` | Object version id to download (requires bucket versioning). Omit to download the latest version |
+| `--version-id`                  | Object version id to download (requires bucket versioning). Omit to download the latest version                                               |
 
 **Examples:**
 ```bash
@@ -1211,12 +1211,12 @@ Upload a local file — or data piped via stdin — as an object. Content-type i
 tigris objects put <bucket> [key] [file] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-a, --access` | Access level (default: private) |
-| `-t, --content-type` | Content type (auto-detected from extension if omitted) |
-| `--cache-control` | Cache-Control header stored with the object and returned on every read (e.g. "public, max-age=31536000, immutable") |
-| `--format` | Output format (default: table) |
+| Flag                 | Description                                                                                                         |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `-a, --access`       | Access level (default: private)                                                                                     |
+| `-t, --content-type` | Content type (auto-detected from extension if omitted)                                                              |
+| `--cache-control`    | Cache-Control header stored with the object and returned on every read (e.g. "public, max-age=31536000, immutable") |
+| `--format`           | Output format (default: table)                                                                                      |
 
 **Examples:**
 ```bash
@@ -1236,12 +1236,12 @@ Delete one or more objects by key from the given bucket. On a versioned bucket, 
 tigris objects delete <bucket> [key] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-y, --yes` | Skip confirmation prompts |
-| `--version-id` | Hard-delete a specific object version (requires bucket versioning). Targets a single key. To destroy a soft-deleted version, use "tigris objects purge" |
-| `--all-versions` | Hard-delete every version and delete marker for the given key(s). Mutually exclusive with --version-id |
-| `--force` | Skip confirmation prompts (alias for --yes) |
+| Flag             | Description                                                                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-y, --yes`      | Skip confirmation prompts                                                                                                                               |
+| `--version-id`   | Hard-delete a specific object version (requires bucket versioning). Targets a single key. To destroy a soft-deleted version, use "tigris objects purge" |
+| `--all-versions` | Hard-delete every version and delete marker for the given key(s). Mutually exclusive with --version-id                                                  |
+| `--force`        | Skip confirmation prompts (alias for --yes)                                                                                                             |
 
 **Examples:**
 ```bash
@@ -1260,9 +1260,9 @@ tigris objects delete my-bucket old-file.txt --all-versions --yes
 tigris objects set <bucket> [key] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-a, --access` | Access level **(required)** |
+| Flag            | Description                    |
+| --------------- | ------------------------------ |
+| `-a, --access`  | Access level **(required)**    |
 | `-n, --new-key` | Rename the object to a new key |
 
 **Examples:**
@@ -1280,8 +1280,8 @@ Set the access level (public or private) on an existing object
 tigris objects set-access <bucket> [key] [access] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag       | Description                    |
+| ---------- | ------------------------------ |
 | `--format` | Output format (default: table) |
 
 **Examples:**
@@ -1298,11 +1298,11 @@ Show metadata for an object (content type, size, modified date)
 tigris objects info <bucket> [key] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--format` | Output format (default: table) |
-| `-snapshot, --snapshot-version` | Read from a specific bucket snapshot |
-| `--version-id` | Object version id (requires bucket versioning). Omit to read the latest version |
+| Flag                            | Description                                                                     |
+| ------------------------------- | ------------------------------------------------------------------------------- |
+| `--format`                      | Output format (default: table)                                                  |
+| `-snapshot, --snapshot-version` | Read from a specific bucket snapshot                                            |
+| `--version-id`                  | Object version id (requires bucket versioning). Omit to read the latest version |
 
 **Examples:**
 ```bash
@@ -1320,12 +1320,12 @@ Restore an archived object (e.g. one in the GLACIER tier) into an actively-reada
 tigris objects restore <bucket> [key] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-d, --days` | How many days the restored copy stays available before reverting to its archived tier (default: 1) |
-| `--version-id` | Restore a specific object version (requires bucket versioning). Omit to restore the current version |
+| Flag                            | Description                                                                                                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `-d, --days`                    | How many days the restored copy stays available before reverting to its archived tier (default: 1)                                                           |
+| `--version-id`                  | Restore a specific object version (requires bucket versioning). Omit to restore the current version                                                          |
 | `-snapshot, --snapshot-version` | Restore the object as of a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464) |
-| `--format` | Output format (default: table) |
+| `--format`                      | Output format (default: table)                                                                                                                               |
 
 **Examples:**
 ```bash
@@ -1343,11 +1343,11 @@ Show the restore state of an archived object (archived, in-progress, or restored
 tigris objects restore-info <bucket> [key] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--version-id` | Inspect a specific object version (requires bucket versioning). Omit to read the current version |
+| Flag                            | Description                                                                                                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--version-id`                  | Inspect a specific object version (requires bucket versioning). Omit to read the current version                                                             |
 | `-snapshot, --snapshot-version` | Inspect the object as of a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464) |
-| `--format` | Output format (default: table) |
+| `--format`                      | Output format (default: table)                                                                                                                               |
 
 **Examples:**
 ```bash
@@ -1364,10 +1364,10 @@ Restore a soft-deleted object within its retention window. List recoverable obje
 tigris objects restore-deleted <bucket> [key] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag           | Description                                                                                          |
+| -------------- | ---------------------------------------------------------------------------------------------------- |
 | `--version-id` | The soft-deleted version to bring back, from "tigris objects list-versions --deleted" **(required)** |
-| `--format` | Output format (default: table) |
+| `--format`     | Output format (default: table)                                                                       |
 
 **Examples:**
 ```bash
@@ -1383,12 +1383,12 @@ Permanently destroy a soft-deleted object version before its retention period ex
 tigris objects purge <bucket> [key] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-y, --yes` | Skip confirmation prompts |
+| Flag           | Description                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------------- |
+| `-y, --yes`    | Skip confirmation prompts                                                                         |
 | `--version-id` | The soft-deleted version to destroy, from "tigris objects list-versions --deleted" **(required)** |
-| `--force` | Skip confirmation prompts (alias for --yes) |
-| `--format` | Output format (default: table) |
+| `--force`      | Skip confirmation prompts (alias for --yes)                                                       |
+| `--format`     | Output format (default: table)                                                                    |
 
 **Examples:**
 ```bash
@@ -1400,18 +1400,18 @@ tigris objects purge t3://my-bucket/report.pdf --version-id 1787749774802410496 
 
 Create, list, inspect, delete, and assign roles to access keys. Access keys are credentials used for programmatic API access
 
-| Command | Description |
-|---------|-------------|
-| `tigris access-keys list` (l) | List all access keys in the current organization |
-| `tigris access-keys create` (c) | Create a new access key, optionally scoped to buckets, and export its credentials to a dotenv file or your shell. Returns the key ID and secret (shown only once) |
-| `tigris access-keys delete` (d) | Permanently delete one or more access keys by ID. This revokes all access immediately |
-| `tigris access-keys get` (g) | Show details for an access key including its name, creation date, default permissions, and assigned bucket roles |
-| `tigris access-keys assign` (a) | Assign per-bucket roles to an access key. Pair each --bucket with a --role (Editor, ReadWrite, or ReadOnly), or use --admin for org-wide access |
-| `tigris access-keys set` (s) | Update settings on an existing access key — currently its default permissions, the console's "Enable default permissions" toggle. Bucket roles are left as they are |
-| `tigris access-keys rotate` (r) | Rotate an access key's secret. The current secret is immediately invalidated and a new one is returned (shown only once) |
-| `tigris access-keys attach-policy` (ap) | Attach an IAM policy to an access key. If no policy ARN is provided, shows interactive selection of available policies |
-| `tigris access-keys detach-policy` (dp) | Detach an IAM policy from an access key. If no policy ARN is provided, shows interactive selection of attached policies |
-| `tigris access-keys list-policies` (lp) | List all IAM policies attached to an access key |
+| Command                                 | Description                                                                                                                                                         |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tigris access-keys list` (l)           | List all access keys in the current organization                                                                                                                    |
+| `tigris access-keys create` (c)         | Create a new access key, optionally scoped to buckets, and export its credentials to a dotenv file or your shell. Returns the key ID and secret (shown only once)   |
+| `tigris access-keys delete` (d)         | Permanently delete one or more access keys by ID. This revokes all access immediately                                                                               |
+| `tigris access-keys get` (g)            | Show details for an access key including its name, creation date, default permissions, and assigned bucket roles                                                    |
+| `tigris access-keys assign` (a)         | Assign per-bucket roles to an access key. Pair each --bucket with a --role (Editor, ReadWrite, or ReadOnly), or use --admin for org-wide access                     |
+| `tigris access-keys set` (s)            | Update settings on an existing access key — currently its default permissions, the console's "Enable default permissions" toggle. Bucket roles are left as they are |
+| `tigris access-keys rotate` (r)         | Rotate an access key's secret. The current secret is immediately invalidated and a new one is returned (shown only once)                                            |
+| `tigris access-keys attach-policy` (ap) | Attach an IAM policy to an access key. If no policy ARN is provided, shows interactive selection of available policies                                              |
+| `tigris access-keys detach-policy` (dp) | Detach an IAM policy from an access key. If no policy ARN is provided, shows interactive selection of attached policies                                             |
+| `tigris access-keys list-policies` (lp) | List all IAM policies attached to an access key                                                                                                                     |
 
 #### `tigris access-keys list` (l)
 
@@ -1421,10 +1421,10 @@ List all access keys in the current organization
 tigris access-keys list [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--format` | Output format (default: table) |
-| `--limit` | Maximum number of items to return per page |
+| Flag                | Description                                                     |
+| ------------------- | --------------------------------------------------------------- |
+| `--format`          | Output format (default: table)                                  |
+| `--limit`           | Maximum number of items to return per page                      |
 | `-pt, --page-token` | Pagination token from a previous request to fetch the next page |
 
 **Examples:**
@@ -1440,15 +1440,15 @@ Create a new access key, optionally scoped to buckets, and export its credential
 tigris access-keys create <name> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-b, --bucket` | Bucket name (can specify multiple, comma-separated). Each bucket is paired positionally with a --role value |
-| `-r, --role` | Role to assign (can specify multiple, comma-separated). Each role pairs with the corresponding --bucket value |
-| `--admin` | Grant admin access to all buckets in the organization |
+| Flag                    | Description                                                                                                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-b, --bucket`          | Bucket name (can specify multiple, comma-separated). Each bucket is paired positionally with a --role value                                                                                                   |
+| `-r, --role`            | Role to assign (can specify multiple, comma-separated). Each role pairs with the corresponding --bucket value                                                                                                 |
+| `--admin`               | Grant admin access to all buckets in the organization                                                                                                                                                         |
 | `--default-permissions` | Whether the key also gets the default-allowed operations (such as creating and listing buckets) on top of its roles and policies — the console's "Enable default permissions" toggle. Enabled unless disabled |
-| `--env` | Write the credentials to a dotenv file, merging into it when it already exists. Defaults to ./.env. The secret is then not printed |
-| `--export` | Print the credentials as shell "export" lines and nothing else on stdout, for eval "$(tigris access-keys create <name> --export)" |
-| `--for` | Which SDK the credentials are for. --env and --export then use that SDK's variable names. tigris writes TIGRIS_STORAGE_*; aws writes AWS_* plus Tigris endpoints and region (default: tigris) |
+| `--env`                 | Write the credentials to a dotenv file, merging into it when it already exists. Defaults to ./.env. The secret is then not printed                                                                            |
+| `--export`              | Print the credentials as shell "export" lines and nothing else on stdout, for eval "$(tigris access-keys create <name> --export)"                                                                             |
+| `--for`                 | Which SDK the credentials are for. --env and --export then use that SDK's variable names. tigris writes TIGRIS_STORAGE_*; aws writes AWS_* plus Tigris endpoints and region (default: tigris)                 |
 
 **Examples:**
 ```bash
@@ -1466,10 +1466,10 @@ Permanently delete one or more access keys by ID. This revokes all access immedi
 tigris access-keys delete <id> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-y, --yes` | Skip confirmation prompts |
-| `--force` | Skip confirmation prompts (alias for --yes) |
+| Flag        | Description                                 |
+| ----------- | ------------------------------------------- |
+| `-y, --yes` | Skip confirmation prompts                   |
+| `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
 ```bash
@@ -1498,12 +1498,12 @@ Assign per-bucket roles to an access key. Pair each --bucket with a --role (Edit
 tigris access-keys assign <id> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-b, --bucket` | Bucket name (can specify multiple, comma-separated). Each bucket is paired positionally with a --role value |
-| `-r, --role` | Role to assign (can specify multiple, comma-separated). Each role pairs with the corresponding --bucket value |
-| `--admin` | Grant admin access to all buckets in the organization |
-| `--revoke-roles` | Revoke all bucket roles from the access key |
+| Flag             | Description                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------- |
+| `-b, --bucket`   | Bucket name (can specify multiple, comma-separated). Each bucket is paired positionally with a --role value   |
+| `-r, --role`     | Role to assign (can specify multiple, comma-separated). Each role pairs with the corresponding --bucket value |
+| `--admin`        | Grant admin access to all buckets in the organization                                                         |
+| `--revoke-roles` | Revoke all bucket roles from the access key                                                                   |
 
 **Examples:**
 ```bash
@@ -1521,8 +1521,8 @@ Update settings on an existing access key — currently its default permissions,
 tigris access-keys set <id> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag                    | Description                                                                                                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--default-permissions` | Whether the key also gets the default-allowed operations (such as creating and listing buckets) on top of its roles and policies — the console's "Enable default permissions" toggle. Enabled unless disabled |
 
 **Examples:**
@@ -1539,10 +1539,10 @@ Rotate an access key's secret. The current secret is immediately invalidated and
 tigris access-keys rotate <id> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-y, --yes` | Skip confirmation prompts |
-| `--force` | Skip confirmation prompts (alias for --yes) |
+| Flag        | Description                                 |
+| ----------- | ------------------------------------------- |
+| `-y, --yes` | Skip confirmation prompts                   |
+| `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
 ```bash
@@ -1557,8 +1557,8 @@ Attach an IAM policy to an access key. If no policy ARN is provided, shows inter
 tigris access-keys attach-policy <id> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag           | Description                 |
+| -------------- | --------------------------- |
 | `--policy-arn` | ARN of the policy to attach |
 
 **Examples:**
@@ -1575,11 +1575,11 @@ Detach an IAM policy from an access key. If no policy ARN is provided, shows int
 tigris access-keys detach-policy <id> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-y, --yes` | Skip confirmation prompts |
-| `--policy-arn` | ARN of the policy to detach |
-| `--force` | Skip confirmation prompts (alias for --yes) |
+| Flag           | Description                                 |
+| -------------- | ------------------------------------------- |
+| `-y, --yes`    | Skip confirmation prompts                   |
+| `--policy-arn` | ARN of the policy to detach                 |
+| `--force`      | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
 ```bash
@@ -1595,10 +1595,10 @@ List all IAM policies attached to an access key
 tigris access-keys list-policies <id> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--format` | Output format (default: table) |
-| `--limit` | Maximum number of items to return per page |
+| Flag                | Description                                                     |
+| ------------------- | --------------------------------------------------------------- |
+| `--format`          | Output format (default: table)                                  |
+| `--limit`           | Maximum number of items to return per page                      |
 | `-pt, --page-token` | Pagination token from a previous request to fetch the next page |
 
 **Examples:**
@@ -1610,26 +1610,26 @@ tigris access-keys list-policies tid_AaBbCcDdEeFf
 
 Identity and Access Management - manage policies, users, and permissions
 
-| Command | Description |
-|---------|-------------|
+| Command                   | Description                                                      |
+| ------------------------- | ---------------------------------------------------------------- |
 | `tigris iam policies` (p) | Manage IAM policies. Policies define permissions for access keys |
-| `tigris iam users` (u) | Manage organization users and invitations |
-| `tigris iam teams` (t) | Manage organization teams |
+| `tigris iam users` (u)    | Manage organization users and invitations                        |
+| `tigris iam teams` (t)    | Manage organization teams                                        |
 
 #### `tigris iam policies` (p)
 
 Manage IAM policies. Policies define permissions for access keys
 
-| Command | Description |
-|---------|-------------|
-| `tigris iam policies list` (l) | List all policies in the current organization |
-| `tigris iam policies get` (g) | Show details for a policy including its document and attached users. If no ARN provided, shows interactive selection |
-| `tigris iam policies create` (c) | Create a new policy with the given name and policy document. Document can be provided via file, inline JSON, or stdin |
-| `tigris iam policies edit` (e) | Update an existing policy's document. Document can be provided via file, inline JSON, or stdin. If no ARN provided, shows interactive selection |
-| `tigris iam policies delete` (d) | Delete a policy. If no ARN provided, shows interactive selection |
-| `tigris iam policies link-key` (lnk) | Link an access key to a policy. If no policy ARN is provided, shows interactive selection. If no access key ID is provided, shows interactive selection of unlinked keys |
+| Command                                 | Description                                                                                                                                                                |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tigris iam policies list` (l)          | List all policies in the current organization                                                                                                                              |
+| `tigris iam policies get` (g)           | Show details for a policy including its document and attached users. If no ARN provided, shows interactive selection                                                       |
+| `tigris iam policies create` (c)        | Create a new policy with the given name and policy document. Document can be provided via file, inline JSON, or stdin                                                      |
+| `tigris iam policies edit` (e)          | Update an existing policy's document. Document can be provided via file, inline JSON, or stdin. If no ARN provided, shows interactive selection                            |
+| `tigris iam policies delete` (d)        | Delete a policy. If no ARN provided, shows interactive selection                                                                                                           |
+| `tigris iam policies link-key` (lnk)    | Link an access key to a policy. If no policy ARN is provided, shows interactive selection. If no access key ID is provided, shows interactive selection of unlinked keys   |
 | `tigris iam policies unlink-key` (ulnk) | Unlink an access key from a policy. If no policy ARN is provided, shows interactive selection. If no access key ID is provided, shows interactive selection of linked keys |
-| `tigris iam policies list-keys` (lk) | List all access keys attached to a policy. If no policy ARN is provided, shows interactive selection |
+| `tigris iam policies list-keys` (lk)    | List all access keys attached to a policy. If no policy ARN is provided, shows interactive selection                                                                       |
 
 ##### `tigris iam policies list` (l)
 
@@ -1639,10 +1639,10 @@ List all policies in the current organization
 tigris iam policies list [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--format` | Output format (default: table) |
-| `--limit` | Maximum number of items to return per page |
+| Flag                | Description                                                     |
+| ------------------- | --------------------------------------------------------------- |
+| `--format`          | Output format (default: table)                                  |
+| `--limit`           | Maximum number of items to return per page                      |
 | `-pt, --page-token` | Pagination token from a previous request to fetch the next page |
 
 **Examples:**
@@ -1658,8 +1658,8 @@ Show details for a policy including its document and attached users. If no ARN p
 tigris iam policies get [resource] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag       | Description                    |
+| ---------- | ------------------------------ |
 | `--format` | Output format (default: table) |
 
 **Examples:**
@@ -1676,10 +1676,10 @@ Create a new policy with the given name and policy document. Document can be pro
 tigris iam policies create <name> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag             | Description                                                                   |
+| ---------------- | ----------------------------------------------------------------------------- |
 | `-d, --document` | Policy document (JSON file path or inline JSON). If omitted, reads from stdin |
-| `--description` | Policy description |
+| `--description`  | Policy description                                                            |
 
 **Examples:**
 ```bash
@@ -1696,10 +1696,10 @@ Update an existing policy's document. Document can be provided via file, inline 
 tigris iam policies edit [resource] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag             | Description                                                                       |
+| ---------------- | --------------------------------------------------------------------------------- |
 | `-d, --document` | New policy document (JSON file path or inline JSON). If omitted, reads from stdin |
-| `--description` | Update policy description |
+| `--description`  | Update policy description                                                         |
 
 **Examples:**
 ```bash
@@ -1716,10 +1716,10 @@ Delete a policy. If no ARN provided, shows interactive selection
 tigris iam policies delete [resource] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-y, --yes` | Skip confirmation prompts |
-| `--force` | Skip confirmation prompts (alias for --yes) |
+| Flag        | Description                                 |
+| ----------- | ------------------------------------------- |
+| `-y, --yes` | Skip confirmation prompts                   |
+| `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
 ```bash
@@ -1735,8 +1735,8 @@ Link an access key to a policy. If no policy ARN is provided, shows interactive 
 tigris iam policies link-key [resource] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag   | Description             |
+| ------ | ----------------------- |
 | `--id` | Access key ID to attach |
 
 **Examples:**
@@ -1753,11 +1753,11 @@ Unlink an access key from a policy. If no policy ARN is provided, shows interact
 tigris iam policies unlink-key [resource] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-y, --yes` | Skip confirmation prompts |
-| `--id` | Access key ID to detach |
-| `--force` | Skip confirmation prompts (alias for --yes) |
+| Flag        | Description                                 |
+| ----------- | ------------------------------------------- |
+| `-y, --yes` | Skip confirmation prompts                   |
+| `--id`      | Access key ID to detach                     |
+| `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
 ```bash
@@ -1773,8 +1773,8 @@ List all access keys attached to a policy. If no policy ARN is provided, shows i
 tigris iam policies list-keys [resource] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag       | Description                    |
+| ---------- | ------------------------------ |
 | `--format` | Output format (default: table) |
 
 **Examples:**
@@ -1787,13 +1787,13 @@ tigris iam policies list-keys
 
 Manage organization users and invitations
 
-| Command | Description |
-|---------|-------------|
-| `tigris iam users list` (l) | List all users and pending invitations in the organization |
-| `tigris iam users invite` (i) | Invite users to the organization by email |
-| `tigris iam users revoke-invitation` (ri) | Revoke pending invitations. If no invitation ID provided, shows interactive selection |
-| `tigris iam users update-role` (ur) | Update user roles in the organization. If no user ID provided, shows interactive selection |
-| `tigris iam users remove` (rm) | Remove users from the organization. If no user ID provided, shows interactive selection |
+| Command                                   | Description                                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `tigris iam users list` (l)               | List all users and pending invitations in the organization                                 |
+| `tigris iam users invite` (i)             | Invite users to the organization by email                                                  |
+| `tigris iam users revoke-invitation` (ri) | Revoke pending invitations. If no invitation ID provided, shows interactive selection      |
+| `tigris iam users update-role` (ur)       | Update user roles in the organization. If no user ID provided, shows interactive selection |
+| `tigris iam users remove` (rm)            | Remove users from the organization. If no user ID provided, shows interactive selection    |
 
 ##### `tigris iam users list` (l)
 
@@ -1803,8 +1803,8 @@ List all users and pending invitations in the organization
 tigris iam users list [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag       | Description                    |
+| ---------- | ------------------------------ |
 | `--format` | Output format (default: table) |
 
 **Examples:**
@@ -1821,8 +1821,8 @@ Invite users to the organization by email
 tigris iam users invite <email> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag         | Description                                             |
+| ------------ | ------------------------------------------------------- |
 | `-r, --role` | Role to assign to the invited user(s) (default: member) |
 
 **Examples:**
@@ -1840,10 +1840,10 @@ Revoke pending invitations. If no invitation ID provided, shows interactive sele
 tigris iam users revoke-invitation [resource] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-y, --yes` | Skip confirmation prompts |
-| `--force` | Skip confirmation prompts (alias for --yes) |
+| Flag        | Description                                 |
+| ----------- | ------------------------------------------- |
+| `-y, --yes` | Skip confirmation prompts                   |
+| `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
 ```bash
@@ -1860,8 +1860,8 @@ Update user roles in the organization. If no user ID provided, shows interactive
 tigris iam users update-role [resource] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag         | Description                                                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `-r, --role` | Role(s) to assign (comma-separated). Each role pairs with the corresponding user ID. If one role is given, it applies to all users **(required)** |
 
 **Examples:**
@@ -1880,10 +1880,10 @@ Remove users from the organization. If no user ID provided, shows interactive se
 tigris iam users remove [resource] [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-y, --yes` | Skip confirmation prompts |
-| `--force` | Skip confirmation prompts (alias for --yes) |
+| Flag        | Description                                 |
+| ----------- | ------------------------------------------- |
+| `-y, --yes` | Skip confirmation prompts                   |
+| `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
 ```bash
@@ -1896,11 +1896,11 @@ tigris iam users remove user@example.com,user@example.net --yes
 
 Manage organization teams
 
-| Command | Description |
-|---------|-------------|
-| `tigris iam teams list` (l) | List all teams in the organization |
-| `tigris iam teams create` (c) | Create a new team in the organization |
-| `tigris iam teams edit` (e) | Update a team's name, description, or members. Members are replaced with the provided list |
+| Command                       | Description                                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------------ |
+| `tigris iam teams list` (l)   | List all teams in the organization                                                         |
+| `tigris iam teams create` (c) | Create a new team in the organization                                                      |
+| `tigris iam teams edit` (e)   | Update a team's name, description, or members. Members are replaced with the provided list |
 
 ##### `tigris iam teams list` (l)
 
@@ -1910,8 +1910,8 @@ List all teams in the organization
 tigris iam teams list [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag       | Description                    |
+| ---------- | ------------------------------ |
 | `--format` | Output format (default: table) |
 
 **Examples:**
@@ -1928,10 +1928,10 @@ Create a new team in the organization
 tigris iam teams create <name> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-d, --description` | Description for the team |
-| `-m, --members` | Member email address(es) to add (comma-separated for multiple) |
+| Flag                | Description                                                    |
+| ------------------- | -------------------------------------------------------------- |
+| `-d, --description` | Description for the team                                       |
+| `-m, --members`     | Member email address(es) to add (comma-separated for multiple) |
 
 **Examples:**
 ```bash
@@ -1948,11 +1948,11 @@ Update a team's name, description, or members. Members are replaced with the pro
 tigris iam teams edit <id> [flags]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-n, --name` | New name for the team |
-| `-d, --description` | New description for the team |
-| `-m, --members` | Replace the team's members with these email address(es) (comma-separated for multiple) |
+| Flag                | Description                                                                            |
+| ------------------- | -------------------------------------------------------------------------------------- |
+| `-n, --name`        | New name for the team                                                                  |
+| `-d, --description` | New description for the team                                                           |
+| `-m, --members`     | Replace the team's members with these email address(es) (comma-separated for multiple) |
 
 **Examples:**
 ```bash

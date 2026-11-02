@@ -32,7 +32,7 @@ definitions:
 
   location_options: &location_options
     - name: Global
-      value: 'global'
+      value: "global"
       description: Global
     - name: USA
       value: usa
@@ -148,9 +148,9 @@ commands:
       - "npx tigris init"
       - "tigris init --agent"
     messages:
-      onStart: ''
-      onSuccess: ''
-      onFailure: 'Setup failed'
+      onStart: ""
+      onSuccess: ""
+      onFailure: "Setup failed"
     arguments:
       - name: agent
         description: Print a setup recipe for an AI coding agent to follow instead of running the interactive wizard
@@ -170,14 +170,14 @@ commands:
       - "tigris configure --access-key tid_AaBb --access-secret tsec_XxYy"
       - "tigris configure --endpoint https://custom.endpoint.dev"
     messages:
-      onStart: 'Saving credentials...'
-      onSuccess: 'Credentials saved to ~/.tigris/config.json. You can now use all tigris commands.'
-      onFailure: 'Failed to save credentials'
+      onStart: "Saving credentials..."
+      onSuccess: "Credentials saved to ~/.tigris/config.json. You can now use all tigris commands."
+      onFailure: "Failed to save credentials"
       nextActions:
-        - command: 'tigris credentials test'
-          description: 'Verify your credentials are working'
-        - command: 'tigris ls'
-          description: 'List your buckets'
+        - command: "tigris credentials test"
+          description: "Verify your credentials are working"
+        - command: "tigris ls"
+          description: "List your buckets"
     arguments:
       - name: access-key
         description: Your Tigris access key ID
@@ -188,7 +188,7 @@ commands:
         alias: secret
         required: false
       - name: endpoint
-        description: 'Tigris API endpoint (default: https://t3.storage.dev)'
+        description: "Tigris API endpoint (default: https://t3.storage.dev)"
         alias: e
         required: false
 
@@ -202,9 +202,9 @@ commands:
       - "tigris login oauth"
       - "tigris login credentials --access-key tid_AaBb --access-secret tsec_XxYy"
     messages:
-      onStart: ''
-      onSuccess: 'Login successful'
-      onFailure: 'Login failed'
+      onStart: ""
+      onSuccess: "Login successful"
+      onFailure: "Login failed"
     alias: l
     arguments:
       - name: access-key
@@ -221,9 +221,9 @@ commands:
         description: Choose how to login - OAuth (browser) or credentials (access key)
         helpText: "Choose how to log in: OAuth or access key"
         messages:
-          onStart: ''
-          onSuccess: 'Login successful'
-          onFailure: 'Login failed'
+          onStart: ""
+          onSuccess: "Login successful"
+          onFailure: "Login failed"
       # oauth
       - name: oauth
         description: Login via browser using OAuth2 device flow. Best for interactive use
@@ -232,16 +232,16 @@ commands:
         examples:
           - "tigris login oauth"
         messages:
-          onStart: 'Opening browser for authentication...'
+          onStart: "Opening browser for authentication..."
           onSuccess: "Logged in successfully\nOrganization '{{org}}' selected"
-          onFailure: 'Authentication failed'
+          onFailure: "Authentication failed"
           onAlreadyDone: "Already logged in.\nRun \"tigris logout\" first to switch accounts."
           hint: "You have {{count}} organizations.\nRun \"tigris orgs list\" to switch."
           nextActions:
-            - command: 'tigris orgs list'
-              description: 'List and switch organizations'
-            - command: 'tigris ls'
-              description: 'List your buckets'
+            - command: "tigris orgs list"
+              description: "List and switch organizations"
+            - command: "tigris ls"
+              description: "List your buckets"
       # credentials
       - name: credentials
         description: Login with an access key and secret. Creates a temporary session that is cleared on logout
@@ -251,12 +251,12 @@ commands:
           - "tigris login credentials --access-key tid_AaBb --access-secret tsec_XxYy"
           - "tigris login credentials"
         messages:
-          onStart: 'Authenticating...'
-          onSuccess: 'Logged in with credentials'
-          onFailure: 'Authentication failed'
+          onStart: "Authenticating..."
+          onSuccess: "Logged in with credentials"
+          onFailure: "Authentication failed"
           nextActions:
-            - command: 'tigris ls'
-              description: 'List your buckets'
+            - command: "tigris ls"
+              description: "List your buckets"
         arguments:
           - name: access-key
             description: Your access key ID (will prompt if not provided)
@@ -277,9 +277,9 @@ commands:
     examples:
       - "tigris whoami"
     messages:
-      onStart: ''
-      onSuccess: ''
-      onFailure: 'Failed to get user information'
+      onStart: ""
+      onSuccess: ""
+      onFailure: "Failed to get user information"
       onAlreadyDone: "Not authenticated\nRun \"tigris login\" to authenticate"
 
   # usage
@@ -293,11 +293,11 @@ commands:
       - "tigris usage --all"
       - "tigris usage --format json"
     messages:
-      onStart: ''
-      onSuccess: ''
-      onFailure: 'Failed to get usage'
-      onEmpty: 'No usage recorded for {{month}}'
-      hint: '{{action}}: {{url}}'
+      onStart: ""
+      onSuccess: ""
+      onFailure: "Failed to get usage"
+      onEmpty: "No usage recorded for {{month}}"
+      hint: "{{action}}: {{url}}"
     arguments:
       - name: month
         description: Billing month as YYYY-MM (default is the current month)
@@ -315,10 +315,10 @@ commands:
     examples:
       - "tigris update"
     messages:
-      onStart: 'Checking for updates...'
-      onSuccess: 'Updated to {{latestVersion}}'
-      onFailure: 'Failed to update'
-      onAlreadyDone: 'Already on the latest version ({{currentVersion}})'
+      onStart: "Checking for updates..."
+      onSuccess: "Updated to {{latestVersion}}"
+      onFailure: "Failed to update"
+      onAlreadyDone: "Already on the latest version ({{currentVersion}})"
 
   # logout
   - name: logout
@@ -328,9 +328,9 @@ commands:
     examples:
       - "tigris logout"
     messages:
-      onStart: 'Logging out...'
-      onSuccess: 'Logged out. Your configured credentials are still saved.'
-      onFailure: 'Failed to logout'
+      onStart: "Logging out..."
+      onSuccess: "Logged out. Your configured credentials are still saved."
+      onFailure: "Failed to logout"
 
   # credentials
   - name: credentials
@@ -350,15 +350,14 @@ commands:
           - "tigris credentials test"
           - "tigris credentials test --bucket my-bucket"
         messages:
-          onStart: 'Testing credentials...'
-          onSuccess: 'Credentials are valid'
-          onFailure: 'Credentials test failed'
+          onStart: "Testing credentials..."
+          onSuccess: "Credentials are valid"
+          onFailure: "Credentials test failed"
         arguments:
           - name: bucket
             description: Bucket name to test access against (optional)
             alias: b
             required: false
-
 
   #########################
   # Telemetry
@@ -381,26 +380,26 @@ commands:
         examples:
           - "tigris telemetry status"
         messages:
-          onStart: ''
-          onSuccess: ''
-          onFailure: 'Failed to read telemetry settings'
+          onStart: ""
+          onSuccess: ""
+          onFailure: "Failed to read telemetry settings"
       - name: disable
         description: Turn off usage analytics and error reports on this machine
         examples:
           - "tigris telemetry disable"
         messages:
-          onStart: ''
-          onSuccess: 'Telemetry disabled. The CLI will not send usage analytics or error reports.'
-          onFailure: 'Failed to disable telemetry'
+          onStart: ""
+          onSuccess: "Telemetry disabled. The CLI will not send usage analytics or error reports."
+          onFailure: "Failed to disable telemetry"
       - name: enable
         description: Turn usage analytics and error reports back on for this machine
         helpText: Turn usage analytics and error reports back on
         examples:
           - "tigris telemetry enable"
         messages:
-          onStart: ''
-          onSuccess: 'Telemetry enabled. Thanks for helping us improve the CLI.'
-          onFailure: 'Failed to enable telemetry'
+          onStart: ""
+          onSuccess: "Telemetry enabled. Thanks for helping us improve the CLI."
+          onFailure: "Failed to enable telemetry"
 
   #########################
   # Unix style commands
@@ -417,7 +416,7 @@ commands:
       - "tigris ls my-bucket/images/"
       - "tigris ls t3://my-bucket/prefix/"
     messages:
-      onFailure: 'Failed to list. Verify the bucket exists and your credentials have access'
+      onFailure: "Failed to list. Verify the bucket exists and your credentials have access"
       onEmpty: 'No results found. Run "tigris ls" to see all buckets'
     arguments:
       - name: path
@@ -463,7 +462,7 @@ commands:
       - "tigris mk my-fork --fork-of my-bucket"
       - "tigris mk my-fork --fork-of my-bucket --source-snapshot 1765889000501544464"
     messages:
-      onFailure: 'Failed to create. Check the name is valid and your credentials have write access'
+      onFailure: "Failed to create. Check the name is valid and your credentials have write access"
     arguments:
       - name: path
         required: true
@@ -514,7 +513,7 @@ commands:
         description: Location for the bucket (only applies when creating a bucket)
         alias: l
         options: *location_options
-        default: 'global'
+        default: "global"
       - name: fork-of
         description: Create this bucket as a fork (copy-on-write clone) of the named source bucket
         alias: fork
@@ -532,7 +531,7 @@ commands:
       - "tigris touch my-bucket/placeholder.txt"
       - "tigris touch t3://my-bucket/logs/"
     messages:
-      onFailure: 'Failed to create object. Verify the bucket exists and your credentials have write access'
+      onFailure: "Failed to create object. Verify the bucket exists and your credentials have write access"
     arguments:
       - name: path
         required: true
@@ -552,9 +551,9 @@ commands:
       - "tigris stat t3://my-bucket"
       - "tigris stat t3://my-bucket/my-object.json"
     messages:
-      onStart: ''
-      onSuccess: ''
-      onFailure: 'Failed to get stats'
+      onStart: ""
+      onSuccess: ""
+      onFailure: "Failed to get stats"
     arguments:
       - name: path
         required: false
@@ -587,9 +586,9 @@ commands:
       - "tigris presign my-bucket/image.png --format json"
       - "tigris presign my-bucket/data.csv --access-key tid_AaBb"
     messages:
-      onStart: ''
-      onSuccess: ''
-      onFailure: 'Failed to generate presigned URL'
+      onStart: ""
+      onSuccess: ""
+      onFailure: "Failed to generate presigned URL"
     arguments:
       - name: path
         required: true
@@ -606,7 +605,7 @@ commands:
       - name: expires-in
         description: URL expiry time in seconds
         alias: e
-        default: '3600'
+        default: "3600"
       - name: access-key
         description: Access key ID to use for signing. If not provided, resolved from credentials or auto-selected
         helpText: Access key ID to sign with. Defaults to your current credentials
@@ -636,7 +635,7 @@ commands:
       - "tigris cp t3://my-bucket/src/ t3://my-bucket/dest/ -r"
       - "tigris cp ./images/ t3://my-bucket/images/ -r"
     messages:
-      onFailure: 'Copy failed. Verify both paths are correct and credentials have access'
+      onFailure: "Copy failed. Verify both paths are correct and credentials have access"
     arguments:
       - name: src
         required: true
@@ -682,7 +681,7 @@ commands:
       - "tigris mv t3://my-bucket/old-dir/ t3://my-bucket/new-dir/ -rf"
       - "tigris mv my-bucket/a.txt my-bucket/b.txt -f"
     messages:
-      onFailure: 'Move failed. Verify both paths are remote and credentials have access'
+      onFailure: "Move failed. Verify both paths are remote and credentials have access"
     arguments:
       - *yes_argument
       - name: src
@@ -722,7 +721,7 @@ commands:
       - "tigris rm t3://my-bucket -f"
       - 'tigris rm "t3://my-bucket/logs/*.tmp" -f'
     messages:
-      onFailure: 'Remove failed. Verify the path exists and credentials have delete access'
+      onFailure: "Remove failed. Verify the path exists and credentials have delete access"
     arguments:
       - *yes_argument
       - name: path
@@ -755,9 +754,9 @@ commands:
       - "tigris bundle t3://my-bucket --keys keys.txt --compression gzip -o archive.tar.gz"
       - "cat keys.txt | tigris bundle my-bucket > archive.tar"
     messages:
-      onStart: ''
-      onSuccess: ''
-      onFailure: 'Bundle failed. Verify the bucket exists and credentials have read access'
+      onStart: ""
+      onSuccess: ""
+      onFailure: "Bundle failed. Verify the bucket exists and credentials have read access"
     arguments:
       - name: bucket
         required: true
@@ -805,9 +804,9 @@ commands:
           - "tigris orgs list"
           - "tigris orgs list --format json"
         messages:
-          onStart: 'Listing organizations...'
+          onStart: "Listing organizations..."
           onSuccess: "Organization '{{name}}' selected"
-          onFailure: 'Failed to select organization'
+          onFailure: "Failed to select organization"
           onEmpty: "No organizations found. You may need to re-authenticate.\nRun: tigris login"
         arguments:
           - name: format
@@ -824,13 +823,13 @@ commands:
         examples:
           - "tigris orgs create my-org"
         messages:
-          onStart: 'Creating organization...'
+          onStart: "Creating organization..."
           onSuccess: "Organization '{{name}}' created successfully\nOrganization ID: {{id}}"
-          onFailure: 'Failed to create organization'
+          onFailure: "Failed to create organization"
           hint: "Next steps:\n   - Select this organization: tigris orgs select {{name}}"
           nextActions:
-            - command: 'tigris orgs select {{name}}'
-              description: 'Select this organization as active'
+            - command: "tigris orgs select {{name}}"
+              description: "Select this organization as active"
         arguments:
           - name: name
             type: positional
@@ -845,14 +844,14 @@ commands:
         examples:
           - "tigris orgs select my-org"
         messages:
-          onStart: ''
+          onStart: ""
           onSuccess: "Organization '{{name}}' selected"
-          onFailure: 'Failed to select organization'
+          onFailure: "Failed to select organization"
           nextActions:
-            - command: 'tigris ls'
-              description: 'List your buckets'
-            - command: 'tigris buckets create <name>'
-              description: 'Create a new bucket'
+            - command: "tigris ls"
+              description: "List your buckets"
+            - command: "tigris buckets create <name>"
+              description: "Create a new bucket"
         arguments:
           - name: name
             type: positional
@@ -868,13 +867,13 @@ commands:
           - "tigris orgs delete"
           - "tigris orgs delete <org-id> --yes"
         messages:
-          onStart: 'Deleting organization...'
+          onStart: "Deleting organization..."
           onSuccess: "Organization '{{name}}' deleted"
-          onFailure: 'Failed to delete organization'
-          hint: "That was your active organization. '{{next}}' ({{nextId}}) is active now; run \"tigris orgs list\" to switch"
+          onFailure: "Failed to delete organization"
+          hint: 'That was your active organization. ''{{next}}'' ({{nextId}}) is active now; run "tigris orgs list" to switch'
           nextActions:
-            - command: 'tigris orgs list'
-              description: 'List your remaining organizations'
+            - command: "tigris orgs list"
+              description: "List your remaining organizations"
         arguments:
           - *yes_argument
           - name: id
@@ -910,10 +909,10 @@ commands:
           - "tigris buckets list --owner alice@example.com"
           - "tigris buckets list --deleted"
         messages:
-          onStart: 'Listing buckets...'
-          onSuccess: 'Found {{count}} bucket(s)'
-          onFailure: 'Failed to list buckets'
-          onEmpty: 'No buckets found'
+          onStart: "Listing buckets..."
+          onSuccess: "Found {{count}} bucket(s)"
+          onFailure: "Failed to list buckets"
+          onEmpty: "No buckets found"
         arguments:
           - name: format
             description: Output format
@@ -950,14 +949,14 @@ commands:
           - "tigris buckets create my-fork --fork-of my-bucket"
           - "tigris buckets create my-fork --fork-of my-bucket --source-snapshot 1765889000501544464"
         messages:
-          onStart: 'Creating bucket...'
+          onStart: "Creating bucket..."
           onSuccess: "Bucket '{{name}}' created successfully"
-          onFailure: 'Failed to create bucket'
+          onFailure: "Failed to create bucket"
           nextActions:
-            - command: 'tigris access-keys create <name>'
-              description: 'Create an access key for programmatic access'
-            - command: 'tigris cp ./file t3://{{name}}/'
-              description: 'Upload files to the new bucket'
+            - command: "tigris access-keys create <name>"
+              description: "Create an access key for programmatic access"
+            - command: "tigris cp ./file t3://{{name}}/"
+              description: "Upload files to the new bucket"
         arguments:
           - name: name
             description: Name of the bucket
@@ -1003,7 +1002,7 @@ commands:
             description: Location for the bucket
             alias: l
             options: *location_options
-            default: 'global'
+            default: "global"
           - name: fork-of
             description: Create this bucket as a fork (copy-on-write clone) of the named source bucket
             alias: fork
@@ -1020,11 +1019,11 @@ commands:
           - "tigris buckets rebase my-fork"
           - "tigris buckets rebase my-fork --yes"
         messages:
-          onStart: 'Rebasing fork...'
+          onStart: "Rebasing fork..."
           onSuccess: "Fork '{{fork}}' rebased onto its source (snapshot {{snapshotVersion}})"
           onFailure: "Failed to rebase fork '{{fork}}'"
           nextActions:
-            - command: 'tigris buckets merge {{fork}}'
+            - command: "tigris buckets merge {{fork}}"
               description: "Merge the fork's changes back into its source bucket"
         arguments:
           - *yes_argument
@@ -1044,12 +1043,12 @@ commands:
           - "tigris buckets merge my-fork --from-snapshot 1765889000501544464"
           - "tigris buckets merge my-fork --yes"
         messages:
-          onStart: 'Merging fork...'
+          onStart: "Merging fork..."
           onSuccess: "Fork '{{fork}}' merged into '{{into}}' (snapshot {{snapshotVersion}})"
           onFailure: "Failed to merge fork '{{fork}}'"
           nextActions:
-            - command: 'tigris buckets get {{into}}'
-              description: 'Inspect the updated source bucket'
+            - command: "tigris buckets get {{into}}"
+              description: "Inspect the updated source bucket"
         arguments:
           - *yes_argument
           - name: fork
@@ -1074,9 +1073,9 @@ commands:
         examples:
           - "tigris buckets get my-bucket"
         messages:
-          onStart: 'Getting bucket details...'
-          onSuccess: ''
-          onFailure: 'Failed to get bucket details'
+          onStart: "Getting bucket details..."
+          onSuccess: ""
+          onFailure: "Failed to get bucket details"
         arguments:
           - name: name
             description: Name of the bucket
@@ -1098,12 +1097,12 @@ commands:
           - "tigris buckets delete my-bucket --yes"
           - "tigris buckets delete bucket-a,bucket-b --yes"
         messages:
-          onStart: 'Deleting bucket...'
+          onStart: "Deleting bucket..."
           onSuccess: "Bucket '{{name}}' deleted successfully"
           onFailure: "Failed to delete bucket '{{name}}'"
           nextActions:
-            - command: 'tigris ls'
-              description: 'List remaining buckets'
+            - command: "tigris ls"
+              description: "List remaining buckets"
         arguments:
           - *yes_argument
           - name: name
@@ -1124,12 +1123,12 @@ commands:
         examples:
           - "tigris buckets restore my-bucket"
         messages:
-          onStart: 'Restoring bucket...'
+          onStart: "Restoring bucket..."
           onSuccess: "Bucket '{{name}}' restored successfully"
           onFailure: "Failed to restore bucket '{{name}}'"
           nextActions:
-            - command: 'tigris buckets get {{name}}'
-              description: 'Inspect the restored bucket'
+            - command: "tigris buckets get {{name}}"
+              description: "Inspect the restored bucket"
         arguments:
           - name: name
             description: Name of the soft-deleted bucket to restore
@@ -1147,12 +1146,12 @@ commands:
           - "tigris buckets purge my-bucket --yes"
           - "tigris buckets purge bucket-a,bucket-b --yes"
         messages:
-          onStart: 'Purging bucket...'
+          onStart: "Purging bucket..."
           onSuccess: "Bucket '{{name}}' purged"
           onFailure: "Failed to purge bucket '{{name}}'"
           nextActions:
-            - command: 'tigris buckets list --deleted'
-              description: 'List the remaining soft-deleted buckets'
+            - command: "tigris buckets list --deleted"
+              description: "List the remaining soft-deleted buckets"
         arguments:
           - *yes_argument
           - name: name
@@ -1179,9 +1178,9 @@ commands:
           - "tigris buckets set my-bucket --soft-delete enable --retention-days 30"
           - "tigris buckets set my-bucket --soft-delete disable"
         messages:
-          onStart: 'Updating bucket...'
-          onSuccess: 'Bucket {{name}} updated successfully'
-          onFailure: 'Failed to update bucket'
+          onStart: "Updating bucket..."
+          onSuccess: "Bucket {{name}} updated successfully"
+          onFailure: "Failed to update bucket"
         arguments:
           - name: name
             description: Name of the bucket
@@ -1236,9 +1235,9 @@ commands:
         examples:
           - "tigris buckets enable-snapshots my-bucket"
         messages:
-          onStart: 'Enabling snapshots...'
-          onSuccess: 'Snapshots enabled for bucket {{name}}'
-          onFailure: 'Failed to enable snapshots'
+          onStart: "Enabling snapshots..."
+          onSuccess: "Snapshots enabled for bucket {{name}}"
+          onFailure: "Failed to enable snapshots"
         arguments:
           - name: name
             description: Name of the bucket
@@ -1254,9 +1253,9 @@ commands:
         examples:
           - "tigris buckets disable-snapshots my-bucket"
         messages:
-          onStart: 'Disabling snapshots...'
-          onSuccess: 'Snapshots disabled for bucket {{name}}'
-          onFailure: 'Failed to disable snapshots'
+          onStart: "Disabling snapshots..."
+          onSuccess: "Snapshots disabled for bucket {{name}}"
+          onFailure: "Failed to disable snapshots"
         arguments:
           - name: name
             description: Name of the bucket
@@ -1267,7 +1266,7 @@ commands:
       # set-ttl
       - name: set-ttl
         removed: true
-        replaced_by: 'tigris buckets lifecycle create <bucket> --expire-days <N>'
+        replaced_by: "tigris buckets lifecycle create <bucket> --expire-days <N>"
       # set-locations
       - name: set-locations
         group: Configuration
@@ -1277,9 +1276,9 @@ commands:
           - "tigris buckets set-locations my-bucket --locations iad,fra"
           - "tigris buckets set-locations my-bucket --locations global"
         messages:
-          onStart: 'Updating bucket locations...'
-          onSuccess: 'Locations updated for bucket {{name}}'
-          onFailure: 'Failed to update bucket locations'
+          onStart: "Updating bucket locations..."
+          onSuccess: "Locations updated for bucket {{name}}"
+          onFailure: "Failed to update bucket locations"
         arguments:
           - name: name
             description: Name of the bucket
@@ -1302,9 +1301,9 @@ commands:
           - "tigris buckets set-migration my-bucket --bucket source-bucket --endpoint https://s3.amazonaws.com --region us-east-1 --access-key AKIA... --secret-key wJal... --write-through"
           - "tigris buckets set-migration my-bucket --disable"
         messages:
-          onStart: 'Updating migration settings...'
-          onSuccess: 'Migration settings updated for bucket {{name}}'
-          onFailure: 'Failed to update migration settings'
+          onStart: "Updating migration settings..."
+          onSuccess: "Migration settings updated for bucket {{name}}"
+          onFailure: "Failed to update migration settings"
         arguments:
           - name: name
             description: Name of the bucket
@@ -1344,9 +1343,9 @@ commands:
           - "tigris buckets migrate t3://my-bucket/prefix/"
           - "tigris buckets migrate my-bucket --max-in-flight-gb 100"
         messages:
-          onStart: ''
-          onSuccess: ''
-          onFailure: 'Migration failed'
+          onStart: ""
+          onSuccess: ""
+          onFailure: "Migration failed"
         arguments:
           - name: path
             description: Bucket name or path with optional prefix. Supports t3:// and tigris:// prefixes
@@ -1359,11 +1358,11 @@ commands:
           - name: max-in-flight-gb
             description: Max total gigabytes of scheduled-but-unconfirmed migrations to keep in flight. Accepts 1-100
             helpText: Max gigabytes of unconfirmed migrations to keep in flight (1-100)
-            default: '50'
+            default: "50"
       # set-transition
       - name: set-transition
         removed: true
-        replaced_by: 'tigris buckets lifecycle create <bucket> --storage-class <class> --days <N>'
+        replaced_by: "tigris buckets lifecycle create <bucket> --storage-class <class> --days <N>"
       # lifecycle
       - name: lifecycle
         group: Configuration
@@ -1383,10 +1382,10 @@ commands:
               - "tigris buckets lifecycle list my-bucket"
               - "tigris buckets lifecycle list my-bucket --json"
             messages:
-              onStart: ''
-              onSuccess: ''
-              onFailure: 'Failed to list lifecycle rules'
-              onEmpty: 'No lifecycle rules configured'
+              onStart: ""
+              onSuccess: ""
+              onFailure: "Failed to list lifecycle rules"
+              onEmpty: "No lifecycle rules configured"
             arguments:
               - name: name
                 description: Name of the bucket
@@ -1408,9 +1407,9 @@ commands:
               - "tigris buckets lifecycle create my-bucket --prefix tmp/ --expire-days 7"
               - "tigris buckets lifecycle create my-bucket --prefix archive/ --storage-class GLACIER --days 30 --expire-days 365"
             messages:
-              onStart: 'Creating lifecycle rule...'
-              onSuccess: 'Lifecycle rule created on bucket {{name}} (id: {{id}})'
-              onFailure: 'Failed to create lifecycle rule'
+              onStart: "Creating lifecycle rule..."
+              onSuccess: "Lifecycle rule created on bucket {{name}} (id: {{id}})"
+              onFailure: "Failed to create lifecycle rule"
             arguments:
               - name: name
                 description: Name of the bucket
@@ -1447,9 +1446,9 @@ commands:
               - "tigris buckets lifecycle edit my-bucket abc123 --expire-days 90"
               - "tigris buckets lifecycle edit my-bucket abc123 --enable"
             messages:
-              onStart: 'Updating lifecycle rule...'
-              onSuccess: 'Lifecycle rule {{id}} updated on bucket {{name}}'
-              onFailure: 'Failed to update lifecycle rule'
+              onStart: "Updating lifecycle rule..."
+              onSuccess: "Lifecycle rule {{id}} updated on bucket {{name}}"
+              onFailure: "Failed to update lifecycle rule"
             arguments:
               - name: name
                 description: Name of the bucket
@@ -1497,9 +1496,9 @@ commands:
           - "tigris buckets set-notifications my-bucket --disable"
           - "tigris buckets set-notifications my-bucket --reset"
         messages:
-          onStart: 'Updating notification settings...'
-          onSuccess: 'Notification settings updated for bucket {{name}}'
-          onFailure: 'Failed to update notification settings'
+          onStart: "Updating notification settings..."
+          onSuccess: "Notification settings updated for bucket {{name}}"
+          onFailure: "Failed to update notification settings"
         arguments:
           - name: name
             description: Name of the bucket
@@ -1511,7 +1510,7 @@ commands:
             description: Webhook URL to send notifications to (must be http or https)
             alias: u
           - name: filter
-            description: "SQL WHERE clause to filter events by key (e.g. WHERE `key` REGEXP \"^images\")"
+            description: 'SQL WHERE clause to filter events by key (e.g. WHERE `key` REGEXP "^images")'
             alias: f
           - name: token
             description: Token for webhook authentication
@@ -1540,9 +1539,9 @@ commands:
           - "tigris buckets set-cors my-bucket --origins https://example.com --override"
           - "tigris buckets set-cors my-bucket --reset"
         messages:
-          onStart: 'Updating CORS settings...'
-          onSuccess: 'CORS settings updated for bucket {{name}}'
-          onFailure: 'Failed to update CORS settings'
+          onStart: "Updating CORS settings..."
+          onSuccess: "CORS settings updated for bucket {{name}}"
+          onFailure: "Failed to update CORS settings"
         arguments:
           - name: name
             description: Name of the bucket
@@ -1561,7 +1560,7 @@ commands:
           - name: expose-headers
             description: Response headers to expose (comma-separated)
           - name: max-age
-            description: 'Preflight cache duration in seconds (default: 3600)'
+            description: "Preflight cache duration in seconds (default: 3600)"
           - name: override
             description: Replace all existing CORS rules instead of appending
             type: flag
@@ -1582,9 +1581,9 @@ commands:
           - "tigris buckets share my-bucket --team tmid_MQQUhV --role Editor --override"
           - "tigris buckets share my-bucket --reset"
         messages:
-          onStart: 'Updating bucket shares...'
-          onSuccess: 'Shares updated for bucket {{name}}'
-          onFailure: 'Failed to update bucket shares'
+          onStart: "Updating bucket shares..."
+          onSuccess: "Shares updated for bucket {{name}}"
+          onFailure: "Failed to update bucket shares"
         arguments:
           - name: name
             description: Name of the bucket
@@ -1629,7 +1628,7 @@ commands:
   - name: forks
     alias: f
     removed: true
-    replaced_by: 'tigris buckets create --fork-of and tigris buckets list --forks-of'
+    replaced_by: "tigris buckets create --fork-of and tigris buckets list --forks-of"
 
   #########################
   # Manage snapshots
@@ -1653,10 +1652,10 @@ commands:
           - "tigris snapshots list my-bucket"
           - "tigris snapshots list my-bucket --format json"
         messages:
-          onStart: 'Listing snapshots...'
-          onSuccess: 'Found {{count}} snapshot(s)'
-          onFailure: 'Failed to list snapshots'
-          onEmpty: 'No snapshots found for this bucket'
+          onStart: "Listing snapshots..."
+          onSuccess: "Found {{count}} snapshot(s)"
+          onFailure: "Failed to list snapshots"
+          onEmpty: "No snapshots found for this bucket"
         arguments:
           - name: name
             description: Name of the bucket
@@ -1682,9 +1681,9 @@ commands:
           - "tigris snapshots take my-bucket"
           - "tigris snapshots take my-bucket my-snapshot"
         messages:
-          onStart: 'Taking snapshot...'
+          onStart: "Taking snapshot..."
           onSuccess: "Snapshot '{{snapshotName}}' taken for bucket '{{name}}'"
-          onFailure: 'Failed to take snapshot'
+          onFailure: "Failed to take snapshot"
         arguments:
           - name: name
             description: Name of the bucket
@@ -1707,12 +1706,12 @@ commands:
           - "tigris snapshots delete my-bucket 1765889000501544464 --yes"
           - "tigris snapshots delete my-bucket 1765889000501544464,1765889000501544465 --yes"
         messages:
-          onStart: 'Deleting snapshot...'
+          onStart: "Deleting snapshot..."
           onSuccess: "Snapshot '{{version}}' deleted from bucket '{{name}}'"
           onFailure: "Failed to delete snapshot '{{version}}'"
           nextActions:
-            - command: 'tigris snapshots list {{name}}'
-              description: 'List remaining snapshots'
+            - command: "tigris snapshots list {{name}}"
+              description: "List remaining snapshots"
         arguments:
           - *yes_argument
           - name: name
@@ -1765,10 +1764,10 @@ commands:
           - "tigris objects list my-bucket --format json"
           - "tigris objects list my-bucket --deleted"
         messages:
-          onStart: 'Listing objects...'
-          onSuccess: 'Found {{count}} object(s)'
-          onFailure: 'Failed to list objects'
-          onEmpty: 'No objects found'
+          onStart: "Listing objects..."
+          onSuccess: "Found {{count}} object(s)"
+          onFailure: "Failed to list objects"
+          onEmpty: "No objects found"
         arguments:
           - name: bucket
             description: Name of the bucket, or a path with optional prefix (t3://bucket/prefix/)
@@ -1815,10 +1814,10 @@ commands:
           - "tigris objects list-versions my-bucket --format json"
           - "tigris objects list-versions my-bucket --prefix report.pdf --deleted"
         messages:
-          onStart: 'Listing object versions...'
-          onSuccess: 'Found {{versions}} version(s) and {{deleteMarkers}} delete marker(s)'
-          onFailure: 'Failed to list object versions'
-          onEmpty: 'No versions or delete markers found'
+          onStart: "Listing object versions..."
+          onSuccess: "Found {{versions}} version(s) and {{deleteMarkers}} delete marker(s)"
+          onFailure: "Failed to list object versions"
+          onEmpty: "No versions or delete markers found"
         arguments:
           - name: bucket
             description: Name of the bucket, or a path with optional prefix (t3://bucket/prefix/)
@@ -1861,9 +1860,9 @@ commands:
           - "tigris objects get t3://my-bucket/config.json"
           - "tigris objects get my-bucket archive.zip --output ./archive.zip --mode stream"
         messages:
-          onStart: 'Getting object...'
-          onSuccess: ''
-          onFailure: 'Failed to get object'
+          onStart: "Getting object..."
+          onSuccess: ""
+          onFailure: "Failed to get object"
         arguments:
           - name: bucket
             description: Name of the bucket, or a full path (t3://bucket/key)
@@ -1906,12 +1905,12 @@ commands:
           - "echo 'hello' | tigris objects put t3://my-bucket/hello.txt"
           - "cat report.pdf | tigris objects put my-bucket report.pdf --content-type application/pdf"
         messages:
-          onStart: 'Uploading object...'
+          onStart: "Uploading object..."
           onSuccess: "Object '{{key}}' uploaded successfully"
-          onFailure: 'Failed to upload object'
+          onFailure: "Failed to upload object"
           nextActions:
-            - command: 'tigris presign {{bucket}}/{{key}}'
-              description: 'Generate a presigned URL for the uploaded object'
+            - command: "tigris presign {{bucket}}/{{key}}"
+              description: "Generate a presigned URL for the uploaded object"
         arguments:
           - name: bucket
             description: Name of the bucket, or a full path (t3://bucket/key)
@@ -1959,12 +1958,12 @@ commands:
           - "tigris objects delete my-bucket old-file.txt --version-id abc123 --yes"
           - "tigris objects delete my-bucket old-file.txt --all-versions --yes"
         messages:
-          onStart: 'Deleting object...'
+          onStart: "Deleting object..."
           onSuccess: "Object '{{key}}' deleted successfully"
-          onFailure: 'Failed to delete object'
+          onFailure: "Failed to delete object"
           nextActions:
-            - command: 'tigris ls {{bucket}}'
-              description: 'List remaining objects in the bucket'
+            - command: "tigris ls {{bucket}}"
+              description: "List remaining objects in the bucket"
         arguments:
           - *yes_argument
           - name: bucket
@@ -2003,10 +2002,10 @@ commands:
           - "tigris objects set t3://my-bucket/my-file.txt --access public"
           - "tigris objects set my-bucket my-file.txt --access private"
         messages:
-          onStart: 'Updating object...'
+          onStart: "Updating object..."
           onSuccess: "Object '{{key}}' updated successfully"
-          onFailure: 'Failed to update object'
-          onDeprecated: 'tigris objects set is deprecated. Use `tigris objects set-access` for ACL changes and `tigris mv` to rename objects. This command will be removed in a future release.'
+          onFailure: "Failed to update object"
+          onDeprecated: "tigris objects set is deprecated. Use `tigris objects set-access` for ACL changes and `tigris mv` to rename objects. This command will be removed in a future release."
         arguments:
           - name: bucket
             description: Name of the bucket, or a full path (t3://bucket/key)
@@ -2033,9 +2032,9 @@ commands:
           - "tigris objects set-access my-bucket my-file.txt public"
           - "tigris objects set-access t3://my-bucket/my-file.txt private"
         messages:
-          onStart: 'Updating object access...'
+          onStart: "Updating object access..."
           onSuccess: "Access for '{{key}}' updated to {{access}}"
-          onFailure: 'Failed to update object access'
+          onFailure: "Failed to update object access"
         arguments:
           - name: bucket
             description: Name of the bucket, or a full path (t3://bucket/key)
@@ -2065,9 +2064,9 @@ commands:
           - "tigris objects info my-bucket report.pdf --format json"
           - "tigris objects info my-bucket report.pdf --version-id abc123"
         messages:
-          onStart: ''
-          onSuccess: ''
-          onFailure: 'Failed to get object info'
+          onStart: ""
+          onSuccess: ""
+          onFailure: "Failed to get object info"
         arguments:
           - name: bucket
             type: positional
@@ -2097,9 +2096,9 @@ commands:
           - "tigris objects restore t3://my-bucket/archived.bin --days 7"
           - "tigris objects restore my-bucket archived.bin --snapshot-version 1765889000501544464"
         messages:
-          onStart: 'Requesting restore...'
+          onStart: "Requesting restore..."
           onSuccess: "Restore requested for '{{key}}'"
-          onFailure: 'Failed to restore object'
+          onFailure: "Failed to restore object"
         arguments:
           - name: bucket
             type: positional
@@ -2135,10 +2134,10 @@ commands:
           - "tigris objects restore-info t3://my-bucket/archived.bin --format json"
           - "tigris objects restore-info my-bucket archived.bin --snapshot-version 1765889000501544464"
         messages:
-          onStart: ''
-          onSuccess: ''
-          onFailure: 'Failed to get restore info'
-          onEmpty: 'No restore information for this object (it is not archived)'
+          onStart: ""
+          onSuccess: ""
+          onFailure: "Failed to get restore info"
+          onEmpty: "No restore information for this object (it is not archived)"
         arguments:
           - name: bucket
             type: positional
@@ -2168,12 +2167,12 @@ commands:
           - "tigris objects restore-deleted my-bucket report.pdf --version-id 1787749774802410496"
           - "tigris objects restore-deleted t3://my-bucket/report.pdf --version-id 1787749774802410496"
         messages:
-          onStart: 'Restoring deleted object...'
+          onStart: "Restoring deleted object..."
           onSuccess: "Object '{{key}}' restored successfully"
-          onFailure: 'Failed to restore deleted object'
+          onFailure: "Failed to restore deleted object"
           nextActions:
-            - command: 'tigris ls {{bucket}}'
-              description: 'List objects in the bucket'
+            - command: "tigris ls {{bucket}}"
+              description: "List objects in the bucket"
         arguments:
           - name: bucket
             type: positional
@@ -2205,9 +2204,9 @@ commands:
           - "tigris objects purge my-bucket report.pdf --version-id 1787749774802410496 --yes"
           - "tigris objects purge t3://my-bucket/report.pdf --version-id 1787749774802410496 --yes"
         messages:
-          onStart: 'Purging deleted object...'
+          onStart: "Purging deleted object..."
           onSuccess: "Purged version '{{versionId}}' of '{{key}}'"
-          onFailure: 'Failed to purge deleted object'
+          onFailure: "Failed to purge deleted object"
         arguments:
           - *yes_argument
           - name: bucket
@@ -2253,10 +2252,10 @@ commands:
         examples:
           - "tigris access-keys list"
         messages:
-          onStart: ''
-          onSuccess: ''
-          onFailure: 'Failed to list access keys'
-          onEmpty: 'No access keys found'
+          onStart: ""
+          onSuccess: ""
+          onFailure: "Failed to list access keys"
+          onEmpty: "No access keys found"
         arguments:
           - name: format
             description: Output format
@@ -2277,12 +2276,12 @@ commands:
           - "tigris access-keys create ci --bucket my-app-bucket --role ReadOnly --default-permissions disable"
           - 'eval "$(tigris access-keys create dev --bucket my-app-bucket --role Editor --export)"'
         messages:
-          onStart: 'Creating access key...'
-          onSuccess: 'Access key created'
-          onFailure: 'Failed to create access key'
+          onStart: "Creating access key..."
+          onSuccess: "Access key created"
+          onFailure: "Failed to create access key"
           nextActions:
-            - command: 'tigris access-keys assign {{id}} --bucket <bucket> --role Editor'
-              description: 'Assign bucket roles to the new access key'
+            - command: "tigris access-keys assign {{id}} --bucket <bucket> --role Editor"
+              description: "Assign bucket roles to the new access key"
         arguments:
           - name: name
             description: Name for the access key
@@ -2314,12 +2313,12 @@ commands:
           - "tigris access-keys delete tid_AaBbCcDdEeFf --yes"
           - "tigris access-keys delete tid_AaBb,tid_CcDd --yes"
         messages:
-          onStart: 'Deleting access key...'
+          onStart: "Deleting access key..."
           onSuccess: "Access key '{{id}}' deleted"
           onFailure: "Failed to delete access key '{{id}}'"
           nextActions:
-            - command: 'tigris access-keys list'
-              description: 'List remaining access keys'
+            - command: "tigris access-keys list"
+              description: "List remaining access keys"
         arguments:
           - *yes_argument
           - name: id
@@ -2339,9 +2338,9 @@ commands:
         examples:
           - "tigris access-keys get tid_AaBbCcDdEeFf"
         messages:
-          onStart: ''
-          onSuccess: ''
-          onFailure: 'Failed to get access key'
+          onStart: ""
+          onSuccess: ""
+          onFailure: "Failed to get access key"
         arguments:
           - name: id
             description: Access key ID
@@ -2359,12 +2358,12 @@ commands:
           - "tigris access-keys assign tid_AaBb --admin"
           - "tigris access-keys assign tid_AaBb --revoke-roles"
         messages:
-          onStart: 'Assigning bucket roles...'
-          onSuccess: 'Bucket roles assigned'
-          onFailure: 'Failed to assign bucket roles'
+          onStart: "Assigning bucket roles..."
+          onSuccess: "Bucket roles assigned"
+          onFailure: "Failed to assign bucket roles"
           nextActions:
-            - command: 'tigris cp ./file t3://<bucket>/'
-              description: 'Upload files using the assigned access key'
+            - command: "tigris cp ./file t3://<bucket>/"
+              description: "Upload files using the assigned access key"
         arguments:
           - name: id
             description: Access key ID
@@ -2386,9 +2385,9 @@ commands:
           - "tigris access-keys set tid_AaBb --default-permissions disable"
           - "tigris access-keys set tid_AaBb --default-permissions enable"
         messages:
-          onStart: 'Updating access key...'
+          onStart: "Updating access key..."
           onSuccess: "Default permissions {{setting}} for access key '{{id}}'"
-          onFailure: 'Failed to update access key'
+          onFailure: "Failed to update access key"
         arguments:
           - name: id
             description: Access key ID
@@ -2404,12 +2403,12 @@ commands:
         examples:
           - "tigris access-keys rotate tid_AaBbCcDdEeFf --yes"
         messages:
-          onStart: 'Rotating access key...'
-          onSuccess: 'Access key rotated'
-          onFailure: 'Failed to rotate access key'
+          onStart: "Rotating access key..."
+          onSuccess: "Access key rotated"
+          onFailure: "Failed to rotate access key"
           nextActions:
-            - command: 'tigris access-keys get {{id}}'
-              description: 'Verify the rotated access key'
+            - command: "tigris access-keys get {{id}}"
+              description: "Verify the rotated access key"
         arguments:
           - *yes_argument
           - name: id
@@ -2429,9 +2428,9 @@ commands:
           - "tigris access-keys attach-policy tid_AaBb --policy-arn arn:aws:iam::org_id:policy/my-policy"
           - "tigris access-keys attach-policy tid_AaBb"
         messages:
-          onStart: 'Attaching policy...'
-          onSuccess: 'Policy attached'
-          onFailure: 'Failed to attach policy'
+          onStart: "Attaching policy..."
+          onSuccess: "Policy attached"
+          onFailure: "Failed to attach policy"
         arguments:
           - name: id
             description: Access key ID
@@ -2451,9 +2450,9 @@ commands:
           - "tigris access-keys detach-policy tid_AaBb --policy-arn arn:aws:iam::org_id:policy/my-policy --yes"
           - "tigris access-keys detach-policy tid_AaBb"
         messages:
-          onStart: 'Detaching policy...'
-          onSuccess: 'Policy detached'
-          onFailure: 'Failed to detach policy'
+          onStart: "Detaching policy..."
+          onSuccess: "Policy detached"
+          onFailure: "Failed to detach policy"
         arguments:
           - *yes_argument
           - name: id
@@ -2475,10 +2474,10 @@ commands:
         examples:
           - "tigris access-keys list-policies tid_AaBbCcDdEeFf"
         messages:
-          onStart: ''
-          onSuccess: ''
-          onFailure: 'Failed to list policies for access key'
-          onEmpty: 'No policies attached to this access key'
+          onStart: ""
+          onSuccess: ""
+          onFailure: "Failed to list policies for access key"
+          onEmpty: "No policies attached to this access key"
         arguments:
           - name: id
             description: Access key ID
@@ -2523,10 +2522,10 @@ commands:
             examples:
               - "tigris iam policies list"
             messages:
-              onStart: ''
-              onSuccess: ''
-              onFailure: 'Failed to list policies'
-              onEmpty: 'No policies found'
+              onStart: ""
+              onSuccess: ""
+              onFailure: "Failed to list policies"
+              onEmpty: "No policies found"
             arguments:
               - name: format
                 description: Output format
@@ -2545,10 +2544,10 @@ commands:
               - "tigris iam policies get"
               - "tigris iam policies get arn:aws:iam::org_id:policy/my-policy"
             messages:
-              onStart: ''
-              onSuccess: ''
-              onFailure: 'Failed to get policy'
-              onEmpty: 'No policies found'
+              onStart: ""
+              onSuccess: ""
+              onFailure: "Failed to get policy"
+              onEmpty: "No policies found"
             arguments:
               - name: resource
                 description: Policy ARN. If omitted, shows interactive selection
@@ -2566,12 +2565,12 @@ commands:
             alias: c
             examples:
               - "tigris iam policies create my-policy --document policy.json"
-              - "tigris iam policies create my-policy --document '{\"Version\":\"2012-10-17\",\"Statement\":[...]}'"
+              - 'tigris iam policies create my-policy --document ''{"Version":"2012-10-17","Statement":[...]}'''
               - "cat policy.json | tigris iam policies create my-policy"
             messages:
-              onStart: 'Creating policy...'
+              onStart: "Creating policy..."
               onSuccess: "Policy '{{name}}' created"
-              onFailure: 'Failed to create policy'
+              onFailure: "Failed to create policy"
             arguments:
               - name: name
                 description: Policy name
@@ -2595,10 +2594,10 @@ commands:
               - "tigris iam policies edit arn:aws:iam::org_id:policy/my-policy --document policy.json"
               - "cat policy.json | tigris iam policies edit arn:aws:iam::org_id:policy/my-policy"
             messages:
-              onStart: 'Updating policy...'
+              onStart: "Updating policy..."
               onSuccess: "Policy '{{resource}}' updated"
-              onFailure: 'Failed to update policy'
-              onEmpty: 'No policies found'
+              onFailure: "Failed to update policy"
+              onEmpty: "No policies found"
             arguments:
               - name: resource
                 description: Policy ARN. If omitted, shows interactive selection
@@ -2622,10 +2621,10 @@ commands:
               - "tigris iam policies delete"
               - "tigris iam policies delete arn:aws:iam::org_id:policy/my-policy --yes"
             messages:
-              onStart: 'Deleting policy...'
+              onStart: "Deleting policy..."
               onSuccess: "Policy '{{resource}}' deleted"
-              onFailure: 'Failed to delete policy'
-              onEmpty: 'No policies found'
+              onFailure: "Failed to delete policy"
+              onEmpty: "No policies found"
             arguments:
               - *yes_argument
               - name: resource
@@ -2645,10 +2644,10 @@ commands:
               - "tigris iam policies link-key arn:aws:iam::org_id:policy/my-policy --id tid_AaBb"
               - "tigris iam policies link-key"
             messages:
-              onStart: 'Linking access key...'
-              onSuccess: 'Access key linked'
-              onFailure: 'Failed to link access key'
-              onEmpty: 'No policies found'
+              onStart: "Linking access key..."
+              onSuccess: "Access key linked"
+              onFailure: "Failed to link access key"
+              onEmpty: "No policies found"
             arguments:
               - name: resource
                 description: Policy ARN. If omitted, shows interactive selection
@@ -2668,10 +2667,10 @@ commands:
               - "tigris iam policies unlink-key arn:aws:iam::org_id:policy/my-policy --id tid_AaBb --yes"
               - "tigris iam policies unlink-key"
             messages:
-              onStart: 'Unlinking access key...'
-              onSuccess: 'Access key unlinked'
-              onFailure: 'Failed to unlink access key'
-              onEmpty: 'No policies found'
+              onStart: "Unlinking access key..."
+              onSuccess: "Access key unlinked"
+              onFailure: "Failed to unlink access key"
+              onEmpty: "No policies found"
             arguments:
               - *yes_argument
               - name: resource
@@ -2695,10 +2694,10 @@ commands:
               - "tigris iam policies list-keys arn:aws:iam::org_id:policy/my-policy"
               - "tigris iam policies list-keys"
             messages:
-              onStart: ''
-              onSuccess: ''
-              onFailure: 'Failed to list access keys for policy'
-              onEmpty: 'No access keys attached to this policy'
+              onStart: ""
+              onSuccess: ""
+              onFailure: "Failed to list access keys for policy"
+              onEmpty: "No access keys attached to this policy"
             arguments:
               - name: resource
                 description: Policy ARN. If omitted, shows interactive selection
@@ -2726,10 +2725,10 @@ commands:
               - "tigris iam users list"
               - "tigris iam users list --format json"
             messages:
-              onStart: ''
-              onSuccess: ''
-              onFailure: 'Failed to list users'
-              onEmpty: 'No users found in this organization'
+              onStart: ""
+              onSuccess: ""
+              onFailure: "Failed to list users"
+              onEmpty: "No users found in this organization"
             arguments:
               - name: format
                 description: Output format
@@ -2743,9 +2742,9 @@ commands:
               - "tigris iam users invite user@example.com --role admin"
               - "tigris iam users invite user1@example.com,user2@example.com"
             messages:
-              onStart: 'Sending invitation...'
+              onStart: "Sending invitation..."
               onSuccess: "Invitation sent to '{{email}}'"
-              onFailure: 'Failed to send invitation'
+              onFailure: "Failed to send invitation"
             arguments:
               - name: email
                 description: Email address(es) to invite (comma-separated for multiple)
@@ -2769,10 +2768,10 @@ commands:
               - "tigris iam users revoke-invitation invitation_id --yes"
               - "tigris iam users revoke-invitation id1,id2,id3 --yes"
             messages:
-              onStart: 'Revoking invitation...'
+              onStart: "Revoking invitation..."
               onSuccess: "Invitation(s) revoked"
-              onFailure: 'Failed to revoke invitation'
-              onEmpty: 'No pending invitations found'
+              onFailure: "Failed to revoke invitation"
+              onEmpty: "No pending invitations found"
             arguments:
               - *yes_argument
               - name: resource
@@ -2794,10 +2793,10 @@ commands:
               - "tigris iam users update-role id1,id2 --role admin"
               - "tigris iam users update-role id1,id2 --role admin,member"
             messages:
-              onStart: 'Updating user role...'
+              onStart: "Updating user role..."
               onSuccess: "Role updated"
-              onFailure: 'Failed to update user role'
-              onEmpty: 'No users found in this organization'
+              onFailure: "Failed to update user role"
+              onEmpty: "No users found in this organization"
             arguments:
               - name: resource
                 description: User ID(s) (comma-separated for multiple). If omitted, shows interactive selection
@@ -2821,10 +2820,10 @@ commands:
               - "tigris iam users remove user@example.com --yes"
               - "tigris iam users remove user@example.com,user@example.net --yes"
             messages:
-              onStart: 'Removing user...'
+              onStart: "Removing user..."
               onSuccess: "User(s) removed"
-              onFailure: 'Failed to remove user'
-              onEmpty: 'No users found in this organization'
+              onFailure: "Failed to remove user"
+              onEmpty: "No users found in this organization"
             arguments:
               - *yes_argument
               - name: resource
@@ -2851,10 +2850,10 @@ commands:
               - "tigris iam teams list"
               - "tigris iam teams list --format json"
             messages:
-              onStart: ''
-              onSuccess: ''
-              onFailure: 'Failed to list teams'
-              onEmpty: 'No teams found in this organization'
+              onStart: ""
+              onSuccess: ""
+              onFailure: "Failed to list teams"
+              onEmpty: "No teams found in this organization"
             arguments:
               - name: format
                 description: Output format
@@ -2868,9 +2867,9 @@ commands:
               - "tigris iam teams create engineering --description 'Engineering team'"
               - "tigris iam teams create engineering --members a@example.com,b@example.com"
             messages:
-              onStart: 'Creating team...'
+              onStart: "Creating team..."
               onSuccess: "Team '{{name}}' created"
-              onFailure: 'Failed to create team'
+              onFailure: "Failed to create team"
             arguments:
               - name: name
                 description: Name of the team
@@ -2894,9 +2893,9 @@ commands:
               - "tigris iam teams edit team_id --description 'Platform team'"
               - "tigris iam teams edit team_id --members a@example.com,b@example.com"
             messages:
-              onStart: 'Updating team...'
+              onStart: "Updating team..."
               onSuccess: "Team updated"
-              onFailure: 'Failed to update team'
+              onFailure: "Failed to update team"
             arguments:
               - name: id
                 description: ID of the team to edit

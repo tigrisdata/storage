@@ -86,7 +86,10 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         uses: changesets/action@v2.1.2
         with:
-          version-script: pnpm changeset version
+          # `pnpm version-packages` runs `changeset version` and then formats the
+          # CHANGELOGs it rewrote: changesets emits Markdown that `pnpm check`
+          # (biome) would otherwise flag on the next commit.
+          version-script: pnpm version-packages
           publish-script: pnpm changeset publish
           commit-message: "chore(release): bump versions and update changelogs"
           pr-title: "chore(release): bump versions and update changelogs"

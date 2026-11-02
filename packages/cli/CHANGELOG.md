@@ -63,18 +63,16 @@
 ### Minor Changes
 
 - [#331](https://github.com/tigrisdata/storage/pull/331) [`8fb552e`](https://github.com/tigrisdata/storage/commit/8fb552e8b379796edc02237011ddca99400a9aa4) Thanks [@designcode](https://github.com/designcode)! - `tigris access-keys create` can now scope the key and hand its credentials over where they are needed:
-  
   - `--bucket` / `--role` / `--admin` scope the key at creation, with the same pairing rules as `access-keys assign`, so a scoped key no longer needs a second command.
   - `--env [path]` writes the credentials to a dotenv file (default `./.env`). Existing assignments are replaced in place, everything else in the file is left alone (permissions included), a new file is created readable by its owner only, and the secret is no longer printed to the terminal. Warns when the file is not covered by `.gitignore`. A key scoped to one bucket also writes the bucket variable. The file is replaced atomically, so a write that fails part-way leaves it as it was; if it cannot be written at all, the credentials are printed instead and the command exits 1, so the one-time secret is never lost.
   - `--export` prints `export VAR=...` lines and nothing else on stdout, for `eval "$(tigris access-keys create my-key --bucket my-app-bucket --role Editor --export)"`.
   - `--for tigris|aws` chooses which SDK the variables are named for: `TIGRIS_STORAGE_*` for Tigris SDKs, or `AWS_*` plus Tigris endpoints and region for the AWS SDK. The endpoints are the ones the CLI itself is using (`configure --endpoint`, `TIGRIS_STORAGE_ENDPOINT`, `AWS_ENDPOINT_URL_*`, or the defaults), so a key made against a custom deployment points the SDK at that deployment.
-  
+
   Access-key commands now honour an AWS profile's `endpoint_url_iam`, as storage commands already did.
-  
+
   The `tigris init --agent` recipe now uses `tigris access-keys create … --env` instead of asking the agent to route the secret through a temporary file and `jq`.
 
 - [#327](https://github.com/tigrisdata/storage/pull/327) [`4016e5e`](https://github.com/tigrisdata/storage/commit/4016e5ec9c7e6efacc0a8c328fcd3d10879e6dcd) Thanks [@designcode](https://github.com/designcode)! - Cleaner, narrower help output, modelled on cobra-based CLIs such as flyctl and auth0.
-  
   - Commands and arguments in `specs.yaml` take a new optional `helpText`: a precise one-liner shown in help lists. The full `description` still appears on the command's own help page and in the generated docs.
   - Command lists show the bare command name instead of `cp|copy [options] <src> <dest>`; aliases move to an `Aliases:` section and the usage line no longer advertises the hidden `help` subcommand.
   - Long flags line up whether or not they have a short form, each section sizes its own column, an over-long flag sits on its own line instead of squeezing every description, and global flags are listed under `Global Options:`.
@@ -95,18 +93,18 @@
 - [#236](https://github.com/tigrisdata/storage/pull/236) [`a9876ab`](https://github.com/tigrisdata/storage/commit/a9876ab253f03a69ca1d3da08d914fc9ac3f227f) Thanks [@Xe](https://github.com/Xe)! - `tigris init --agent` prints its setup recipe in [ASD-STE100 Simplified
   Technical English](https://www.asd-ste100.org/). Each step reads the same
   way to every agent that follows it.
-  
+
   The goal is to make the instructions unambiguous for both humans and
   agents. A distracted operator and a less capable model read each step the
   same way.
-  
+
   Each step is now one instruction per sentence in the imperative. Every
   condition is ahead of the command. All steps that carried two orders at
   once now use two sentences. An agent can no longer do half of a step
   and count it as complete.
 
 - [#326](https://github.com/tigrisdata/storage/pull/326) [`5fb9f14`](https://github.com/tigrisdata/storage/commit/5fb9f14fdb6e16dce3a150aab883dce49abc5ca2) Thanks [@MantasMiksys](https://github.com/MantasMiksys)! - Keep `Sid` and `Condition` in IAM policy documents
-  
+
   Policy documents were mapped field by field in four places, and every mapping
   listed only `Effect`, `Action` and `Resource`. Conditions were dropped when
   creating a policy, when updating one, and when reading one back, so an
@@ -256,7 +254,6 @@
 ### Minor Changes
 
 - [#272](https://github.com/tigrisdata/storage/pull/272) [`ce88477`](https://github.com/tigrisdata/storage/commit/ce88477ee61d073710f6cf1e3726799946ca29e8) Thanks [@designcode](https://github.com/designcode)! - Surface soft-delete object recovery in the CLI.
-
   - `tigris objects list <bucket> --deleted` lists soft-deleted objects.
   - `tigris objects list-versions <bucket> --deleted` lists their recoverable versions.
   - `tigris objects restore-deleted <bucket> <key> --version-id <id>` brings one back.
@@ -283,7 +280,6 @@
   the install banner appearing twice
 
   Two things went wrong in a single `npx tigris@latest init` run:
-
   - **Skills installed for nobody.** `init` passes every selected editor to the
     upstream `skills` installer in one call, and that tool validates all of its
     `-a` names before doing any work — so one name it doesn't know fails the step
@@ -338,7 +334,6 @@
   object(s)". `ls` hides those markers, so the counts now do too — the
   confirmation prompt and the final tally are derived from the same rule and
   always agree.
-
   - `mv` and `rm` no longer count the folder's own marker, or the markers of any
     nested subfolders, as objects. The markers are still moved and deleted as
     before; they're just not counted or printed.
@@ -353,7 +348,6 @@
 
   Wildcards also no longer operate on the folder they match inside. A wildcard
   names files within a folder, not the folder itself, so:
-
   - `mv 'folder/*.zip'` with nothing matching now reports `No objects to move`
     instead of `Moved 1 object(s)`. It previously moved the source folder's
     marker to the destination, which removed `folder/` itself.
@@ -391,7 +385,6 @@
 
 - [#230](https://github.com/tigrisdata/storage/pull/230) [`931178a`](https://github.com/tigrisdata/storage/commit/931178a4be74ac31054be0b90a97481caec8f671) Thanks [@designcode](https://github.com/designcode)! - `tigris init` no longer offers to install a CLI you already have, and the CLI is
   now reachable unscoped as `npx tigris`.
-
   - The wizard installs the CLI only when `tigris` isn't on PATH; when it is, the
     "Defaults" hint drops the `CLI - Global` step and the existing install is
     brought up to date instead. Updating delegates to `tigris update`, which
@@ -411,7 +404,6 @@
 
 - [#233](https://github.com/tigrisdata/storage/pull/233) [`8c25b57`](https://github.com/tigrisdata/storage/commit/8c25b5778b1079da3afd81063354aa248a73e135) Thanks [@designcode](https://github.com/designcode)! - `tigris buckets migrate` keeps more data in flight by default, and the budget is
   now tunable per run.
-
   - The in-flight byte budget — the total size of migrations scheduled
     server-side but not yet confirmed — rises from 10 GB to 50 GB. A run made up
     of multi-gigabyte objects can now keep several of them in flight at once
@@ -465,7 +457,6 @@
 
 - [#202](https://github.com/tigrisdata/storage/pull/202) [`af315f4`](https://github.com/tigrisdata/storage/commit/af315f4f360d9e9934b7dfb855637665b7b4eeba) Thanks [@designcode](https://github.com/designcode)! - Fix a deadlock in `tigris buckets migrate` that stalled large migrations, and
   overhaul how migrations are paced and displayed.
-
   - **Deadlock fix:** the drain step only polled the oldest in-flight objects, so
     a slow object at the head hid the completed objects behind it — their bytes
     were never freed, the in-flight budget stayed pinned at its cap, and the

@@ -18,7 +18,7 @@
     "test": "pnpm -r --if-present run test",
     "commit": "cz",
     "changeset": "changeset",
-    "version-packages": "changeset version",
+    "version-packages": "changeset version && biome format --write",
     "release": "pnpm -r --if-present run build && changeset publish",
     "prepare": "husky install",
     "clean": "pnpm -r --if-present run clean && rm -rf node_modules/.cache"

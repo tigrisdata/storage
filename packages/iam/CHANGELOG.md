@@ -11,7 +11,7 @@
 ### Minor Changes
 
 - [#344](https://github.com/tigrisdata/storage/pull/344) [`2cffc3b`](https://github.com/tigrisdata/storage/commit/2cffc3b863da017fbbdfccc3e56ba3a5aa4821fd) Thanks [@designcode](https://github.com/designcode)! - `deleteOrganization(organizationId)` deletes an organization you own, through `DELETE /tigris-iam/namespaces` scoped to that organization. The gateway accepts it only from an OAuth session, only for Tigris-native organizations, only from the owner, and only once the organization is empty (no buckets, access keys, policies, teams, or other members); its shares and invitations are removed with it. Gateway errors are returned as is, and so are transport failures — as `{ error }`, never a throw; `removeAccessKey` now does the same.
-  
+
   Errors from the IAM gateway now carry its reason (`{ status: "error", message }`) instead of the HTTP status text, so a refused request says why rather than `Bad Request`.
 
 - [#356](https://github.com/tigrisdata/storage/pull/356) [`ef397c4`](https://github.com/tigrisdata/storage/commit/ef397c48bac56359535c48228158044f7585ffce) Thanks [@designcode](https://github.com/designcode)! - `getUsage({ month })` fetches the organization's usage and charges for a billing month from the management API — the data behind the console's Usage page: every charge with its quantity, billed quantity, tiers and amount, plus subtotal, credits, total, plan and invoice state. Defaults to the current month; needs a session token.
@@ -21,7 +21,7 @@
 ### Minor Changes
 
 - [#326](https://github.com/tigrisdata/storage/pull/326) [`5fb9f14`](https://github.com/tigrisdata/storage/commit/5fb9f14fdb6e16dce3a150aab883dce49abc5ca2) Thanks [@MantasMiksys](https://github.com/MantasMiksys)! - Keep `Sid` and `Condition` in IAM policy documents
-  
+
   Policy documents were mapped field by field in four places, and every mapping
   listed only `Effect`, `Action` and `Resource`. Conditions were dropped when
   creating a policy, when updating one, and when reading one back, so an
@@ -134,7 +134,6 @@
 ### Minor Changes
 
 - [#166](https://github.com/tigrisdata/storage/pull/166) [`263e952`](https://github.com/tigrisdata/storage/commit/263e952183228ba1612e9dcfcc1f29ba2410bee3) Thanks [@designcode](https://github.com/designcode)! - Add `createTeam`, `editTeam`, and `listTeams` for managing teams within an organization.
-
   - `createTeam(team, options?)` creates a team from a `CreateTeamInput` (`name` required, optional `description` and `members`) and returns the new `teamId`.
   - `editTeam(teamId, team, options?)` applies a partial update (`Partial<CreateTeamInput>`); it errors with `No fields to update` when no fields are provided.
   - `listTeams(options?)` returns the organization's teams, each mapped to a `Team` (`id`, `name`, `description`, `members`, `createdAt`, `updatedAt`).

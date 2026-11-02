@@ -1,6 +1,6 @@
 ---
 name: tigris
-description: 'Tigris object storage CLI reference. Use when working with object storage, file uploads, S3-compatible buckets, or blob storage. Provides commands, conventions, and environment setup for using Tigris via the tigris (t3) CLI.'
+description: "Tigris object storage CLI reference. Use when working with object storage, file uploads, S3-compatible buckets, or blob storage. Provides commands, conventions, and environment setup for using Tigris via the tigris (t3) CLI."
 user-invocable: false
 ---
 
