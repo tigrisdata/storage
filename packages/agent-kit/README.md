@@ -39,7 +39,7 @@ import { createForks, teardownForks } from '@tigrisdata/agent-kit';
 
 // 'my-dataset' must have snapshots enabled
 const { data: forkSet, error } = await createForks('my-dataset', 3, {
-  prefix: 'experiment-run-42',    // optional, controls fork bucket names
+  prefix: 'experiment-run-42', // optional, controls fork bucket names
   credentials: { role: 'Editor' }, // optional, creates scoped keys per fork
 });
 
@@ -62,8 +62,8 @@ Provision dedicated storage for a single agent — a new bucket with optional TT
 import { createWorkspace, teardownWorkspace } from '@tigrisdata/agent-kit';
 
 const { data: workspace } = await createWorkspace('agent-workspace-abc', {
-  ttl: { days: 1 },               // auto-expire objects after 1 day
-  enableSnapshots: true,           // allow checkpointing later
+  ttl: { days: 1 }, // auto-expire objects after 1 day
+  enableSnapshots: true, // allow checkpointing later
   credentials: { role: 'Editor' }, // optional scoped access key
 });
 
@@ -83,7 +83,7 @@ import { checkpoint, restore, listCheckpoints } from '@tigrisdata/agent-kit';
 
 // Take a checkpoint
 const { data: ckpt } = await checkpoint('training-data', {
-  name: 'epoch-50',  // optional label
+  name: 'epoch-50', // optional label
 });
 // ckpt.snapshotId — use this to restore later
 
@@ -94,11 +94,9 @@ for (const c of list.checkpoints) {
 }
 
 // Restore into a new fork from that checkpoint
-const { data: restored } = await restore(
-  'training-data',
-  ckpt.snapshotId,
-  { forkName: 'training-data-retry' },
-);
+const { data: restored } = await restore('training-data', ckpt.snapshotId, {
+  forkName: 'training-data-retry',
+});
 // restored.bucket — an independent copy-on-write clone at that point in time
 ```
 
@@ -124,32 +122,32 @@ await teardownCoordination('pipeline-bucket');
 
 ### Forks
 
-| Function | Description |
-|---|---|
+| Function                                   | Description                                  |
+| ------------------------------------------ | -------------------------------------------- |
 | `createForks(baseBucket, count, options?)` | Snapshot + fork N times + scoped credentials |
-| `teardownForks(forkSet, options?)` | Revoke credentials + delete forks |
+| `teardownForks(forkSet, options?)`         | Revoke credentials + delete forks            |
 
 ### Workspaces
 
-| Function | Description |
-|---|---|
-| `createWorkspace(name, options?)` | Create bucket + TTL + scoped credentials |
-| `teardownWorkspace(workspace, options?)` | Revoke credentials + delete bucket |
+| Function                                 | Description                              |
+| ---------------------------------------- | ---------------------------------------- |
+| `createWorkspace(name, options?)`        | Create bucket + TTL + scoped credentials |
+| `teardownWorkspace(workspace, options?)` | Revoke credentials + delete bucket       |
 
 ### Checkpoints
 
-| Function | Description |
-|---|---|
-| `checkpoint(bucket, options?)` | Snapshot a bucket, returns snapshot ID |
-| `restore(bucket, snapshotId, options?)` | Fork from a snapshot |
-| `listCheckpoints(bucket, options?)` | List all snapshots for a bucket |
+| Function                                | Description                            |
+| --------------------------------------- | -------------------------------------- |
+| `checkpoint(bucket, options?)`          | Snapshot a bucket, returns snapshot ID |
+| `restore(bucket, snapshotId, options?)` | Fork from a snapshot                   |
+| `listCheckpoints(bucket, options?)`     | List all snapshots for a bucket        |
 
 ### Coordination
 
-| Function | Description |
-|---|---|
-| `setupCoordination(bucket, options)` | Configure bucket notifications |
-| `teardownCoordination(bucket, options?)` | Clear bucket notifications |
+| Function                                 | Description                    |
+| ---------------------------------------- | ------------------------------ |
+| `setupCoordination(bucket, options)`     | Configure bucket notifications |
+| `teardownCoordination(bucket, options?)` | Clear bucket notifications     |
 
 ## License
 

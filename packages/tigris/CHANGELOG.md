@@ -49,11 +49,11 @@
 - [#236](https://github.com/tigrisdata/storage/pull/236) [`a9876ab`](https://github.com/tigrisdata/storage/commit/a9876ab253f03a69ca1d3da08d914fc9ac3f227f) Thanks [@Xe](https://github.com/Xe)! - `tigris init --agent` prints its setup recipe in [ASD-STE100 Simplified
   Technical English](https://www.asd-ste100.org/). Each step reads the same
   way to every agent that follows it.
-  
+
   The goal is to make the instructions unambiguous for both humans and
   agents. A distracted operator and a less capable model read each step the
   same way.
-  
+
   Each step is now one instruction per sentence in the imperative. Every
   condition is ahead of the command. All steps that carried two orders at
   once now use two sentences. An agent can no longer do half of a step
@@ -116,7 +116,6 @@
 
 - [#230](https://github.com/tigrisdata/storage/pull/230) [`931178a`](https://github.com/tigrisdata/storage/commit/931178a4be74ac31054be0b90a97481caec8f671) Thanks [@designcode](https://github.com/designcode)! - `tigris init` no longer offers to install a CLI you already have, and the CLI is
   now reachable unscoped as `npx tigris`.
-
   - The wizard installs the CLI only when `tigris` isn't on PATH; when it is, the
     "Defaults" hint drops the `CLI - Global` step and the existing install is
     brought up to date instead. Updating delegates to `tigris update`, which
@@ -136,7 +135,6 @@
 
 - [#233](https://github.com/tigrisdata/storage/pull/233) [`8c25b57`](https://github.com/tigrisdata/storage/commit/8c25b5778b1079da3afd81063354aa248a73e135) Thanks [@designcode](https://github.com/designcode)! - `tigris buckets migrate` keeps more data in flight by default, and the budget is
   now tunable per run.
-
   - The in-flight byte budget — the total size of migrations scheduled
     server-side but not yet confirmed — rises from 10 GB to 50 GB. A run made up
     of multi-gigabyte objects can now keep several of them in flight at once

@@ -239,7 +239,7 @@ Other behaviour worth knowing before you debug it as a bug:
   rather than soft-deleting, so nothing lands in the soft-delete view
   and `list({ deleted: true })` stays empty for it — recover those
   through `listVersions()` on a specific `versionId`. Deleting one
-  specific version *does* soft-delete that version. A test that deletes
+  specific version _does_ soft-delete that version. A test that deletes
   without a `versionId` on a snapshot bucket and then waits for the
   soft-delete view will wait forever.
 - To destroy a soft-deleted version use `purgeDeletedObject`, not

@@ -50,17 +50,17 @@ unchanged.
 To skip the popup, pass an access key:
 
 ```tsx
-<TigrisShell accessKey={{ accessKeyId, secretAccessKey }} />
+<TigrisShell accessKey={{ accessKeyId, secretAccessKey }} />;
 ```
 
 or, from inside the shell, `tigris login --access-key … --access-secret …`.
 
 The two credential types are stored differently:
 
-| | Stored in | Survives a reload |
-| --- | --- | --- |
-| OAuth session | Auth0's SDK cache (`localStorage`) | yes |
-| Access key | in-memory filesystem | **no** |
+|               | Stored in                          | Survives a reload |
+| ------------- | ---------------------------------- | ----------------- |
+| OAuth session | Auth0's SDK cache (`localStorage`) | yes               |
+| Access key    | in-memory filesystem               | **no**            |
 
 So signing in with `login` sticks across reloads and renews silently off the
 refresh token — including mid-command, when a long upload outlives the access
@@ -98,7 +98,7 @@ export default defineConfig({
 
 Auth0 shows a confirmation prompt on every login when the callback URI is
 non-verifiable — which `localhost` is — even for a first-party app with
-*Allow Skipping User Consent* enabled on the API. It guards against app
+_Allow Skipping User Consent_ enabled on the API. It guards against app
 impersonation on the same device and cannot be disabled from client code, so
 expect it in local development and not on a deployed origin. The Node CLI is
 unaffected because its device flow has no callback URI.
@@ -124,14 +124,14 @@ unaffected because its device flow has no callback URI.
 
 ## Props
 
-| Prop | Description |
-| --- | --- |
-| `auth` | Auth0 domain/clientId/audience overrides |
-| `accessKey` | Sign in with an access key instead of OAuth |
-| `env` | Extra environment variables the CLI can read. `TIGRIS_FORCE_PATH_STYLE` defaults to `true` — a page cannot reach per-bucket subdomains cross-origin — and can be overridden here |
-| `welcome` | Replace the banner, or `false` for none |
-| `onReady` | Receives the `ShellEngine` for imperative use |
-| `className`, `style` | Applied to the container |
+| Prop                 | Description                                                                                                                                                                      |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth`               | Auth0 domain/clientId/audience overrides                                                                                                                                         |
+| `accessKey`          | Sign in with an access key instead of OAuth                                                                                                                                      |
+| `env`                | Extra environment variables the CLI can read. `TIGRIS_FORCE_PATH_STYLE` defaults to `true` — a page cannot reach per-bucket subdomains cross-origin — and can be overridden here |
+| `welcome`            | Replace the banner, or `false` for none                                                                                                                                          |
+| `onReady`            | Receives the `ShellEngine` for imperative use                                                                                                                                    |
+| `className`, `style` | Applied to the container                                                                                                                                                         |
 
 ## License
 

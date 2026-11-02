@@ -47,11 +47,11 @@ curl -fsSL https://get.t3.storage.dev/install.sh | sh
 
 #### Options
 
-| Environment Variable | Description                                                       |
-| -------------------- | ----------------------------------------------------------------- |
-| `TIGRIS_VERSION`     | Install a specific version (e.g., `3.4.2`)                        |
-| `TIGRIS_INSTALL_DIR` | Custom install directory (default: `/usr/local/bin`)              |
-| `TIGRIS_BASE_URL`    | Artifact host (default: `https://get.t3.storage.dev`)             |
+| Environment Variable | Description                                           |
+| -------------------- | ----------------------------------------------------- |
+| `TIGRIS_VERSION`     | Install a specific version (e.g., `3.4.2`)            |
+| `TIGRIS_INSTALL_DIR` | Custom install directory (default: `/usr/local/bin`)  |
+| `TIGRIS_BASE_URL`    | Artifact host (default: `https://get.t3.storage.dev`) |
 
 Example:
 
@@ -77,8 +77,8 @@ irm https://get.t3.storage.dev/install.ps1 | iex
 
 #### Options
 
-| Environment Variable | Description                                            |
-| -------------------- | ------------------------------------------------------ |
+| Environment Variable | Description                                           |
+| -------------------- | ----------------------------------------------------- |
 | `TIGRIS_VERSION`     | Install a specific version (e.g., `3.4.2`)            |
 | `TIGRIS_INSTALL_DIR` | Custom install directory (default: `~\.tigris\bin`)   |
 | `TIGRIS_BASE_URL`    | Artifact host (default: `https://get.t3.storage.dev`) |

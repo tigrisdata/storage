@@ -1,4 +1,6 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as yaml from 'yaml';
@@ -176,6 +178,19 @@ function generateDocs(specs: Specs): string {
   return lines.join('\n');
 }
 
+// The tables above are written compact; `pnpm check` (biome) expects them
+// padded. Format the file here so `pnpm updatedocs` leaves a clean tree
+// instead of relying on the pre-commit hook. Biome is run through node so the
+// same call works on Windows.
+function formatReadme(readmePath: string): void {
+  const biome = createRequire(import.meta.url).resolve(
+    '@biomejs/biome/bin/biome'
+  );
+  execFileSync(process.execPath, [biome, 'format', '--write', readmePath], {
+    stdio: 'inherit',
+  });
+}
+
 function updateReadme(docsContent: string): void {
   const readmePath = join(__dirname, '..', 'README.md');
   const readmeContent = readFileSync(readmePath, 'utf-8');
@@ -205,6 +220,7 @@ function updateReadme(docsContent: string): void {
     readmeContent.slice(trailingStart);
 
   writeFileSync(readmePath, newReadme);
+  formatReadme(readmePath);
   console.log('README.md updated successfully!');
 }
 

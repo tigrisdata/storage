@@ -80,7 +80,6 @@
 ### Minor Changes
 
 - [#272](https://github.com/tigrisdata/storage/pull/272) [`ce88477`](https://github.com/tigrisdata/storage/commit/ce88477ee61d073710f6cf1e3726799946ca29e8) Thanks [@designcode](https://github.com/designcode)! - Add soft-delete object recovery: list deleted objects, restore one, or purge it for good.
-
   - `list({ deleted: true })` and `listVersions({ deleted: true })` read the bucket's soft-delete view instead of its live objects.
   - `restoreDeletedObject(path, versionId)` brings a deleted object back.
   - `purgeDeletedObject(path, versionId)` permanently destroys a deleted version before its retention period expires.
@@ -88,7 +87,6 @@
 ### Patch Changes
 
 - [#272](https://github.com/tigrisdata/storage/pull/272) [`ce88477`](https://github.com/tigrisdata/storage/commit/ce88477ee61d073710f6cf1e3726799946ca29e8) Thanks [@designcode](https://github.com/designcode)! - Surface soft-delete object recovery in the CLI.
-
   - `tigris objects list <bucket> --deleted` lists soft-deleted objects.
   - `tigris objects list-versions <bucket> --deleted` lists their recoverable versions.
   - `tigris objects restore-deleted <bucket> <key> --version-id <id>` brings one back.
@@ -170,7 +168,6 @@
 ### Minor Changes
 
 - [#157](https://github.com/tigrisdata/storage/pull/157) [`9d5c591`](https://github.com/tigrisdata/storage/commit/9d5c591059f987b4745c2fb87435c7ccbe465de0) Thanks [@designcode](https://github.com/designcode)! - Add `mergeFork` and `rebaseFork` for managing bucket forks.
-
   - `mergeFork(forkName, sourceBucketName, options?)` merges a fork's changes back into its parent source bucket. The gateway requires the merge source to be a direct fork of the target, so the request targets the source bucket and names the fork as the merge source. Pass `forkSnapshot` to merge from a specific snapshot of the fork.
   - `rebaseFork(forkName, options?)` re-bases a fork onto the latest state of its source bucket.
 
@@ -188,7 +185,6 @@
 ### Minor Changes
 
 - [#168](https://github.com/tigrisdata/storage/pull/168) [`4790e55`](https://github.com/tigrisdata/storage/commit/4790e5566be74397d2738126cc1d7a623d12157e) Thanks [@designcode](https://github.com/designcode)! - Support the `allowObjectAcl` and `enableDirectoryListing` options in `createBucket`.
-
   - `allowObjectAcl: true` applies the object ACL setting via a follow-up `updateBucket` call once the bucket exists (the S3 `CreateBucket` command can't carry it). If the bucket is created but the ACL update fails — whether it returns an error or throws — the returned error makes the partial state explicit.
   - `enableDirectoryListing: true` enables object listing for the bucket at creation time (relevant for public buckets). It defaults to `false` (listing disabled).
 
@@ -203,7 +199,6 @@
   ```
 
 - [#169](https://github.com/tigrisdata/storage/pull/169) [`f6dade9`](https://github.com/tigrisdata/storage/commit/f6dade9ba5d36a9ce631a57b2d1e6006cb4070b8) Thanks [@designcode](https://github.com/designcode)! - Add `restoreObject` and `getRestoreInfo` for working with archived objects.
-
   - `restoreObject(path, options?)` restores an archived object (e.g. one in the `GLACIER` tier) back into an actively-readable copy for a number of `days` (defaults to `1`).
   - `getRestoreInfo(path, options?)` reports an object's restore state from its `HEAD` headers as a `RestoreInfo` (`{ status, expiresAt? }`), using the `RestoreStatus` enum (`Archived`, `InProgress`, `Restored`). It resolves to `undefined` when there is no restore information — for a non-archived object or one that does not exist.
 
@@ -227,7 +222,6 @@
 ### Minor Changes
 
 - [#161](https://github.com/tigrisdata/storage/pull/161) [`9803a6d`](https://github.com/tigrisdata/storage/commit/9803a6d20c9851573c3ac968c07feb4ef0a4fe9b) Thanks [@designcode](https://github.com/designcode)! - Add `setBucketType`, `enableSnapshot`, and `disableSnapshot` to change a bucket's type (regular vs snapshot) after creation.
-
   - `setBucketType(bucketName, type, options?)` sets the bucket type to `BucketTypes.Regular` or `BucketTypes.Snapshot`.
   - `enableSnapshot(bucketName, options?)` switches a bucket to a snapshot bucket.
   - `disableSnapshot(bucketName, options?)` switches it back to a regular bucket. It is rejected with an error when the bucket still has dependent forks, since a snapshot parent cannot become regular while forks depend on it.
@@ -250,7 +244,6 @@
 ### Minor Changes
 
 - [#159](https://github.com/tigrisdata/storage/pull/159) [`139a0cf`](https://github.com/tigrisdata/storage/commit/139a0cf2c9babbee2e2892c9b00b21094abd2dfb) Thanks [@designcode](https://github.com/designcode)! - Fix bucket-listing pagination and enrich `listForks` results.
-
   - **Pagination fix**: `fetchBucketListing` now sends the gateway's expected `continuation-token` and `max-buckets` query params (previously `ContinuationToken`/`MaxBuckets`) and reads the `ContinuationToken` field from the response (previously the non-existent `NextContinuationToken`/`IsTruncated` pair). This repairs pagination for `listBuckets`, `listForks`, and `getStats`, which previously could drop the continuation token or ignore the requested page size.
   - **`listForks` now resolves forks through the shared listing endpoint** and returns full `Bucket` fields plus fork info (`forkInfo.parents` with the parent bucket, fork-creation time, and source snapshot).
   - **Restored backward compatibility**: `ForkedBucket` is exported again, and each returned fork carries the `forkCreatedAt`, `snapshot`, and `snapshotCreatedAt` fields that were dropped in the previous `listForks` rework. These are deprecated in favor of `forkInfo.parents[0]`.
@@ -264,7 +257,6 @@
 - [#155](https://github.com/tigrisdata/storage/pull/155) [`ac3e0b1`](https://github.com/tigrisdata/storage/commit/ac3e0b11517226012924dc68cb9a06150f5ad7dc) Thanks [@designcode](https://github.com/designcode)! - Rework `listForks` to resolve forks server-side and add pagination.
 
   `listForks` now lists a source bucket's forks with a single fork-scoped `ListBuckets` request (via the `X-Tigris-Fork` header) instead of paging the entire bucket listing and filtering by parent client-side. This avoids scanning every bucket in the account.
-
   - Forks are now returned as `BucketFork` (`{ name, creationDate }`), replacing `ForkedBucket`.
   - `ListForksOptions` accepts `limit` and `paginationToken`, and `ListForksResponse` returns a `paginationToken`, so callers can page through forks.
 
@@ -287,7 +279,6 @@
 ### Minor Changes
 
 - [#141](https://github.com/tigrisdata/storage/pull/141) [`04a9b99`](https://github.com/tigrisdata/storage/commit/04a9b99e1a5b9960e23f717f1a4195a69ae54ee2) Thanks [@designcode](https://github.com/designcode)! - Add bucket soft-delete support.
-
   - `updateBucket(name, options)` accepts `softDelete: { enabled: true; retentionDays: number } | { enabled: false }` to configure recoverable bucket deletion.
   - `getBucketInfo(name)` returns `settings.softDelete` with the same discriminated shape.
   - `listBuckets({ deleted: true })` lists soft-deleted buckets, and each `Bucket` now carries `softDeleteInfo` when soft delete is enabled.
@@ -345,7 +336,6 @@
 - [#126](https://github.com/tigrisdata/storage/pull/126) [`df9d4f2`](https://github.com/tigrisdata/storage/commit/df9d4f2ee4045a0ab7f9a637fcd92e756248e3e2) Thanks [@designcode](https://github.com/designcode)! - Add `getSignedUploadUrl(key, options)` (server) and `uploadToSignedUrl(name, data, signed, options)` (client) for direct browser-to-Tigris uploads.
 
   Returns a discriminated upload contract:
-
   - **PUT** (default): simple presigned URL. Submit the body as the request payload with any required headers. Supports `contentType`, `metadata`, and `access` via signed headers.
   - **POST** (S3 POST policy): triggered automatically when `maxSize`, `minSize`, or `successActionRedirect` is set — knobs that PUT can't express. Submit a `multipart/form-data` body with the returned `fields` followed by the `file` input.
 
@@ -362,7 +352,6 @@
 ### Minor Changes
 
 - [#118](https://github.com/tigrisdata/storage/pull/118) [`c0cc766`](https://github.com/tigrisdata/storage/commit/c0cc7660bde53b2de4e31dec3067572a3bade731) Thanks [@designcode](https://github.com/designcode)! - Add user-metadata round-trip and fix SigV4 path encoding for keys with sub-delim characters:
-
   - `put` now accepts a `metadata?: Record<string, string>` option and forwards it to S3 as `x-amz-meta-*` headers. `HeadResponse.metadata` (and `PutResponse.metadata`) surface the round-tripped values; key casing follows S3 semantics (lowercased on read).
   - Fix: `copy`, `move`, and `updateObject` returned `403 SignatureDoesNotMatch` for keys containing `!`, `'`, `(`, `)`, or `*` (e.g. `holiday (2024).jpg`). `encodeObjectKey` now matches AWS's canonical-URI encoding (`encodeURIComponent` plus the sub-delims that it leaves alone), aligning the client's signed canonical path with the gateway's recomputed canonical.
 
@@ -371,7 +360,6 @@
 ### Minor Changes
 
 - [#116](https://github.com/tigrisdata/storage/pull/116) [`76983d1`](https://github.com/tigrisdata/storage/commit/76983d15a040257c7932cefc5ff10d1fb1df3ac6) Thanks [@designcode](https://github.com/designcode)! - Add fork listing and snapshot deletion, and expand bucket listing fields:
-
   - New `listForks(sourceBucketName?)` returns every bucket that forks from the given source as `ForkedBucket[]` (name, creation date, fork timestamp, source snapshot, snapshot creation date).
   - New `deleteBucketSnapshot(sourceBucketName, snapshotVersion)` deletes a specific snapshot version of a bucket.
   - `listBuckets` and `getStats` now return additional bucket metadata: `regions`, `type` (`Regular` | `Snapshot`), and `visibility` (`public` | `private`).
@@ -381,7 +369,6 @@
 ### Minor Changes
 
 - [#103](https://github.com/tigrisdata/storage/pull/103) [`fd56aa7`](https://github.com/tigrisdata/storage/commit/fd56aa794eb9a68bdee348e8b4e925f844f42438) Thanks [@designcode](https://github.com/designcode)! - Add support for S3 object-version operations on snapshot-enabled buckets:
-
   - New `listVersions({ prefix, delimiter, limit, keyMarker, versionIdMarker })` returns the object versions and delete markers for a bucket prefix, plus `nextKeyMarker` / `nextVersionIdMarker` for pagination.
   - `head`, `get`, and `remove` now accept a `versionId` option. On `head` / `get` it selects the specified version; on `remove` it permanently deletes that version (without one, `remove` creates a delete marker on a versioned bucket, matching S3 semantics).
 
@@ -394,7 +381,6 @@
 - [#101](https://github.com/tigrisdata/storage/pull/101) [`6306356`](https://github.com/tigrisdata/storage/commit/6306356b6203c5d02cf90bb2ce566bcfdf9fa110) Thanks [@designcode](https://github.com/designcode)! - Fix `403 SignatureDoesNotMatch` from `copy`, `move`, and `updateObject` when the object key contains `/` or any other character that requires percent-encoding (space, `?`, `=`, etc.) and the request is signed with access-key SigV4.
 
   Two related fixes:
-
   - Custom HTTP client now constructs `SignatureV4` with `uriEscapePath: false`, matching S3's single-encoding canonical-path scheme. The default `true` (AWS-standard double-encoding) caused the signer to re-escape any percent sequence in the path during canonicalization, while Tigris gateway uses S3 single-encoding — producing the mismatch for every key with a special char.
   - Object keys in the request path and `X-Amz-Copy-Source` header are URL-encoded per-segment via the new `encodeObjectKey` helper, preserving `/` as a separator so the wire URL stays valid.
 

@@ -2,14 +2,14 @@
 
 The Tigris CLI supports multiple authentication methods. When more than one is configured, the CLI uses the first match in the following priority order:
 
-| Priority | Method | How to set up |
-|----------|--------|---------------|
-| 1 | AWS Profile | `AWS_PROFILE` env var + `~/.aws/credentials` |
-| 2 | Environment variables (AWS_) | `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` |
-| 3 | Environment variables (TIGRIS_) | `TIGRIS_STORAGE_ACCESS_KEY_ID` + `TIGRIS_STORAGE_SECRET_ACCESS_KEY` |
-| 4 | OAuth login | `tigris login` or `tigris login oauth` |
-| 5 | Credentials login | `tigris login credentials` |
-| 6 | Configured credentials | `tigris configure` |
+| Priority | Method                          | How to set up                                                       |
+| -------- | ------------------------------- | ------------------------------------------------------------------- |
+| 1        | AWS Profile                     | `AWS_PROFILE` env var + `~/.aws/credentials`                        |
+| 2        | Environment variables (AWS_)    | `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY`                       |
+| 3        | Environment variables (TIGRIS_) | `TIGRIS_STORAGE_ACCESS_KEY_ID` + `TIGRIS_STORAGE_SECRET_ACCESS_KEY` |
+| 4        | OAuth login                     | `tigris login` or `tigris login oauth`                              |
+| 5        | Credentials login               | `tigris login credentials`                                          |
+| 6        | Configured credentials          | `tigris configure`                                                  |
 
 Run `tigris whoami` to see which method is currently active.
 
@@ -77,19 +77,19 @@ When both AWS_ and TIGRIS_ variables are set, AWS_ takes priority.
 
 You can override service endpoints independently:
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `AWS_ENDPOINT_URL_S3` | Storage endpoint | `https://t3.storage.dev` |
-| `AWS_ENDPOINT_URL_IAM` | IAM endpoint | `https://iam.storageapi.dev` |
-| `TIGRIS_STORAGE_ENDPOINT` | Storage endpoint  | `https://t3.storage.dev` |
-| `TIGRIS_IAM_ENDPOINT` | IAM endpoint (fallback) | `https://iam.storageapi.dev` |
+| Variable                  | Description             | Default                      |
+| ------------------------- | ----------------------- | ---------------------------- |
+| `AWS_ENDPOINT_URL_S3`     | Storage endpoint        | `https://t3.storage.dev`     |
+| `AWS_ENDPOINT_URL_IAM`    | IAM endpoint            | `https://iam.storageapi.dev` |
+| `TIGRIS_STORAGE_ENDPOINT` | Storage endpoint        | `https://t3.storage.dev`     |
+| `TIGRIS_IAM_ENDPOINT`     | IAM endpoint (fallback) | `https://iam.storageapi.dev` |
 
 AWS_ endpoint variables take priority over TIGRIS_ endpoint variables.
 
 ### Other variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
+| Variable                  | Description                                                                                                                                                                                                  | Default |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
 | `TIGRIS_FORCE_PATH_STYLE` | Use S3 path-style addressing (bucket in the URL path instead of the host). Set to `1`, `true`, `yes`, or `on` to enable. Useful behind gateways or proxies that don't support virtual-hosted-style requests. | `false` |
 
 ## AWS Profile

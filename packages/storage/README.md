@@ -510,7 +510,7 @@ you rely on this:
   normally does, and leaves earlier versions live — nothing lands in the
   soft-delete view. Recover from that with `listVersions()` and
   `get`/`remove` on a specific `versionId`. Deleting one specific version
-  *does* soft-delete that version, and it shows up in `list({ deleted: true })`
+  _does_ soft-delete that version, and it shows up in `list({ deleted: true })`
   like any other.
 
 Recovering an object is a three-step flow: find the deleted keys, pick the
@@ -635,30 +635,30 @@ createBucket(bucketName: string, options?: CreateBucketOptions): Promise<TigrisS
 
 #### `options`
 
-| **Parameter**        | **Required** | **Values**                                                                                                                                                               |
-| -------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| access               | No           | `public` or `private`. If set to public, objects in this bucket will be publicly readable. Default value is `private`                                                    |
-| allowObjectAcl       | No           | Whether to allow per-object ACL settings. When `true`, it is applied with a follow-up request after the bucket is created. Default is `false`                            |
-| defaultTier          | No           | `STANDARD`, `STANDARD_IA`, `GLACIER` or `GLACIER_IR`. This is default object tier for all objects uploaded to it. Default is `STANDARD`                                  |
-| enableSnapshot       | No           | Enable snapshot functionality for the bucket. Default is `false`. Please note only the Standard storage tier is supported for snapshot-enabled buckets                   |
-| enableDirectoryListing | No         | Whether the bucket's objects can be listed by unauthenticated clients (relevant for public buckets). Default is `false` (listing disabled)                               |
-| locations            | No           | Bucket location configuration. See [Locations](#bucket-locations) below. Default is **global**.                                                                          |
-| sourceBucketName     | No           | The name of the source bucket to fork from.                                                                                                                              |
-| sourceBucketSnapshot | No           | The snapshot version of the source bucket to fork from.                                                                                                                  |
-| consistency          | No           | **Deprecated.** Use `locations` instead. `default` or `strict`.                                                                                                          |
-| region               | No           | **Deprecated.** Use `locations` instead. By default, **Global**.                                                                                                         |
-| config               | No           | A configuration object to override the [default configuration](#authentication).                                                                                         |
+| **Parameter**          | **Required** | **Values**                                                                                                                                             |
+| ---------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| access                 | No           | `public` or `private`. If set to public, objects in this bucket will be publicly readable. Default value is `private`                                  |
+| allowObjectAcl         | No           | Whether to allow per-object ACL settings. When `true`, it is applied with a follow-up request after the bucket is created. Default is `false`          |
+| defaultTier            | No           | `STANDARD`, `STANDARD_IA`, `GLACIER` or `GLACIER_IR`. This is default object tier for all objects uploaded to it. Default is `STANDARD`                |
+| enableSnapshot         | No           | Enable snapshot functionality for the bucket. Default is `false`. Please note only the Standard storage tier is supported for snapshot-enabled buckets |
+| enableDirectoryListing | No           | Whether the bucket's objects can be listed by unauthenticated clients (relevant for public buckets). Default is `false` (listing disabled)             |
+| locations              | No           | Bucket location configuration. See [Locations](#bucket-locations) below. Default is **global**.                                                        |
+| sourceBucketName       | No           | The name of the source bucket to fork from.                                                                                                            |
+| sourceBucketSnapshot   | No           | The snapshot version of the source bucket to fork from.                                                                                                |
+| consistency            | No           | **Deprecated.** Use `locations` instead. `default` or `strict`.                                                                                        |
+| region                 | No           | **Deprecated.** Use `locations` instead. By default, **Global**.                                                                                       |
+| config                 | No           | A configuration object to override the [default configuration](#authentication).                                                                       |
 
 #### Bucket Locations
 
 The `locations` option controls where your bucket data is stored. It accepts an object with a `type` and optional `values`:
 
-| **Type** | **Values**                                                                 | **Description**                                                                                                        |
-| -------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `global` | _(none)_                                                                   | Data distributed globally. Strong consistency for requests in same region, eventual consistency globally.               |
-| `multi`  | `'usa'` or `'eur'`                                                         | Highest availability with data residency across regions in the chosen geo. Strong consistency globally.                 |
+| **Type** | **Values**                                                                                                        | **Description**                                                                                                                                |
+| -------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `global` | _(none)_                                                                                                          | Data distributed globally. Strong consistency for requests in same region, eventual consistency globally.                                      |
+| `multi`  | `'usa'` or `'eur'`                                                                                                | Highest availability with data residency across regions in the chosen geo. Strong consistency globally.                                        |
 | `dual`   | One or more of: `'ams'`, `'fra'`, `'gru'`, `'iad'`, `'jnb'`, `'lhr'`, `'nrt'`, `'ord'`, `'sin'`, `'sjc'`, `'syd'` | High availability with data residency across regions of choice. Strong consistency for requests in same region, eventual consistency globally. |
-| `single` | One of: `'ams'`, `'fra'`, `'gru'`, `'iad'`, `'jnb'`, `'lhr'`, `'nrt'`, `'ord'`, `'sin'`, `'sjc'`, `'syd'`         | Data redundancy across availability zones in a single region. Strong consistency globally.                              |
+| `single` | One of: `'ams'`, `'fra'`, `'gru'`, `'iad'`, `'jnb'`, `'lhr'`, `'nrt'`, `'ord'`, `'sin'`, `'sjc'`, `'syd'`         | Data redundancy across availability zones in a single region. Strong consistency globally.                                                     |
 
 In case of successful `createBucket`, the `data` property will be set and contains the following properties:
 
@@ -831,8 +831,8 @@ listBuckets(options?: ListBucketsOptions): Promise<TigrisStorageResponse<ListBuc
 | limit           | No           | The maximum number of buckets to return.                                         |
 | paginationToken | No           | The pagination token to continue listing buckets from the previous request.      |
 | deleted         | No           | `true` to list only soft-deleted buckets.                                        |
-| forksOnly      | No           | `true` to list only buckets that are forks of another bucket.                    |
-| owner         | No           | List only buckets owned by this user, by username (an email address).            |
+| forksOnly       | No           | `true` to list only buckets that are forks of another bucket.                    |
+| owner           | No           | List only buckets owned by this user, by username (an email address).            |
 | config          | No           | A configuration object to override the [default configuration](#authentication). |
 
 In case of successful `list`, the `data` property will be set to the list of buckets and contains the following properties:
@@ -1027,18 +1027,18 @@ updateBucket(bucketName: string, options?: UpdateBucketOptions): Promise<TigrisS
 
 #### `options`
 
-| **Parameter**            | **Required** | **Values**                                                                                                          |
-| ------------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------- |
-| access                   | No           | `public` or `private`. Set the bucket access level.                                                                 |
-| allowObjectAcl           | No           | Whether to allow per-object ACL settings.                                                                           |
-| disableDirectoryListing  | No           | Whether to disable directory listing for the bucket.                                                                |
-| locations                | No           | Bucket location configuration. See [Locations](#bucket-locations).                                                  |
-| cacheControl             | No           | Set the Cache-Control header for the bucket.                                                                        |
-| customDomain             | No           | Set a custom domain for the bucket.                                                                                 |
-| enableAdditionalHeaders  | No           | Enable additional HTTP headers (e.g., `X-Content-Type-Options: nosniff`).                                           |
-| enableDeleteProtection   | No           | Enable or disable delete protection for the bucket.                                                                 |
-| regions                  | No           | **Deprecated.** Use `locations` instead.                                                                            |
-| config                   | No           | A configuration object to override the [default configuration](#authentication).                                    |
+| **Parameter**           | **Required** | **Values**                                                                       |
+| ----------------------- | ------------ | -------------------------------------------------------------------------------- |
+| access                  | No           | `public` or `private`. Set the bucket access level.                              |
+| allowObjectAcl          | No           | Whether to allow per-object ACL settings.                                        |
+| disableDirectoryListing | No           | Whether to disable directory listing for the bucket.                             |
+| locations               | No           | Bucket location configuration. See [Locations](#bucket-locations).               |
+| cacheControl            | No           | Set the Cache-Control header for the bucket.                                     |
+| customDomain            | No           | Set a custom domain for the bucket.                                              |
+| enableAdditionalHeaders | No           | Enable additional HTTP headers (e.g., `X-Content-Type-Options: nosniff`).        |
+| enableDeleteProtection  | No           | Enable or disable delete protection for the bucket.                              |
+| regions                 | No           | **Deprecated.** Use `locations` instead.                                         |
+| config                  | No           | A configuration object to override the [default configuration](#authentication). |
 
 In case of successful `updateBucket`, the `data` property will be set and contains:
 
@@ -1087,21 +1087,21 @@ setBucketCors(bucketName: string, options?: SetBucketCorsOptions): Promise<Tigri
 
 #### `options`
 
-| **Parameter** | **Required** | **Values**                                                                       |
-| ------------- | ------------ | -------------------------------------------------------------------------------- |
-| rules         | Yes          | An array of CORS rules. See below.                                               |
-| override      | No           | When `false` (default), new rules are appended to existing rules. When `true`, existing rules are replaced.  |
-| config        | No           | A configuration object to override the [default configuration](#authentication). |
+| **Parameter** | **Required** | **Values**                                                                                                  |
+| ------------- | ------------ | ----------------------------------------------------------------------------------------------------------- |
+| rules         | Yes          | An array of CORS rules. See below.                                                                          |
+| override      | No           | When `false` (default), new rules are appended to existing rules. When `true`, existing rules are replaced. |
+| config        | No           | A configuration object to override the [default configuration](#authentication).                            |
 
 Each CORS rule has the following properties:
 
-| **Property**   | **Required** | **Values**                                                                                                               |
-| -------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| allowedOrigins | Yes          | A string or array of allowed origins. Use `'*'` for all origins.                                                         |
-| allowedMethods | No           | A string or array of HTTP methods (`GET`, `HEAD`, `PUT`, `POST`, `DELETE`, `OPTIONS`, `PATCH`, `TRACE`, `CONNECT`).      |
-| allowedHeaders | No           | A string or array of allowed headers. Use `'*'` for all headers.                                                         |
-| exposeHeaders  | No           | A string or array of headers to expose to the browser.                                                                   |
-| maxAge         | No           | The max age in seconds for preflight request caching. Must be a positive integer.                                        |
+| **Property**   | **Required** | **Values**                                                                                                          |
+| -------------- | ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| allowedOrigins | Yes          | A string or array of allowed origins. Use `'*'` for all origins.                                                    |
+| allowedMethods | No           | A string or array of HTTP methods (`GET`, `HEAD`, `PUT`, `POST`, `DELETE`, `OPTIONS`, `PATCH`, `TRACE`, `CONNECT`). |
+| allowedHeaders | No           | A string or array of allowed headers. Use `'*'` for all headers.                                                    |
+| exposeHeaders  | No           | A string or array of headers to expose to the browser.                                                              |
+| maxAge         | No           | The max age in seconds for preflight request caching. Must be a positive integer.                                   |
 
 ### Examples
 
@@ -1150,15 +1150,15 @@ setBucketLifecycle(bucketName: string, options?: SetBucketLifecycleOptions): Pro
 
 Each lifecycle rule has the following properties:
 
-| **Property** | **Required** | **Values**                                                                                                                                |
-| ------------ | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| storageClass | No           | Transition target storage class: `STANDARD_IA`, `GLACIER`, or `GLACIER_IR`.                                                               |
-| days         | No           | Transition: days after object creation. Cannot be combined with `date`.                                                                   |
-| date         | No           | Transition: specific date to transition. Cannot be combined with `days`.                                                                  |
-| expiration   | No           | `{ days?: number; date?: string }` — when objects are deleted. `days` and `date` are mutually exclusive; one of them must be set.         |
-| filter       | No           | `{ prefix: string }` — scope the rule to objects whose key starts with `prefix`.                                                          |
-| enabled      | No           | Whether the rule is enabled. Defaults to `true`.                                                                                          |
-| id           | No           | Stable identifier. When updating, supply the existing rule's `id` to target it; otherwise the rule is created with a generated id.        |
+| **Property** | **Required** | **Values**                                                                                                                         |
+| ------------ | ------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| storageClass | No           | Transition target storage class: `STANDARD_IA`, `GLACIER`, or `GLACIER_IR`.                                                        |
+| days         | No           | Transition: days after object creation. Cannot be combined with `date`.                                                            |
+| date         | No           | Transition: specific date to transition. Cannot be combined with `days`.                                                           |
+| expiration   | No           | `{ days?: number; date?: string }` — when objects are deleted. `days` and `date` are mutually exclusive; one of them must be set.  |
+| filter       | No           | `{ prefix: string }` — scope the rule to objects whose key starts with `prefix`.                                                   |
+| enabled      | No           | Whether the rule is enabled. Defaults to `true`.                                                                                   |
+| id           | No           | Stable identifier. When updating, supply the existing rule's `id` to target it; otherwise the rule is created with a generated id. |
 
 A rule must have at least one of a transition (`storageClass` + `days`/`date`) or an `expiration`. `filter` alone is not enough.
 
@@ -1293,20 +1293,20 @@ setBucketNotifications(bucketName: string, options: SetBucketNotificationsOption
 
 #### `options`
 
-| **Parameter**      | **Required** | **Values**                                                                                                          |
-| ------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------- |
-| notificationConfig | Yes          | Notification configuration object. See below.                                                                       |
-| override           | No           | When `true`, replaces existing config. When `false` (default), merges with existing config.                         |
-| config             | No           | A configuration object to override the [default configuration](#authentication).                                    |
+| **Parameter**      | **Required** | **Values**                                                                                  |
+| ------------------ | ------------ | ------------------------------------------------------------------------------------------- |
+| notificationConfig | Yes          | Notification configuration object. See below.                                               |
+| override           | No           | When `true`, replaces existing config. When `false` (default), merges with existing config. |
+| config             | No           | A configuration object to override the [default configuration](#authentication).            |
 
 The notification configuration object:
 
-| **Property** | **Required** | **Values**                                                                                                                 |
-| ------------ | ------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| enabled      | No           | Whether notifications are enabled.                                                                                         |
-| url          | No           | The webhook URL (must use http or https). Required when creating a new configuration.                                      |
-| filter       | No           | A filter string to match object keys.                                                                                      |
-| auth         | No           | Authentication for the webhook. Either `{ token: string }` or `{ username: string, password: string }`. Cannot use both.  |
+| **Property** | **Required** | **Values**                                                                                                               |
+| ------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| enabled      | No           | Whether notifications are enabled.                                                                                       |
+| url          | No           | The webhook URL (must use http or https). Required when creating a new configuration.                                    |
+| filter       | No           | A filter string to match object keys.                                                                                    |
+| auth         | No           | Authentication for the webhook. Either `{ token: string }` or `{ username: string, password: string }`. Cannot use both. |
 
 Pass an empty object `{}` as `notificationConfig` to clear all notifications. When only `enabled` is provided, the existing configuration is preserved with the new enabled state.
 
@@ -1377,11 +1377,11 @@ setBucketTtl(bucketName: string, options?: SetBucketTtlOptions): Promise<TigrisS
 
 The TTL configuration object:
 
-| **Property** | **Required** | **Values**                                                                       |
-| ------------ | ------------ | -------------------------------------------------------------------------------- |
-| enabled      | No           | Whether TTL is enabled.                                                          |
-| days         | No           | Number of days after which objects expire. Cannot be combined with `date`.       |
-| date         | No           | A specific date when objects expire. Cannot be combined with `days`.             |
+| **Property** | **Required** | **Values**                                                                 |
+| ------------ | ------------ | -------------------------------------------------------------------------- |
+| enabled      | No           | Whether TTL is enabled.                                                    |
+| days         | No           | Number of days after which objects expire. Cannot be combined with `date`. |
+| date         | No           | A specific date when objects expire. Cannot be combined with `days`.       |
 
 ### Examples
 
@@ -1591,7 +1591,11 @@ for (const { part, url } of urls.data) {
 }
 
 // 4. Complete the multipart upload
-const result = await completeMultipartUpload('large-file.zip', uploadId, partIds);
+const result = await completeMultipartUpload(
+  'large-file.zip',
+  uploadId,
+  partIds
+);
 if (result.error) {
   console.error('Error completing upload:', result.error);
 } else {
@@ -1623,18 +1627,18 @@ import { upload } from '@tigrisdata/storage/client';
 
 #### `options`
 
-| **Parameter**      | **Required** | **Values**                                                                                                    |
-| ------------------ | ------------ | ------------------------------------------------------------------------------------------------------------- |
-| url                | Yes          | The URL of your upload endpoint that handles client uploads.                                                  |
-| access             | No           | The access level for the object. Possible values are `public` and `private`.                                  |
-| addRandomSuffix    | No           | Whether to add a random suffix to the object name. Default is `false`.                                        |
-| allowOverwrite     | No           | Whether to allow overwriting the object. Default is `true`.                                                   |
-| contentType        | No           | Set the content type of the object. If not provided, inferred from the file.                                  |
-| contentDisposition | No           | Set the content disposition. Possible values are `inline` and `attachment`.                                   |
-| multipart          | No           | Enable multipart upload for large files. Default is `false`.                                                  |
-| partSize           | No           | Part size in bytes for multipart uploads. Default is 5MB.                                                     |
-| concurrency        | No           | Maximum number of concurrent part uploads for multipart uploads. Default is `4`.                              |
-| onUploadProgress   | No           | Callback to track upload progress: `onUploadProgress({loaded: number, total: number, percentage: number})`.   |
+| **Parameter**      | **Required** | **Values**                                                                                                  |
+| ------------------ | ------------ | ----------------------------------------------------------------------------------------------------------- |
+| url                | Yes          | The URL of your upload endpoint that handles client uploads.                                                |
+| access             | No           | The access level for the object. Possible values are `public` and `private`.                                |
+| addRandomSuffix    | No           | Whether to add a random suffix to the object name. Default is `false`.                                      |
+| allowOverwrite     | No           | Whether to allow overwriting the object. Default is `true`.                                                 |
+| contentType        | No           | Set the content type of the object. If not provided, inferred from the file.                                |
+| contentDisposition | No           | Set the content disposition. Possible values are `inline` and `attachment`.                                 |
+| multipart          | No           | Enable multipart upload for large files. Default is `false`.                                                |
+| partSize           | No           | Part size in bytes for multipart uploads. Default is 5MB.                                                   |
+| concurrency        | No           | Maximum number of concurrent part uploads for multipart uploads. Default is `4`.                            |
+| onUploadProgress   | No           | Callback to track upload progress: `onUploadProgress({loaded: number, total: number, percentage: number})`. |
 
 In case of successful upload, the `data` property will be set to the upload and contains the following properties:
 

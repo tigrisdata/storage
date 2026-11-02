@@ -21,7 +21,7 @@ npm install @tigrisdata/agent-shell
 ```
 
 ```typescript
-import { TigrisShell } from "@tigrisdata/agent-shell";
+import { TigrisShell } from '@tigrisdata/agent-shell';
 
 const shell = new TigrisShell({
   accessKeyId: process.env.TIGRIS_STORAGE_ACCESS_KEY_ID,
@@ -30,8 +30,8 @@ const shell = new TigrisShell({
 });
 
 await shell.exec('echo "Hello world" > greeting.txt');
-await shell.exec("cat greeting.txt"); // stdout: "Hello world\n"
-await shell.exec("cat greeting.txt | tr a-z A-Z"); // stdout: "HELLO WORLD\n"
+await shell.exec('cat greeting.txt'); // stdout: "Hello world\n"
+await shell.exec('cat greeting.txt | tr a-z A-Z'); // stdout: "HELLO WORLD\n"
 
 // Persist to Tigris when you're ready
 await shell.flush();
@@ -105,8 +105,8 @@ const shell = new TigrisShell({
 
 try {
   await shell.exec('echo "processing..." > status.txt');
-  await shell.exec("echo '{\"score\": 0.95}' > results.json");
-  await shell.exec("cat results.json | jq .score"); // "0.95\n"
+  await shell.exec('echo \'{"score": 0.95}\' > results.json');
+  await shell.exec('cat results.json | jq .score'); // "0.95\n"
 
   // Only persist on success
   await shell.flush();
@@ -127,9 +127,9 @@ const shell = new TigrisShell(
     secretAccessKey: process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY,
   },
   {
-    cwd: "/workspace", // Starting directory (default: /workspace)
-    env: { DEBUG: "true" }, // Initial environment variables
-  },
+    cwd: '/workspace', // Starting directory (default: /workspace)
+    env: { DEBUG: 'true' }, // Initial environment variables
+  }
 );
 ```
 
@@ -174,27 +174,27 @@ fork source-bucket --list                    # List forks of a bucket
 Mount multiple buckets at different paths:
 
 ```typescript
-import { TigrisShell } from "@tigrisdata/agent-shell";
+import { TigrisShell } from '@tigrisdata/agent-shell';
 
 const shell = new TigrisShell({
   accessKeyId: process.env.TIGRIS_STORAGE_ACCESS_KEY_ID,
   secretAccessKey: process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY,
-  bucket: "agent-workspace", // auto-mounted at /workspace
+  bucket: 'agent-workspace', // auto-mounted at /workspace
 });
 
-shell.mount("shared-datasets", "/datasets");
+shell.mount('shared-datasets', '/datasets');
 
-await shell.exec("cat /datasets/training/labels.csv | head -10");
-await shell.exec("cp /datasets/training/labels.csv ./local-copy.csv");
+await shell.exec('cat /datasets/training/labels.csv | head -10');
+await shell.exec('cp /datasets/training/labels.csv ./local-copy.csv');
 await shell.exec('echo "processed" > results.txt');
 
 // Flush all mounts, or a specific one
 await shell.flush(); // all
-await shell.flush("/datasets"); // just /datasets
+await shell.flush('/datasets'); // just /datasets
 
 // List and unmount
 shell.listMounts(); // [{ bucket: "agent-workspace", mountPoint: "/workspace" }, ...]
-shell.unmount("/datasets");
+shell.unmount('/datasets');
 ```
 
 ### Advanced: Compose with just-bash
@@ -206,9 +206,9 @@ npm install @tigrisdata/agent-shell just-bash
 ```
 
 ```typescript
-import { Bash, MountableFs, InMemoryFs } from "just-bash";
-import { TigrisAdapter } from "@tigrisdata/agent-shell/fs";
-import { createTigrisCommands } from "@tigrisdata/agent-shell/commands";
+import { Bash, MountableFs, InMemoryFs } from 'just-bash';
+import { TigrisAdapter } from '@tigrisdata/agent-shell/fs';
+import { createTigrisCommands } from '@tigrisdata/agent-shell/commands';
 
 const auth = {
   accessKeyId: process.env.TIGRIS_STORAGE_ACCESS_KEY_ID,
@@ -216,18 +216,18 @@ const auth = {
 };
 
 const fs = new MountableFs({ base: new InMemoryFs() });
-fs.mount("/workspace", new TigrisAdapter(auth, "agent-workspace"));
-fs.mount("/datasets", new TigrisAdapter(auth, "shared-datasets"));
+fs.mount('/workspace', new TigrisAdapter(auth, 'agent-workspace'));
+fs.mount('/datasets', new TigrisAdapter(auth, 'shared-datasets'));
 
 const bash = new Bash({
   fs,
-  cwd: "/workspace",
+  cwd: '/workspace',
   customCommands: [
-    ...createTigrisCommands({ ...auth, bucket: "agent-workspace" }),
+    ...createTigrisCommands({ ...auth, bucket: 'agent-workspace' }),
   ],
 });
 
-await bash.exec("cp /datasets/data.csv ./local.csv");
+await bash.exec('cp /datasets/data.csv ./local.csv');
 ```
 
 ## API Reference
