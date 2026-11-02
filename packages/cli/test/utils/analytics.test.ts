@@ -126,6 +126,7 @@ vi.mock('node:child_process', async () => {
 });
 
 const {
+  commandHandlesSigint,
   decodeTokenEmail,
   errorCodeOf,
   finishCommand,
@@ -385,6 +386,8 @@ describe('cli_command event', () => {
     expect(spawns.calls).toHaveLength(1);
     const [call] = spawns.calls;
     expect(call.command).toBe(process.execPath);
+    // Never the caller's directory, which the child would otherwise pin.
+    expect(call.options.cwd).toBe(tmpdir());
     expect(call.args.slice(0, 2)).toEqual([
       '/opt/tigris/dist/cli.js',
       TELEMETRY_SEND_COMMAND,
@@ -758,7 +761,10 @@ describe('outcomes through the dispatcher', () => {
 });
 
 describe('Ctrl-C', () => {
-  it('records an interrupted run and re-raises SIGINT', () => {
+  /** Let the deferred re-raise run. */
+  const nextTurn = () => new Promise((resolve) => setImmediate(resolve));
+
+  it('records an interrupted run and re-raises SIGINT on the next turn', async () => {
     const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
     trackCommand(['cp']);
     process.emit('SIGINT');
@@ -767,15 +773,55 @@ describe('Ctrl-C', () => {
     expect(properties.success).toBe(false);
     expect(properties.exit_code).toBe(130);
     expect(properties.error_category).toBe('interrupted');
-    expect(kill).toHaveBeenCalledWith(process.pid, 'SIGINT');
     // The listener is gone, so the re-raised signal takes the default action.
     expect(process.listenerCount('SIGINT')).toBe(0);
+    expect(kill).not.toHaveBeenCalled();
+    await nextTurn();
+    expect(kill).toHaveBeenCalledWith(process.pid, 'SIGINT');
   });
 
-  it('leaves Ctrl-C to a command that handles it itself', () => {
+  it('still re-raises when another listener saw the same Ctrl-C', async () => {
+    // A spinner restoring the cursor: listens while active and removes
+    // itself on the signal. It must not be mistaken for a command that
+    // handles Ctrl-C itself, or nobody would end the process.
+    const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+    const spinner = () => {
+      process.removeListener('SIGINT', spinner);
+    };
+    trackCommand(['init']);
+    process.on('SIGINT', spinner);
+    try {
+      process.emit('SIGINT');
+      expect(lastEvent().properties.error_category).toBe('interrupted');
+      await nextTurn();
+      expect(kill).toHaveBeenCalledWith(process.pid, 'SIGINT');
+    } finally {
+      process.removeListener('SIGINT', spinner);
+    }
+  });
+
+  it('exits 130 on Windows instead of killing itself', async () => {
+    // process.kill(pid, 'SIGINT') is TerminateProcess with exit code 1 there.
+    const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+    exitStub.mockImplementation(() => undefined as never);
+    const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+    Object.defineProperty(process, 'platform', { ...platform, value: 'win32' });
+    try {
+      trackCommand(['cp']);
+      process.emit('SIGINT');
+      await nextTurn();
+      expect(kill).not.toHaveBeenCalled();
+      expect(exitStub).toHaveBeenCalledWith(130);
+    } finally {
+      Object.defineProperty(process, 'platform', platform);
+    }
+  });
+
+  it('leaves Ctrl-C to a command that declared its own handling', () => {
     const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
     const own = () => {};
     trackCommand(['buckets', 'migrate']);
+    commandHandlesSigint();
     process.on('SIGINT', own);
     try {
       process.emit('SIGINT');
@@ -790,6 +836,7 @@ describe('Ctrl-C', () => {
     vi.spyOn(process, 'kill').mockImplementation(() => true);
     const own = () => {};
     trackCommand(['buckets', 'migrate']);
+    commandHandlesSigint();
     process.on('SIGINT', own);
     try {
       process.emit('SIGINT');

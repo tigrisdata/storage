@@ -51,7 +51,8 @@ import {
  *      dispatcher's own local-validation exits, commander usage errors, and
  *      commands that exit 0 on success. process.exit is wrapped while a command
  *      is being tracked, so no call site needs to know about analytics.
- *   3. Ctrl-C — a SIGINT listener records `exit_code: 130` and re-raises.
+ *   3. Ctrl-C — a SIGINT listener records `exit_code: 130` and re-raises,
+ *      unless the command declared its own handling (commandHandlesSigint).
  *
  * Most exits are synchronous `never` calls, and a request in flight dies with
  * process.exit(), so the event is not sent from this process: it is handed to
@@ -314,6 +315,8 @@ let tracked: TrackedCommand | null = null;
 let ended = false;
 let originalExit: typeof process.exit | null = null;
 let sigintListener: (() => void) | null = null;
+/** Set by commandHandlesSigint(): Ctrl-C belongs to the command this run. */
+let sigintClaimed = false;
 
 /** process.exit() accepts strings and undefined; PostHog wants an integer. */
 function normalizeExitCode(code: number | string | null | undefined): number {
@@ -439,6 +442,24 @@ function buildCommandEvent(
 }
 
 /**
+ * Take SIGINT's default action now that no listener of ours remains. On
+ * Windows process.kill(pid, 'SIGINT') is TerminateProcess with exit code 1,
+ * and there is no signal death to reproduce, so exit with the conventional
+ * code instead.
+ */
+function reraiseSigint(exit: typeof process.exit): void {
+  if (process.platform !== 'win32') {
+    try {
+      process.kill(process.pid, 'SIGINT');
+      return;
+    } catch {
+      // Fall through to a plain exit.
+    }
+  }
+  exit.call(process, SIGINT_EXIT_CODE);
+}
+
+/**
  * Wrap process.exit and listen for Ctrl-C for the rest of this run. Installed
  * only once a command is actually being tracked, so with telemetry off the
  * process is untouched.
@@ -455,10 +476,10 @@ function installExitHooks(): void {
   }) as typeof process.exit;
 
   const onSigint = () => {
-    // A command with its own Ctrl-C handling (`buckets migrate` stops
-    // gracefully on the first one) owns the outcome; when it exits, the
+    // A command that declared its own Ctrl-C handling (`buckets migrate`
+    // stops gracefully on the first one) owns the outcome; when it exits, the
     // process.exit hook above records it.
-    if (process.listenerCount('SIGINT') > 1) {
+    if (sigintClaimed) {
       // Remember it so the outcome reads `interrupted` rather than whatever
       // exit code the command's own handler chooses.
       if (tracked) {
@@ -469,11 +490,12 @@ function installExitHooks(): void {
     finishCommand(SIGINT_EXIT_CODE);
     // finishCommand removed this listener, so re-raising takes the default
     // action: the shell sees a death by SIGINT, exactly as without analytics.
-    try {
-      process.kill(process.pid, 'SIGINT');
-    } catch {
-      exit.call(process, SIGINT_EXIT_CODE);
-    }
+    // Deferred to the next turn of the loop on purpose: another listener for
+    // this same delivery (a prompt spinner restoring the cursor) still runs
+    // after this one, and when it removes itself Node drops a signal that is
+    // already pending along with it. By the next turn the default action is
+    // back in place.
+    setImmediate(() => reraiseSigint(exit));
   };
   sigintListener = onSigint;
   process.on('SIGINT', onSigint);
@@ -528,6 +550,18 @@ export function recordCommandError(
 }
 
 /**
+ * Declare that the running command installs its own SIGINT listener and ends
+ * the run itself (`buckets migrate` stops gracefully, then exits). Ctrl-C is
+ * then left to it: the run is not ended here, and the outcome recorded when
+ * the command exits reads `interrupted`. No other listener counts — a spinner
+ * or a library restoring the cursor does not stop Ctrl-C from ending the run
+ * and re-raising the signal.
+ */
+export function commandHandlesSigint(): void {
+  sigintClaimed = true;
+}
+
+/**
  * Hand the tracked command's `cli_command` event, with its outcome, to the
  * detached sender, along with anything else queued (a `$identify`, Sentry
  * envelopes). Returns without waiting on the network. Idempotent: only the
@@ -565,6 +599,7 @@ export function resetCommandTrackingForTesting(): void {
   }
   tracked = null;
   ended = false;
+  sigintClaimed = false;
   resetTelemetryQueueForTesting();
 }
 

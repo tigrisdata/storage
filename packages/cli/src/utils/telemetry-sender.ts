@@ -140,6 +140,11 @@ function spawnSender(batch: TelemetryRequest[], fallback: () => void): void {
       detached: true,
       stdio: 'ignore',
       windowsHide: true,
+      // Not the caller's directory: the child outlives the command, and on
+      // Windows a directory that is any process's cwd cannot be deleted, so a
+      // script that runs the CLI in a temp folder and then removes it would
+      // fail for as long as the child is still posting.
+      cwd: tmpdir(),
     });
     // A spawn that fails reports it asynchronously; a missing pid says so now.
     child.on('error', fail);

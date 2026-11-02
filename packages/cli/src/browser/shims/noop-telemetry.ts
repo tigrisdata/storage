@@ -13,6 +13,7 @@ export async function flushTelemetry(): Promise<void> {}
 export function trackCommand(): void {}
 export function recordCommandError(): void {}
 export function finishCommand(): void {}
+export function commandHandlesSigint(): void {}
 export function identifyOnLogin(): void {}
 export function isTelemetryDisabled(): boolean {
   return true;

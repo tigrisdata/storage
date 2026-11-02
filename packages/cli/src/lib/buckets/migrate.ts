@@ -5,6 +5,7 @@ import {
   list,
   migrate as scheduleMigration,
 } from '@tigrisdata/storage';
+import { commandHandlesSigint } from '@utils/analytics.js';
 import { executeWithConcurrency } from '@utils/concurrency.js';
 import { failWithError } from '@utils/exit.js';
 import { formatSize } from '@utils/format.js';
@@ -690,6 +691,9 @@ export default async function migrate(
     stopRendering();
     clearProgress();
   };
+  // Ctrl-C is handled here, so analytics must not end the run on it; the
+  // exit below records the outcome.
+  commandHandlesSigint();
   process.on('SIGINT', sigintHandler);
   // On resize, clear the block at its current height so the next render tick
   // repaints it at the new width. Just zeroing the height would append a fresh
