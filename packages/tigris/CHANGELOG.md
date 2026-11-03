@@ -1,5 +1,13 @@
 # tigris
 
+## 3.17.2
+
+### Patch Changes
+
+- [#372](https://github.com/tigrisdata/storage/pull/372) [`f7600ff`](https://github.com/tigrisdata/storage/commit/f7600ffb32ef98bb46ff4a9ee5bf32a4200ee59b) Thanks [@katieschilling](https://github.com/katieschilling)! - Usage analytics now record each command's outcome (success, exit code, duration, error category) and the first-touch surface on the person. Telemetry is sent by a background process after the command exits, so commands no longer wait on the network when they finish (previously up to ~300ms with error reporting on).
+- Updated dependencies [[`f7600ff`](https://github.com/tigrisdata/storage/commit/f7600ffb32ef98bb46ff4a9ee5bf32a4200ee59b)]:
+  - @tigrisdata/cli@3.17.2
+
 ## 3.17.1
 
 ### Patch Changes
