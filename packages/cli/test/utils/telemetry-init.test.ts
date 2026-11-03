@@ -8,6 +8,7 @@ const sdk = {
   flush: vi.fn(async () => true),
   setContext: vi.fn(),
   setTag: vi.fn(),
+  createTransport: vi.fn(),
 };
 
 async function load(options: { sdkLoads?: boolean; optedOut?: boolean } = {}) {
@@ -49,6 +50,10 @@ describe('initTelemetry', () => {
     expect(options.tracesSampleRate).toBe(0);
     expect(options.integrations).toBe(telemetry.selectIntegrations);
     expect(options.beforeSend).toBe(telemetry.beforeSend);
+    // Delivery goes through the detached sender, never the network.
+    expect(typeof options.transport).toBe('function');
+    expect(options.sendClientReports).toBe(false);
+    expect(options.enableRuntimeChannelInjection).toBe(false);
     expect(sdk.setContext).toHaveBeenCalledWith(
       'cli',
       expect.objectContaining({ node: process.version })

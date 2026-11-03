@@ -57,8 +57,9 @@ export default async function status(
     lines.push(
       '',
       'What is collected:',
-      '   Usage analytics   which commands you run and their arguments, CLI',
-      '                     version, OS, install method, and whether you are in CI',
+      '   Usage analytics   which commands you run, their arguments and outcome',
+      '                     (success, exit code, duration), CLI version, OS,',
+      '                     install method, and whether you are in CI',
       '   Error reports     crashes and unexpected failures',
       '',
       'Never collected:',
