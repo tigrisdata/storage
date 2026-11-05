@@ -1,4 +1,12 @@
-import { createReadStream, statSync } from 'node:fs';
+import {
+  closeSync,
+  constants,
+  createReadStream,
+  fstatSync,
+  openSync,
+  readSync,
+  statSync,
+} from 'node:fs';
 import { Readable } from 'node:stream';
 import { getStorageConfig } from '@auth/provider.js';
 import { put } from '@tigrisdata/storage';
@@ -30,6 +38,7 @@ export default async function putObject(options: Record<string, unknown>) {
     'cacheControl',
   ]);
   const format = getFormat(options);
+  const ifAbsent = getOption<boolean>(options, ['if-absent', 'ifAbsent'], false);
 
   if (!bucketArg) {
     failWithError(context, 'Bucket name or path is required');
@@ -51,10 +60,41 @@ export default async function putObject(options: Record<string, unknown>) {
     failWithError(context, 'File path is required (or pipe data via stdin)');
   }
 
-  let body: ReadableStream;
+  let body: ReadableStream | Buffer;
   let fileSize: number | undefined;
 
-  if (file) {
+  if (ifAbsent) {
+    const limit = 5 * 1024 * 1024;
+    if (!file) {
+      failWithError(context, '--if-absent requires a regular file up to 5 MiB; stdin is unsupported');
+    }
+    let fd: number | undefined;
+    try {
+      // Nonblocking open avoids waiting on a FIFO before the descriptor check.
+      fd = openSync(file, constants.O_RDONLY | constants.O_NONBLOCK);
+      const stats = fstatSync(fd);
+      if (!stats.isFile() || stats.size > limit) {
+        throw new Error('--if-absent requires a regular file up to 5 MiB');
+      }
+      // Read at most limit + 1, even if the file grows after fstat.
+      const bytes = Buffer.alloc(limit + 1);
+      let size = 0;
+      while (size < bytes.length) {
+        const count = readSync(fd, bytes, size, bytes.length - size, null);
+        if (count === 0) break;
+        size += count;
+      }
+      if (size > limit) {
+        throw new Error('--if-absent requires a regular file up to 5 MiB');
+      }
+      body = bytes.subarray(0, size);
+      fileSize = size;
+    } catch (error) {
+      failWithError(context, error);
+    } finally {
+      if (fd !== undefined) closeSync(fd);
+    }
+  } else if (file) {
     // Read from file
     try {
       const stats = statSync(file);
@@ -83,6 +123,7 @@ export default async function putObject(options: Record<string, unknown>) {
     contentType ?? (file ? getContentType(file) : undefined);
 
   const { data, error } = await put(key, body, {
+    ifAbsent,
     access: access === 'public' ? 'public' : 'private',
     contentType: resolvedContentType,
     cacheControl,

@@ -22,6 +22,14 @@ export type PutOptions = {
   access?: 'public' | 'private';
   addRandomSuffix?: boolean;
   allowOverwrite?: boolean;
+  /**
+   * Atomically create only if the key is absent (If-None-Match: *).
+   * Supports string, Buffer or Blob bodies up to 5 MiB only. Streams,
+   * multipart and custom part sizes are rejected before client resolution.
+   * Conflicts are returned as errors, never retried unconditionally.
+   * Omitted/false preserves the existing allowOverwrite behavior.
+   */
+  ifAbsent?: boolean;
   contentType?: string;
   contentDisposition?: 'attachment' | 'inline';
   /**
@@ -58,6 +66,29 @@ export async function put(
   body: string | ReadableStream | Blob | Buffer,
   options?: PutOptions
 ): Promise<TigrisStorageResponse<PutResponse, Error>> {
+  if (options?.ifAbsent) {
+    const size =
+      typeof body === 'string'
+        ? Buffer.byteLength(body)
+        : Buffer.isBuffer(body)
+          ? body.byteLength
+          : body instanceof Blob
+            ? body.size
+            : undefined;
+    if (
+      size === undefined ||
+      size > 5 * 1024 * 1024 ||
+      options.multipart ||
+      options.partSize !== undefined
+    ) {
+      return {
+        error: new Error(
+          'ifAbsent requires a string, Buffer or Blob up to 5 MiB without multipart or partSize'
+        ),
+      };
+    }
+  }
+
   const config = getConfig();
   const { data: tigrisClient, error } = createTigrisClient(options?.config);
 
@@ -100,8 +131,12 @@ export async function put(
       CacheControl: options?.cacheControl ?? undefined,
       Metadata: options?.metadata,
       ACL: access,
+      ...(options?.ifAbsent ? { IfNoneMatch: '*' } : {}),
     },
-    partSize: options?.partSize ?? (options?.multipart ? 1024 * 1024 * 5 : 0),
+    // Bounded ifAbsent bodies always use one PutObject, never multipart.
+    partSize: options?.ifAbsent
+      ? 5 * 1024 * 1024
+      : (options?.partSize ?? (options?.multipart ? 1024 * 1024 * 5 : 0)),
     queueSize: options?.queueSize,
     leavePartsOnError: !(options?.multipart || options?.partSize),
     abortController: options?.abortController
