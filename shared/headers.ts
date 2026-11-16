@@ -31,6 +31,15 @@ export enum TigrisHeaders {
 
   REGIONS = 'X-Tigris-Regions',
 
+  /**
+   * Set on CreateBucket to replicate `x-amz-meta-*` user metadata into the
+   * global index, so every region can return it in a listing. Fixed at
+   * creation — it cannot be changed afterwards.
+   */
+  GLOBAL_USER_METADATA = 'X-Tigris-Global-User-Metadata',
+  /** Asks ListObjects / ListObjectsV2 to return each object's user metadata. */
+  LIST_METADATA = 'X-Tigris-List-Metadata',
+
   SNAPSHOT = 'X-Tigris-Snapshot',
   FORK = 'X-Tigris-Fork',
   SNAPSHOT_VERSION = 'X-Tigris-Snapshot-Version',

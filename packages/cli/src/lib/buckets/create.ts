@@ -41,6 +41,10 @@ export default async function create(options: Record<string, unknown>) {
     'enable-directory-listing',
     'enableDirectoryListing',
   ]);
+  const globalUserMetadata = getOption<boolean>(options, [
+    'global-user-metadata',
+    'globalUserMetadata',
+  ]);
   let defaultTier = getOption<string>(options, ['default-tier', 't', 'T']);
   const locations = getOption<string>(options, ['locations', 'l', 'L']);
   const forkOf = getOption<string>(options, ['fork-of', 'forkOf', 'fork']);
@@ -131,6 +135,7 @@ export default async function create(options: Record<string, unknown>) {
     enableSnapshot: enableSnapshots === true,
     allowObjectAcl: allowObjectAcl === true,
     enableDirectoryListing: enableDirectoryListing === true,
+    enableGlobalUserMetadata: globalUserMetadata === true,
     access: (access ?? 'private') as 'public' | 'private',
     locations: parsedLocations ?? parseLocations(locations ?? 'global'),
     ...(forkOf ? { sourceBucketName: forkOf } : {}),

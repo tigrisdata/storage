@@ -4,6 +4,8 @@ import { getBucketInfo } from '../lib/bucket/info';
 import { listBuckets } from '../lib/bucket/list';
 import { removeBucket } from '../lib/bucket/remove';
 import { getConfig } from '../lib/config';
+import { list } from '../lib/object/list';
+import { put } from '../lib/object/put';
 import { shouldSkipIntegrationTests } from './setup';
 
 const skipTests = shouldSkipIntegrationTests();
@@ -183,6 +185,49 @@ describe.skipIf(skipTests)('createBucket Integration Tests', () => {
     const info = await getBucketInfo(name, { config });
     expect(info.error).toBeUndefined();
     expect(info.data?.settings.allowObjectAcl).toBe(false);
+  });
+
+  it('should create a bucket with global user metadata and list it', async () => {
+    const name = testBucket('global-meta');
+    bucketsToCleanup.push(name);
+
+    const result = await createBucket(name, {
+      enableGlobalUserMetadata: true,
+      config,
+    });
+    expect(
+      result.error,
+      `create with enableGlobalUserMetadata failed: ${result.error?.message}`
+    ).toBeUndefined();
+
+    const bucketConfig = { ...config, bucket: name };
+
+    const withMeta = await put('folder/with meta.txt', 'hello', {
+      metadata: { owner: 'alice', mode: '33188' },
+      config: bucketConfig,
+    });
+    expect(withMeta.error).toBeUndefined();
+    const plain = await put('plain.txt', 'hello', { config: bucketConfig });
+    expect(plain.error).toBeUndefined();
+
+    await expect
+      .poll(async () => {
+        const { data } = await list({
+          includeMetadata: true,
+          config: bucketConfig,
+        });
+        return Object.fromEntries(
+          (data?.items ?? []).map((item) => [item.name, item.metadata])
+        );
+      }, POLL)
+      .toEqual({
+        'folder/with meta.txt': { owner: 'alice', mode: '33188' },
+        'plain.txt': {},
+      });
+
+    // A plain listing carries no metadata field at all.
+    const { data } = await list({ config: bucketConfig });
+    expect(data?.items.every((item) => item.metadata === undefined)).toBe(true);
   });
 
   // ── Validation errors ──

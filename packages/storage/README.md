@@ -430,15 +430,16 @@ list(options?: ListOptions): Promise<TigrisStorageResponse<ListResponse, Error>>
 
 #### `options`
 
-| **Parameter**   | **Required** | **Values**                                                                       |
-| --------------- | ------------ | -------------------------------------------------------------------------------- |
-| delimiter       | No           | A delimiter is a character that you use to group keys.                           |
-| prefix          | No           | Limits the items to keys that begin with the specified prefix.                   |
-| limit           | No           | The maximum number of objects to return. By default, returns up to 100 objects.  |
-| paginationToken | No           | The pagination token to continue listing objects from the previous request.      |
-| snapshotVersion | No           | Snapshot version of the bucket.                                                  |
-| deleted         | No           | List [soft-deleted objects](#recovering-deleted-objects) instead of live ones.   |
-| config          | No           | A configuration object to override the [default configuration](#authentication). |
+| **Parameter**   | **Required** | **Values**                                                                             |
+| --------------- | ------------ | -------------------------------------------------------------------------------------- |
+| delimiter       | No           | A delimiter is a character that you use to group keys.                                 |
+| prefix          | No           | Limits the items to keys that begin with the specified prefix.                         |
+| limit           | No           | The maximum number of objects to return. By default, returns up to 100 objects.        |
+| paginationToken | No           | The pagination token to continue listing objects from the previous request.            |
+| snapshotVersion | No           | Snapshot version of the bucket.                                                        |
+| deleted         | No           | List [soft-deleted objects](#recovering-deleted-objects) instead of live ones.         |
+| includeMetadata | No           | Return each object's user metadata. See [Global user metadata](#global-user-metadata). |
+| config          | No           | A configuration object to override the [default configuration](#authentication).       |
 
 In case of successful `list`, the `data` property will be set to the list of objects and contains the following properties:
 
@@ -486,6 +487,47 @@ if (currentPage.data) {
 
 console.log(allFiles);
 ```
+
+## Global user metadata
+
+User metadata is the `metadata` you pass to `put`, stored with the object as
+`x-amz-meta-*` values. `list` can return it for every object in one call,
+instead of a `head` per object:
+
+```ts
+const result = await list({ prefix: 'photos/', includeMetadata: true });
+
+if (result.error) {
+  console.error('Error listing objects:', result.error);
+} else {
+  for (const item of result.data.items) {
+    console.log(item.name, item.metadata); // e.g. { owner: 'alice', mode: '33188' }
+  }
+}
+```
+
+Each item gets a `metadata` object keyed without the `x-amz-meta-` prefix
+(empty when the object has no user metadata).
+
+By default, user metadata is stored only in the regions that hold the bucket's
+data, so a metadata listing served from **outside the bucket's location comes
+back empty**. Create the bucket with `enableGlobalUserMetadata: true` to
+replicate user metadata to every region, so the listing is complete everywhere:
+
+| Listing                                           | Inside bucket location    | Outside bucket location   |
+| ------------------------------------------------- | ------------------------- | ------------------------- |
+| `list()`                                          | all objects               | all objects               |
+| `list({ includeMetadata: true })`, option not set | all objects with metadata | empty                     |
+| `list({ includeMetadata: true })`, option set     | all objects with metadata | all objects with metadata |
+
+Things to know:
+
+- `enableGlobalUserMetadata` is fixed when the bucket is created; it cannot be
+  turned on or off afterwards.
+- It does not apply to forks, or to buckets that are the target of a merge.
+- The metadata is stored in every region, so large values slow down every
+  listing of the bucket.
+- `head` and `get` are unaffected — they always return the full metadata.
 
 ## Recovering deleted objects
 
@@ -635,19 +677,20 @@ createBucket(bucketName: string, options?: CreateBucketOptions): Promise<TigrisS
 
 #### `options`
 
-| **Parameter**          | **Required** | **Values**                                                                                                                                             |
-| ---------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| access                 | No           | `public` or `private`. If set to public, objects in this bucket will be publicly readable. Default value is `private`                                  |
-| allowObjectAcl         | No           | Whether to allow per-object ACL settings. When `true`, it is applied with a follow-up request after the bucket is created. Default is `false`          |
-| defaultTier            | No           | `STANDARD`, `STANDARD_IA`, `GLACIER` or `GLACIER_IR`. This is default object tier for all objects uploaded to it. Default is `STANDARD`                |
-| enableSnapshot         | No           | Enable snapshot functionality for the bucket. Default is `false`. Please note only the Standard storage tier is supported for snapshot-enabled buckets |
-| enableDirectoryListing | No           | Whether the bucket's objects can be listed by unauthenticated clients (relevant for public buckets). Default is `false` (listing disabled)             |
-| locations              | No           | Bucket location configuration. See [Locations](#bucket-locations) below. Default is **global**.                                                        |
-| sourceBucketName       | No           | The name of the source bucket to fork from.                                                                                                            |
-| sourceBucketSnapshot   | No           | The snapshot version of the source bucket to fork from.                                                                                                |
-| consistency            | No           | **Deprecated.** Use `locations` instead. `default` or `strict`.                                                                                        |
-| region                 | No           | **Deprecated.** Use `locations` instead. By default, **Global**.                                                                                       |
-| config                 | No           | A configuration object to override the [default configuration](#authentication).                                                                       |
+| **Parameter**            | **Required** | **Values**                                                                                                                                                |
+| ------------------------ | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| access                   | No           | `public` or `private`. If set to public, objects in this bucket will be publicly readable. Default value is `private`                                     |
+| allowObjectAcl           | No           | Whether to allow per-object ACL settings. When `true`, it is applied with a follow-up request after the bucket is created. Default is `false`             |
+| defaultTier              | No           | `STANDARD`, `STANDARD_IA`, `GLACIER` or `GLACIER_IR`. This is default object tier for all objects uploaded to it. Default is `STANDARD`                   |
+| enableSnapshot           | No           | Enable snapshot functionality for the bucket. Default is `false`. Please note only the Standard storage tier is supported for snapshot-enabled buckets    |
+| enableDirectoryListing   | No           | Whether the bucket's objects can be listed by unauthenticated clients (relevant for public buckets). Default is `false` (listing disabled)                |
+| enableGlobalUserMetadata | No           | Replicate objects' user metadata to every region. See [Global user metadata](#global-user-metadata). Cannot be changed after creation. Default is `false` |
+| locations                | No           | Bucket location configuration. See [Locations](#bucket-locations) below. Default is **global**.                                                           |
+| sourceBucketName         | No           | The name of the source bucket to fork from.                                                                                                               |
+| sourceBucketSnapshot     | No           | The snapshot version of the source bucket to fork from.                                                                                                   |
+| consistency              | No           | **Deprecated.** Use `locations` instead. `default` or `strict`.                                                                                           |
+| region                   | No           | **Deprecated.** Use `locations` instead. By default, **Global**.                                                                                          |
+| config                   | No           | A configuration object to override the [default configuration](#authentication).                                                                          |
 
 #### Bucket Locations
 
@@ -746,6 +789,16 @@ if (result.error) {
   console.log('Bucket created with directory listing enabled:', result.data);
 }
 ```
+
+#### Create a bucket with global user metadata
+
+```ts
+const result = await createBucket('my-bucket', {
+  enableGlobalUserMetadata: true,
+});
+```
+
+See [Global user metadata](#global-user-metadata) for what this changes.
 
 ## Getting bucket information
 
