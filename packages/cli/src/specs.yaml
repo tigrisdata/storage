@@ -496,6 +496,11 @@ commands:
         helpText: Enable directory listing for a public bucket (bucket creation only)
         type: flag
         default: false
+      - name: global-user-metadata
+        description: Replicate object user metadata to every region so metadata listings work from anywhere. Cannot be changed after creation (only applies when creating a bucket)
+        helpText: Replicate user metadata to every region (bucket creation only)
+        type: flag
+        default: false
       - name: default-tier
         description: Default storage tier (only applies when creating a bucket)
         alias: t
@@ -946,6 +951,7 @@ commands:
           - "tigris buckets create my-bucket --enable-snapshots --default-tier STANDARD_IA"
           - "tigris buckets create my-bucket --allow-object-acl"
           - "tigris buckets create my-bucket --public --enable-directory-listing"
+          - "tigris buckets create my-bucket --global-user-metadata"
           - "tigris buckets create my-fork --fork-of my-bucket"
           - "tigris buckets create my-fork --fork-of my-bucket --source-snapshot 1765889000501544464"
         messages:
@@ -983,6 +989,11 @@ commands:
             default: false
           - name: enable-directory-listing
             description: Enable directory listing, relevant for public buckets
+            type: flag
+            default: false
+          - name: global-user-metadata
+            description: Replicate object user metadata to every region so metadata listings work from anywhere. Cannot be changed after creation
+            helpText: Replicate object user metadata to every region
             type: flag
             default: false
           - name: default-tier

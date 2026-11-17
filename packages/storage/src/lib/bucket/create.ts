@@ -16,6 +16,18 @@ export type CreateBucketOptions = {
   locations?: BucketLocations;
   enableDirectoryListing?: boolean;
   allowObjectAcl?: boolean;
+  /**
+   * Replicate objects' user metadata (the `metadata` passed to `put`, stored
+   * as `x-amz-meta-*`) to every region instead of only the regions that hold
+   * the bucket's data. With it, `list({ includeMetadata: true })` returns
+   * complete results from any region; without it, that listing is empty
+   * outside the bucket's location.
+   *
+   * Fixed at creation — it cannot be turned on or off later — and it does not
+   * apply to forks. The metadata is stored in every region, so large values
+   * slow down every listing of the bucket.
+   */
+  enableGlobalUserMetadata?: boolean;
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
@@ -101,6 +113,11 @@ export async function createBucket(
       // Set snapshot enabled
       if (options?.enableSnapshot) {
         req.headers[TigrisHeaders.SNAPSHOT_ENABLED] = 'true';
+      }
+
+      // Replicate user metadata to every region
+      if (options?.enableGlobalUserMetadata) {
+        req.headers[TigrisHeaders.GLOBAL_USER_METADATA] = 'true';
       }
 
       // Set fork source bucket

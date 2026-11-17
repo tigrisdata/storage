@@ -5,6 +5,7 @@ import { getConfig, missingConfigError } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import {
+  addListMetadataMiddleware,
   addSnapshotVersionMiddleware,
   addSoftDeleteMiddleware,
 } from './middleware';
@@ -30,6 +31,17 @@ export type ListOptions = {
    * a `versionId` to `restoreDeletedObject` or `purgeDeletedObject`.
    */
   deleted?: boolean;
+  /**
+   * Return each object's user metadata (the `metadata` passed to `put`) as
+   * `metadata` on every item, saving a `head` call per object.
+   *
+   * Where this returns objects depends on the bucket. User metadata is stored
+   * only in the regions that hold the bucket's data, so a request served from
+   * outside the bucket's location returns an **empty listing** — unless the
+   * bucket was created with `enableGlobalUserMetadata`, which replicates the
+   * metadata to every region.
+   */
+  includeMetadata?: boolean;
   config?: TigrisStorageConfig;
 };
 
@@ -39,6 +51,12 @@ export type ListItem = {
   size: number;
   lastModified: Date;
   etag: string;
+  /**
+   * The object's user metadata, keyed without the `x-amz-meta-` prefix. Only
+   * set when the listing was requested with `includeMetadata: true`; an object
+   * with no user metadata gets an empty object.
+   */
+  metadata?: Record<string, string>;
 };
 
 export type ListResponse = {
@@ -78,6 +96,17 @@ export async function list(
     addSoftDeleteMiddleware(list.middlewareStack);
   }
 
+  let listedMetadata: Record<string, string>[] | undefined;
+  if (options?.includeMetadata) {
+    addListMetadataMiddleware(
+      list.middlewareStack,
+      tigrisClient.config.streamCollector,
+      (metadata) => {
+        listedMetadata = metadata;
+      }
+    );
+  }
+
   if (options?.source) {
     const source = options.source;
     list.middlewareStack.add(
@@ -97,12 +126,15 @@ export async function list(
         return {
           data: {
             items:
-              res.Contents?.map((item) => ({
+              res.Contents?.map((item, index) => ({
                 id: item.Key ?? '',
                 name: item.Key ?? '',
                 size: item.Size ?? 0,
                 lastModified: item.LastModified ?? new Date(),
                 etag: item.ETag ?? '',
+                ...(options?.includeMetadata
+                  ? { metadata: listedMetadata?.[index] ?? {} }
+                  : {}),
               })) ?? [],
             commonPrefixes:
               res.CommonPrefixes?.map((p) => p.Prefix ?? '').filter(Boolean) ??

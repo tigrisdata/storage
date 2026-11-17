@@ -65,6 +65,7 @@
     "@aws-sdk/s3-presigned-post": "^3.1053.0",
     "@aws-sdk/s3-request-presigner": "^3.1038.0",
     "@aws-sdk/types": "^3.973.8",
+    "@aws-sdk/xml-builder": "^3.972.43",
     "@smithy/signature-v4": "^5.3.14",
     "dotenv": "^18.0.0"
   }

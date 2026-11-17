@@ -326,6 +326,7 @@ tigris mk <path> [flags]
 | `-s, --enable-snapshots`          | Enable snapshots for the bucket (only applies when creating a bucket) (default: false)                                                                                          |
 | `--allow-object-acl`              | Allow per-object ACLs on the bucket (only applies when creating a bucket) (default: false)                                                                                      |
 | `--enable-directory-listing`      | Enable directory listing, relevant for public buckets (only applies when creating a bucket) (default: false)                                                                    |
+| `--global-user-metadata`          | Replicate object user metadata to every region so metadata listings work from anywhere. Cannot be changed after creation (only applies when creating a bucket) (default: false) |
 | `-t, --default-tier`              | Default storage tier (only applies when creating a bucket) (default: STANDARD)                                                                                                  |
 | `-l, --locations`                 | Location for the bucket (only applies when creating a bucket) (default: global)                                                                                                 |
 | `-fork, --fork-of`                | Create this bucket as a fork (copy-on-write clone) of the named source bucket                                                                                                   |
@@ -635,6 +636,7 @@ tigris buckets create [name] [flags]
 | `-s, --enable-snapshots`          | Enable snapshots for the bucket (default: false)                                                                                                                                |
 | `--allow-object-acl`              | Allow per-object ACLs on the bucket (default: false)                                                                                                                            |
 | `--enable-directory-listing`      | Enable directory listing, relevant for public buckets (default: false)                                                                                                          |
+| `--global-user-metadata`          | Replicate object user metadata to every region so metadata listings work from anywhere. Cannot be changed after creation (default: false)                                       |
 | `-t, --default-tier`              | Choose the default tier for the bucket (default: STANDARD)                                                                                                                      |
 | `-l, --locations`                 | Location for the bucket (default: global)                                                                                                                                       |
 | `-fork, --fork-of`                | Create this bucket as a fork (copy-on-write clone) of the named source bucket                                                                                                   |
@@ -647,6 +649,7 @@ tigris buckets create my-bucket --access public --locations iad
 tigris buckets create my-bucket --enable-snapshots --default-tier STANDARD_IA
 tigris buckets create my-bucket --allow-object-acl
 tigris buckets create my-bucket --public --enable-directory-listing
+tigris buckets create my-bucket --global-user-metadata
 tigris buckets create my-fork --fork-of my-bucket
 tigris buckets create my-fork --fork-of my-bucket --source-snapshot 1765889000501544464
 ```

@@ -283,6 +283,9 @@ importers:
       '@aws-sdk/types':
         specifier: ^3.973.8
         version: 3.975.1
+      '@aws-sdk/xml-builder':
+        specifier: ^3.972.43
+        version: 3.972.43
       '@smithy/signature-v4':
         specifier: ^5.3.14
         version: 5.7.5

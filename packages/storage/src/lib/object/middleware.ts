@@ -1,5 +1,6 @@
 import type { HttpRequest, MiddlewareStack } from '@aws-sdk/types';
 import { TigrisHeaders } from '@shared/index';
+import { parseListMetadata } from './list-metadata';
 
 /**
  * Pin an S3 command to a point-in-time bucket snapshot by attaching the
@@ -80,6 +81,82 @@ export function addSoftDeleteRestoreMiddleware<
     {
       name: 'X-Tigris-Soft-Delete-Restore-Middleware',
       step: 'build',
+      override: true,
+    }
+  );
+}
+
+/**
+ * Ask a `ListObjectsV2` call to return each object's user metadata, and hand
+ * the parsed values to `onMetadata`.
+ *
+ * Two halves, because the AWS SDK knows nothing about this extension:
+ *
+ * - `X-Tigris-List-Metadata` makes the gateway add `<Metadata>` elements to
+ *   every `<Contents>` entry.
+ * - The SDK's deserializer only maps the fields in the S3 model and silently
+ *   drops those elements, so the raw XML is read here before the deserializer
+ *   sees it. `priority: 'low'` puts this middleware closer to the wire than the
+ *   deserializer in the same step. The body is a one-shot stream, so it is
+ *   handed back as the collected bytes for the deserializer to parse as usual.
+ *
+ * `onMetadata` receives one record per `<Contents>` entry, in response order —
+ * the same order as the command output's `Contents`.
+ */
+export function addListMetadataMiddleware<
+  Input extends object,
+  Output extends object,
+>(
+  middlewareStack: MiddlewareStack<Input, Output>,
+  streamCollector: (stream: unknown) => Promise<Uint8Array>,
+  onMetadata: (metadata: Record<string, string>[]) => void
+) {
+  middlewareStack.add(
+    (next) => async (args) => {
+      const req = args.request as HttpRequest;
+      req.headers[TigrisHeaders.LIST_METADATA] = 'true';
+      return next(args);
+    },
+    {
+      name: 'X-Tigris-List-Metadata-Middleware',
+      step: 'build',
+      override: true,
+    }
+  );
+
+  middlewareStack.add(
+    (next) => async (args) => {
+      const result = await next(args);
+      const response = result.response as
+        | { statusCode?: number; body?: unknown }
+        | undefined;
+
+      // Leave error responses untouched for the SDK's own error handling.
+      if (
+        !response ||
+        response.statusCode === undefined ||
+        response.statusCode < 200 ||
+        response.statusCode >= 300
+      ) {
+        return result;
+      }
+
+      const bytes =
+        response.body instanceof Uint8Array
+          ? response.body
+          : response.body
+            ? await streamCollector(response.body)
+            : new Uint8Array();
+      response.body = bytes;
+
+      onMetadata(parseListMetadata(new TextDecoder().decode(bytes)));
+
+      return result;
+    },
+    {
+      name: 'X-Tigris-List-Metadata-Response-Middleware',
+      step: 'deserialize',
+      priority: 'low',
       override: true,
     }
   );

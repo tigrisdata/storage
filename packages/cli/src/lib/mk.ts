@@ -41,6 +41,10 @@ export default async function mk(options: Record<string, unknown>) {
       'enable-directory-listing',
       'enableDirectoryListing',
     ]);
+    const globalUserMetadata = getOption<boolean>(options, [
+      'global-user-metadata',
+      'globalUserMetadata',
+    ]);
     const defaultTier = getOption<string>(options, [
       'defaultTier',
       'default-tier',
@@ -64,6 +68,7 @@ export default async function mk(options: Record<string, unknown>) {
       enableSnapshot: enableSnapshots === true,
       allowObjectAcl: allowObjectAcl === true,
       enableDirectoryListing: enableDirectoryListing === true,
+      enableGlobalUserMetadata: globalUserMetadata === true,
       access: (access ?? 'private') as 'public' | 'private',
       locations: parseLocations(locations ?? 'global'),
       ...(forkOf ? { sourceBucketName: forkOf } : {}),
