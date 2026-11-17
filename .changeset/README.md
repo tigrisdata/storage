@@ -15,6 +15,7 @@ Pick the affected packages, choose `patch` / `minor` / `major`, and write a shor
 ## Releasing
 
 When PRs with changesets land on `main`, the release workflow opens (or updates) a "Version Packages" PR that:
+
 - bumps each affected package's `version` in its `package.json`
 - updates each package's `CHANGELOG.md`
 - consumes the `.changeset/*.md` files

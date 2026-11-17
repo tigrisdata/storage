@@ -75,6 +75,7 @@ tigris init [flags]
 | `--agent` | Print a setup recipe for an AI coding agent to follow instead of running the interactive wizard |
 
 **Examples:**
+
 ```bash
 tigris init
 npx tigris init
@@ -96,6 +97,7 @@ tigris configure [flags]
 | `-e, --endpoint`           | Tigris API endpoint (default: https://t3.storage.dev) |
 
 **Examples:**
+
 ```bash
 tigris configure --access-key tid_AaBb --access-secret tsec_XxYy
 tigris configure --endpoint https://custom.endpoint.dev
@@ -128,6 +130,7 @@ tigris login oauth
 ```
 
 **Examples:**
+
 ```bash
 tigris login oauth
 ```
@@ -146,6 +149,7 @@ tigris login credentials [flags]
 | `-secret, --access-secret` | Your secret access key (will prompt if not provided) |
 
 **Examples:**
+
 ```bash
 tigris login credentials --access-key tid_AaBb --access-secret tsec_XxYy
 tigris login credentials
@@ -160,6 +164,7 @@ tigris whoami
 ```
 
 **Examples:**
+
 ```bash
 tigris whoami
 ```
@@ -179,6 +184,7 @@ tigris usage [flags]
 | `--format` | Output format (default: table)                          |
 
 **Examples:**
+
 ```bash
 tigris usage
 tigris usage --month 2026-09
@@ -195,6 +201,7 @@ tigris update
 ```
 
 **Examples:**
+
 ```bash
 tigris update
 ```
@@ -208,6 +215,7 @@ tigris logout
 ```
 
 **Examples:**
+
 ```bash
 tigris logout
 ```
@@ -233,6 +241,7 @@ tigris credentials test [flags]
 | `-b, --bucket` | Bucket name to test access against (optional) |
 
 **Examples:**
+
 ```bash
 tigris credentials test
 tigris credentials test --bucket my-bucket
@@ -257,6 +266,7 @@ tigris telemetry status
 ```
 
 **Examples:**
+
 ```bash
 tigris telemetry status
 ```
@@ -270,6 +280,7 @@ tigris telemetry disable
 ```
 
 **Examples:**
+
 ```bash
 tigris telemetry disable
 ```
@@ -283,6 +294,7 @@ tigris telemetry enable
 ```
 
 **Examples:**
+
 ```bash
 tigris telemetry enable
 ```
@@ -304,6 +316,7 @@ tigris ls [path] [flags]
 | `--source`                      | List objects from a specific storage source on buckets with shadow migration enabled                                                          |
 
 **Examples:**
+
 ```bash
 tigris ls
 tigris ls my-bucket
@@ -333,6 +346,7 @@ tigris mk <path> [flags]
 | `-source-snap, --source-snapshot` | Fork from a specific snapshot of the source bucket. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Requires --fork-of |
 
 **Examples:**
+
 ```bash
 tigris mk my-bucket
 tigris mk my-bucket --access public --region iad
@@ -353,6 +367,7 @@ tigris touch <path>
 ```
 
 **Examples:**
+
 ```bash
 tigris touch my-bucket/placeholder.txt
 tigris touch t3://my-bucket/logs/
@@ -373,6 +388,7 @@ tigris stat [path] [flags]
 | `--version-id`                  | Object version id to stat (requires bucket versioning). Omit to stat the latest version                                                       |
 
 **Examples:**
+
 ```bash
 tigris stat
 tigris stat t3://my-bucket
@@ -397,6 +413,7 @@ tigris presign <path> [flags]
 | `-snapshot, --snapshot-version` | Read from a specific bucket snapshot. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Only supported for GET requests. |
 
 **Examples:**
+
 ```bash
 tigris presign my-bucket/file.txt
 tigris presign t3://my-bucket/report.pdf --method put --expires-in 7200
@@ -419,6 +436,7 @@ tigris cp <src> <dest> [flags]
 | `--cache-control` | Cache-Control header stored with uploaded objects (only applies to local-to-remote uploads) |
 
 **Examples:**
+
 ```bash
 tigris cp ./file.txt t3://my-bucket/file.txt
 tigris cp ./logo.png t3://my-bucket/logo.png --access public
@@ -443,6 +461,7 @@ tigris mv <src> <dest> [flags]
 | `-f, --force`     | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
+
 ```bash
 tigris mv t3://my-bucket/old.txt t3://my-bucket/new.txt -f
 tigris mv t3://my-bucket/old-dir/ t3://my-bucket/new-dir/ -rf
@@ -464,6 +483,7 @@ tigris rm <path> [flags]
 | `-f, --force`     | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
+
 ```bash
 tigris rm t3://my-bucket/file.txt -f
 tigris rm t3://my-bucket/folder/ -rf
@@ -487,6 +507,7 @@ tigris bundle <bucket> [flags]
 | `--on-error`    | How to handle missing objects. 'skip' omits them, 'fail' aborts the request (default: skip)                                                                                   |
 
 **Examples:**
+
 ```bash
 tigris bundle my-bucket --keys key1.jpg,key2.jpg --output archive.tar
 tigris bundle my-bucket --keys keys.txt --output archive.tar
@@ -519,6 +540,7 @@ tigris organizations list [flags]
 | `-i, --select` | Interactive selection mode      |
 
 **Examples:**
+
 ```bash
 tigris orgs list
 tigris orgs list --format json
@@ -533,6 +555,7 @@ tigris organizations create <name>
 ```
 
 **Examples:**
+
 ```bash
 tigris orgs create my-org
 ```
@@ -546,6 +569,7 @@ tigris organizations select <name>
 ```
 
 **Examples:**
+
 ```bash
 tigris orgs select my-org
 ```
@@ -563,6 +587,7 @@ tigris organizations delete [id] [flags]
 | `-y, --yes` | Skip confirmation prompts |
 
 **Examples:**
+
 ```bash
 tigris orgs delete
 tigris orgs delete <org-id> --yes
@@ -612,6 +637,7 @@ tigris buckets list [flags]
 | `-pt, --page-token` | Pagination token from a previous request to fetch the next page      |
 
 **Examples:**
+
 ```bash
 tigris buckets list
 tigris buckets list --format json
@@ -643,6 +669,7 @@ tigris buckets create [name] [flags]
 | `-source-snap, --source-snapshot` | Fork from a specific snapshot of the source bucket. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Requires --fork-of |
 
 **Examples:**
+
 ```bash
 tigris buckets create my-bucket
 tigris buckets create my-bucket --access public --locations iad
@@ -667,6 +694,7 @@ tigris buckets rebase <fork> [flags]
 | `-y, --yes` | Skip confirmation prompts |
 
 **Examples:**
+
 ```bash
 tigris buckets rebase my-fork
 tigris buckets rebase my-fork --yes
@@ -687,6 +715,7 @@ tigris buckets merge <fork> [flags]
 | `-from-snap, --from-snapshot` | Merge from a specific snapshot of the fork rather than its current state. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464) |
 
 **Examples:**
+
 ```bash
 tigris buckets merge my-fork
 tigris buckets merge my-fork --into my-bucket
@@ -707,6 +736,7 @@ tigris buckets get <name> [flags]
 | `--format` | Output format (default: table) |
 
 **Examples:**
+
 ```bash
 tigris buckets get my-bucket
 ```
@@ -725,6 +755,7 @@ tigris buckets delete <name> [flags]
 | `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
+
 ```bash
 tigris buckets delete my-bucket --yes
 tigris buckets delete bucket-a,bucket-b --yes
@@ -739,6 +770,7 @@ tigris buckets restore <name>
 ```
 
 **Examples:**
+
 ```bash
 tigris buckets restore my-bucket
 ```
@@ -757,6 +789,7 @@ tigris buckets purge <name> [flags]
 | `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
+
 ```bash
 tigris buckets purge my-bucket --yes
 tigris buckets purge bucket-a,bucket-b --yes
@@ -785,6 +818,7 @@ tigris buckets set <name> [flags]
 | `--enable-additional-headers` | Enable additional HTTP headers (X-Content-Type-Options nosniff)                              |
 
 **Examples:**
+
 ```bash
 tigris buckets set my-bucket --access public
 tigris buckets set my-bucket --default-tier GLACIER
@@ -803,6 +837,7 @@ tigris buckets enable-snapshots <name>
 ```
 
 **Examples:**
+
 ```bash
 tigris buckets enable-snapshots my-bucket
 ```
@@ -816,6 +851,7 @@ tigris buckets disable-snapshots <name>
 ```
 
 **Examples:**
+
 ```bash
 tigris buckets disable-snapshots my-bucket
 ```
@@ -833,6 +869,7 @@ tigris buckets set-locations <name> [flags]
 | `-l, --locations` | Bucket location |
 
 **Examples:**
+
 ```bash
 tigris buckets set-locations my-bucket --locations iad
 tigris buckets set-locations my-bucket --locations iad,fra
@@ -858,6 +895,7 @@ tigris buckets set-migration <name> [flags]
 | `--disable`             | Disable migration and clear all migration settings              |
 
 **Examples:**
+
 ```bash
 tigris buckets set-migration my-bucket --bucket source-bucket --endpoint https://s3.amazonaws.com --region us-east-1 --access-key AKIA... --secret-key wJal...
 tigris buckets set-migration my-bucket --bucket source-bucket --endpoint https://s3.amazonaws.com --region us-east-1 --access-key AKIA... --secret-key wJal... --write-through
@@ -877,6 +915,7 @@ tigris buckets migrate <path> [flags]
 | `--max-in-flight-gb` | Max total gigabytes of scheduled-but-unconfirmed migrations to keep in flight. Accepts 1-100 (default: 50) |
 
 **Examples:**
+
 ```bash
 tigris buckets migrate my-bucket
 tigris buckets migrate my-bucket/images/
@@ -907,6 +946,7 @@ tigris buckets lifecycle list <name> [flags]
 | `--format` | Output format (default: table) |
 
 **Examples:**
+
 ```bash
 tigris buckets lifecycle list my-bucket
 tigris buckets lifecycle list my-bucket --json
@@ -931,6 +971,7 @@ tigris buckets lifecycle create <name> [flags]
 | `--disable`           | Create the rule in a disabled state                                                     |
 
 **Examples:**
+
 ```bash
 tigris buckets lifecycle create my-bucket --storage-class STANDARD_IA --days 30
 tigris buckets lifecycle create my-bucket --prefix logs/ --storage-class GLACIER --days 90
@@ -958,6 +999,7 @@ tigris buckets lifecycle edit <name> <id> [flags]
 | `--disable`           | Disable the rule (does not remove it)         |
 
 **Examples:**
+
 ```bash
 tigris buckets lifecycle edit my-bucket abc123 --days 60
 tigris buckets lifecycle edit my-bucket abc123 --expire-days 90
@@ -984,6 +1026,7 @@ tigris buckets set-notifications <name> [flags]
 | `--reset`      | Clear all notification settings on the bucket                                |
 
 **Examples:**
+
 ```bash
 tigris buckets set-notifications my-bucket --url https://example.com/webhook
 tigris buckets set-notifications my-bucket --url https://example.com/webhook --token secret123
@@ -1013,6 +1056,7 @@ tigris buckets set-cors <name> [flags]
 | `--reset`          | Clear all CORS rules on the bucket                        |
 
 **Examples:**
+
 ```bash
 tigris buckets set-cors my-bucket --origins '*' --methods GET,HEAD
 tigris buckets set-cors my-bucket --origins https://example.com --methods GET,POST --headers Content-Type,Authorization --max-age 3600
@@ -1038,6 +1082,7 @@ tigris buckets share <name> [flags]
 | `--reset`              | Remove all shares from the bucket                                                                                                                                     |
 
 **Examples:**
+
 ```bash
 tigris buckets share my-bucket --organization --role ReadOnly
 tigris buckets share my-bucket --team tmid_MQQUhV --role Editor
@@ -1072,6 +1117,7 @@ tigris snapshots list <name> [flags]
 | `-pt, --page-token` | Pagination token from a previous request to fetch the next page |
 
 **Examples:**
+
 ```bash
 tigris snapshots list my-bucket
 tigris snapshots list my-bucket --format json
@@ -1086,6 +1132,7 @@ tigris snapshots take <name> [snapshot-name]
 ```
 
 **Examples:**
+
 ```bash
 tigris snapshots take my-bucket
 tigris snapshots take my-bucket my-snapshot
@@ -1105,6 +1152,7 @@ tigris snapshots delete <name> <version> [flags]
 | `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
+
 ```bash
 tigris snapshots delete my-bucket 1765889000501544464 --yes
 tigris snapshots delete my-bucket 1765889000501544464,1765889000501544465 --yes
@@ -1148,6 +1196,7 @@ tigris objects list <bucket> [flags]
 | `--deleted`                     | List soft-deleted objects instead of live ones. Requires soft delete on the bucket. On a snapshot bucket a plain delete records a delete marker instead, so use "tigris objects list-versions" for those |
 
 **Examples:**
+
 ```bash
 tigris objects list my-bucket
 tigris objects list t3://my-bucket
@@ -1176,6 +1225,7 @@ tigris objects list-versions <bucket> [flags]
 | `--deleted`           | List the recoverable versions of soft-deleted objects. Use the version id with "tigris objects restore-deleted" or "tigris objects purge" |
 
 **Examples:**
+
 ```bash
 tigris objects list-versions my-bucket
 tigris objects list-versions t3://my-bucket/logs/
@@ -1200,6 +1250,7 @@ tigris objects get <bucket> [key] [flags]
 | `--version-id`                  | Object version id to download (requires bucket versioning). Omit to download the latest version                                               |
 
 **Examples:**
+
 ```bash
 tigris objects get my-bucket config.json
 tigris objects get t3://my-bucket/config.json
@@ -1222,6 +1273,7 @@ tigris objects put <bucket> [key] [file] [flags]
 | `--format`           | Output format (default: table)                                                                                      |
 
 **Examples:**
+
 ```bash
 tigris objects put my-bucket report.pdf ./report.pdf
 tigris objects put t3://my-bucket/report.pdf ./report.pdf
@@ -1247,6 +1299,7 @@ tigris objects delete <bucket> [key] [flags]
 | `--force`        | Skip confirmation prompts (alias for --yes)                                                                                                             |
 
 **Examples:**
+
 ```bash
 tigris objects delete my-bucket old-file.txt --yes
 tigris objects delete t3://my-bucket/old-file.txt --yes
@@ -1269,6 +1322,7 @@ tigris objects set <bucket> [key] [flags]
 | `-n, --new-key` | Rename the object to a new key |
 
 **Examples:**
+
 ```bash
 tigris objects set my-bucket my-file.txt --access public
 tigris objects set t3://my-bucket/my-file.txt --access public
@@ -1288,6 +1342,7 @@ tigris objects set-access <bucket> [key] [access] [flags]
 | `--format` | Output format (default: table) |
 
 **Examples:**
+
 ```bash
 tigris objects set-access my-bucket my-file.txt public
 tigris objects set-access t3://my-bucket/my-file.txt private
@@ -1308,6 +1363,7 @@ tigris objects info <bucket> [key] [flags]
 | `--version-id`                  | Object version id (requires bucket versioning). Omit to read the latest version |
 
 **Examples:**
+
 ```bash
 tigris objects info my-bucket report.pdf
 tigris objects info t3://my-bucket/report.pdf
@@ -1331,6 +1387,7 @@ tigris objects restore <bucket> [key] [flags]
 | `--format`                      | Output format (default: table)                                                                                                                               |
 
 **Examples:**
+
 ```bash
 tigris objects restore my-bucket archived.bin
 tigris objects restore my-bucket archived.bin --days 3
@@ -1353,6 +1410,7 @@ tigris objects restore-info <bucket> [key] [flags]
 | `--format`                      | Output format (default: table)                                                                                                                               |
 
 **Examples:**
+
 ```bash
 tigris objects restore-info my-bucket archived.bin
 tigris objects restore-info t3://my-bucket/archived.bin --format json
@@ -1373,6 +1431,7 @@ tigris objects restore-deleted <bucket> [key] [flags]
 | `--format`     | Output format (default: table)                                                                       |
 
 **Examples:**
+
 ```bash
 tigris objects restore-deleted my-bucket report.pdf --version-id 1787749774802410496
 tigris objects restore-deleted t3://my-bucket/report.pdf --version-id 1787749774802410496
@@ -1394,6 +1453,7 @@ tigris objects purge <bucket> [key] [flags]
 | `--format`     | Output format (default: table)                                                                    |
 
 **Examples:**
+
 ```bash
 tigris objects purge my-bucket report.pdf --version-id 1787749774802410496 --yes
 tigris objects purge t3://my-bucket/report.pdf --version-id 1787749774802410496 --yes
@@ -1431,6 +1491,7 @@ tigris access-keys list [flags]
 | `-pt, --page-token` | Pagination token from a previous request to fetch the next page |
 
 **Examples:**
+
 ```bash
 tigris access-keys list
 ```
@@ -1454,6 +1515,7 @@ tigris access-keys create <name> [flags]
 | `--for`                 | Which SDK the credentials are for. --env and --export then use that SDK's variable names. tigris writes TIGRIS_STORAGE_*; aws writes AWS_* plus Tigris endpoints and region (default: tigris)                 |
 
 **Examples:**
+
 ```bash
 tigris access-keys create my-ci-key
 tigris access-keys create my-app --bucket my-app-bucket --role Editor --env
@@ -1475,6 +1537,7 @@ tigris access-keys delete <id> [flags]
 | `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
+
 ```bash
 tigris access-keys delete tid_AaBbCcDdEeFf --yes
 tigris access-keys delete tid_AaBb,tid_CcDd --yes
@@ -1489,6 +1552,7 @@ tigris access-keys get <id>
 ```
 
 **Examples:**
+
 ```bash
 tigris access-keys get tid_AaBbCcDdEeFf
 ```
@@ -1509,6 +1573,7 @@ tigris access-keys assign <id> [flags]
 | `--revoke-roles` | Revoke all bucket roles from the access key                                                                   |
 
 **Examples:**
+
 ```bash
 tigris access-keys assign tid_AaBb --bucket my-bucket --role Editor
 tigris access-keys assign tid_AaBb --bucket a,b --role Editor,ReadOnly
@@ -1529,6 +1594,7 @@ tigris access-keys set <id> [flags]
 | `--default-permissions` | Whether the key also gets the default-allowed operations (such as creating and listing buckets) on top of its roles and policies — the console's "Enable default permissions" toggle. Enabled unless disabled |
 
 **Examples:**
+
 ```bash
 tigris access-keys set tid_AaBb --default-permissions disable
 tigris access-keys set tid_AaBb --default-permissions enable
@@ -1548,6 +1614,7 @@ tigris access-keys rotate <id> [flags]
 | `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
+
 ```bash
 tigris access-keys rotate tid_AaBbCcDdEeFf --yes
 ```
@@ -1565,6 +1632,7 @@ tigris access-keys attach-policy <id> [flags]
 | `--policy-arn` | ARN of the policy to attach |
 
 **Examples:**
+
 ```bash
 tigris access-keys attach-policy tid_AaBb --policy-arn arn:aws:iam::org_id:policy/my-policy
 tigris access-keys attach-policy tid_AaBb
@@ -1585,6 +1653,7 @@ tigris access-keys detach-policy <id> [flags]
 | `--force`      | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
+
 ```bash
 tigris access-keys detach-policy tid_AaBb --policy-arn arn:aws:iam::org_id:policy/my-policy --yes
 tigris access-keys detach-policy tid_AaBb
@@ -1605,6 +1674,7 @@ tigris access-keys list-policies <id> [flags]
 | `-pt, --page-token` | Pagination token from a previous request to fetch the next page |
 
 **Examples:**
+
 ```bash
 tigris access-keys list-policies tid_AaBbCcDdEeFf
 ```
@@ -1649,6 +1719,7 @@ tigris iam policies list [flags]
 | `-pt, --page-token` | Pagination token from a previous request to fetch the next page |
 
 **Examples:**
+
 ```bash
 tigris iam policies list
 ```
@@ -1666,6 +1737,7 @@ tigris iam policies get [resource] [flags]
 | `--format` | Output format (default: table) |
 
 **Examples:**
+
 ```bash
 tigris iam policies get
 tigris iam policies get arn:aws:iam::org_id:policy/my-policy
@@ -1685,6 +1757,7 @@ tigris iam policies create <name> [flags]
 | `--description`  | Policy description                                                            |
 
 **Examples:**
+
 ```bash
 tigris iam policies create my-policy --document policy.json
 tigris iam policies create my-policy --document '{"Version":"2012-10-17","Statement":[...]}'
@@ -1705,6 +1778,7 @@ tigris iam policies edit [resource] [flags]
 | `--description`  | Update policy description                                                         |
 
 **Examples:**
+
 ```bash
 tigris iam policies edit --document policy.json
 tigris iam policies edit arn:aws:iam::org_id:policy/my-policy --document policy.json
@@ -1725,6 +1799,7 @@ tigris iam policies delete [resource] [flags]
 | `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
+
 ```bash
 tigris iam policies delete
 tigris iam policies delete arn:aws:iam::org_id:policy/my-policy --yes
@@ -1743,6 +1818,7 @@ tigris iam policies link-key [resource] [flags]
 | `--id` | Access key ID to attach |
 
 **Examples:**
+
 ```bash
 tigris iam policies link-key arn:aws:iam::org_id:policy/my-policy --id tid_AaBb
 tigris iam policies link-key
@@ -1763,6 +1839,7 @@ tigris iam policies unlink-key [resource] [flags]
 | `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
+
 ```bash
 tigris iam policies unlink-key arn:aws:iam::org_id:policy/my-policy --id tid_AaBb --yes
 tigris iam policies unlink-key
@@ -1781,6 +1858,7 @@ tigris iam policies list-keys [resource] [flags]
 | `--format` | Output format (default: table) |
 
 **Examples:**
+
 ```bash
 tigris iam policies list-keys arn:aws:iam::org_id:policy/my-policy
 tigris iam policies list-keys
@@ -1811,6 +1889,7 @@ tigris iam users list [flags]
 | `--format` | Output format (default: table) |
 
 **Examples:**
+
 ```bash
 tigris iam users list
 tigris iam users list --format json
@@ -1829,6 +1908,7 @@ tigris iam users invite <email> [flags]
 | `-r, --role` | Role to assign to the invited user(s) (default: member) |
 
 **Examples:**
+
 ```bash
 tigris iam users invite user@example.com
 tigris iam users invite user@example.com --role admin
@@ -1849,6 +1929,7 @@ tigris iam users revoke-invitation [resource] [flags]
 | `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
+
 ```bash
 tigris iam users revoke-invitation
 tigris iam users revoke-invitation invitation_id --yes
@@ -1868,6 +1949,7 @@ tigris iam users update-role [resource] [flags]
 | `-r, --role` | Role(s) to assign (comma-separated). Each role pairs with the corresponding user ID. If one role is given, it applies to all users **(required)** |
 
 **Examples:**
+
 ```bash
 tigris iam users update-role --role admin
 tigris iam users update-role user_id --role member
@@ -1889,6 +1971,7 @@ tigris iam users remove [resource] [flags]
 | `--force`   | Skip confirmation prompts (alias for --yes) |
 
 **Examples:**
+
 ```bash
 tigris iam users remove
 tigris iam users remove user@example.com --yes
@@ -1918,6 +2001,7 @@ tigris iam teams list [flags]
 | `--format` | Output format (default: table) |
 
 **Examples:**
+
 ```bash
 tigris iam teams list
 tigris iam teams list --format json
@@ -1937,6 +2021,7 @@ tigris iam teams create <name> [flags]
 | `-m, --members`     | Member email address(es) to add (comma-separated for multiple) |
 
 **Examples:**
+
 ```bash
 tigris iam teams create engineering
 tigris iam teams create engineering --description 'Engineering team'
@@ -1958,6 +2043,7 @@ tigris iam teams edit <id> [flags]
 | `-m, --members`     | Replace the team's members with these email address(es) (comma-separated for multiple) |
 
 **Examples:**
+
 ```bash
 tigris iam teams edit team_id --name platform
 tigris iam teams edit team_id --description 'Platform team'

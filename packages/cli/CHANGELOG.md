@@ -97,7 +97,7 @@
 ### Patch Changes
 
 - [#236](https://github.com/tigrisdata/storage/pull/236) [`a9876ab`](https://github.com/tigrisdata/storage/commit/a9876ab253f03a69ca1d3da08d914fc9ac3f227f) Thanks [@Xe](https://github.com/Xe)! - `tigris init --agent` prints its setup recipe in [ASD-STE100 Simplified
-  Technical English](https://www.asd-ste100.org/). Each step reads the same
+Technical English](https://www.asd-ste100.org/). Each step reads the same
   way to every agent that follows it.
 
   The goal is to make the instructions unambiguous for both humans and
