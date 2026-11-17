@@ -175,6 +175,49 @@ describe.skipIf(skipTests)('createBucket Integration Tests', () => {
       .toBe(true);
   });
 
+  it.each([7, 30])(
+    'should create a bucket with soft delete enabled for %s days',
+    async (retentionDays) => {
+      const name = testBucket(`soft-delete-${retentionDays}`);
+      bucketsToCleanup.push(name);
+
+      const result = await createBucket(name, {
+        softDelete: { enabled: true, retentionDays },
+        config,
+      });
+
+      expect(
+        result.error,
+        `create with softDelete failed: ${result.error?.message}`
+      ).toBeUndefined();
+      expect(result.data).toBeDefined();
+
+      await expect
+        .poll(async () => {
+          const info = await getBucketInfo(name, { config });
+          return info.data?.settings.softDelete;
+        }, POLL)
+        .toEqual({ enabled: true, retentionDays });
+    }
+  );
+
+  it('should reject an out-of-range soft delete retention without creating the bucket', async () => {
+    const name = testBucket('soft-delete-bad');
+
+    const result = await createBucket(name, {
+      softDelete: { enabled: true, retentionDays: 3 },
+      config,
+    });
+
+    expect(result.error?.message).toContain('between 7 and 90');
+
+    // Look the bucket up by name rather than scanning a listing, which is
+    // paginated and could hide an unwanted bucket on a later page.
+    const info = await getBucketInfo(name, { config });
+    expect(info.error).toBeDefined();
+    expect(info.data).toBeUndefined();
+  });
+
   it('should default object ACL to disabled when allowObjectAcl is omitted', async () => {
     const name = testBucket('no-acl');
     bucketsToCleanup.push(name);

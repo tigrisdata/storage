@@ -86,6 +86,7 @@ export type {
   BucketShareRole,
   BucketShares,
   BucketSharesInput,
+  BucketSoftDelete,
   BucketsStats,
   BucketTtl,
   BucketType,

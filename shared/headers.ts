@@ -12,6 +12,9 @@ export enum TigrisHeaders {
   /**
    * Switches an object operation over to the bucket's soft-delete view — the
    * recoverable copies kept after a delete, rather than the live objects.
+   *
+   * On CreateBucket the same header means something else: it enables soft
+   * delete on the new bucket, with the retention period in days as its value.
    */
   SOFT_DELETE = 'X-Tigris-Soft-Delete',
   /** Which kind of restore to perform, e.g. `soft-delete`. */

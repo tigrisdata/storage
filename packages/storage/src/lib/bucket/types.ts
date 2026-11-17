@@ -69,6 +69,14 @@ export type BucketTtl = {
   date?: string;
 };
 
+/**
+ * A bucket's soft delete setting. When enabled, deleted objects stay
+ * recoverable for `retentionDays` (7–90) before they are destroyed.
+ */
+export type BucketSoftDelete =
+  | { enabled: true; retentionDays: number }
+  | { enabled: false };
+
 export type BucketLifecycleFilter = {
   prefix: string;
 };

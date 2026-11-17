@@ -533,7 +533,8 @@ Things to know:
 
 When a bucket has soft delete enabled, deleting an object keeps a recoverable
 copy for the bucket's retention period instead of destroying it. Enable it with
-`updateBucket`:
+`updateBucket`, or pass the same `softDelete` option to
+[`createBucket`](#creating-a-bucket):
 
 ```ts
 await updateBucket('my-bucket', {
@@ -677,20 +678,21 @@ createBucket(bucketName: string, options?: CreateBucketOptions): Promise<TigrisS
 
 #### `options`
 
-| **Parameter**            | **Required** | **Values**                                                                                                                                                |
-| ------------------------ | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| access                   | No           | `public` or `private`. If set to public, objects in this bucket will be publicly readable. Default value is `private`                                     |
-| allowObjectAcl           | No           | Whether to allow per-object ACL settings. When `true`, it is applied with a follow-up request after the bucket is created. Default is `false`             |
-| defaultTier              | No           | `STANDARD`, `STANDARD_IA`, `GLACIER` or `GLACIER_IR`. This is default object tier for all objects uploaded to it. Default is `STANDARD`                   |
-| enableSnapshot           | No           | Enable snapshot functionality for the bucket. Default is `false`. Please note only the Standard storage tier is supported for snapshot-enabled buckets    |
-| enableDirectoryListing   | No           | Whether the bucket's objects can be listed by unauthenticated clients (relevant for public buckets). Default is `false` (listing disabled)                |
-| enableGlobalUserMetadata | No           | Replicate objects' user metadata to every region. See [Global user metadata](#global-user-metadata). Cannot be changed after creation. Default is `false` |
-| locations                | No           | Bucket location configuration. See [Locations](#bucket-locations) below. Default is **global**.                                                           |
-| sourceBucketName         | No           | The name of the source bucket to fork from.                                                                                                               |
-| sourceBucketSnapshot     | No           | The snapshot version of the source bucket to fork from.                                                                                                   |
-| consistency              | No           | **Deprecated.** Use `locations` instead. `default` or `strict`.                                                                                           |
-| region                   | No           | **Deprecated.** Use `locations` instead. By default, **Global**.                                                                                          |
-| config                   | No           | A configuration object to override the [default configuration](#authentication).                                                                          |
+| **Parameter**            | **Required** | **Values**                                                                                                                                                               |
+| ------------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| access                   | No           | `public` or `private`. If set to public, objects in this bucket will be publicly readable. Default value is `private`                                                    |
+| allowObjectAcl           | No           | Whether to allow per-object ACL settings. When `true`, it is applied with a follow-up request after the bucket is created. Default is `false`                            |
+| softDelete               | No           | `{ enabled: true, retentionDays }` to keep deleted objects recoverable for 7–90 days. See [Recovering deleted objects](#recovering-deleted-objects). Default is disabled |
+| defaultTier              | No           | `STANDARD`, `STANDARD_IA`, `GLACIER` or `GLACIER_IR`. This is default object tier for all objects uploaded to it. Default is `STANDARD`                                  |
+| enableSnapshot           | No           | Enable snapshot functionality for the bucket. Default is `false`. Please note only the Standard storage tier is supported for snapshot-enabled buckets                   |
+| enableDirectoryListing   | No           | Whether the bucket's objects can be listed by unauthenticated clients (relevant for public buckets). Default is `false` (listing disabled)                               |
+| enableGlobalUserMetadata | No           | Replicate objects' user metadata to every region. See [Global user metadata](#global-user-metadata). Cannot be changed after creation. Default is `false`                |
+| locations                | No           | Bucket location configuration. See [Locations](#bucket-locations) below. Default is **global**.                                                                          |
+| sourceBucketName         | No           | The name of the source bucket to fork from.                                                                                                                              |
+| sourceBucketSnapshot     | No           | The snapshot version of the source bucket to fork from.                                                                                                                  |
+| consistency              | No           | **Deprecated.** Use `locations` instead. `default` or `strict`.                                                                                                          |
+| region                   | No           | **Deprecated.** Use `locations` instead. By default, **Global**.                                                                                                         |
+| config                   | No           | A configuration object to override the [default configuration](#authentication).                                                                                         |
 
 #### Bucket Locations
 
@@ -789,6 +791,20 @@ if (result.error) {
   console.log('Bucket created with directory listing enabled:', result.data);
 }
 ```
+
+#### Create a bucket with soft delete
+
+```ts
+const result = await createBucket('my-bucket', {
+  softDelete: { enabled: true, retentionDays: 30 },
+});
+
+if (result.error) {
+  console.error('Error creating bucket:', result.error);
+}
+```
+
+`retentionDays` must be a whole number between 7 and 90.
 
 #### Create a bucket with global user metadata
 

@@ -3,6 +3,7 @@ import { createStorageClient } from '../http-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import type {
   BucketLocations,
+  BucketSoftDelete,
   StorageClass,
   UpdateBucketResponse,
 } from './types';
@@ -32,7 +33,7 @@ export type UpdateBucketOptions = {
   cacheControl?: string;
   customDomain?: string;
   enableAdditionalHeaders?: boolean;
-  softDelete?: { enabled: true; retentionDays: number } | { enabled: false };
+  softDelete?: BucketSoftDelete;
   /**
    * @deprecated Use `softDelete` instead.
    */

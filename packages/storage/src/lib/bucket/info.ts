@@ -7,6 +7,7 @@ import type {
   BucketMigration,
   BucketNotification,
   BucketShares,
+  BucketSoftDelete,
   BucketTtl,
   StorageClass,
 } from './types';
@@ -58,7 +59,7 @@ export type BucketInfoResponse = {
      */
     ttlConfig?: BucketTtl;
     customDomain?: string;
-    softDelete: { enabled: true; retentionDays: number } | { enabled: false };
+    softDelete: BucketSoftDelete;
     /**
      * @deprecated Use `softDelete` instead.
      */

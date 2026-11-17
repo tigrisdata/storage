@@ -3,7 +3,7 @@ import type { HttpRequest } from '@aws-sdk/types';
 import { TigrisHeaders, toError } from '@shared/index';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
-import type { BucketLocations, StorageClass } from './types';
+import type { BucketLocations, BucketSoftDelete, StorageClass } from './types';
 import { updateBucket } from './update';
 import { validateLocationValues } from './utils/regions';
 
@@ -28,6 +28,15 @@ export type CreateBucketOptions = {
    * slow down every listing of the bucket.
    */
   enableGlobalUserMetadata?: boolean;
+  /**
+   * Keep deleted objects recoverable for `retentionDays` (7–90). Same shape as
+   * the `softDelete` option of `updateBucket`, and set as part of the create
+   * request itself.
+   *
+   * It still takes a few seconds to reach the data plane — an object deleted
+   * immediately after `createBucket` returns is deleted for good.
+   */
+  softDelete?: BucketSoftDelete;
   config?: Omit<TigrisStorageConfig, 'bucket'>;
 };
 
@@ -37,6 +46,9 @@ export type CreateBucketResponse = {
   sourceBucketName?: string;
   sourceBucketSnapshot?: string;
 };
+
+const SOFT_DELETE_MIN_RETENTION_DAYS = 7;
+const SOFT_DELETE_MAX_RETENTION_DAYS = 90;
 
 export async function createBucket(
   bucketName: string,
@@ -70,6 +82,21 @@ export async function createBucket(
         'sourceBucketName is required when sourceBucketSnapshot is provided'
       ),
     };
+  }
+
+  if (options?.softDelete?.enabled) {
+    const { retentionDays } = options.softDelete;
+    if (
+      !Number.isInteger(retentionDays) ||
+      retentionDays < SOFT_DELETE_MIN_RETENTION_DAYS ||
+      retentionDays > SOFT_DELETE_MAX_RETENTION_DAYS
+    ) {
+      return {
+        error: new Error(
+          `softDelete.retentionDays must be a whole number between ${SOFT_DELETE_MIN_RETENTION_DAYS} and ${SOFT_DELETE_MAX_RETENTION_DAYS}`
+        ),
+      };
+    }
   }
 
   const command = new CreateBucketCommand({
@@ -118,6 +145,14 @@ export async function createBucket(
       // Replicate user metadata to every region
       if (options?.enableGlobalUserMetadata) {
         req.headers[TigrisHeaders.GLOBAL_USER_METADATA] = 'true';
+      }
+
+      // Enable soft delete. On CreateBucket the header carries the retention
+      // period in days rather than the `true` it takes on other operations.
+      if (options?.softDelete?.enabled) {
+        req.headers[TigrisHeaders.SOFT_DELETE] = String(
+          options.softDelete.retentionDays
+        );
       }
 
       // Set fork source bucket
