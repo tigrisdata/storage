@@ -952,6 +952,7 @@ commands:
           - "tigris buckets create my-bucket --allow-object-acl"
           - "tigris buckets create my-bucket --public --enable-directory-listing"
           - "tigris buckets create my-bucket --global-user-metadata"
+          - "tigris buckets create my-bucket --soft-delete --retention-days 30"
           - "tigris buckets create my-fork --fork-of my-bucket"
           - "tigris buckets create my-fork --fork-of my-bucket --source-snapshot 1765889000501544464"
         messages:
@@ -996,6 +997,14 @@ commands:
             helpText: Replicate object user metadata to every region
             type: flag
             default: false
+          - name: soft-delete
+            description: Enable soft delete so deleted objects can be recovered within the retention window. Requires --retention-days. Change it later with "tigris buckets set --soft-delete"
+            helpText: Enable soft delete (requires --retention-days)
+            type: flag
+            default: false
+          - name: retention-days
+            description: Number of days (7-90) to retain soft-deleted objects. Requires --soft-delete
+            helpText: Days (7-90) to retain soft-deleted objects
           - name: default-tier
             description: Choose the default tier for the bucket
             alias: t

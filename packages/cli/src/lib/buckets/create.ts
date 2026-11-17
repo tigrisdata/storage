@@ -1,5 +1,9 @@
 import { getStorageConfig } from '@auth/provider.js';
-import type { BucketLocations, StorageClass } from '@tigrisdata/storage';
+import type {
+  BucketLocations,
+  BucketSoftDelete,
+  StorageClass,
+} from '@tigrisdata/storage';
 import { createBucket } from '@tigrisdata/storage';
 import {
   failWithError,
@@ -16,6 +20,9 @@ import enquirer from 'enquirer';
 const { prompt } = enquirer;
 
 const context = msg('buckets', 'create');
+
+const SOFT_DELETE_MIN_RETENTION_DAYS = 7;
+const SOFT_DELETE_MAX_RETENTION_DAYS = 90;
 
 export default async function create(options: Record<string, unknown>) {
   printStart(context);
@@ -44,6 +51,14 @@ export default async function create(options: Record<string, unknown>) {
   const globalUserMetadata = getOption<boolean>(options, [
     'global-user-metadata',
     'globalUserMetadata',
+  ]);
+  const softDeleteFlag = getOption<boolean>(options, [
+    'soft-delete',
+    'softDelete',
+  ]);
+  const retentionDays = getOption<string | number>(options, [
+    'retention-days',
+    'retentionDays',
   ]);
   let defaultTier = getOption<string>(options, ['default-tier', 't', 'T']);
   const locations = getOption<string>(options, ['locations', 'l', 'L']);
@@ -130,12 +145,39 @@ export default async function create(options: Record<string, unknown>) {
     failWithError(context, '--source-snapshot requires --fork-of');
   }
 
+  if (retentionDays !== undefined && !softDeleteFlag) {
+    failWithError(
+      context,
+      '--retention-days can only be used with --soft-delete'
+    );
+  }
+
+  let softDelete: BucketSoftDelete | undefined;
+  if (softDeleteFlag) {
+    if (retentionDays === undefined) {
+      failWithError(context, '--retention-days is required with --soft-delete');
+    }
+    const days = Number(retentionDays);
+    if (
+      !Number.isInteger(days) ||
+      days < SOFT_DELETE_MIN_RETENTION_DAYS ||
+      days > SOFT_DELETE_MAX_RETENTION_DAYS
+    ) {
+      failWithError(
+        context,
+        `--retention-days must be a whole number between ${SOFT_DELETE_MIN_RETENTION_DAYS} and ${SOFT_DELETE_MAX_RETENTION_DAYS}`
+      );
+    }
+    softDelete = { enabled: true, retentionDays: days };
+  }
+
   const { error } = await createBucket(name, {
     defaultTier: (defaultTier ?? 'STANDARD') as StorageClass,
     enableSnapshot: enableSnapshots === true,
     allowObjectAcl: allowObjectAcl === true,
     enableDirectoryListing: enableDirectoryListing === true,
     enableGlobalUserMetadata: globalUserMetadata === true,
+    softDelete,
     access: (access ?? 'private') as 'public' | 'private',
     locations: parsedLocations ?? parseLocations(locations ?? 'global'),
     ...(forkOf ? { sourceBucketName: forkOf } : {}),

@@ -655,18 +655,20 @@ Create a new bucket with optional access, tier, and location settings
 tigris buckets create [name] [flags]
 ```
 
-| Flag                              | Description                                                                                                                                                                     |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-a, --access`                    | Access level (default: private)                                                                                                                                                 |
-| `--public`                        | Shorthand for --access public                                                                                                                                                   |
-| `-s, --enable-snapshots`          | Enable snapshots for the bucket (default: false)                                                                                                                                |
-| `--allow-object-acl`              | Allow per-object ACLs on the bucket (default: false)                                                                                                                            |
-| `--enable-directory-listing`      | Enable directory listing, relevant for public buckets (default: false)                                                                                                          |
-| `--global-user-metadata`          | Replicate object user metadata to every region so metadata listings work from anywhere. Cannot be changed after creation (default: false)                                       |
-| `-t, --default-tier`              | Choose the default tier for the bucket (default: STANDARD)                                                                                                                      |
-| `-l, --locations`                 | Location for the bucket (default: global)                                                                                                                                       |
-| `-fork, --fork-of`                | Create this bucket as a fork (copy-on-write clone) of the named source bucket                                                                                                   |
-| `-source-snap, --source-snapshot` | Fork from a specific snapshot of the source bucket. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Requires --fork-of |
+| Flag                              | Description                                                                                                                                                                             |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-a, --access`                    | Access level (default: private)                                                                                                                                                         |
+| `--public`                        | Shorthand for --access public                                                                                                                                                           |
+| `-s, --enable-snapshots`          | Enable snapshots for the bucket (default: false)                                                                                                                                        |
+| `--allow-object-acl`              | Allow per-object ACLs on the bucket (default: false)                                                                                                                                    |
+| `--enable-directory-listing`      | Enable directory listing, relevant for public buckets (default: false)                                                                                                                  |
+| `--global-user-metadata`          | Replicate object user metadata to every region so metadata listings work from anywhere. Cannot be changed after creation (default: false)                                               |
+| `--soft-delete`                   | Enable soft delete so deleted objects can be recovered within the retention window. Requires --retention-days. Change it later with "tigris buckets set --soft-delete" (default: false) |
+| `--retention-days`                | Number of days (7-90) to retain soft-deleted objects. Requires --soft-delete                                                                                                            |
+| `-t, --default-tier`              | Choose the default tier for the bucket (default: STANDARD)                                                                                                                              |
+| `-l, --locations`                 | Location for the bucket (default: global)                                                                                                                                               |
+| `-fork, --fork-of`                | Create this bucket as a fork (copy-on-write clone) of the named source bucket                                                                                                           |
+| `-source-snap, --source-snapshot` | Fork from a specific snapshot of the source bucket. Accepts a snapshot version string or any UNIX nanosecond-precision timestamp (e.g. 1765889000501544464). Requires --fork-of         |
 
 **Examples:**
 
@@ -677,6 +679,7 @@ tigris buckets create my-bucket --enable-snapshots --default-tier STANDARD_IA
 tigris buckets create my-bucket --allow-object-acl
 tigris buckets create my-bucket --public --enable-directory-listing
 tigris buckets create my-bucket --global-user-metadata
+tigris buckets create my-bucket --soft-delete --retention-days 30
 tigris buckets create my-fork --fork-of my-bucket
 tigris buckets create my-fork --fork-of my-bucket --source-snapshot 1765889000501544464
 ```
