@@ -16,13 +16,32 @@ export interface ClientUploadRequest {
   uploadId?: string;
   parts?: number[];
   partIds?: Array<{ [key: number]: string }>;
+  /** Sent by the client as `false` to complete the upload only if no object exists at `name`. */
+  allowOverwrite?: boolean;
 }
 
 export async function handleClientUpload(
   request: ClientUploadRequest,
   config?: TigrisStorageConfig
 ): Promise<TigrisStorageResponse<unknown, Error>> {
-  const { action, name, uploadId, parts, partIds } = request;
+  const result = await handle(request, config);
+  return result.error ? { error: serializable(result.error) } : result;
+}
+
+// Routes send the result with `Response.json`, and a plain `Error` serializes
+// to `{}`. Keep the message so the browser client can report it, for example
+// `File already exists`.
+function serializable(error: Error): Error {
+  return Object.assign(error, {
+    toJSON: () => ({ name: error.name, message: error.message }),
+  });
+}
+
+async function handle(
+  request: ClientUploadRequest,
+  config?: TigrisStorageConfig
+): Promise<TigrisStorageResponse<unknown, Error>> {
+  const { action, name, uploadId, parts, partIds, allowOverwrite } = request;
 
   try {
     switch (action) {
@@ -56,6 +75,7 @@ export async function handleClientUpload(
           };
         }
         return await completeMultipartUpload(name, uploadId, partIds, {
+          allowOverwrite: allowOverwrite !== false,
           config,
         });
       default:

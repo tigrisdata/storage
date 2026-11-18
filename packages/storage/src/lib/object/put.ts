@@ -7,6 +7,7 @@ import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
 import { addRandomSuffix } from '../utils';
 import { head } from './head';
+import { FILE_EXISTS_ERROR_MESSAGE, isPreconditionFailed } from './overwrite';
 
 export type PutOnUploadProgress = ({
   loaded,
@@ -72,10 +73,12 @@ export async function put(
   const allowOverwrite = options?.allowOverwrite ?? true;
 
   if (!allowOverwrite) {
+    // Fast fail before sending any bytes. This alone races with other
+    // writers; the `If-None-Match` header on the upload is the real guard.
     const headResult = await head(path, { config: options?.config });
     if (headResult !== undefined && headResult.data !== undefined) {
       return {
-        error: new Error('File already exists'),
+        error: new Error(FILE_EXISTS_ERROR_MESSAGE),
       };
     }
   }
@@ -100,10 +103,15 @@ export async function put(
       CacheControl: options?.cacheControl ?? undefined,
       Metadata: options?.metadata,
       ACL: access,
+      // lib-storage copies these params into both PutObject and
+      // CompleteMultipartUpload, so the condition holds at any size.
+      ...(allowOverwrite ? {} : { IfNoneMatch: '*' }),
     },
     partSize: options?.partSize ?? (options?.multipart ? 1024 * 1024 * 5 : 0),
     queueSize: options?.queueSize,
-    leavePartsOnError: !(options?.multipart || options?.partSize),
+    // lib-storage switches to multipart for large bodies even without these
+    // options, so always abort a failed upload instead of leaving parts.
+    leavePartsOnError: false,
     abortController: options?.abortController
       ? options.abortController
       : new AbortController(),
@@ -133,6 +141,9 @@ export async function put(
     const result = await upload.done();
     etag = result.ETag ?? '';
   } catch (error) {
+    if (!allowOverwrite && isPreconditionFailed(error)) {
+      return { error: new Error(FILE_EXISTS_ERROR_MESSAGE) };
+    }
     return { error: toError(error) };
   }
 

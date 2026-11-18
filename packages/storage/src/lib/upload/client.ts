@@ -1,4 +1,5 @@
 import { executeWithConcurrency } from '@shared/utils';
+import { FILE_EXISTS_ERROR_MESSAGE } from '../object/overwrite';
 import type { TigrisStorageResponse } from '../types';
 import { addRandomSuffix } from '../utils';
 import { type SignedUploadUrlResponse, UploadAction } from './shared';
@@ -6,6 +7,12 @@ import { type SignedUploadUrlResponse, UploadAction } from './shared';
 export type UploadOptions = {
   access?: 'public' | 'private';
   addRandomSuffix?: boolean;
+  /**
+   * When `false`, the upload fails with `File already exists` instead of
+   * replacing an existing object (sent as `If-None-Match: *`). Multipart
+   * uploads need a server whose `handleClientUpload` supports this option.
+   * Default is `true`.
+   */
   allowOverwrite?: boolean;
   contentType?: string;
   contentDisposition?: 'attachment' | 'inline';
@@ -125,6 +132,8 @@ async function uploadSingle(
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve();
+        } else if (xhr.status === 412 && options?.allowOverwrite === false) {
+          reject(new Error(FILE_EXISTS_ERROR_MESSAGE));
         } else {
           reject(new Error(`Upload failed with status: ${xhr.status}`));
         }
@@ -140,6 +149,10 @@ async function uploadSingle(
 
       if (options?.contentType || data.type) {
         xhr.setRequestHeader('Content-Type', options?.contentType ?? data.type);
+      }
+
+      if (options?.allowOverwrite === false) {
+        xhr.setRequestHeader('If-None-Match', '*');
       }
 
       // Send data
@@ -161,7 +174,7 @@ async function uploadSingle(
       .catch((error) => {
         // Return error
         return {
-          error: new Error(error),
+          error: error instanceof Error ? error : new Error(String(error)),
         };
       });
   } catch {
@@ -319,6 +332,7 @@ async function uploadMultipart(
         action: UploadAction.MultipartComplete,
         uploadId,
         partIds,
+        ...(options?.allowOverwrite === false ? { allowOverwrite: false } : {}),
       }),
     });
 
@@ -330,7 +344,20 @@ async function uploadMultipart(
       };
     }
 
-    const { data: completeData } = await completeResponse.json();
+    const completeBody = await completeResponse.json();
+
+    // The route usually returns `handleClientUpload`'s result as JSON with a
+    // 200, so a failed completion shows up as `error` in the body.
+    if (completeBody?.error) {
+      return {
+        error: new Error(
+          errorMessage(completeBody?.error) ??
+            'Failed to complete multipart upload'
+        ),
+      };
+    }
+
+    const completeData = completeBody?.data;
 
     return {
       data: {
@@ -349,6 +376,16 @@ async function uploadMultipart(
       ),
     };
   }
+}
+
+// An `Error` serializes to `{}` unless the route copies its message, so only
+// a string or an object with a `message` carries the reason.
+function errorMessage(error: unknown): string | undefined {
+  const message =
+    typeof error === 'string'
+      ? error
+      : (error as { message?: unknown }).message;
+  return typeof message === 'string' && message ? message : undefined;
 }
 
 export type UploadToSignedUrlOptions = {
