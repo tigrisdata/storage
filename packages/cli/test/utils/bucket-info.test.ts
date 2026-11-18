@@ -168,6 +168,35 @@ describe('buildBucketInfo', () => {
     });
   });
 
+  describe('data migration skip patterns', () => {
+    const withMigration = (skipPatterns?: string[]) =>
+      buildBucketInfo(
+        makeResponse({
+          settings: {
+            ...makeResponse().settings,
+            dataMigration: {
+              name: 'source-bucket',
+              endpoint: 'https://s3.amazonaws.com',
+              skipPatterns,
+            },
+          },
+        })
+      );
+
+    it('lists the skip patterns', () => {
+      const info = withMigration(['tmp/*', '*.tmp']);
+      expect(findValue(info, 'Migration Skip Patterns')).toBe('tmp/*, *.tmp');
+    });
+
+    it.each([
+      ['undefined', undefined],
+      ['empty', []],
+    ])('does not add the row when %s', (_, skipPatterns) => {
+      const info = withMigration(skipPatterns);
+      expect(findValue(info, 'Migration Skip Patterns')).toBeUndefined();
+    });
+  });
+
   describe('additional headers', () => {
     it('does not add the row when undefined', () => {
       const info = buildBucketInfo(makeResponse());

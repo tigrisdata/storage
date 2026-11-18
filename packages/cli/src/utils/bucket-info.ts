@@ -174,6 +174,14 @@ export function buildBucketInfo(data: BucketInfoResponse) {
         ? `${data.settings.dataMigration.name ?? 'N/A'} (${data.settings.dataMigration.endpoint})`
         : (data.settings.dataMigration.name ?? 'Configured'),
     });
+
+    const skipPatterns = data.settings.dataMigration.skipPatterns ?? [];
+    if (skipPatterns.length > 0) {
+      info.push({
+        label: 'Migration Skip Patterns',
+        value: skipPatterns.join(', '),
+      });
+    }
   }
 
   return info;

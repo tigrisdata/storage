@@ -887,21 +887,23 @@ Configure data migration from an external S3-compatible source bucket. Tigris wi
 tigris buckets set-migration <name> [flags]
 ```
 
-| Flag                    | Description                                                     |
-| ----------------------- | --------------------------------------------------------------- |
-| `-b, --bucket`          | Name of the source bucket to migrate from                       |
-| `-e, --endpoint`        | Endpoint URL of the source S3-compatible service                |
-| `-r, --region`          | Region of the source bucket                                     |
-| `-key, --access-key`    | Access key for the source bucket                                |
-| `-secret, --secret-key` | Secret key for the source bucket                                |
-| `--write-through`       | Enable write-through mode (writes go to both source and Tigris) |
-| `--disable`             | Disable migration and clear all migration settings              |
+| Flag                    | Description                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-b, --bucket`          | Name of the source bucket to migrate from                                                                                                                                                                                                                                                                                                                       |
+| `-e, --endpoint`        | Endpoint URL of the source S3-compatible service                                                                                                                                                                                                                                                                                                                |
+| `-r, --region`          | Region of the source bucket                                                                                                                                                                                                                                                                                                                                     |
+| `-key, --access-key`    | Access key for the source bucket                                                                                                                                                                                                                                                                                                                                |
+| `-secret, --secret-key` | Secret key for the source bucket                                                                                                                                                                                                                                                                                                                                |
+| `--write-through`       | Enable write-through mode (writes go to both source and Tigris)                                                                                                                                                                                                                                                                                                 |
+| `--skip-patterns`       | Object keys never copied into Tigris, on write or on a read miss (comma-separated). Writes still go to the source bucket. Each pattern matches the whole key, and `*` matches any characters including `/`, e.g. `tmp/*`, `*.tmp`, `manifest.json`. Up to 32 patterns of 512 bytes. Settings are replaced as a whole, so omitting this clears existing patterns |
+| `--disable`             | Disable migration and clear all migration settings                                                                                                                                                                                                                                                                                                              |
 
 **Examples:**
 
 ```bash
 tigris buckets set-migration my-bucket --bucket source-bucket --endpoint https://s3.amazonaws.com --region us-east-1 --access-key AKIA... --secret-key wJal...
 tigris buckets set-migration my-bucket --bucket source-bucket --endpoint https://s3.amazonaws.com --region us-east-1 --access-key AKIA... --secret-key wJal... --write-through
+tigris buckets set-migration my-bucket --bucket source-bucket --endpoint https://s3.amazonaws.com --region us-east-1 --access-key AKIA... --secret-key wJal... --write-through --skip-patterns 'tmp/*,*.tmp'
 tigris buckets set-migration my-bucket --disable
 ```
 

@@ -452,11 +452,12 @@ export function extractArgumentValues(
   });
 
   args.forEach((arg) => {
-    if (arg.multiple && arg.type !== 'positional' && result[arg.name]) {
-      if (typeof result[arg.name] === 'string') {
-        result[arg.name] = (result[arg.name] as string)
-          .split(',')
-          .map((s) => s.trim());
+    if (!arg.multiple || arg.type === 'positional') return;
+    // Commander stores `--skip-patterns` as `skipPatterns`, so split the
+    // value under the camelCase key as well as the spec name.
+    for (const key of new Set([arg.name, camelCase(arg.name)])) {
+      if (typeof result[key] === 'string') {
+        result[key] = (result[key] as string).split(',').map((s) => s.trim());
       }
     }
   });
