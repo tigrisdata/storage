@@ -47,6 +47,7 @@ type BucketApiSettings = {
     name?: string;
     endpoint?: string;
     write_through?: boolean;
+    skip_patterns?: string[];
   };
   lifecycle_rules?: {
     id?: string;

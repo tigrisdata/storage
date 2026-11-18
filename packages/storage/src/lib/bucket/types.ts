@@ -53,6 +53,14 @@ export type BucketMigration = {
   name?: string;
   endpoint?: string;
   writeThrough?: boolean;
+  /**
+   * Object keys that are never copied into Tigris, on write or on a read
+   * miss. Writes still go to the source bucket. Each pattern matches the
+   * whole key, and `*` matches any characters, including `/`: `tmp/*`,
+   * `*.tmp`, `manifest.json`. Up to 32 patterns of up to 512 bytes each;
+   * a pattern made only of `*` and `/` is rejected.
+   */
+  skipPatterns?: string[];
 };
 
 /**
