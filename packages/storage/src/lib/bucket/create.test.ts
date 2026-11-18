@@ -5,8 +5,13 @@ vi.mock('../tigris-client', () => ({
   createTigrisClient: vi.fn(),
 }));
 
+vi.mock('./update', () => ({
+  updateBucket: vi.fn(),
+}));
+
 import { createTigrisClient } from '../tigris-client';
 import { createBucket } from './create';
+import { updateBucket } from './update';
 
 const GLOBAL_USER_METADATA = 'X-Tigris-Global-User-Metadata';
 
@@ -31,6 +36,10 @@ beforeEach(() => {
   });
 
   vi.mocked(createTigrisClient).mockReturnValue({ data: client });
+  vi.mocked(updateBucket).mockReset();
+  vi.mocked(updateBucket).mockResolvedValue({
+    data: { bucket: 'my-bucket', updated: true },
+  });
 });
 
 // The setting is fixed when the bucket is created, so a CreateBucket that
@@ -60,4 +69,49 @@ describe('createBucket global user metadata header', () => {
       Object.keys(sentHeaders ?? {}).map((name) => name.toLowerCase())
     ).not.toContain(GLOBAL_USER_METADATA.toLowerCase());
   });
+});
+
+describe('createBucket soft delete', () => {
+  const SOFT_DELETE = 'X-Tigris-Soft-Delete';
+
+  it.each([7, 30, 90])(
+    'sends the retention period of %s days on the create request',
+    async (retentionDays) => {
+      const result = await createBucket('my-bucket', {
+        softDelete: { enabled: true, retentionDays },
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(sentHeaders?.[SOFT_DELETE]).toBe(String(retentionDays));
+      // Set atomically with creation — no follow-up request.
+      expect(updateBucket).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([
+    ['disabled', { softDelete: { enabled: false } as const }],
+    ['omitted', {}],
+  ])('does not send the header when %s', async (_label, options) => {
+    const result = await createBucket('my-bucket', options);
+
+    expect(result.error).toBeUndefined();
+    expect(sentHeaders).toBeDefined();
+    expect(
+      Object.keys(sentHeaders ?? {}).map((name) => name.toLowerCase())
+    ).not.toContain(SOFT_DELETE.toLowerCase());
+  });
+
+  it.each([6, 91, 0, -1, 7.5, Number.NaN])(
+    'rejects retentionDays %s without sending a request',
+    async (retentionDays) => {
+      const result = await createBucket('my-bucket', {
+        softDelete: { enabled: true, retentionDays },
+      });
+
+      expect(result.error?.message).toBe(
+        'softDelete.retentionDays must be a whole number between 7 and 90'
+      );
+      expect(sentHeaders).toBeUndefined();
+    }
+  );
 });

@@ -1763,6 +1763,35 @@ describe.skipIf(skipTests)('CLI Integration Tests', () => {
       expect(info.stdout).toContain('Yes');
     });
 
+    it('should enable soft delete with --soft-delete --retention-days', () => {
+      const name = `${testPrefix}-bc-sd`;
+      bcBuckets.push(name);
+      const result = runCli(
+        `buckets create ${name} --soft-delete --retention-days 30`
+      );
+      expectExit(result, 0);
+
+      // Bucket settings are eventually consistent — retry until reported.
+      let info = { stdout: '', stderr: '', exitCode: 1 };
+      for (let i = 0; i < 3; i++) {
+        info = runCli(`buckets get ${name}`);
+        if (info.stdout.includes('Enabled (30 day retention)')) break;
+        if (i < 2) execSync('sleep 5');
+      }
+      expectExit(info, 0);
+      expect(info.stdout).toContain('Enabled (30 day retention)');
+    }, 60_000);
+
+    it('should reject --soft-delete without --retention-days', () => {
+      const result = runCli(
+        `buckets create ${testPrefix}-bc-sd-err --soft-delete`
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain(
+        '--retention-days is required with --soft-delete'
+      );
+    });
+
     it('should error on --source-snapshot without --fork-of', () => {
       const result = runCli(
         `buckets create ${testPrefix}-bc-err --source-snapshot snap1`
