@@ -29,6 +29,10 @@ export default async function putObject(options: Record<string, unknown>) {
     'cache-control',
     'cacheControl',
   ]);
+  // Commander parses `--no-overwrite` as `overwrite: false`.
+  const noOverwrite =
+    getOption<boolean>(options, ['overwrite']) === false ||
+    !!getOption<boolean>(options, ['no-overwrite', 'noOverwrite']);
   const format = getFormat(options);
 
   if (!bucketArg) {
@@ -86,6 +90,7 @@ export default async function putObject(options: Record<string, unknown>) {
     access: access === 'public' ? 'public' : 'private',
     contentType: resolvedContentType,
     cacheControl,
+    ...(noOverwrite ? { allowOverwrite: false } : {}),
     ...uploadParams,
     onUploadProgress: ({ loaded, percentage }) => {
       if (fileSize !== undefined && fileSize > 0) {
@@ -106,7 +111,12 @@ export default async function putObject(options: Record<string, unknown>) {
   process.stdout.write(`\r${' '.repeat(60)}\r`);
 
   if (error) {
-    failWithError(context, error);
+    failWithError(
+      context,
+      noOverwrite && error.message === 'File already exists'
+        ? `t3://${bucket}/${key} already exists (--no-overwrite)`
+        : error
+    );
   }
 
   const result = [
