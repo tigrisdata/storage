@@ -1,5 +1,22 @@
 # @tigrisdata/cli
 
+## 3.18.0
+
+### Minor Changes
+
+- [#421](https://github.com/tigrisdata/storage/pull/421) [`80b47c7`](https://github.com/tigrisdata/storage/commit/80b47c71615ac7f537fca5935b50c064e3276017) Thanks [@designcode](https://github.com/designcode)! - Add `--soft-delete` and `--retention-days` to `tigris buckets create` to enable soft delete when creating a bucket
+
+- [#419](https://github.com/tigrisdata/storage/pull/419) [`91e7bda`](https://github.com/tigrisdata/storage/commit/91e7bda4830024d34554163484c17e72097642f9) Thanks [@designcode](https://github.com/designcode)! - Add support for [global user metadata](https://www.tigrisdata.com/docs/objects/global-user-metadata/).
+  - `@tigrisdata/storage`: `createBucket` accepts `enableGlobalUserMetadata` to replicate objects' user metadata to every region, and `list` accepts `includeMetadata` to return each object's user metadata as `metadata` on every item.
+  - `@tigrisdata/cli`: `tigris buckets create` and `tigris mk` accept `--global-user-metadata`.
+
+- [#422](https://github.com/tigrisdata/storage/pull/422) [`3810090`](https://github.com/tigrisdata/storage/commit/3810090d23dce33d7089be46c0c7c8e91fafd403) Thanks [@designcode](https://github.com/designcode)! - Add `--skip-patterns` to `tigris buckets set-migration`, and show the patterns in `tigris buckets get`
+
+### Patch Changes
+
+- Updated dependencies [[`80b47c7`](https://github.com/tigrisdata/storage/commit/80b47c71615ac7f537fca5935b50c064e3276017), [`91e7bda`](https://github.com/tigrisdata/storage/commit/91e7bda4830024d34554163484c17e72097642f9), [`3810090`](https://github.com/tigrisdata/storage/commit/3810090d23dce33d7089be46c0c7c8e91fafd403)]:
+  - @tigrisdata/storage@3.24.0
+
 ## 3.17.2
 
 ### Patch Changes
