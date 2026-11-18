@@ -1319,6 +1319,7 @@ commands:
         examples:
           - "tigris buckets set-migration my-bucket --bucket source-bucket --endpoint https://s3.amazonaws.com --region us-east-1 --access-key AKIA... --secret-key wJal..."
           - "tigris buckets set-migration my-bucket --bucket source-bucket --endpoint https://s3.amazonaws.com --region us-east-1 --access-key AKIA... --secret-key wJal... --write-through"
+          - "tigris buckets set-migration my-bucket --bucket source-bucket --endpoint https://s3.amazonaws.com --region us-east-1 --access-key AKIA... --secret-key wJal... --write-through --skip-patterns 'tmp/*,*.tmp'"
           - "tigris buckets set-migration my-bucket --disable"
         messages:
           onStart: "Updating migration settings..."
@@ -1349,6 +1350,10 @@ commands:
           - name: write-through
             description: Enable write-through mode (writes go to both source and Tigris)
             type: flag
+          - name: skip-patterns
+            description: Object keys never copied into Tigris, on write or on a read miss (comma-separated). Writes still go to the source bucket. Each pattern matches the whole key, and `*` matches any characters including `/`, e.g. `tmp/*`, `*.tmp`, `manifest.json`. Up to 32 patterns of 512 bytes. Settings are replaced as a whole, so omitting this clears existing patterns
+            helpText: Keys never copied into Tigris, e.g. "tmp/*,*.tmp" (comma-separated)
+            multiple: true
           - name: disable
             description: Disable migration and clear all migration settings
             type: flag

@@ -220,6 +220,7 @@ export async function getBucketInfo(
               name: response.data.shadow_bucket.name,
               endpoint: response.data.shadow_bucket.endpoint,
               writeThrough: response.data.shadow_bucket.write_through,
+              skipPatterns: response.data.shadow_bucket.skip_patterns,
             }
           : undefined,
         lifecycleRules: lifecycleRules.length > 0 ? lifecycleRules : undefined,

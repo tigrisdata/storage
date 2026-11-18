@@ -21,6 +21,10 @@ export default async function setMigration(options: Record<string, unknown>) {
     'write-through',
     'writeThrough',
   ]);
+  const skipPatterns = getOption<string[]>(options, [
+    'skip-patterns',
+    'skipPatterns',
+  ]);
   const disable = getOption<boolean>(options, ['disable']);
 
   if (!name) {
@@ -34,7 +38,8 @@ export default async function setMigration(options: Record<string, unknown>) {
       region !== undefined ||
       accessKey !== undefined ||
       secretKey !== undefined ||
-      writeThrough !== undefined)
+      writeThrough !== undefined ||
+      skipPatterns !== undefined)
   ) {
     failWithError(context, 'Cannot use --disable with other migration options');
   }
@@ -59,6 +64,14 @@ export default async function setMigration(options: Record<string, unknown>) {
     return;
   }
 
+  // A bare `--skip-patterns` parses as `true`, not a list.
+  if (skipPatterns !== undefined && !Array.isArray(skipPatterns)) {
+    failWithError(
+      context,
+      "--skip-patterns requires a value, e.g. --skip-patterns 'tmp/*,*.tmp'"
+    );
+  }
+
   if (!bucket || !endpoint || !region || !accessKey || !secretKey) {
     failWithError(
       context,
@@ -75,6 +88,7 @@ export default async function setMigration(options: Record<string, unknown>) {
       name: bucket,
       endpoint,
       writeThrough: writeThrough ?? false,
+      skipPatterns,
     },
     config: finalConfig,
   });

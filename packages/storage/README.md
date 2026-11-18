@@ -1310,15 +1310,16 @@ setBucketMigration(bucketName: string, options?: SetBucketMigrationOptions): Pro
 
 The migration configuration object:
 
-| **Property** | **Required** | **Values**                                                      |
-| ------------ | ------------ | --------------------------------------------------------------- |
-| enabled      | Yes          | Whether migration is enabled.                                   |
-| accessKey    | Yes*         | Access key for the source S3 bucket. Required when enabled.     |
-| secretKey    | Yes*         | Secret key for the source S3 bucket. Required when enabled.     |
-| region       | Yes*         | Region of the source S3 bucket. Required when enabled.          |
-| name         | Yes*         | Name of the source S3 bucket. Required when enabled.            |
-| endpoint     | Yes*         | Endpoint URL of the source S3 provider. Required when enabled.  |
-| writeThrough | No           | Whether to write through to the source bucket. Default `false`. |
+| **Property** | **Required** | **Values**                                                                   |
+| ------------ | ------------ | ---------------------------------------------------------------------------- |
+| enabled      | Yes          | Whether migration is enabled.                                                |
+| accessKey    | Yes*         | Access key for the source S3 bucket. Required when enabled.                  |
+| secretKey    | Yes*         | Secret key for the source S3 bucket. Required when enabled.                  |
+| region       | Yes*         | Region of the source S3 bucket. Required when enabled.                       |
+| name         | Yes*         | Name of the source S3 bucket. Required when enabled.                         |
+| endpoint     | Yes*         | Endpoint URL of the source S3 provider. Required when enabled.               |
+| writeThrough | No           | Whether to write through to the source bucket. Default `false`.              |
+| skipPatterns | No           | Object keys never copied into Tigris, on write or on a read miss. See below. |
 
 ### Examples
 
@@ -1333,6 +1334,31 @@ const result = await setBucketMigration('my-bucket', {
     region: 'us-east-1',
     name: 'source-bucket',
     endpoint: 'https://s3.amazonaws.com',
+  },
+});
+```
+
+#### Skip copying some keys into Tigris
+
+Keys that match `skipPatterns` are never copied into Tigris, either when they are written or on a read miss. Writes still go to the source bucket. Each pattern matches the whole key, and `*` matches any characters, including `/`:
+
+- `tmp/*` matches every key under `tmp/`, but not `tmpfile`
+- `*.tmp` matches `a/b/c.tmp`, but not `a/b/c.tmp.gz`
+- `manifest.json` matches only that key
+
+Up to 32 patterns of up to 512 bytes each are allowed, and a pattern made only of `*` and `/` is rejected. The migration settings are replaced as a whole on every call, so pass the full configuration each time; leaving out `skipPatterns` clears any existing patterns.
+
+```ts
+const result = await setBucketMigration('my-bucket', {
+  dataMigration: {
+    enabled: true,
+    accessKey: 'AKIAIOSFODNN7EXAMPLE',
+    secretKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+    region: 'us-east-1',
+    name: 'source-bucket',
+    endpoint: 'https://s3.amazonaws.com',
+    writeThrough: true,
+    skipPatterns: ['tmp/*', '*.tmp'],
   },
 });
 ```

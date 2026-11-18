@@ -88,6 +88,16 @@ describe('extractArgumentValues', () => {
     const result = extractArgumentValues(args, [], { tags: 'a,b,c' });
     expect(result.tags).toEqual(['a', 'b', 'c']);
   });
+
+  it('comma-splits multi-word values under the camelCase key Commander uses', () => {
+    const args: Argument[] = [
+      { name: 'skip-patterns', description: 'Patterns', multiple: true },
+    ];
+    const result = extractArgumentValues(args, [], {
+      skipPatterns: 'tmp/*, *.tmp',
+    });
+    expect(result.skipPatterns).toEqual(['tmp/*', '*.tmp']);
+  });
 });
 
 describe('validateRequiredWhen', () => {
