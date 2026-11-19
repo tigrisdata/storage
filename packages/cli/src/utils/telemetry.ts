@@ -77,7 +77,12 @@ export function invocationCommand(argv: string[]): string | undefined {
   return first && !first.startsWith('-') ? first : undefined;
 }
 
-// Sentry default integrations we deliberately drop:
+// The Sentry default integrations we keep. An allowlist, because each SDK
+// release adds defaults for servers, databases and AI libraries that a CLI
+// never loads, and some of them print a warning on every run in the Bun
+// binary ("No diagnostics-channel injection detected").
+//
+// Defaults we deliberately leave out, besides those:
 // - OnUncaughtException / OnUnhandledRejection: we own process exit ourselves.
 // - LocalVariables(Async): captures local variable values (e.g. credentials)
 //   into stack frames, which beforeSend does not scrub.
@@ -91,23 +96,23 @@ export function invocationCommand(argv: string[]): string | undefined {
 //   processed when the process ended. Without them capture is synchronous; the
 //   OS release is set in configure() instead, and source lines of the minified
 //   bundle say little.
-export const DISABLED_INTEGRATIONS: ReadonlySet<string> = new Set([
-  'OnUncaughtException',
-  'OnUnhandledRejection',
-  'LocalVariables',
-  'LocalVariablesAsync',
-  'Console',
-  'ChildProcess',
-  'ProcessSession',
-  'Context',
-  'ContextLines',
+export const ENABLED_INTEGRATIONS: ReadonlySet<string> = new Set([
+  'EventFilters',
+  'FunctionToString',
+  'LinkedErrors',
+  'Dedupe',
+  'NodeSystemError',
+  'Http',
+  'NodeFetch',
+  'WorkerThreads',
+  'Modules',
 ]);
 
-/** The SDK's default integrations minus DISABLED_INTEGRATIONS. */
+/** The SDK's default integrations that are in ENABLED_INTEGRATIONS. */
 export function selectIntegrations<T extends { name: string }>(
   defaults: T[]
 ): T[] {
-  return defaults.filter((i) => !DISABLED_INTEGRATIONS.has(i.name));
+  return defaults.filter((i) => ENABLED_INTEGRATIONS.has(i.name));
 }
 
 /**
@@ -235,8 +240,7 @@ function configure(sdk: SentryModule, dsn: string): void {
     // Error reporting only — no performance tracing.
     tracesSampleRate: 0,
     dataCollection: DATA_COLLECTION,
-    // Drop integrations that fight our exit handling, delay capture, or
-    // capture user data we don't scrub. See DISABLED_INTEGRATIONS.
+    // Only the integrations error reporting needs. See ENABLED_INTEGRATIONS.
     integrations: selectIntegrations,
     beforeSend,
     // Delivered by the detached sender; see makeQueuedTransport.

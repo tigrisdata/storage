@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   beforeSend,
-  DISABLED_INTEGRATIONS,
+  ENABLED_INTEGRATIONS,
   invocationCommand,
   redactSecrets,
   scrubArgv,
@@ -11,41 +11,46 @@ import {
 } from '../../src/utils/telemetry.js';
 
 describe('selectIntegrations', () => {
-  // The filter works by name, so a rename upstream would silently stop
-  // dropping an integration. Pin the ones that carry user data.
-  const guarded = [
-    'OnUncaughtException',
-    'OnUnhandledRejection',
-    'LocalVariablesAsync',
-    'Console',
-    'ChildProcess',
-    // Not user data, but they delay exit or make capture asynchronous, which
-    // the detached sender depends on not happening.
-    'ProcessSession',
-    'Context',
-    'ContextLines',
-  ];
+  const kept = () =>
+    selectIntegrations(getDefaultIntegrations({})).map((i) => i.name);
 
-  it('still finds every guarded integration among the defaults', () => {
+  // The filter works by name, so a rename upstream would silently drop an
+  // integration we rely on.
+  it('still finds every enabled integration among the defaults', () => {
     const names = getDefaultIntegrations({}).map((i) => i.name);
-    for (const name of guarded) {
+    for (const name of ENABLED_INTEGRATIONS) {
       expect(
         names,
         `${name} is no longer a default integration name`
       ).toContain(name);
     }
+    expect(kept()).toEqual(
+      names.filter((name) => ENABLED_INTEGRATIONS.has(name))
+    );
   });
 
-  it('drops them and keeps the rest', () => {
-    const defaults = getDefaultIntegrations({});
-    const kept = selectIntegrations(defaults).map((i) => i.name);
-    for (const name of DISABLED_INTEGRATIONS) {
-      expect(kept).not.toContain(name);
+  it('drops integrations that carry user data or delay exit', () => {
+    for (const name of [
+      'OnUncaughtException',
+      'OnUnhandledRejection',
+      'LocalVariables',
+      'LocalVariablesAsync',
+      'Console',
+      'ChildProcess',
+      'ProcessSession',
+      'Context',
+      'ContextLines',
+    ]) {
+      expect(kept()).not.toContain(name);
     }
-    expect(kept.length).toBe(
-      defaults.filter((i) => !DISABLED_INTEGRATIONS.has(i.name)).length
-    );
-    expect(kept).toContain('LinkedErrors');
+  });
+
+  // These instrument libraries through diagnostics channels, which the Bun
+  // binary cannot inject, so Sentry warns on every run when they are on.
+  it('drops server framework integrations', () => {
+    for (const name of ['Express', 'Fastify', 'Hapi', 'Hono', 'Koa', 'Nitro']) {
+      expect(kept()).not.toContain(name);
+    }
   });
 });
 
