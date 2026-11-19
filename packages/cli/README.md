@@ -429,11 +429,12 @@ Copy files between local filesystem and Tigris, or between paths within Tigris. 
 tigris cp <src> <dest> [flags]
 ```
 
-| Flag              | Description                                                                                 |
-| ----------------- | ------------------------------------------------------------------------------------------- |
-| `-r, --recursive` | Copy directories recursively                                                                |
-| `-a, --access`    | Access level for uploaded objects (only applies to local-to-remote uploads)                 |
-| `--cache-control` | Cache-Control header stored with uploaded objects (only applies to local-to-remote uploads) |
+| Flag              | Description                                                                                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `-r, --recursive` | Copy directories recursively                                                                                                                                 |
+| `-a, --access`    | Access level for uploaded objects (only applies to local-to-remote uploads)                                                                                  |
+| `--cache-control` | Cache-Control header stored with uploaded objects (only applies to local-to-remote uploads)                                                                  |
+| `--no-overwrite`  | Never replace existing objects. A single upload fails if the key exists; -r and wildcard copies skip existing keys (only applies to local-to-remote uploads) |
 
 **Examples:**
 
@@ -444,6 +445,7 @@ tigris cp ./dist/ t3://my-bucket/assets/ -r --cache-control 'public, max-age=315
 tigris cp t3://my-bucket/file.txt ./local-copy.txt
 tigris cp t3://my-bucket/src/ t3://my-bucket/dest/ -r
 tigris cp ./images/ t3://my-bucket/images/ -r
+tigris cp ./images/ t3://my-bucket/images/ -r --no-overwrite
 ```
 
 ### `tigris mv` (move)
@@ -1275,6 +1277,7 @@ tigris objects put <bucket> [key] [file] [flags]
 | `-a, --access`       | Access level (default: private)                                                                                     |
 | `-t, --content-type` | Content type (auto-detected from extension if omitted)                                                              |
 | `--cache-control`    | Cache-Control header stored with the object and returned on every read (e.g. "public, max-age=31536000, immutable") |
+| `--no-overwrite`     | Fail instead of replacing the object if the key already exists, including when another upload creates it first      |
 | `--format`           | Output format (default: table)                                                                                      |
 
 **Examples:**
@@ -1285,6 +1288,7 @@ tigris objects put t3://my-bucket/report.pdf ./report.pdf
 tigris objects put my-bucket logo.png ./logo.png --access public --content-type image/png
 tigris objects put my-bucket app.js ./app.js --cache-control 'public, max-age=31536000, immutable'
 echo 'hello' | tigris objects put t3://my-bucket/hello.txt
+tigris objects put my-bucket report.pdf ./report.pdf --no-overwrite
 cat report.pdf | tigris objects put my-bucket report.pdf --content-type application/pdf
 ```
 

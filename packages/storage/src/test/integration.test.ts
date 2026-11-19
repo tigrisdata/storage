@@ -26,6 +26,11 @@ import { get } from '../lib/object/get';
 import { head } from '../lib/object/head';
 import { list } from '../lib/object/list';
 import { move } from '../lib/object/move';
+import {
+  completeMultipartUpload,
+  getPartsPresignedUrls,
+  initMultipartUpload,
+} from '../lib/object/multipart';
 import { put } from '../lib/object/put';
 import { remove } from '../lib/object/remove';
 import { setObjectAccess } from '../lib/object/set/access';
@@ -74,6 +79,56 @@ describe.skipIf(skipTests)('Tigris Storage Integration Tests', () => {
 
       expect(result.error).toBeDefined();
       expect(result.error?.message).toBe('File already exists');
+    });
+
+    // put() fails fast on HEAD, so drive the multipart calls directly to
+    // check the gateway itself enforces If-None-Match on completion.
+    it('should refuse to complete a create-only multipart upload over an existing object', async () => {
+      await put(testFileName, testFileContent, { config });
+
+      const init = await initMultipartUpload(testFileName, { config });
+      const uploadId = init.data?.uploadId as string;
+      const urls = await getPartsPresignedUrls(testFileName, [1], uploadId, {
+        config,
+      });
+      const partUrl = urls.data?.[0]?.url as string;
+      const partResponse = await fetch(partUrl, {
+        method: 'PUT',
+        body: 'new content',
+      });
+      const etag = partResponse.headers.get('etag') as string;
+
+      const result = await completeMultipartUpload(
+        testFileName,
+        uploadId,
+        [{ 1: etag }],
+        { allowOverwrite: false, config }
+      );
+
+      expect(result.error?.message).toBe('File already exists');
+      const body = await get(testFileName, 'string', { config });
+      expect(body.data).toBe(testFileContent);
+    });
+
+    it('should complete a create-only multipart upload when the object is absent', async () => {
+      const init = await initMultipartUpload(testFileName, { config });
+      const uploadId = init.data?.uploadId as string;
+      const urls = await getPartsPresignedUrls(testFileName, [1], uploadId, {
+        config,
+      });
+      const partResponse = await fetch(urls.data?.[0]?.url as string, {
+        method: 'PUT',
+        body: testFileContent,
+      });
+
+      const result = await completeMultipartUpload(
+        testFileName,
+        uploadId,
+        [{ 1: partResponse.headers.get('etag') as string }],
+        { allowOverwrite: false, config }
+      );
+
+      expect(result.error).toBeUndefined();
     });
 
     it('should handle different content types', async () => {

@@ -124,19 +124,19 @@ put(path: string, body: string | ReadableStream | Blob | Buffer, options?: PutOp
 
 #### `options`
 
-| **Parameter**      | **Required** | **Values**                                                                                                                                              |
-| ------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| access             | No           | The access level for the object. Possible values are `public` and `private`.                                                                            |
-| addRandomSuffix    | No           | Whether to add a random suffix to the object name. Default is `false`.                                                                                  |
-| allowOverwrite     | No           | Whether to allow overwriting the object. Default is `true`.                                                                                             |
-| contentType        | No           | Set the content type of the object. If not provided, the content type will be inferred from the extension of the path.                                  |
-| contentDisposition | No           | Set the content disposition of the object. Possible values are `inline` and `attachment`. Default is `inline`. Use `attachment` for downloadable files. |
-| multipart          | No           | Pass `multipart: true` when uploading large objects. It will split the object into multiple parts and upload them in parallel.                          |
-| partSize           | No           | Part size in bytes for multipart uploads. Default is 5MB.                                                                                               |
-| queueSize          | No           | Maximum number of concurrent part uploads for multipart uploads.                                                                                        |
-| abortController    | No           | An AbortController instance to abort the upload.                                                                                                        |
-| onUploadProgress   | No           | Callback to track upload progress: `onUploadProgress({loaded: number, total: number, percentage: number})`.                                             |
-| config             | No           | A configuration object to override the [default configuration](#authentication).                                                                        |
+| **Parameter**      | **Required** | **Values**                                                                                                                                                                             |
+| ------------------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| access             | No           | The access level for the object. Possible values are `public` and `private`.                                                                                                           |
+| addRandomSuffix    | No           | Whether to add a random suffix to the object name. Default is `false`.                                                                                                                 |
+| allowOverwrite     | No           | Whether to allow overwriting the object. Default is `true`. When `false`, the upload fails with `File already exists` if the key exists, even if another writer creates it mid-upload. |
+| contentType        | No           | Set the content type of the object. If not provided, the content type will be inferred from the extension of the path.                                                                 |
+| contentDisposition | No           | Set the content disposition of the object. Possible values are `inline` and `attachment`. Default is `inline`. Use `attachment` for downloadable files.                                |
+| multipart          | No           | Pass `multipart: true` when uploading large objects. It will split the object into multiple parts and upload them in parallel.                                                         |
+| partSize           | No           | Part size in bytes for multipart uploads. Default is 5MB.                                                                                                                              |
+| queueSize          | No           | Maximum number of concurrent part uploads for multipart uploads.                                                                                                                       |
+| abortController    | No           | An AbortController instance to abort the upload.                                                                                                                                       |
+| onUploadProgress   | No           | Callback to track upload progress: `onUploadProgress({loaded: number, total: number, percentage: number})`.                                                                            |
+| config             | No           | A configuration object to override the [default configuration](#authentication).                                                                                                       |
 
 In case of successful upload, the `data` property will be set to the upload and contains the following properties:
 
@@ -177,7 +177,13 @@ const result = await put('large.mp4', fileStream, {
 const result = await put('config.json', configuration, {
   allowOverwrite: false,
 });
+
+if (result.error?.message === 'File already exists') {
+  // Another upload already created config.json.
+}
 ```
+
+The upload is sent with `If-None-Match: *`, so Tigris only stores it if no object exists at that key when the upload completes. This holds for multipart uploads too.
 
 #### Cancel an upload
 
@@ -1658,7 +1664,7 @@ completeMultipartUpload(path: string, uploadId: string, partIds: Array<{ [key: n
 - `path`: (Required) The object key
 - `uploadId`: (Required) The upload ID from `initMultipartUpload`
 - `partIds`: (Required) Array of objects mapping part numbers to their ETags (e.g., `[{ 1: 'etag1' }, { 2: 'etag2' }]`)
-- `options`: (Optional) `{ config }` to override the [default configuration](#authentication)
+- `options`: (Optional) `{ allowOverwrite, config }`. Pass `allowOverwrite: false` to complete the upload only if no object exists at `path`; otherwise it fails with `File already exists`. `config` overrides the [default configuration](#authentication)
 
 Returns `{ path: string, url: string }` on success.
 
@@ -1722,18 +1728,18 @@ import { upload } from '@tigrisdata/storage/client';
 
 #### `options`
 
-| **Parameter**      | **Required** | **Values**                                                                                                  |
-| ------------------ | ------------ | ----------------------------------------------------------------------------------------------------------- |
-| url                | Yes          | The URL of your upload endpoint that handles client uploads.                                                |
-| access             | No           | The access level for the object. Possible values are `public` and `private`.                                |
-| addRandomSuffix    | No           | Whether to add a random suffix to the object name. Default is `false`.                                      |
-| allowOverwrite     | No           | Whether to allow overwriting the object. Default is `true`.                                                 |
-| contentType        | No           | Set the content type of the object. If not provided, inferred from the file.                                |
-| contentDisposition | No           | Set the content disposition. Possible values are `inline` and `attachment`.                                 |
-| multipart          | No           | Enable multipart upload for large files. Default is `false`.                                                |
-| partSize           | No           | Part size in bytes for multipart uploads. Default is 5MB.                                                   |
-| concurrency        | No           | Maximum number of concurrent part uploads for multipart uploads. Default is `4`.                            |
-| onUploadProgress   | No           | Callback to track upload progress: `onUploadProgress({loaded: number, total: number, percentage: number})`. |
+| **Parameter**      | **Required** | **Values**                                                                                                                                    |
+| ------------------ | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| url                | Yes          | The URL of your upload endpoint that handles client uploads.                                                                                  |
+| access             | No           | The access level for the object. Possible values are `public` and `private`.                                                                  |
+| addRandomSuffix    | No           | Whether to add a random suffix to the object name. Default is `false`.                                                                        |
+| allowOverwrite     | No           | Whether to allow overwriting the object. Default is `true`. With `multipart`, your endpoint must run a `handleClientUpload` that supports it. |
+| contentType        | No           | Set the content type of the object. If not provided, inferred from the file.                                                                  |
+| contentDisposition | No           | Set the content disposition. Possible values are `inline` and `attachment`.                                                                   |
+| multipart          | No           | Enable multipart upload for large files. Default is `false`.                                                                                  |
+| partSize           | No           | Part size in bytes for multipart uploads. Default is 5MB.                                                                                     |
+| concurrency        | No           | Maximum number of concurrent part uploads for multipart uploads. Default is `4`.                                                              |
+| onUploadProgress   | No           | Callback to track upload progress: `onUploadProgress({loaded: number, total: number, percentage: number})`.                                   |
 
 In case of successful upload, the `data` property will be set to the upload and contains the following properties:
 

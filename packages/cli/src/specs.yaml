@@ -639,6 +639,7 @@ commands:
       - "tigris cp t3://my-bucket/file.txt ./local-copy.txt"
       - "tigris cp t3://my-bucket/src/ t3://my-bucket/dest/ -r"
       - "tigris cp ./images/ t3://my-bucket/images/ -r"
+      - "tigris cp ./images/ t3://my-bucket/images/ -r --no-overwrite"
     messages:
       onFailure: "Copy failed. Verify both paths are correct and credentials have access"
     arguments:
@@ -674,6 +675,10 @@ commands:
       - name: cache-control
         description: Cache-Control header stored with uploaded objects (only applies to local-to-remote uploads)
         helpText: Cache-Control header for uploaded objects (local-to-remote only)
+      - name: no-overwrite
+        type: flag
+        description: Never replace existing objects. A single upload fails if the key exists; -r and wildcard copies skip existing keys (only applies to local-to-remote uploads)
+        helpText: Skip or fail instead of overwriting existing objects (local-to-remote only)
 
   # mv
   - name: mv
@@ -1928,6 +1933,7 @@ commands:
           - "tigris objects put my-bucket logo.png ./logo.png --access public --content-type image/png"
           - "tigris objects put my-bucket app.js ./app.js --cache-control 'public, max-age=31536000, immutable'"
           - "echo 'hello' | tigris objects put t3://my-bucket/hello.txt"
+          - "tigris objects put my-bucket report.pdf ./report.pdf --no-overwrite"
           - "cat report.pdf | tigris objects put my-bucket report.pdf --content-type application/pdf"
         messages:
           onStart: "Uploading object..."
@@ -1966,6 +1972,10 @@ commands:
           - name: cache-control
             description: Cache-Control header stored with the object and returned on every read (e.g. "public, max-age=31536000, immutable")
             helpText: Cache-Control header stored with the object and returned on reads
+          - name: no-overwrite
+            type: flag
+            description: Fail instead of replacing the object if the key already exists, including when another upload creates it first
+            helpText: Fail if the key already exists instead of overwriting it
           - name: format
             description: Output format
             options: [json, table, xml]

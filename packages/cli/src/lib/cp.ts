@@ -98,15 +98,20 @@ function listLocalFilesWithWildcard(
     });
 }
 
+type UploadFileOptions = {
+  showProgress?: boolean;
+  access?: 'public' | 'private';
+  cacheControl?: string;
+  noOverwrite?: boolean;
+};
+
 async function uploadFile(
   localPath: string,
   bucket: string,
   key: string,
   config: Awaited<ReturnType<typeof getStorageConfig>>,
-  showProgress = false,
-  access?: 'public' | 'private',
-  cacheControl?: string
-): Promise<{ error?: string }> {
+  { showProgress = false, access, cacheControl, noOverwrite }: UploadFileOptions
+): Promise<{ error?: string; exists?: boolean }> {
   let fileSize: number | undefined;
   try {
     const stats = statSync(localPath);
@@ -120,11 +125,14 @@ async function uploadFile(
 
   const contentType = getContentType(localPath);
 
+  // put() returns without reading the body when its HEAD check finds the key,
+  // so close the file afterwards or each skipped file stays open.
   const { error: putError } = await put(key, body, {
     ...calculateUploadParams(fileSize),
     ...(contentType ? { contentType } : {}),
     ...(access ? { access } : {}),
     ...(cacheControl ? { cacheControl } : {}),
+    ...(noOverwrite ? { allowOverwrite: false } : {}),
     onUploadProgress: showProgress
       ? ({ loaded }) => {
           if (fileSize !== undefined && fileSize > 0) {
@@ -141,17 +149,68 @@ async function uploadFile(
       ...config,
       bucket,
     },
-  });
+  }).finally(() => fileStream.destroy());
 
   if (showProgress) {
     process.stdout.write(`\r${' '.repeat(60)}\r`);
   }
 
   if (putError) {
-    return { error: putError.message };
+    return {
+      error: putError.message,
+      // The SDK reports a create-only conflict with this message, from either
+      // its HEAD pre-check or a 412 on the upload itself.
+      exists: noOverwrite && putError.message === 'File already exists',
+    };
   }
 
   return {};
+}
+
+/**
+ * Upload many files with bounded concurrency and print one summary. With
+ * --no-overwrite, files whose key already exists are skipped, not failed, so
+ * re-running the same copy only uploads what is new.
+ */
+async function uploadBatch(
+  entries: { file: string; destKey: string }[],
+  bucket: string,
+  config: Awaited<ReturnType<typeof getStorageConfig>>,
+  options: Omit<UploadFileOptions, 'showProgress'>
+) {
+  const tasks = entries.map(({ file, destKey }) => async () => {
+    const result = await uploadFile(file, bucket, destKey, config, options);
+    if (result.exists) {
+      if (!_jsonMode)
+        console.log(`Skipped ${file} (t3://${bucket}/${destKey} exists)`);
+      return 'skipped' as const;
+    }
+    if (result.error) {
+      console.error(`Failed to upload ${file}: ${result.error}`);
+      return 'failed' as const;
+    }
+    if (!_jsonMode)
+      console.log(`Uploaded ${file} -> t3://${bucket}/${destKey}`);
+    return 'uploaded' as const;
+  });
+  const results = await executeWithConcurrency(tasks, 8);
+  const copied = results.filter((r) => r === 'uploaded').length;
+  const skipped = results.filter((r) => r === 'skipped').length;
+
+  if (_jsonMode) {
+    console.log(
+      JSON.stringify({
+        action: 'copied',
+        direction: 'local-to-remote',
+        count: copied,
+        ...(options.noOverwrite ? { skipped } : {}),
+      })
+    );
+  } else if (skipped > 0) {
+    console.log(`Uploaded ${copied} file(s), skipped ${skipped} existing`);
+  } else {
+    console.log(`Uploaded ${copied} file(s)`);
+  }
 }
 
 async function downloadFile(
@@ -260,8 +319,7 @@ async function copyLocalToRemote(
   destParsed: ParsedPath,
   config: Awaited<ReturnType<typeof getStorageConfig>>,
   recursive: boolean,
-  access?: 'public' | 'private',
-  cacheControl?: string
+  uploadOptions: Omit<UploadFileOptions, 'showProgress'>
 ) {
   const localPath = resolveLocalPath(src);
   const isWildcard = src.includes('*');
@@ -275,6 +333,7 @@ async function copyLocalToRemote(
             action: 'copied',
             direction: 'local-to-remote',
             count: 0,
+            ...(uploadOptions.noOverwrite ? { skipped: 0 } : {}),
           })
         );
       } else {
@@ -284,45 +343,14 @@ async function copyLocalToRemote(
     }
 
     const wildcardDir = dirname(localPath);
-    const tasks = files.map((file) => async () => {
+    const entries = files.map((file) => {
       const relPath = relative(wildcardDir, file);
       const destKey = destParsed.path
         ? `${destParsed.path.replace(/\/$/, '')}/${relPath}`
         : relPath;
-
-      const result = await uploadFile(
-        file,
-        destParsed.bucket,
-        destKey,
-        config,
-        false,
-        access,
-        cacheControl
-      );
-      if (result.error) {
-        console.error(`Failed to upload ${file}: ${result.error}`);
-        return false;
-      } else {
-        if (!_jsonMode)
-          console.log(
-            `Uploaded ${file} -> t3://${destParsed.bucket}/${destKey}`
-          );
-        return true;
-      }
+      return { file, destKey };
     });
-    const results = await executeWithConcurrency(tasks, 8);
-    const copied = results.filter(Boolean).length;
-    if (_jsonMode) {
-      console.log(
-        JSON.stringify({
-          action: 'copied',
-          direction: 'local-to-remote',
-          count: copied,
-        })
-      );
-    } else {
-      console.log(`Uploaded ${copied} file(s)`);
-    }
+    await uploadBatch(entries, destParsed.bucket, config, uploadOptions);
     return;
   }
 
@@ -348,6 +376,7 @@ async function copyLocalToRemote(
             action: 'copied',
             direction: 'local-to-remote',
             count: 0,
+            ...(uploadOptions.noOverwrite ? { skipped: 0 } : {}),
           })
         );
       } else {
@@ -359,48 +388,16 @@ async function copyLocalToRemote(
     // Linux cp convention: trailing slash = contents only, no slash = include dir name
     const dirName = src.endsWith('/') ? '' : basename(localPath);
 
-    const dirTasks = files.map((file) => async () => {
+    const entries = files.map((file) => {
       const relativePath = relative(localPath, file);
       const parts = [
         destParsed.path?.replace(/\/$/, ''),
         dirName,
         relativePath,
       ].filter(Boolean);
-      const destKey = parts.join('/');
-
-      const result = await uploadFile(
-        file,
-        destParsed.bucket,
-        destKey,
-        config,
-        false,
-        access,
-        cacheControl
-      );
-      if (result.error) {
-        console.error(`Failed to upload ${file}: ${result.error}`);
-        return false;
-      } else {
-        if (!_jsonMode)
-          console.log(
-            `Uploaded ${file} -> t3://${destParsed.bucket}/${destKey}`
-          );
-        return true;
-      }
+      return { file, destKey: parts.join('/') };
     });
-    const dirResults = await executeWithConcurrency(dirTasks, 8);
-    const copied = dirResults.filter(Boolean).length;
-    if (_jsonMode) {
-      console.log(
-        JSON.stringify({
-          action: 'copied',
-          direction: 'local-to-remote',
-          count: copied,
-        })
-      );
-    } else {
-      console.log(`Uploaded ${copied} file(s)`);
-    }
+    await uploadBatch(entries, destParsed.bucket, config, uploadOptions);
   } else {
     // Single file
     const fileName = basename(localPath);
@@ -429,10 +426,13 @@ async function copyLocalToRemote(
       destParsed.bucket,
       destKey,
       config,
-      !_jsonMode,
-      access,
-      cacheControl
+      { ...uploadOptions, showProgress: !_jsonMode }
     );
+    if (result.exists) {
+      exitWithError(
+        `t3://${destParsed.bucket}/${destKey} already exists (--no-overwrite)`
+      );
+    }
     if (result.error) {
       exitWithError(result.error);
     }
@@ -859,6 +859,10 @@ export default async function cp(options: Record<string, unknown>) {
     'cache-control',
     'cacheControl',
   ]);
+  // Commander parses `--no-overwrite` as `overwrite: false`.
+  const noOverwrite =
+    getOption<boolean>(options, ['overwrite']) === false ||
+    !!getOption<boolean>(options, ['no-overwrite', 'noOverwrite']);
   const format = getFormat(options);
   _jsonMode = format === 'json';
 
@@ -888,6 +892,10 @@ export default async function cp(options: Record<string, unknown>) {
     exitWithError('--cache-control only applies to local-to-remote uploads.');
   }
 
+  if (noOverwrite && direction !== 'local-to-remote') {
+    exitWithError('--no-overwrite only applies to local-to-remote uploads.');
+  }
+
   const config = await getStorageConfig({ withCredentialProvider: true });
 
   switch (direction) {
@@ -896,14 +904,11 @@ export default async function cp(options: Record<string, unknown>) {
       if (!destParsed.bucket) {
         exitWithError('Invalid destination path');
       }
-      await copyLocalToRemote(
-        src,
-        destParsed,
-        config,
-        recursive,
+      await copyLocalToRemote(src, destParsed, config, recursive, {
         access,
-        cacheControl
-      );
+        cacheControl,
+        noOverwrite,
+      });
       break;
     }
     case 'remote-to-local': {

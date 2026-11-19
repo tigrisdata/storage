@@ -1,4 +1,5 @@
 import {
+  AbortMultipartUploadCommand,
   CompleteMultipartUploadCommand,
   CreateMultipartUploadCommand,
   UploadPartCommand,
@@ -8,6 +9,7 @@ import { toError } from '@shared/utils';
 import { getConfig } from '../config';
 import { createTigrisClient } from '../tigris-client';
 import type { TigrisStorageConfig, TigrisStorageResponse } from '../types';
+import { FILE_EXISTS_ERROR_MESSAGE, isPreconditionFailed } from './overwrite';
 import { getPresignedUrl } from './presigned-url';
 
 export type InitMultipartUploadOptions = {
@@ -109,6 +111,11 @@ export async function getPartsPresignedUrls(
 }
 
 export type CompleteMultipartUploadOptions = {
+  /**
+   * When `false`, the upload only completes if no object exists at `path`
+   * (sent as `If-None-Match: *`). Default is `true`.
+   */
+  allowOverwrite?: boolean;
   config?: TigrisStorageConfig;
 };
 
@@ -142,6 +149,7 @@ export async function completeMultipartUpload(
         }))
       ),
     },
+    ...(options?.allowOverwrite === false ? { IfNoneMatch: '*' } : {}),
   });
 
   try {
@@ -165,7 +173,21 @@ export async function completeMultipartUpload(
         error: new Error(`Unable to complete multipart upload`),
       };
     }
-  } catch {
+  } catch (error) {
+    if (options?.allowOverwrite === false && isPreconditionFailed(error)) {
+      // The upload can never complete now, so drop its parts. Other failures
+      // keep the upload, since completing again with the same ID may work.
+      await tigrisClient
+        .send(
+          new AbortMultipartUploadCommand({
+            Bucket: options?.config?.bucket ?? config.bucket,
+            Key: path,
+            UploadId: uploadId,
+          })
+        )
+        .catch(() => {});
+      return { error: new Error(FILE_EXISTS_ERROR_MESSAGE) };
+    }
     return {
       error: new Error(`Unable to complete multipart upload`),
     };
