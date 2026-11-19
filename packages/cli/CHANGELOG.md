@@ -1,5 +1,17 @@
 # @tigrisdata/cli
 
+## 3.19.0
+
+### Minor Changes
+
+- [#423](https://github.com/tigrisdata/storage/pull/423) [`61852fd`](https://github.com/tigrisdata/storage/commit/61852fd4e08390c1a39f7da000de2b71f2b1b8e7) Thanks [@designcode](https://github.com/designcode)! - Add `--no-overwrite` to `tigris objects put` and `tigris cp` (local to remote). A single upload fails if the key exists; recursive and wildcard copies skip existing keys and report how many were skipped.
+
+### Patch Changes
+
+- [#424](https://github.com/tigrisdata/storage/pull/424) [`00ed2d3`](https://github.com/tigrisdata/storage/commit/00ed2d3e6b46ebcd2e7fa6443786870963173ddb) Thanks [@designcode](https://github.com/designcode)! - Stop the standalone binary from printing a Sentry "No diagnostics-channel injection detected" warning on every command. Telemetry now enables only the Sentry integrations error reporting needs, instead of every default minus a denylist.
+- Updated dependencies [[`61852fd`](https://github.com/tigrisdata/storage/commit/61852fd4e08390c1a39f7da000de2b71f2b1b8e7)]:
+  - @tigrisdata/storage@3.25.0
+
 ## 3.18.0
 
 ### Minor Changes
