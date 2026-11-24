@@ -788,3 +788,72 @@ describe('error messages', () => {
     expect(response.error?.message).toBe('Unauthorized');
   });
 });
+
+describe('temporary credentials', () => {
+  function signedHeaders(call: unknown[]): string[] {
+    const authorization = headerOf(call, 'authorization') ?? '';
+    const match = /SignedHeaders=([^,]+)/.exec(authorization);
+    return match ? match[1].split(';') : [];
+  }
+
+  it('signs the session token in with the key pair', async () => {
+    fetchMock.mockImplementation(() => json(200, {}));
+
+    await makeClient({ sessionToken: 'tsts1-token' }).request({
+      method: 'GET',
+      path: '/x',
+    });
+
+    const call = fetchMock.mock.calls[0];
+    expect(headerOf(call, 'x-amz-security-token')).toBe('tsts1-token');
+    expect(signedHeaders(call)).toContain('x-amz-security-token');
+  });
+
+  it('omits the token header for a plain key pair', async () => {
+    fetchMock.mockImplementation(() => json(200, {}));
+
+    await makeClient().request({ method: 'GET', path: '/x' });
+
+    const call = fetchMock.mock.calls[0];
+    expect(headerOf(call, 'authorization')).toBeTruthy();
+    expect(headerOf(call, 'x-amz-security-token')).toBeUndefined();
+  });
+
+  it('sends a session token without a key pair as OAuth, unsigned', async () => {
+    fetchMock.mockImplementation(() => json(200, {}));
+
+    await makeClient({
+      accessKeyId: undefined,
+      secretAccessKey: undefined,
+      sessionToken: 'oauth-token',
+      organizationId: 'org',
+    }).request({ method: 'GET', path: '/x' });
+
+    const call = fetchMock.mock.calls[0];
+    expect(headerOf(call, 'authorization')).toBeUndefined();
+    expect(headerOf(call, 'x-amz-security-token')).toBe('oauth-token');
+    expect(headerOf(call, 'x-tigris-namespace')).toBe('org');
+  });
+
+  it('does not share a cached client across session tokens', async () => {
+    fetchMock.mockImplementation(() => json(200, {}));
+    const baseUrl = `https://t${uniqueSuffix++}.example.com`;
+
+    for (const token of ['tsts1-first', 'tsts1-second']) {
+      const { data } = createTigrisHttpClient({
+        baseUrl,
+        accessKeyId: 'AKIAEXAMPLE',
+        secretAccessKey: 'secret',
+        sessionToken: token,
+      });
+      await data?.request({ method: 'GET', path: '/x' });
+    }
+
+    expect(headerOf(fetchMock.mock.calls[0], 'x-amz-security-token')).toBe(
+      'tsts1-first'
+    );
+    expect(headerOf(fetchMock.mock.calls[1], 'x-amz-security-token')).toBe(
+      'tsts1-second'
+    );
+  });
+});

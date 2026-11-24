@@ -59,6 +59,12 @@ export interface TigrisHttpClient {
 
 export interface CreateHttpClientOptions {
   baseUrl: string;
+  /**
+   * With `accessKeyId` and `secretAccessKey`: the session token of temporary
+   * credentials, signed into the request as `x-amz-security-token`. Without
+   * them: an OAuth access token, sent with `organizationId` instead of a
+   * signature. Callers holding an OAuth token must not also pass a key pair.
+   */
   sessionToken?: string;
   organizationId?: string;
   accessKeyId?: string;
@@ -81,12 +87,14 @@ async function generateSignatureHeaders(
   headers: Record<string, string>,
   body: string | undefined,
   accessKeyId: string,
-  secretAccessKey: string
+  secretAccessKey: string,
+  sessionToken: string | undefined
 ): Promise<Record<string, string>> {
   const signer = new SignatureV4({
     credentials: {
       accessKeyId,
       secretAccessKey,
+      ...(sessionToken && { sessionToken }),
     },
     region: 'auto',
     service: 's3',
@@ -319,17 +327,20 @@ export function createTigrisHttpClient(
         // Signed per attempt, not once up front: `x-amz-date` stays inside its
         // validity window on a retried request, and a future credential
         // provider would get a chance to refresh between attempts.
-        if (accessKeyId && secretAccessKey && !sessionToken) {
+        // A key pair means SigV4; a session token alongside it belongs to
+        // temporary credentials and is signed in. On its own it is OAuth.
+        if (accessKeyId && secretAccessKey) {
           headers = await generateSignatureHeaders(
             req.method,
             url,
             headers,
             bodyString,
             accessKeyId,
-            secretAccessKey
+            secretAccessKey,
+            sessionToken
           );
         } else {
-          // Use session token or pre-generated authorization
+          // OAuth: the token and the organization travel as plain headers.
           if (sessionToken) {
             headers[TigrisHeaders.SESSION_TOKEN] = sessionToken;
           }

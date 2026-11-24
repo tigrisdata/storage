@@ -59,8 +59,14 @@ export function createIAMClient(
   const config = getConfig();
   const sessionToken = options?.sessionToken ?? config.sessionToken;
   const organizationId = options?.organizationId ?? config.organizationId;
-  const accessKeyId = options?.accessKeyId ?? config.accessKeyId;
-  const secretAccessKey = options?.secretAccessKey ?? config.secretAccessKey;
+  // A session token here is OAuth, which wins over a key pair. The shared
+  // client would sign a key pair it is given, so leave it out.
+  const accessKeyId = sessionToken
+    ? undefined
+    : (options?.accessKeyId ?? config.accessKeyId);
+  const secretAccessKey = sessionToken
+    ? undefined
+    : (options?.secretAccessKey ?? config.secretAccessKey);
 
   // Allow either session token, authorization, or credentials
   const hasCredentials = accessKeyId && secretAccessKey;
