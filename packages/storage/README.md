@@ -84,7 +84,19 @@ const result = await get('object.txt', 'string', {
 
 #### Use temporary credentials
 
-[Temporary credentials](https://www.tigrisdata.com/docs/iam/temporary-credentials/) are an access key ID, a secret and a session token, scoped to one bucket. Pass all three together:
+[Temporary credentials](https://www.tigrisdata.com/docs/iam/temporary-credentials/) are an access key ID, a secret and a session token, scoped to one bucket. Issue them with an access key using `createTemporaryCredentials` from `@tigrisdata/iam`:
+
+```ts
+import { createTemporaryCredentials } from '@tigrisdata/iam';
+
+const { data: credentials } = await createTemporaryCredentials('ci-upload', {
+  bucket: 'my-bucket-name',
+  access: 'write', // 'read', 'write' or 'readwrite'; or pass exact `actions`
+  durationSeconds: 3600,
+});
+```
+
+Then pass all three together:
 
 ```ts
 const result = await list({
@@ -108,7 +120,21 @@ TIGRIS_STORAGE_BUCKET=bucket_name
 
 They only allow what their policy lists, on that one bucket. Bucket management calls such as `listBuckets` and `createBucket` are refused.
 
-To renew them before they expire, pass a `credentialProvider` instead. It returns `{ accessKeyId, secretAccessKey, sessionToken, expiration }`, and the SDK calls it again shortly before `expiration`. It only applies to object calls that go through the S3 client; `copy`, `move` and `updateObject` read the static fields.
+To renew them before they expire, pass a `credentialProvider` instead. It returns `{ accessKeyId, secretAccessKey, sessionToken, expiration }`, which is what `createTemporaryCredentials` returns, and the SDK calls it again shortly before `expiration`. It only applies to object calls that go through the S3 client; `copy`, `move` and `updateObject` read the static fields.
+
+```ts
+const config = {
+  bucket: 'my-bucket-name',
+  credentialProvider: async () => {
+    const { data, error } = await createTemporaryCredentials('worker', {
+      bucket: 'my-bucket-name',
+      access: 'read',
+    });
+    if (error) throw error;
+    return data;
+  },
+};
+```
 
 ## Responses
 

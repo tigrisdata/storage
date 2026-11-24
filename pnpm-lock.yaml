@@ -212,6 +212,15 @@ importers:
 
   packages/iam:
     dependencies:
+      '@aws-crypto/sha256-js':
+        specifier: ^5.2.0
+        version: 5.2.0
+      '@aws-sdk/xml-builder':
+        specifier: ^3.972.43
+        version: 3.972.43
+      '@smithy/signature-v4':
+        specifier: ^5.3.14
+        version: 5.7.5
       dotenv:
         specifier: ^18.0.0
         version: 18.0.10
@@ -304,6 +313,9 @@ importers:
       '@aws-crypto/sha256-js':
         specifier: ^5.2.0
         version: 5.2.0
+      '@aws-sdk/xml-builder':
+        specifier: ^3.972.43
+        version: 3.972.43
       '@smithy/signature-v4':
         specifier: ^5.3.14
         version: 5.7.5

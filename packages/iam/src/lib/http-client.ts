@@ -91,3 +91,36 @@ export function createIAMClient(
     retry: options?.retry ?? config.retry,
   });
 }
+
+/**
+ * Client for the STS endpoint. STS only accepts requests signed with an access
+ * key (`GetFederationToken must be signed with an access key`), so an OAuth
+ * session token is refused here instead of on the wire.
+ */
+export function createSTSClient(
+  options?: TigrisIAMConfig
+): TigrisIAMResponse<TigrisHttpClient, Error> {
+  const config = getConfig();
+  const accessKeyId = options?.accessKeyId || config.accessKeyId;
+  const secretAccessKey = options?.secretAccessKey || config.secretAccessKey;
+
+  if (!accessKeyId || !secretAccessKey) {
+    const oauth = options?.sessionToken || config.sessionToken;
+    return {
+      error: new Error(
+        oauth
+          ? 'Temporary credentials must be issued with an access key; an OAuth session cannot issue them'
+          : 'An access key is required to issue temporary credentials'
+      ),
+    };
+  }
+
+  return createTigrisHttpClient({
+    baseUrl:
+      options?.stsEndpoint || config.stsEndpoint || DEFAULT_ENDPOINTS.sts,
+    accessKeyId,
+    secretAccessKey,
+    service: 'sts',
+    retry: options?.retry ?? config.retry,
+  });
+}

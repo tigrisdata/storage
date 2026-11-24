@@ -857,3 +857,65 @@ describe('temporary credentials', () => {
     );
   });
 });
+
+describe('XML error bodies', () => {
+  it('reports the Message of an STS-style error', async () => {
+    fetchMock.mockImplementation(
+      () =>
+        new Response(
+          '<?xml version="1.0" encoding="UTF-8"?>\n<ErrorResponse><Error><Type>Sender</Type><Code>MalformedPolicyDocument</Code><Message>Statement 0: only Effect Allow is supported</Message></Error></ErrorResponse>',
+          { status: 400, statusText: 'Bad Request' }
+        )
+    );
+
+    const response = await makeClient().request({ method: 'GET', path: '/x' });
+
+    expect(response.error?.message).toBe(
+      'Statement 0: only Effect Allow is supported'
+    );
+  });
+
+  it('decodes escaped characters in the message', async () => {
+    fetchMock.mockImplementation(
+      () =>
+        new Response(
+          '<Error><Code>X</Code><Message>a &lt;b&gt; &amp; &quot;c&quot;</Message></Error>',
+          { status: 400, statusText: 'Bad Request' }
+        )
+    );
+
+    const response = await makeClient().request({ method: 'GET', path: '/x' });
+
+    expect(response.error?.message).toBe('a <b> & "c"');
+  });
+
+  it('falls back to the status text when the XML has no Message', async () => {
+    fetchMock.mockImplementation(
+      () =>
+        new Response('<Error><Code>X</Code></Error>', {
+          status: 403,
+          statusText: 'Forbidden',
+        })
+    );
+
+    const response = await makeClient().request({ method: 'GET', path: '/x' });
+
+    expect(response.error?.message).toBe('Forbidden');
+  });
+});
+
+describe('signing service', () => {
+  it('signs for s3 by default and for the service asked for', async () => {
+    fetchMock.mockImplementation(() => json(200, {}));
+
+    await makeClient().request({ method: 'GET', path: '/x' });
+    await makeClient({ service: 'sts' }).request({ method: 'GET', path: '/x' });
+
+    expect(headerOf(fetchMock.mock.calls[0], 'authorization')).toContain(
+      '/auto/s3/aws4_request'
+    );
+    expect(headerOf(fetchMock.mock.calls[1], 'authorization')).toContain(
+      '/auto/sts/aws4_request'
+    );
+  });
+});
