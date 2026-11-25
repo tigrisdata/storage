@@ -111,12 +111,14 @@ export default async function temporary(options: Record<string, unknown>) {
   // `eval "$(tigris credentials temporary ... --export)"` sees nothing else.
   if (!exportToShell) printStart(context);
 
+  // Before a key may be created for an OAuth login, so a failure here
+  // leaves nothing behind.
+  const endpoints = exportToShell ? await endpointsOrFail() : undefined;
   const keys = await issuingKey({
     name,
     bucket,
     role: roleFor(access, actions),
   });
-  const endpoints = exportToShell ? await endpointsOrFail() : undefined;
 
   const { data, error } = await createTemporaryCredentials(name, {
     config: {

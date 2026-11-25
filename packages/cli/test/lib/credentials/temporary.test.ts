@@ -402,6 +402,14 @@ describe('credentials temporary, logged in with OAuth', () => {
     expect(enquirer.prompt).not.toHaveBeenCalled();
   });
 
+  it('resolves the endpoints before creating a key', async () => {
+    choose('create');
+    vi.mocked(resolveEndpoints).mockRejectedValue(new Error('bad endpoint'));
+
+    expect(await fails({ export: true })).toContain('bad endpoint');
+    expect(createAccessKey).not.toHaveBeenCalled();
+  });
+
   it('deletes the created key when nothing is issued', async () => {
     choose('create');
     vi.mocked(createTemporaryCredentials).mockResolvedValue({
