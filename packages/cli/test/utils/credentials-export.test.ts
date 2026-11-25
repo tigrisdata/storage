@@ -33,6 +33,22 @@ const defaults = {
 const key = { id: 'tid_AaBb', secret: 'tsec_XxYy', endpoints: defaults };
 
 describe('credentialVariables', () => {
+  it('adds the session token of temporary credentials for either SDK', () => {
+    const temporary = { ...key, sessionToken: 'tsts1-token' };
+    expect(
+      credentialVariables({ ...temporary, sdk: 'tigris', bucket: 'my-app' })
+    ).toEqual([
+      ['TIGRIS_STORAGE_ACCESS_KEY_ID', 'tid_AaBb'],
+      ['TIGRIS_STORAGE_SECRET_ACCESS_KEY', 'tsec_XxYy'],
+      ['TIGRIS_STORAGE_SESSION_TOKEN', 'tsts1-token'],
+      ['TIGRIS_STORAGE_BUCKET', 'my-app'],
+    ]);
+    expect(credentialVariables({ ...temporary, sdk: 'aws' })).toContainEqual([
+      'AWS_SESSION_TOKEN',
+      'tsts1-token',
+    ]);
+  });
+
   it('writes the Tigris SDK variables, with the bucket when there is one', () => {
     expect(credentialVariables({ ...key, sdk: 'tigris' })).toEqual([
       ['TIGRIS_STORAGE_ACCESS_KEY_ID', 'tid_AaBb'],

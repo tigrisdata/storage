@@ -15,6 +15,9 @@ vi.mock('../../src/auth/client.js', () => ({
 
 vi.mock('../../src/auth/provider.js', () => ({
   resolveAuthMethod: vi.fn(),
+  usesTemporaryCredentials: vi.fn(
+    (method: { sessionToken?: string }) => !!method.sessionToken
+  ),
   getTigrisConfig: vi.fn(() => ({
     iamEndpoint: 'https://iam.test',
     mgmtEndpoint: 'https://mgmt.test',
@@ -170,5 +173,19 @@ describe('getIAMConfig', () => {
     } as Awaited<ReturnType<typeof resolveAuthMethod>>);
 
     await expect(getIAMConfig(context)).rejects.toThrow('Not authenticated');
+  });
+
+  it('refuses temporary credentials, which cannot call IAM', async () => {
+    vi.mocked(resolveAuthMethod).mockResolvedValue({
+      type: 'environment',
+      accessKeyId: 'tsid_a',
+      secretAccessKey: 'tssec_a',
+      sessionToken: 'tsts1',
+      source: 'aws',
+    });
+
+    await expect(getIAMConfig(context)).rejects.toThrow(
+      'You are using temporary credentials, which cannot manage access keys or IAM'
+    );
   });
 });

@@ -1,4 +1,5 @@
 import type { NextAction } from '../types.js';
+import { isUsingTemporaryCredentials } from './temporary-credentials.js';
 
 export enum ExitCode {
   Success = 0,
@@ -137,10 +138,14 @@ export function classifyError(error: unknown): ClassifiedError {
   }
 
   if (matchesAny(message, PERMISSION_PATTERNS)) {
+    // Temporary credentials allow only what their policy grants, on one
+    // bucket, and nothing beyond objects; that is the likely cause.
     return {
       exitCode: ExitCode.AuthFailure,
       category: 'permission',
-      message,
+      message: isUsingTemporaryCredentials()
+        ? `${message}\n  You are using temporary credentials. They allow only the actions their policy grants, on one bucket, and cannot list or manage buckets.`
+        : message,
       nextActions: getPermissionNextActions(),
     };
   }

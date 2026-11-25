@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   type ClassifiedError,
   classifyError,
   ExitCode,
 } from '../../src/utils/errors.js';
+import { setUsingTemporaryCredentials } from '../../src/utils/temporary-credentials.js';
 
 describe('classifyError', () => {
   describe('auth errors (exit code 2)', () => {
@@ -211,5 +212,30 @@ describe('classifyError', () => {
         expect(typeof action.description).toBe('string');
       }
     });
+  });
+});
+
+describe('permission errors with temporary credentials', () => {
+  afterEach(() => setUsingTemporaryCredentials(false));
+
+  it('says the credentials are temporary', () => {
+    setUsingTemporaryCredentials(true);
+
+    const classified = classifyError(new Error('Access Denied.'));
+
+    expect(classified.category).toBe('permission');
+    expect(classified.message).toContain('Access Denied.');
+    expect(classified.message).toContain(
+      'You are using temporary credentials. They allow only'
+    );
+  });
+
+  it('leaves the message alone for other credentials', () => {
+    expect(classifyError(new Error('Forbidden')).message).toBe('Forbidden');
+  });
+
+  it('leaves other categories alone', () => {
+    setUsingTemporaryCredentials(true);
+    expect(classifyError(new Error('NoSuchKey')).message).toBe('NoSuchKey');
   });
 });

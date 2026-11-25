@@ -10,7 +10,11 @@ import { getAuthClient } from './client.js';
 
 export { isFlyOrganization } from './fly.js';
 
-import { getTigrisConfig, resolveAuthMethod } from './provider.js';
+import {
+  getTigrisConfig,
+  resolveAuthMethod,
+  usesTemporaryCredentials,
+} from './provider.js';
 import {
   getAwsProfileConfig,
   getLoginMethod,
@@ -59,6 +63,15 @@ export async function getOAuthIAMConfig(context: MessageContext) {
  */
 export async function getIAMConfig(context: MessageContext) {
   const method = await resolveAuthMethod();
+
+  // Tigris refuses IAM calls from temporary credentials. Say so up front
+  // rather than surface the gateway's bare "Access Denied".
+  if (usesTemporaryCredentials(method)) {
+    failWithError(
+      context,
+      'You are using temporary credentials, which cannot manage access keys or IAM. Use an access key instead.'
+    );
+  }
 
   switch (method.type) {
     case 'oauth':

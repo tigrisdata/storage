@@ -23,6 +23,8 @@ export type CredentialsSdk = (typeof CREDENTIALS_SDKS)[number];
 export interface KeyCredentials {
   id: string;
   secret: string;
+  /** The session token of temporary credentials. */
+  sessionToken?: string;
   /** Written when the key was scoped to exactly one bucket. */
   bucket?: string;
   sdk: CredentialsSdk;
@@ -41,11 +43,14 @@ export type EnvVariable = [name: string, value: string];
 export function credentialVariables(
   credentials: KeyCredentials
 ): EnvVariable[] {
-  const { id, secret, bucket, sdk, endpoints } = credentials;
+  const { id, secret, sessionToken, bucket, sdk, endpoints } = credentials;
   if (sdk === 'aws') {
     return [
       ['AWS_ACCESS_KEY_ID', id],
       ['AWS_SECRET_ACCESS_KEY', secret],
+      ...(sessionToken
+        ? [['AWS_SESSION_TOKEN', sessionToken] as EnvVariable]
+        : []),
       ['AWS_ENDPOINT_URL_S3', endpoints.storage],
       ['AWS_ENDPOINT_URL_IAM', endpoints.iam],
       ['AWS_REGION', 'auto'],
@@ -55,6 +60,9 @@ export function credentialVariables(
     ['TIGRIS_STORAGE_ACCESS_KEY_ID', id],
     ['TIGRIS_STORAGE_SECRET_ACCESS_KEY', secret],
   ];
+  if (sessionToken) {
+    variables.push(['TIGRIS_STORAGE_SESSION_TOKEN', sessionToken]);
+  }
   if (endpoints.storage !== DEFAULT_STORAGE_ENDPOINT) {
     variables.push(['TIGRIS_STORAGE_ENDPOINT', endpoints.storage]);
   }

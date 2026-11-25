@@ -80,8 +80,7 @@ export function exitWithError(
  * Print failure message and exit. Combines printFailure + exitWithError.
  */
 export function failWithError(context: MessageContext, error: unknown): never {
-  const message = error instanceof Error ? error.message : String(error);
-  printFailure(context, message);
+  printFailure(context, classifyError(error).message);
   exitWithError(error, context);
 }
 

@@ -27,6 +27,16 @@ export default async function test(options: Record<string, unknown>) {
     );
   }
 
+  // A session token alongside an access key means temporary credentials,
+  // which cannot list buckets: only a bucket they were issued for can be
+  // tested.
+  if (!bucket && config.accessKeyId && config.sessionToken) {
+    failWithError(
+      context,
+      'Temporary credentials cannot list buckets. Pass --bucket to test them against the bucket they were issued for.'
+    );
+  }
+
   if (bucket) {
     // Test access to specific bucket by listing objects
     const { error } = await list({
