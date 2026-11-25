@@ -13,6 +13,7 @@ import {
   MAX_TEMPORARY_CREDENTIALS_DURATION,
   MIN_TEMPORARY_CREDENTIALS_DURATION,
   type PolicyDocument,
+  removeAccessKey,
   TEMPORARY_CREDENTIAL_ACTIONS,
   type TemporaryCredentialAccess,
   type TemporaryCredentialAction,
@@ -71,6 +72,13 @@ export default async function temporary(options: Record<string, unknown>) {
     );
   }
 
+  if (policyPath && (bucket || access || actions?.length)) {
+    failWithError(
+      context,
+      "--policy can't be combined with a bucket, --access or --actions: the policy alone says what is granted"
+    );
+  }
+
   const durationSeconds = parseDuration(String(durationOption));
   if (
     durationSeconds === undefined ||
@@ -105,7 +113,7 @@ export default async function temporary(options: Record<string, unknown>) {
 
   const keys = await issuingKey({
     name,
-    bucket: policy ? undefined : bucket,
+    bucket,
     role: roleFor(access, actions),
   });
   const endpoints = exportToShell ? await endpointsOrFail() : undefined;
@@ -132,6 +140,7 @@ export default async function temporary(options: Record<string, unknown>) {
   });
 
   if (error) {
+    if (keys.created) await removeCreatedKey(keys.created);
     failWithError(context, error);
   }
 
@@ -165,7 +174,10 @@ export default async function temporary(options: Record<string, unknown>) {
         expiration: data.expiration.toISOString(),
         federatedUser: data.federatedUser,
         ...(keys.created && {
-          createdAccessKey: { id: keys.accessKeyId, name: keys.created },
+          createdAccessKey: {
+            id: keys.accessKeyId,
+            name: keys.created.name,
+          },
         }),
       })
     );
@@ -231,11 +243,17 @@ export function roleFor(
   return writes ? 'ReadWrite' : 'ReadOnly';
 }
 
+type CreatedKey = {
+  id: string;
+  name: string;
+  config: Awaited<ReturnType<typeof getOAuthIAMConfig>>;
+};
+
 type IssuingKey = {
   accessKeyId: string;
   secretAccessKey: string;
-  /** The name of the key, when it was created for this run. */
-  created?: string;
+  /** Set when the key was created for this run. */
+  created?: CreatedKey;
 };
 
 /**
@@ -346,8 +364,23 @@ async function createIssuingKey({
   return {
     accessKeyId: data.id,
     secretAccessKey: data.secret,
-    created: data.name,
+    created: { id: data.id, name: data.name, config },
   };
+}
+
+/**
+ * Delete a key created for credentials that were then not issued. Its secret
+ * was never shown, so nobody could use it.
+ */
+async function removeCreatedKey({ id, config }: CreatedKey): Promise<void> {
+  const { error } = await removeAccessKey(id, { config });
+  if (error) {
+    console.error(
+      `⚠ Could not delete the access key created for these credentials. Delete it with: tigris access-keys delete ${id}`
+    );
+  } else {
+    console.error(`  Deleted access key ${id}, since nothing was issued.`);
+  }
 }
 
 async function endpointsOrFail() {

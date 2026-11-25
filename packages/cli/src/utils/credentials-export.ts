@@ -35,6 +35,16 @@ export interface KeyCredentials {
 export type EnvVariable = [name: string, value: string];
 
 /**
+ * The session-token variable of each SDK's set. Writing a permanent key
+ * removes it, so a token left by earlier temporary credentials doesn't end
+ * up paired with the new key.
+ */
+export const SESSION_TOKEN_VARIABLE: Record<CredentialsSdk, string> = {
+  tigris: 'TIGRIS_STORAGE_SESSION_TOKEN',
+  aws: 'AWS_SESSION_TOKEN',
+};
+
+/**
  * The variables the chosen SDK reads, in the order they are written. The AWS
  * set includes everything the AWS SDK needs to reach Tigris; Tigris SDK
  * defaults its endpoint, so that set only names one when it is not the
@@ -89,9 +99,14 @@ export function formatDotenvValue(value: string): string {
  * Set `variables` in dotenv `content`, leaving every other line alone. An
  * existing assignment is replaced in place (every occurrence, since parsers
  * disagree on whether the first or the last one wins, and an `export`
- * prefix is kept); anything missing is appended.
+ * prefix is kept); anything missing is appended. Assignments to a name in
+ * `remove` are deleted.
  */
-export function mergeDotenv(content: string, variables: EnvVariable[]): string {
+export function mergeDotenv(
+  content: string,
+  variables: EnvVariable[],
+  remove: readonly string[] = []
+): string {
   // Split on LF and let each line keep its own CR, so a file that mixes
   // CRLF and LF is edited line by line and never re-joined wrongly. Lines
   // this adds follow the file's convention: CRLF if it uses CRLF anywhere.
@@ -102,16 +117,22 @@ export function mergeDotenv(content: string, variables: EnvVariable[]): string {
 
   const wanted = new Map(variables);
   const seen = new Set<string>();
-  const merged = lines.map((line) => {
+  const removed = new Set(remove);
+  const merged = lines.flatMap((line) => {
     const lineCr = line.endsWith('\r') ? '\r' : '';
     const body = lineCr ? line.slice(0, -1) : line;
     const assignment = /^(\s*(?:export\s+)?)([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(
       body
     );
     const name = assignment?.[2];
-    if (!assignment || name === undefined || !wanted.has(name)) return line;
+    if (name !== undefined && removed.has(name) && !wanted.has(name)) {
+      return [];
+    }
+    if (!assignment || name === undefined || !wanted.has(name)) return [line];
     seen.add(name);
-    return `${assignment[1]}${name}=${formatDotenvValue(wanted.get(name) ?? '')}${lineCr}`;
+    return [
+      `${assignment[1]}${name}=${formatDotenvValue(wanted.get(name) ?? '')}${lineCr}`,
+    ];
   });
   // A last line that had no newline gets one below; in a CRLF file it
   // needs its CR too.
@@ -132,11 +153,13 @@ export function mergeDotenv(content: string, variables: EnvVariable[]): string {
  * permissions, so a file the CLI may not write is an error, not a chmod.
  * The content is written to a temporary file beside the target and renamed
  * over it, so a write that fails part-way (disk full, quota) leaves the
- * existing file untouched. Throws the filesystem error as is.
+ * existing file untouched. Throws the filesystem error as is. Assignments to
+ * a name in `remove` are deleted.
  */
 export function writeDotenv(
   filePath: string,
-  variables: EnvVariable[]
+  variables: EnvVariable[],
+  remove: readonly string[] = []
 ): { created: boolean } {
   // Through a symlink, so the file it points at is updated, not the link.
   const target = existsSync(filePath) ? realpathSync(filePath) : filePath;
@@ -149,7 +172,10 @@ export function writeDotenv(
     `.${basename(target)}.${Math.random().toString(36).slice(2)}.tmp`
   );
   try {
-    writeFileSync(temp, mergeDotenv(current, variables), { mode, flag: 'wx' });
+    writeFileSync(temp, mergeDotenv(current, variables, remove), {
+      mode,
+      flag: 'wx',
+    });
     // The mode passed at creation is subject to the umask; the file must
     // end up exactly as permissive as the one it replaces.
     chmodSync(temp, mode);

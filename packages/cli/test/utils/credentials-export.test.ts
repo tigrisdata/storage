@@ -169,6 +169,28 @@ describe('shellExportLines', () => {
   });
 });
 
+describe('mergeDotenv removing variables', () => {
+  it('deletes a stale session token while setting the new key', () => {
+    expect(
+      mergeDotenv(
+        'A=old\nTIGRIS_STORAGE_SESSION_TOKEN=tsts1\nX=1\n',
+        [['A', 'new']],
+        ['TIGRIS_STORAGE_SESSION_TOKEN']
+      )
+    ).toBe('A=new\nX=1\n');
+  });
+
+  it('deletes every assignment, export prefix and CRLF included', () => {
+    expect(mergeDotenv('export T=1\r\nX=1\r\nT=2\r\n', [], ['T'])).toBe(
+      'X=1\r\n'
+    );
+  });
+
+  it('leaves a file without the variable alone', () => {
+    expect(mergeDotenv('X=1\n', [['A', '1']], ['T'])).toBe('X=1\nA=1\n');
+  });
+});
+
 describe('writeDotenv', () => {
   const dir = () => mkdtempSync(join(tmpdir(), 'tigris-dotenv-'));
 

@@ -130,6 +130,20 @@ describe('access-keys create', () => {
     expect(out).not.toContain('tsec_XxYy');
   });
 
+  it('removes the session token of temporary credentials it replaces', async () => {
+    writeFileSync(
+      join(cwd, '.env'),
+      'TIGRIS_STORAGE_ACCESS_KEY_ID=tsid_old\n' +
+        'TIGRIS_STORAGE_SECRET_ACCESS_KEY=tssec_old\n' +
+        'TIGRIS_STORAGE_SESSION_TOKEN=tsts1_old\n'
+    );
+    await run({ env: true });
+    expect(readFileSync(join(cwd, '.env'), 'utf8')).toBe(
+      'TIGRIS_STORAGE_ACCESS_KEY_ID=tid_AaBb\n' +
+        'TIGRIS_STORAGE_SECRET_ACCESS_KEY=tsec_XxYy\n'
+    );
+  });
+
   it('takes a path for --env and the AWS variable set', async () => {
     mkdirSync(join(cwd, 'config'));
     await run({ env: 'config/.env.local', for: 'aws' });

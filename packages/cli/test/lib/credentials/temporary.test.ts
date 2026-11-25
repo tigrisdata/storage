@@ -13,6 +13,7 @@ vi.mock('@tigrisdata/iam', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@tigrisdata/iam')>()),
   createAccessKey: vi.fn(),
   createTemporaryCredentials: vi.fn(),
+  removeAccessKey: vi.fn(async () => ({ data: undefined })),
 }));
 vi.mock('@auth/iam.js', () => ({
   getOAuthIAMConfig: vi.fn(async () => ({ sessionToken: 'oauth' })),
@@ -20,7 +21,11 @@ vi.mock('@auth/iam.js', () => ({
 vi.mock('enquirer', () => ({ default: { prompt: vi.fn() } }));
 
 import { resolveAuthMethod, resolveEndpoints } from '@auth/provider.js';
-import { createAccessKey, createTemporaryCredentials } from '@tigrisdata/iam';
+import {
+  createAccessKey,
+  createTemporaryCredentials,
+  removeAccessKey,
+} from '@tigrisdata/iam';
 import enquirer from 'enquirer';
 import temporary, {
   parseDuration,
@@ -215,6 +220,8 @@ describe('credentials temporary', () => {
     expect(await fails({})).toContain(
       'Statement 0: only Effect Allow is supported'
     );
+    // The access key was the user's own; only a key created here is deleted.
+    expect(removeAccessKey).not.toHaveBeenCalled();
   });
 
   describe('refuses before issuing anything', () => {
@@ -251,8 +258,17 @@ describe('credentials temporary', () => {
         'Cannot combine --export with --format json',
       ],
       [
+        'with --policy and --access',
+        { policy: '/any/policy.json' },
+        "--policy can't be combined with a bucket, --access or --actions",
+      ],
+      [
         'with a missing policy file',
-        { policy: '/nonexistent/policy.json' },
+        {
+          bucket: undefined,
+          access: undefined,
+          policy: '/nonexistent/policy.json',
+        },
         'Could not read --policy /nonexistent/policy.json',
       ],
     ])('%s', async (_, options, message) => {
@@ -384,6 +400,30 @@ describe('credentials temporary, logged in with OAuth', () => {
       await fails({ bucket: undefined, access: undefined, policy: path })
     ).toContain('tigris login credentials');
     expect(enquirer.prompt).not.toHaveBeenCalled();
+  });
+
+  it('deletes the created key when nothing is issued', async () => {
+    choose('create');
+    vi.mocked(createTemporaryCredentials).mockResolvedValue({
+      error: new Error('Statement 0: only Effect Allow is supported'),
+    });
+
+    expect(await fails({})).toContain('Deleted access key tid_new');
+    expect(removeAccessKey).toHaveBeenCalledWith('tid_new', {
+      config: { sessionToken: 'oauth' },
+    });
+  });
+
+  it('names a created key it could not delete', async () => {
+    choose('create');
+    vi.mocked(createTemporaryCredentials).mockResolvedValue({
+      error: new Error('Statement 0: only Effect Allow is supported'),
+    });
+    vi.mocked(removeAccessKey).mockResolvedValueOnce({
+      error: new Error('Access Denied'),
+    });
+
+    expect(await fails({})).toContain('tigris access-keys delete tid_new');
   });
 
   it('reports a key that could not be created', async () => {
