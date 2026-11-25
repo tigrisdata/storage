@@ -68,5 +68,14 @@ export function temporarySessionToken(
     return undefined;
   }
 
+  // A token without its key pair is a leftover, not temporary credentials;
+  // ignoring it lets an OAuth session from the environment apply.
+  if (
+    !getEnvVar('TIGRIS_STORAGE_ACCESS_KEY_ID') ||
+    !getEnvVar('TIGRIS_STORAGE_SECRET_ACCESS_KEY')
+  ) {
+    return undefined;
+  }
+
   return getEnvVar('TIGRIS_STORAGE_SESSION_TOKEN') || undefined;
 }

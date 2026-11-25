@@ -56,9 +56,19 @@ describe('temporarySessionToken', () => {
   });
 
   it('reads TIGRIS_STORAGE_SESSION_TOKEN for keys from the environment', () => {
+    vi.stubEnv('TIGRIS_STORAGE_ACCESS_KEY_ID', 'tsid_env');
+    vi.stubEnv('TIGRIS_STORAGE_SECRET_ACCESS_KEY', 'tssec_env');
     vi.stubEnv('TIGRIS_STORAGE_SESSION_TOKEN', 'tsts1-env');
     expect(temporarySessionToken()).toBe('tsts1-env');
     expect(temporarySessionToken({ bucket: 'b' })).toBe('tsts1-env');
+  });
+
+  it('ignores an environment token without its key pair', () => {
+    vi.stubEnv('TIGRIS_STORAGE_SESSION_TOKEN', 'tsts1-env');
+    expect(temporarySessionToken()).toBeUndefined();
+
+    vi.stubEnv('TIGRIS_STORAGE_ACCESS_KEY_ID', 'tsid_env');
+    expect(temporarySessionToken()).toBeUndefined();
   });
 
   it('does not pair the environment token with keys passed in options', () => {
@@ -218,6 +228,22 @@ describe('createStorageClient', () => {
     const sent = await headers;
     expect(sent.authorization).toContain('x-amz-security-token');
     expect(sent['x-amz-security-token']).toBe('tsts1-a');
+  });
+
+  it('uses OAuth from the environment despite a leftover session token', async () => {
+    vi.stubEnv('TIGRIS_STORAGE_SESSION_TOKEN', 'tsts1-stale');
+    vi.stubEnv('TIGRIS_SESSION_TOKEN', 'oauth-env');
+    vi.stubEnv('TIGRIS_ORGANIZATION_ID', 'org-env');
+
+    const headers = captureHeaders();
+    const { data, error } = createStorageClient({ endpoint: endpoint() });
+    expect(error).toBeUndefined();
+    await data!.request({ method: 'GET', path: '/b/k' });
+
+    const sent = await headers;
+    expect(sent.authorization).toBeUndefined();
+    expect(sent['x-amz-security-token']).toBe('oauth-env');
+    expect(sent['x-tigris-namespace']).toBe('org-env');
   });
 
   it('keeps OAuth ahead of environment keys, as before', async () => {

@@ -91,7 +91,7 @@ import { createTemporaryCredentials } from '@tigrisdata/iam';
 
 const { data: credentials } = await createTemporaryCredentials('ci-upload', {
   bucket: 'my-bucket-name',
-  access: 'write', // 'read', 'write' or 'readwrite'; or pass exact `actions`
+  access: 'readwrite', // 'read', 'write' or 'readwrite'; or pass exact `actions`
   durationSeconds: 3600,
 });
 ```
