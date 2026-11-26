@@ -4,6 +4,7 @@ import type { TigrisIAMConfig } from './types';
 export const DEFAULT_ENDPOINTS = {
   iam: 'https://iam.storageapi.dev',
   mgmt: 'https://mgmt.storageapi.dev',
+  sts: 'https://sts.storage.dev',
 };
 
 /**
@@ -23,6 +24,7 @@ export function getConfig(): TigrisIAMConfig {
   if (isNode()) {
     config.iamEndpoint = getEnvVar('TIGRIS_IAM_ENDPOINT');
     config.mgmtEndpoint = getEnvVar('TIGRIS_MGMT_ENDPOINT');
+    config.stsEndpoint = getEnvVar('TIGRIS_STS_ENDPOINT');
     config.sessionToken = getEnvVar('TIGRIS_SESSION_TOKEN');
     config.organizationId = getEnvVar('TIGRIS_ORGANIZATION_ID');
     config.accessKeyId = getEnvVar('TIGRIS_STORAGE_ACCESS_KEY_ID');

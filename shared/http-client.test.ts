@@ -788,3 +788,134 @@ describe('error messages', () => {
     expect(response.error?.message).toBe('Unauthorized');
   });
 });
+
+describe('temporary credentials', () => {
+  function signedHeaders(call: unknown[]): string[] {
+    const authorization = headerOf(call, 'authorization') ?? '';
+    const match = /SignedHeaders=([^,]+)/.exec(authorization);
+    return match ? match[1].split(';') : [];
+  }
+
+  it('signs the session token in with the key pair', async () => {
+    fetchMock.mockImplementation(() => json(200, {}));
+
+    await makeClient({ sessionToken: 'tsts1-token' }).request({
+      method: 'GET',
+      path: '/x',
+    });
+
+    const call = fetchMock.mock.calls[0];
+    expect(headerOf(call, 'x-amz-security-token')).toBe('tsts1-token');
+    expect(signedHeaders(call)).toContain('x-amz-security-token');
+  });
+
+  it('omits the token header for a plain key pair', async () => {
+    fetchMock.mockImplementation(() => json(200, {}));
+
+    await makeClient().request({ method: 'GET', path: '/x' });
+
+    const call = fetchMock.mock.calls[0];
+    expect(headerOf(call, 'authorization')).toBeTruthy();
+    expect(headerOf(call, 'x-amz-security-token')).toBeUndefined();
+  });
+
+  it('sends a session token without a key pair as OAuth, unsigned', async () => {
+    fetchMock.mockImplementation(() => json(200, {}));
+
+    await makeClient({
+      accessKeyId: undefined,
+      secretAccessKey: undefined,
+      sessionToken: 'oauth-token',
+      organizationId: 'org',
+    }).request({ method: 'GET', path: '/x' });
+
+    const call = fetchMock.mock.calls[0];
+    expect(headerOf(call, 'authorization')).toBeUndefined();
+    expect(headerOf(call, 'x-amz-security-token')).toBe('oauth-token');
+    expect(headerOf(call, 'x-tigris-namespace')).toBe('org');
+  });
+
+  it('does not share a cached client across session tokens', async () => {
+    fetchMock.mockImplementation(() => json(200, {}));
+    const baseUrl = `https://t${uniqueSuffix++}.example.com`;
+
+    for (const token of ['tsts1-first', 'tsts1-second']) {
+      const { data } = createTigrisHttpClient({
+        baseUrl,
+        accessKeyId: 'AKIAEXAMPLE',
+        secretAccessKey: 'secret',
+        sessionToken: token,
+      });
+      await data?.request({ method: 'GET', path: '/x' });
+    }
+
+    expect(headerOf(fetchMock.mock.calls[0], 'x-amz-security-token')).toBe(
+      'tsts1-first'
+    );
+    expect(headerOf(fetchMock.mock.calls[1], 'x-amz-security-token')).toBe(
+      'tsts1-second'
+    );
+  });
+});
+
+describe('XML error bodies', () => {
+  it('reports the Message of an STS-style error', async () => {
+    fetchMock.mockImplementation(
+      () =>
+        new Response(
+          '<?xml version="1.0" encoding="UTF-8"?>\n<ErrorResponse><Error><Type>Sender</Type><Code>MalformedPolicyDocument</Code><Message>Statement 0: only Effect Allow is supported</Message></Error></ErrorResponse>',
+          { status: 400, statusText: 'Bad Request' }
+        )
+    );
+
+    const response = await makeClient().request({ method: 'GET', path: '/x' });
+
+    expect(response.error?.message).toBe(
+      'Statement 0: only Effect Allow is supported'
+    );
+  });
+
+  it('decodes escaped characters in the message', async () => {
+    fetchMock.mockImplementation(
+      () =>
+        new Response(
+          '<Error><Code>X</Code><Message>a &lt;b&gt; &amp; &quot;c&quot;</Message></Error>',
+          { status: 400, statusText: 'Bad Request' }
+        )
+    );
+
+    const response = await makeClient().request({ method: 'GET', path: '/x' });
+
+    expect(response.error?.message).toBe('a <b> & "c"');
+  });
+
+  it('falls back to the status text when the XML has no Message', async () => {
+    fetchMock.mockImplementation(
+      () =>
+        new Response('<Error><Code>X</Code></Error>', {
+          status: 403,
+          statusText: 'Forbidden',
+        })
+    );
+
+    const response = await makeClient().request({ method: 'GET', path: '/x' });
+
+    expect(response.error?.message).toBe('Forbidden');
+  });
+});
+
+describe('signing service', () => {
+  it('signs for s3 by default and for the service asked for', async () => {
+    fetchMock.mockImplementation(() => json(200, {}));
+
+    await makeClient().request({ method: 'GET', path: '/x' });
+    await makeClient({ service: 'sts' }).request({ method: 'GET', path: '/x' });
+
+    expect(headerOf(fetchMock.mock.calls[0], 'authorization')).toContain(
+      '/auto/s3/aws4_request'
+    );
+    expect(headerOf(fetchMock.mock.calls[1], 'authorization')).toContain(
+      '/auto/sts/aws4_request'
+    );
+  });
+});

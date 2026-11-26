@@ -1,5 +1,5 @@
 import { createTigrisHttpClient, type TigrisHttpClient } from '@shared/index';
-import { getConfig } from './config';
+import { getConfig, temporarySessionToken } from './config';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
 function getStorageEndpoint(options?: TigrisStorageConfig): string {
@@ -10,26 +10,34 @@ export function createStorageClient(
   options?: TigrisStorageConfig
 ): TigrisStorageResponse<TigrisHttpClient, Error> {
   const config = getConfig();
-  const sessionToken = options?.sessionToken ?? config.sessionToken;
+  const temporaryToken = temporarySessionToken(options);
+  const oauthToken = temporaryToken
+    ? undefined
+    : (options?.sessionToken ?? config.sessionToken);
   const organizationId = options?.organizationId ?? config.organizationId;
-  const accessKeyId = options?.accessKeyId ?? config.accessKeyId;
-  const secretAccessKey = options?.secretAccessKey ?? config.secretAccessKey;
+  // An OAuth token wins over a key pair, so keep the key pair out of it.
+  const accessKeyId = oauthToken
+    ? undefined
+    : (options?.accessKeyId ?? config.accessKeyId);
+  const secretAccessKey = oauthToken
+    ? undefined
+    : (options?.secretAccessKey ?? config.secretAccessKey);
 
   // Allow either session token, authorization, or credentials
   const hasCredentials = accessKeyId && secretAccessKey;
-  if (!sessionToken && !hasCredentials) {
+  if (!oauthToken && !hasCredentials) {
     return {
       error: new Error('Session token or credentials are required'),
     };
   }
 
-  if (sessionToken && (!organizationId || organizationId === '')) {
+  if (oauthToken && (!organizationId || organizationId === '')) {
     return { error: new Error('Organization ID is required') };
   }
 
   return createTigrisHttpClient({
     baseUrl: getStorageEndpoint(options),
-    sessionToken,
+    sessionToken: oauthToken ?? temporaryToken,
     organizationId,
     accessKeyId,
     secretAccessKey,

@@ -8,6 +8,7 @@ import {
   type CredentialsSdk,
   credentialVariables,
   gitignoreStatus,
+  SESSION_TOKEN_VARIABLE,
   shellExportLines,
   writeDotenv,
 } from '@utils/credentials-export.js';
@@ -128,7 +129,8 @@ export default async function create(options: Record<string, unknown>) {
   let envError: NodeJS.ErrnoException | undefined;
   if (envPath) {
     try {
-      writeDotenv(envPath, variables);
+      // A permanent key: drop any token left by temporary credentials.
+      writeDotenv(envPath, variables, [SESSION_TOKEN_VARIABLE[sdk]]);
     } catch (err) {
       envError = err instanceof Error ? err : new Error(String(err));
     }

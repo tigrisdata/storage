@@ -43,3 +43,39 @@ export function getConfig(): TigrisStorageConfig {
 
   return config;
 }
+
+/**
+ * The session token of temporary credentials (STS `GetFederationToken`), when
+ * the config carries them, or `undefined`.
+ *
+ * `sessionToken` is also how an OAuth access token is passed, so it only counts
+ * as temporary credentials when it arrives with its key pair: `accessKeyId`,
+ * `secretAccessKey` and `sessionToken` all in `options`, or all three in the
+ * environment, where the token is `TIGRIS_STORAGE_SESSION_TOKEN`. A session
+ * token on its own stays an OAuth token, as before.
+ */
+export function temporarySessionToken(
+  options?: TigrisStorageConfig
+): string | undefined {
+  if (options?.sessionToken) {
+    return options.accessKeyId && options.secretAccessKey
+      ? options.sessionToken
+      : undefined;
+  }
+
+  // A key pair from options was not issued with the environment's token.
+  if (options?.accessKeyId || options?.secretAccessKey || !isNode()) {
+    return undefined;
+  }
+
+  // A token without its key pair is a leftover, not temporary credentials;
+  // ignoring it lets an OAuth session from the environment apply.
+  if (
+    !getEnvVar('TIGRIS_STORAGE_ACCESS_KEY_ID') ||
+    !getEnvVar('TIGRIS_STORAGE_SECRET_ACCESS_KEY')
+  ) {
+    return undefined;
+  }
+
+  return getEnvVar('TIGRIS_STORAGE_SESSION_TOKEN') || undefined;
+}

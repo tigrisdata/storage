@@ -21,6 +21,9 @@ vi.mock('@aws-sdk/credential-providers', () => ({
     async () => ({
       accessKeyId: `${profile}-access-key`,
       secretAccessKey: `${profile}-secret-key`,
+      // A profile holding temporary credentials, as SSO or assume-role
+      // profiles do.
+      ...(profile === 'temporary' && { sessionToken: 'profile-token' }),
     }),
 }));
 
@@ -58,6 +61,8 @@ const ENV_KEYS = [
   'TIGRIS_STORAGE_SECRET_ACCESS_KEY',
   'TIGRIS_STORAGE_ENDPOINT',
   'TIGRIS_FORCE_PATH_STYLE',
+  'AWS_SESSION_TOKEN',
+  'TIGRIS_STORAGE_SESSION_TOKEN',
 ];
 
 describe('resolveAuthMethod', () => {
@@ -469,5 +474,98 @@ describe('getStorageConfig forcePathStyle overlay', () => {
     const config = await getStorageConfig();
 
     expect(config.forcePathStyle).toBeUndefined();
+  });
+});
+
+describe('temporary credentials', () => {
+  let savedEnv: Record<string, string | undefined>;
+
+  beforeEach(() => {
+    tempHome = mkdtempSync(join(tmpdir(), 'tigris-test-'));
+    vi.resetModules();
+    savedEnv = {};
+    for (const key of ENV_KEYS) {
+      savedEnv[key] = process.env[key];
+      delete process.env[key];
+    }
+    writeRawConfig({ version: 2 });
+  });
+
+  afterEach(() => {
+    rmSync(tempHome, { recursive: true, force: true });
+    for (const key of ENV_KEYS) {
+      if (savedEnv[key] !== undefined) {
+        process.env[key] = savedEnv[key];
+      } else {
+        delete process.env[key];
+      }
+    }
+  });
+
+  it('passes AWS_SESSION_TOKEN to storage with its key pair', async () => {
+    process.env.AWS_ACCESS_KEY_ID = 'tsid_a';
+    process.env.AWS_SECRET_ACCESS_KEY = 'tssec_a';
+    process.env.AWS_SESSION_TOKEN = 'tsts1-aws';
+
+    const { getStorageConfig, resolveAuthMethod, usesTemporaryCredentials } =
+      await import('../../src/auth/provider.js');
+
+    const method = await resolveAuthMethod();
+    expect(usesTemporaryCredentials(method)).toBe(true);
+    expect(await getStorageConfig()).toMatchObject({
+      accessKeyId: 'tsid_a',
+      secretAccessKey: 'tssec_a',
+      sessionToken: 'tsts1-aws',
+    });
+  });
+
+  it('passes TIGRIS_STORAGE_SESSION_TOKEN with the TIGRIS_ key pair', async () => {
+    process.env.TIGRIS_STORAGE_ACCESS_KEY_ID = 'tsid_t';
+    process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY = 'tssec_t';
+    process.env.TIGRIS_STORAGE_SESSION_TOKEN = 'tsts1-tigris';
+
+    const { getStorageConfig, resolveAuthMethod, usesTemporaryCredentials } =
+      await import('../../src/auth/provider.js');
+
+    expect(usesTemporaryCredentials(await resolveAuthMethod())).toBe(true);
+    expect((await getStorageConfig()).sessionToken).toBe('tsts1-tigris');
+  });
+
+  it("does not pair a session token with the other family's keys", async () => {
+    process.env.AWS_ACCESS_KEY_ID = 'AWS-AK';
+    process.env.AWS_SECRET_ACCESS_KEY = 'AWS-SK';
+    process.env.TIGRIS_STORAGE_SESSION_TOKEN = 'tsts1-tigris';
+
+    const { getStorageConfig } = await import('../../src/auth/provider.js');
+
+    expect((await getStorageConfig()).sessionToken).toBeUndefined();
+  });
+
+  it('keeps the session token of an AWS profile', async () => {
+    createAwsFiles();
+    process.env.AWS_PROFILE = 'temporary';
+
+    const { getStorageConfig, resolveAuthMethod, usesTemporaryCredentials } =
+      await import('../../src/auth/provider.js');
+
+    expect(usesTemporaryCredentials(await resolveAuthMethod())).toBe(true);
+    expect((await getStorageConfig()).sessionToken).toBe('profile-token');
+  });
+
+  it('records that temporary credentials are in use, and clears it after', async () => {
+    const { resolveAuthMethod } = await import('../../src/auth/provider.js');
+    const { isUsingTemporaryCredentials } = await import(
+      '../../src/utils/temporary-credentials.js'
+    );
+
+    process.env.AWS_ACCESS_KEY_ID = 'tsid_a';
+    process.env.AWS_SECRET_ACCESS_KEY = 'tssec_a';
+    process.env.AWS_SESSION_TOKEN = 'tsts1-aws';
+    await resolveAuthMethod();
+    expect(isUsingTemporaryCredentials()).toBe(true);
+
+    delete process.env.AWS_SESSION_TOKEN;
+    await resolveAuthMethod();
+    expect(isUsingTemporaryCredentials()).toBe(false);
   });
 });

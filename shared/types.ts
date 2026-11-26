@@ -19,8 +19,18 @@ export type TigrisEndpointsConfig = {
 export type TigrisAuthConfig = {
   accessKeyId?: string;
   secretAccessKey?: string;
+  /**
+   * Passed with `accessKeyId` and `secretAccessKey`: the session token of
+   * temporary credentials, signed into each request. Passed without them: an
+   * OAuth access token, which also needs `organizationId`.
+   */
   sessionToken?: string;
   organizationId?: string;
+  /**
+   * Returns credentials on demand, for credentials that expire. With
+   * `organizationId` it returns OAuth tokens; without it, access keys with an
+   * optional session token, such as temporary credentials.
+   */
   credentialProvider?: () => Promise<{
     accessKeyId: string;
     secretAccessKey: string;

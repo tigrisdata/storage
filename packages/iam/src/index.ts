@@ -117,6 +117,18 @@ export {
   type Team,
 } from './lib/team/list';
 export {
+  TEMPORARY_CREDENTIAL_ACTIONS,
+  type TemporaryCredentialAccess,
+  type TemporaryCredentialAction,
+} from './lib/temporary-credentials/actions';
+export {
+  type CreateTemporaryCredentialsOptions,
+  createTemporaryCredentials,
+  MAX_TEMPORARY_CREDENTIALS_DURATION,
+  MIN_TEMPORARY_CREDENTIALS_DURATION,
+  type TemporaryCredentials,
+} from './lib/temporary-credentials/create';
+export {
   type GetUsageOptions,
   getUsage,
   type UsageCharge,

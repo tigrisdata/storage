@@ -1,4 +1,5 @@
 import { Sha256 } from '@aws-crypto/sha256-js';
+import { parseXML } from '@aws-sdk/xml-builder';
 import { SignatureV4 } from '@smithy/signature-v4';
 import { TigrisHeaders } from './headers';
 import {
@@ -59,10 +60,18 @@ export interface TigrisHttpClient {
 
 export interface CreateHttpClientOptions {
   baseUrl: string;
+  /**
+   * With `accessKeyId` and `secretAccessKey`: the session token of temporary
+   * credentials, signed into the request as `x-amz-security-token`. Without
+   * them: an OAuth access token, sent with `organizationId` instead of a
+   * signature. Callers holding an OAuth token must not also pass a key pair.
+   */
   sessionToken?: string;
   organizationId?: string;
   accessKeyId?: string;
   secretAccessKey?: string;
+  /** SigV4 service name the request is signed for. Defaults to `s3`. */
+  service?: string;
   /**
    * Default retry policy for every request from this client. Omitted or
    * `false` means a single attempt — retry never engages unless asked for.
@@ -81,15 +90,18 @@ async function generateSignatureHeaders(
   headers: Record<string, string>,
   body: string | undefined,
   accessKeyId: string,
-  secretAccessKey: string
+  secretAccessKey: string,
+  sessionToken: string | undefined,
+  service: string
 ): Promise<Record<string, string>> {
   const signer = new SignatureV4({
     credentials: {
       accessKeyId,
       secretAccessKey,
+      ...(sessionToken && { sessionToken }),
     },
     region: 'auto',
-    service: 's3',
+    service,
     sha256: Sha256,
     // S3 uses single-encoding for the canonical path; the default
     // (`true`) is the AWS-standard double-encoding scheme and produces
@@ -160,6 +172,25 @@ function retryCacheKey(config: RetryConfig | undefined): string | undefined {
   ].join(':');
 }
 
+type XmlError = { Message?: unknown };
+
+/**
+ * `Message` from an S3 error (`<Error>`) or an STS one
+ * (`<ErrorResponse><Error>`), parsed with the AWS SDK's own XML parser.
+ */
+function xmlErrorMessage(text: string): string | undefined {
+  try {
+    const root = parseXML(text) as {
+      Error?: XmlError;
+      ErrorResponse?: { Error?: XmlError };
+    };
+    const message = (root?.Error ?? root?.ErrorResponse?.Error)?.Message;
+    return typeof message === 'string' ? message.trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Read a body without letting a mid-stream failure mask the real error. */
 async function safeText(response: Response): Promise<string> {
   try {
@@ -171,9 +202,14 @@ async function safeText(response: Response): Promise<string> {
 
 /**
  * The reason in an error body, else the status text. S3-style errors carry
- * `Message`; the IAM gateway writes `{ status: "error", message }`.
+ * `Message`, as JSON or as an XML element (S3 and STS errors); the IAM
+ * gateway writes `{ status: "error", message }`.
  */
 function extractErrorMessage(text: string, statusText: string): string {
+  if (text.trimStart().startsWith('<')) {
+    return xmlErrorMessage(text) || statusText || 'Unknown error';
+  }
+
   if (text) {
     try {
       const parsed = JSON.parse(text) as { Message?: string; message?: string };
@@ -200,12 +236,13 @@ export function createTigrisHttpClient(
     organizationId,
     accessKeyId,
     secretAccessKey,
+    service = 's3',
     retry: clientRetry,
   } = options;
 
   const retryKey = retryCacheKey(clientRetry);
 
-  let key: string | undefined = `${baseUrl}`;
+  let key: string | undefined = `${baseUrl}-${service}`;
 
   if (organizationId) {
     key = `${key}-${organizationId}`;
@@ -319,17 +356,21 @@ export function createTigrisHttpClient(
         // Signed per attempt, not once up front: `x-amz-date` stays inside its
         // validity window on a retried request, and a future credential
         // provider would get a chance to refresh between attempts.
-        if (accessKeyId && secretAccessKey && !sessionToken) {
+        // A key pair means SigV4; a session token alongside it belongs to
+        // temporary credentials and is signed in. On its own it is OAuth.
+        if (accessKeyId && secretAccessKey) {
           headers = await generateSignatureHeaders(
             req.method,
             url,
             headers,
             bodyString,
             accessKeyId,
-            secretAccessKey
+            secretAccessKey,
+            sessionToken,
+            service
           );
         } else {
-          // Use session token or pre-generated authorization
+          // OAuth: the token and the organization travel as plain headers.
           if (sessionToken) {
             headers[TigrisHeaders.SESSION_TOKEN] = sessionToken;
           }

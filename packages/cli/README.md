@@ -42,7 +42,7 @@ Run `tigris help` to see all available commands, or `tigris <command> help` for 
 | `tigris usage`                | Show the active organization's usage and charges for a billing month, as on the console's Usage page. Requires OAuth login                                     |
 | `tigris update`               | Update the CLI to the latest version                                                                                                                           |
 | `tigris logout`               | End the current session and clear login state. Credentials saved via 'configure' are kept                                                                      |
-| `tigris credentials` (creds)  | Test whether your current credentials can reach Tigris and optionally verify access to a specific bucket                                                       |
+| `tigris credentials` (creds)  | Test whether your current credentials can reach Tigris, and issue temporary credentials limited to one bucket                                                  |
 | `tigris telemetry`            | Show or change whether the CLI sends usage analytics and error reports                                                                                         |
 | `tigris ls` (list)            | List all buckets (no arguments) or objects under a bucket/prefix path. Accepts bare names or t3:// URIs                                                        |
 | `tigris mk` (create)          | Create a bucket (bare name) or a folder inside a bucket (bucket/folder/ with trailing slash)                                                                   |
@@ -222,11 +222,12 @@ tigris logout
 
 ### `tigris credentials` (creds)
 
-Test whether your current credentials can reach Tigris and optionally verify access to a specific bucket
+Test whether your current credentials can reach Tigris, and issue temporary credentials limited to one bucket
 
-| Command                       | Description                                                                              |
-| ----------------------------- | ---------------------------------------------------------------------------------------- |
-| `tigris credentials test` (t) | Verify that current credentials are valid. Optionally checks access to a specific bucket |
+| Command                               | Description                                                                                                                                                                                                                                                                         |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tigris credentials test` (t)         | Verify that current credentials are valid. Optionally checks access to a specific bucket                                                                                                                                                                                            |
+| `tigris credentials temporary` (temp) | Issue temporary credentials (an access key ID, secret and session token) limited to one bucket and the actions you choose. They expire on their own and cannot be revoked one by one. They are issued with your access key; logged in with OAuth, you can create one for the bucket |
 
 #### `tigris credentials test` (t)
 
@@ -245,6 +246,33 @@ tigris credentials test [flags]
 ```bash
 tigris credentials test
 tigris credentials test --bucket my-bucket
+```
+
+#### `tigris credentials temporary` (temp)
+
+Issue temporary credentials (an access key ID, secret and session token) limited to one bucket and the actions you choose. They expire on their own and cannot be revoked one by one. They are issued with your access key; logged in with OAuth, you can create one for the bucket
+
+```
+tigris credentials temporary [bucket] [flags]
+```
+
+| Flag             | Description                                                                                                                                   |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-n, --name`     | A name for the credentials, shown in their federated user ARN. 2 to 32 characters from letters, digits and _+=,.@- **(required)**             |
+| `-a, --access`   | Grant the read actions, the write actions, or both                                                                                            |
+| `--actions`      | Comma-separated actions to grant, such as s3:GetObject,s3:ListBucket. Combines with --access                                                  |
+| `--policy`       | Path to a JSON policy to use instead of a bucket with --access or --actions                                                                   |
+| `-d, --duration` | How long the credentials last, from 15m to 36h, e.g. 30m, 1h or 3600 (seconds) (default: 1h)                                                  |
+| `--export`       | Print the credentials as shell "export" lines and nothing else on stdout, for eval "$(tigris credentials temporary ... --export)"             |
+| `--for`          | Which SDK the --export variables are for. tigris writes TIGRIS_STORAGE_*; aws writes AWS_* plus Tigris endpoints and region (default: tigris) |
+
+**Examples:**
+
+```bash
+tigris credentials temporary my-bucket --name ci-upload --access write
+tigris credentials temporary my-bucket --name reader --actions s3:GetObject,s3:ListBucket --duration 30m
+tigris credentials temporary --name custom --policy ./policy.json
+eval "$(tigris credentials temporary my-bucket --name ci --access readwrite --export --for aws)"
 ```
 
 ### `tigris telemetry`

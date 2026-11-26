@@ -5,6 +5,7 @@
 
 import { fromIni } from '@aws-sdk/credential-providers';
 import type { RetryConfig } from '@tigrisdata/storage';
+import { setUsingTemporaryCredentials } from '@utils/temporary-credentials.js';
 
 import {
   DEFAULT_IAM_ENDPOINT,
@@ -70,7 +71,11 @@ export function getEnvForcePathStyle(): boolean {
 // Environment credential helpers
 // ---------------------------------------------------------------------------
 
-type EnvCredentials = CredentialsConfig & { source: 'tigris' | 'aws' };
+type EnvCredentials = CredentialsConfig & {
+  source: 'tigris' | 'aws';
+  /** Set for temporary credentials. */
+  sessionToken?: string;
+};
 
 /**
  * Get credentials from environment variables.
@@ -86,6 +91,7 @@ export function getEnvCredentials(): EnvCredentials | null {
     return {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID,
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      sessionToken: process.env.AWS_SESSION_TOKEN || undefined,
       endpoint,
       source: 'aws',
     };
@@ -101,6 +107,7 @@ export function getEnvCredentials(): EnvCredentials | null {
     return {
       accessKeyId: process.env.TIGRIS_STORAGE_ACCESS_KEY_ID,
       secretAccessKey: process.env.TIGRIS_STORAGE_SECRET_ACCESS_KEY,
+      sessionToken: process.env.TIGRIS_STORAGE_SESSION_TOKEN || undefined,
       endpoint,
       source: 'tigris',
     };
@@ -147,6 +154,8 @@ export type AuthMethod =
       profile: string;
       accessKeyId: string;
       secretAccessKey: string;
+      /** Set when the profile holds temporary credentials. */
+      sessionToken?: string;
     }
   | { type: 'oauth' }
   | { type: 'credentials'; accessKeyId: string; secretAccessKey: string }
@@ -155,6 +164,8 @@ export type AuthMethod =
       accessKeyId: string;
       secretAccessKey: string;
       source: 'tigris' | 'aws';
+      /** Set for temporary credentials. */
+      sessionToken?: string;
     }
   | { type: 'configured'; accessKeyId: string; secretAccessKey: string }
   | { type: 'none' };
@@ -167,6 +178,20 @@ export type AuthMethod =
  * per-session override that should win over a previously stored login.
  */
 export async function resolveAuthMethod(): Promise<AuthMethod> {
+  const method = await resolveAuthMethodUnrecorded();
+  setUsingTemporaryCredentials(usesTemporaryCredentials(method));
+  return method;
+}
+
+/** Whether the method authenticates with temporary credentials. */
+export function usesTemporaryCredentials(method: AuthMethod): boolean {
+  return (
+    (method.type === 'aws-profile' || method.type === 'environment') &&
+    !!method.sessionToken
+  );
+}
+
+async function resolveAuthMethodUnrecorded(): Promise<AuthMethod> {
   // 1. AWS profile
   if (hasAwsProfile()) {
     const profile = process.env.AWS_PROFILE || 'default';
@@ -176,6 +201,7 @@ export async function resolveAuthMethod(): Promise<AuthMethod> {
       profile,
       accessKeyId: resolved.accessKeyId,
       secretAccessKey: resolved.secretAccessKey,
+      ...(resolved.sessionToken && { sessionToken: resolved.sessionToken }),
     };
   }
 
@@ -187,6 +213,7 @@ export async function resolveAuthMethod(): Promise<AuthMethod> {
       accessKeyId: envCreds.accessKeyId,
       secretAccessKey: envCreds.secretAccessKey,
       source: envCreds.source,
+      ...(envCreds.sessionToken && { sessionToken: envCreds.sessionToken }),
     };
   }
 
@@ -312,6 +339,7 @@ async function resolveStorageConfig(options?: {
       return {
         accessKeyId: method.accessKeyId,
         secretAccessKey: method.secretAccessKey,
+        ...(method.sessionToken && { sessionToken: method.sessionToken }),
         endpoint:
           profileConfig.endpoint ||
           getTigrisConfig().endpoint ||
@@ -367,6 +395,7 @@ async function resolveStorageConfig(options?: {
       return {
         accessKeyId: method.accessKeyId,
         secretAccessKey: method.secretAccessKey,
+        ...(method.sessionToken && { sessionToken: method.sessionToken }),
         endpoint: getEnvCredentials()?.endpoint || DEFAULT_STORAGE_ENDPOINT,
       };
 

@@ -82,6 +82,60 @@ const result = await get('object.txt', 'string', {
 });
 ```
 
+#### Use temporary credentials
+
+[Temporary credentials](https://www.tigrisdata.com/docs/iam/temporary-credentials/) are an access key ID, a secret and a session token, scoped to one bucket. Issue them with an access key using `createTemporaryCredentials` from `@tigrisdata/iam`:
+
+```ts
+import { createTemporaryCredentials } from '@tigrisdata/iam';
+
+const { data: credentials } = await createTemporaryCredentials('ci-upload', {
+  bucket: 'my-bucket-name',
+  access: 'readwrite', // 'read', 'write' or 'readwrite'; or pass exact `actions`
+  durationSeconds: 3600,
+});
+```
+
+Then pass all three together:
+
+```ts
+const result = await list({
+  config: {
+    bucket: 'my-bucket-name',
+    accessKeyId: 'tsid_...',
+    secretAccessKey: 'tssec_...',
+    sessionToken: 'tsts1...',
+  },
+});
+```
+
+Or set them in the environment:
+
+```bash
+TIGRIS_STORAGE_ACCESS_KEY_ID=tsid_...
+TIGRIS_STORAGE_SECRET_ACCESS_KEY=tssec_...
+TIGRIS_STORAGE_SESSION_TOKEN=tsts1...
+TIGRIS_STORAGE_BUCKET=bucket_name
+```
+
+They only allow what their policy lists, on that one bucket. Bucket management calls such as `listBuckets` and `createBucket` are refused.
+
+To renew them before they expire, pass a `credentialProvider` instead. It returns `{ accessKeyId, secretAccessKey, sessionToken, expiration }`, which is what `createTemporaryCredentials` returns, and the SDK calls it again shortly before `expiration`. It only applies to object calls that go through the S3 client; `copy`, `move` and `updateObject` read the static fields.
+
+```ts
+const config = {
+  bucket: 'my-bucket-name',
+  credentialProvider: async () => {
+    const { data, error } = await createTemporaryCredentials('worker', {
+      bucket: 'my-bucket-name',
+      access: 'read',
+    });
+    if (error) throw error;
+    return data;
+  },
+};
+```
+
 ## Responses
 
 All methods return a generic response of type `TigrisStorageResponse`. If there is an error, the `error` property will be set. If there is a successful response, the `data` property will be set. This allows for a better type safety and error handling.

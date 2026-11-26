@@ -1,7 +1,7 @@
 import { S3Client } from '@aws-sdk/client-s3';
 import type { HttpRequest } from '@aws-sdk/types';
 import { TigrisHeaders } from '@shared/index';
-import { getConfig, missingConfigError } from './config';
+import { getConfig, missingConfigError, temporarySessionToken } from './config';
 import type { TigrisStorageConfig, TigrisStorageResponse } from './types';
 
 const cachedClients = new Map<string, S3Client>();
@@ -16,25 +16,22 @@ export function createTigrisClient(
   const endpoint = options?.endpoint ?? config.endpoint;
   const bucket = options?.bucket ?? config.bucket;
   const forcePathStyle = options?.forcePathStyle ?? false;
+  const temporaryToken = temporarySessionToken(options);
+  const hasOrganization =
+    options?.organizationId !== undefined && options.organizationId !== '';
 
-  if (
-    options?.credentialProvider !== undefined &&
-    (!options?.organizationId || options.organizationId === '')
-  ) {
-    return missingConfigError('organizationId');
-  }
+  // With an organization, a provider returns OAuth tokens; without one it
+  // returns access keys, temporary or not, like any AWS credential provider.
+  const hasCredentialProvider = options?.credentialProvider !== undefined;
 
-  const hasCredentialProvider =
-    options?.credentialProvider !== undefined &&
-    options?.organizationId !== undefined &&
-    options.organizationId !== '';
+  // A session token without its key pair is an OAuth access token.
+  const isOAuth =
+    !temporaryToken &&
+    options?.sessionToken !== undefined &&
+    options.sessionToken !== '' &&
+    hasOrganization;
 
-  const skipAccessKeyCheck =
-    hasCredentialProvider ||
-    (options?.sessionToken !== undefined &&
-      options?.organizationId !== undefined &&
-      options.sessionToken !== '' &&
-      options.organizationId !== '');
+  const skipAccessKeyCheck = hasCredentialProvider || isOAuth;
 
   if (!bucket && !skipBucketCheck) {
     return missingConfigError('bucket');
@@ -57,8 +54,10 @@ export function createTigrisClient(
   if (hasCredentialProvider) {
     // Credential providers are opaque functions — cannot safely cache
     key = undefined;
-  } else if (options?.sessionToken && options?.organizationId) {
-    key = `${options.sessionToken}-${options.organizationId}-${endpoint}`;
+  } else if (isOAuth) {
+    key = `${options!.sessionToken}-${options!.organizationId}-${endpoint}`;
+  } else if (temporaryToken) {
+    key = `${key}-${temporaryToken}`;
   }
 
   if (key && forcePathStyle) {
@@ -77,7 +76,7 @@ export function createTigrisClient(
     : {
         accessKeyId: accessKeyId ?? '',
         secretAccessKey: secretAccessKey ?? '',
-        sessionToken: options?.sessionToken ?? undefined,
+        sessionToken: temporaryToken ?? options?.sessionToken ?? undefined,
       };
 
   const client = new S3Client({
@@ -87,14 +86,11 @@ export function createTigrisClient(
     forcePathStyle,
   });
 
-  if (
-    (options?.sessionToken || hasCredentialProvider) &&
-    options?.organizationId
-  ) {
+  if ((isOAuth || hasCredentialProvider) && hasOrganization) {
     client.middlewareStack.add(
       (next) => async (args) => {
         const req = args.request as HttpRequest;
-        req.headers[TigrisHeaders.NAMESPACE] = options.organizationId!;
+        req.headers[TigrisHeaders.NAMESPACE] = options!.organizationId!;
         const result = await next(args);
         return result;
       },

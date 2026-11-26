@@ -79,6 +79,8 @@ Non-published apps live in `apps/` (part of the pnpm workspace via the `apps/*` 
 
 Shared code lives in [`shared/`](shared) and is imported via the `@shared/*` TS path alias and the matching tsup esbuild alias. It is bundled into each package at build time and is not published as its own package.
 
+`shared/` is bundled, but its third-party imports are not. Every published package that pulls in shared code with a runtime dependency (`@smithy/signature-v4`, `@aws-crypto/sha256-js`, `@aws-sdk/xml-builder`, `dotenv`) lists that dependency in its own `dependencies`, with the same version range as `shared/package.json`. tsup then leaves it external, so an app using several Tigris packages loads one copy. A missing entry makes tsup inline a private copy instead.
+
 Root-level scripts:
 
 - `pnpm build` — build all packages (`pnpm -r run build`)

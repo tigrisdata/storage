@@ -1,5 +1,9 @@
 import { getAuthClient } from '@auth/client.js';
-import { getTigrisConfig, resolveAuthMethod } from '@auth/provider.js';
+import {
+  getTigrisConfig,
+  resolveAuthMethod,
+  usesTemporaryCredentials,
+} from '@auth/provider.js';
 import { getSelectedOrganization } from '@auth/storage.js';
 import { whoami as iamWhoami } from '@tigrisdata/iam';
 import { failWithError } from '@utils/exit.js';
@@ -52,6 +56,13 @@ export default async function whoami(
     let email: string | undefined;
     let userId: string | undefined;
     let organizationId: string | undefined;
+    // Temporary credentials cannot call IAM, so there is no identity to look
+    // up; say what they are instead.
+    const temporary = usesTemporaryCredentials(method);
+    const identity = (accessKeyId: string, secretAccessKey: string) =>
+      temporary
+        ? Promise.resolve({ userId: undefined, organizationId: undefined })
+        : fetchIamIdentity(accessKeyId, secretAccessKey);
     let organizations: { id: string; name: string }[] | undefined;
     let selectedOrg: string | null | undefined;
 
@@ -61,10 +72,7 @@ export default async function whoami(
     switch (method.type) {
       case 'aws-profile': {
         lines.push(`Auth method: ${label} (${method.profile})`);
-        const iam = await fetchIamIdentity(
-          method.accessKeyId,
-          method.secretAccessKey
-        );
+        const iam = await identity(method.accessKeyId, method.secretAccessKey);
         userId = iam.userId;
         organizationId = iam.organizationId;
         break;
@@ -102,10 +110,7 @@ export default async function whoami(
         const envLabel =
           method.source === 'tigris' ? 'TIGRIS_STORAGE_*' : 'AWS_*';
         lines.push(`Auth method: ${label} (${envLabel})`);
-        const iam = await fetchIamIdentity(
-          method.accessKeyId,
-          method.secretAccessKey
-        );
+        const iam = await identity(method.accessKeyId, method.secretAccessKey);
         userId = iam.userId;
         organizationId = iam.organizationId;
         break;
@@ -121,6 +126,10 @@ export default async function whoami(
         organizationId = iam.organizationId;
         break;
       }
+    }
+
+    if (temporary) {
+      lines.push('Credentials: temporary');
     }
 
     // User info
@@ -171,6 +180,7 @@ export default async function whoami(
         email,
         userId,
       };
+      if (temporary) result.temporaryCredentials = true;
       if (organizations) {
         result.organizations = organizations.map((org) => ({
           id: org.id,

@@ -33,6 +33,22 @@ const defaults = {
 const key = { id: 'tid_AaBb', secret: 'tsec_XxYy', endpoints: defaults };
 
 describe('credentialVariables', () => {
+  it('adds the session token of temporary credentials for either SDK', () => {
+    const temporary = { ...key, sessionToken: 'tsts1-token' };
+    expect(
+      credentialVariables({ ...temporary, sdk: 'tigris', bucket: 'my-app' })
+    ).toEqual([
+      ['TIGRIS_STORAGE_ACCESS_KEY_ID', 'tid_AaBb'],
+      ['TIGRIS_STORAGE_SECRET_ACCESS_KEY', 'tsec_XxYy'],
+      ['TIGRIS_STORAGE_SESSION_TOKEN', 'tsts1-token'],
+      ['TIGRIS_STORAGE_BUCKET', 'my-app'],
+    ]);
+    expect(credentialVariables({ ...temporary, sdk: 'aws' })).toContainEqual([
+      'AWS_SESSION_TOKEN',
+      'tsts1-token',
+    ]);
+  });
+
   it('writes the Tigris SDK variables, with the bucket when there is one', () => {
     expect(credentialVariables({ ...key, sdk: 'tigris' })).toEqual([
       ['TIGRIS_STORAGE_ACCESS_KEY_ID', 'tid_AaBb'],
@@ -150,6 +166,28 @@ describe('shellExportLines', () => {
         ['B', "it's $HOME"],
       ])
     ).toEqual(["export A='plain'", "export B='it'\\''s $HOME'"]);
+  });
+});
+
+describe('mergeDotenv removing variables', () => {
+  it('deletes a stale session token while setting the new key', () => {
+    expect(
+      mergeDotenv(
+        'A=old\nTIGRIS_STORAGE_SESSION_TOKEN=tsts1\nX=1\n',
+        [['A', 'new']],
+        ['TIGRIS_STORAGE_SESSION_TOKEN']
+      )
+    ).toBe('A=new\nX=1\n');
+  });
+
+  it('deletes every assignment, export prefix and CRLF included', () => {
+    expect(mergeDotenv('export T=1\r\nX=1\r\nT=2\r\n', [], ['T'])).toBe(
+      'X=1\r\n'
+    );
+  });
+
+  it('leaves a file without the variable alone', () => {
+    expect(mergeDotenv('X=1\n', [['A', '1']], ['T'])).toBe('X=1\nA=1\n');
   });
 });
 
