@@ -1,5 +1,19 @@
 # @tigrisdata/cli
 
+## 3.20.0
+
+### Minor Changes
+
+- [#430](https://github.com/tigrisdata/storage/pull/430) [`b7f4809`](https://github.com/tigrisdata/storage/commit/b7f48099842e0e14a15c324b841728718bbffc06) Thanks [@designcode](https://github.com/designcode)! - Support temporary credentials. `tigris credentials temporary <bucket> --name <name> --access read|write|readwrite` issues credentials limited to one bucket (or use `--actions` or `--policy`), lasting `--duration` (default 1h). `--export` prints them as shell `export` lines for `eval "$(...)"`, with `--for aws` for the AWS variable names. Issuing needs an access key. Logged in with OAuth, the command offers to create one for the bucket (ReadOnly or ReadWrite, matching what is granted), or to stop so you can log in with an access key.
+
+  The CLI now also authenticates with temporary credentials: `AWS_SESSION_TOKEN` or `TIGRIS_STORAGE_SESSION_TOKEN` alongside the matching access key variables, or an AWS profile that holds a session token. Access errors then say the credentials are temporary, and `whoami`, `credentials test` and the access-key and IAM commands explain what temporary credentials can't do instead of failing with "Access Denied".
+
+### Patch Changes
+
+- Updated dependencies [[`b7f4809`](https://github.com/tigrisdata/storage/commit/b7f48099842e0e14a15c324b841728718bbffc06), [`b7f4809`](https://github.com/tigrisdata/storage/commit/b7f48099842e0e14a15c324b841728718bbffc06)]:
+  - @tigrisdata/iam@2.9.0
+  - @tigrisdata/storage@3.26.0
+
 ## 3.19.0
 
 ### Minor Changes
